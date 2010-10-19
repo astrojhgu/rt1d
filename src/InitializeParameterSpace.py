@@ -15,20 +15,23 @@ file we've supplied into a format the routine 'AllParameterSets' will understand
 import numpy as np
 import itertools as it
 import copy
+from SetDefaultParameterValues import *
 
 class InitializeParameterSpace:
     def __init__(self, pf):
         self.pf = pf
         
     def ReadParameterFile(self):
-        """Read in the parameter file, and parse the parameter names and arguments.
+        """
+        Read in the parameter file, and parse the parameter names and arguments.
         Return a dictionary that contains all parameters and their values, whether 
-        they be floats, tuples, or lists."""
+        they be floats, tuples, or lists.
+        """
         f = open(self.pf, "r")
-        pf_dict = {}
+        pf_dict = SetDefaultParameterValues()
         for line in f:
             if not line.split(): continue
-            if line.rfind("#") == 0: continue
+            if line.split()[0][0] == "#": continue
             
             # Cleave off end-of-line comments.
             line = line[:line.rfind("#")].strip()
@@ -36,31 +39,34 @@ class InitializeParameterSpace:
             # Read in the parameter name and the parameter value(s).
             parname, eq, parval = line.partition("=")
                         
-            if parval.strip().isdigit(): parval = float(parval)
-            elif parval.strip().isalpha(): parval = str(parval)
-            else:   
-                parval = parval.strip().split(",")
-                                                                                                       
-                tmp = []                
-                if parval[0][0] == '(':
-                    for element in parval: 
-                        if element.strip(" (,)").isdigit(): tmp.append(float(element.strip("(,)")))
-                        else: tmp.append(element.strip(" (,)"))
-                    parval = tuple(tmp)                    
-                elif parval[0][0] == '[':
-                    for element in parval: tmp.append(float(element.strip("[,]")))
-                    parval = list(tmp)
+            try: parval = float(parval)
+            except ValueError:
+                if parval.strip().isalnum(): 
+                    parval = str(parval)
                 else:
-                    raise ValueError('The format of this parameter cannot be understood.')
+                    parval = parval.strip().split(",")
+                    tmp = []       
+                    if parval[0][0] == '(':
+                        for element in parval: 
+                            if element.strip(" (,)").isdigit(): tmp.append(float(element.strip("(,)")))
+                            else: tmp.append(element.strip(" (,)"))
+                        parval = tuple(tmp)                    
+                    elif parval[0][0] == '[':
+                        for element in parval: tmp.append(float(element.strip("[,]")))
+                        parval = list(tmp)
+                    else:
+                        raise ValueError('The format of this parameter is not understood.')
                     
             pf_dict[parname.strip()] = parval
             
         return pf_dict
         
     def AllParameterSets(self):
-        """Take the dictionary returned by 'ReadParameterFile' and construct a new dictionary,
+        """
+        Take the dictionary returned by 'ReadParameterFile' and construct a new dictionary,
         containing a dictionary for each individual parameter set.  IF we're doing a single
-        model run, this will be the same dictionary as that returned by 'ReadParameterFile'."""
+        model run, this will be the same dictionary as that returned by 'ReadParameterFile'.
+        """
         pf = self.ReadParameterFile()
         
         # First, construct a list of tuples, each one containing the name of the parameter 
