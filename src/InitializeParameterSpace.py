@@ -42,7 +42,7 @@ class InitializeParameterSpace:
             try: parval = float(parval)
             except ValueError:
                 if parval.strip().isalnum(): 
-                    parval = str(parval)
+                    parval = str(parval.strip())
                 else:
                     parval = parval.strip().split(",")
                     tmp = []       
@@ -64,7 +64,7 @@ class InitializeParameterSpace:
     def AllParameterSets(self):
         """
         Take the dictionary returned by 'ReadParameterFile' and construct a new dictionary,
-        containing a dictionary for each individual parameter set.  IF we're doing a single
+        containing a dictionary for each individual parameter set.  If we're doing a single
         model run, this will be the same dictionary as that returned by 'ReadParameterFile'.
         """
         pf = self.ReadParameterFile()
@@ -85,18 +85,18 @@ class InitializeParameterSpace:
                 
                 tupct += 1
         
-        pf_key = 'psp'      # make this a parameter
+        pf_key = pf["SavePrefix"]
         
         # Now, construct a dictionary of dictionaries, one for each set of parameters.
         all_pfs_dict = {}  
-        if tupct == 0: all_pfs_dict = {'{0}1'.format(pf_key): pf}
+        if tupct == 0: all_pfs_dict = {'{0}0000'.format(pf_key): pf}
         elif tupct == 1:
             allcombos = it.combinations(allparvals, tupct)
             
             tmp = pf
             for i, combo in enumerate(allcombos):
                 tmp[combo[0][0]] = combo[0][1]
-                all_pfs_dict["{0}{1:05d}".format(pf_key, i)] = tmp
+                all_pfs_dict["{0}{1:04d}".format(pf_key, i)] = tmp
             
             return all_pfs_dict
             
@@ -119,7 +119,7 @@ class InitializeParameterSpace:
                 for par in combo:
                     tmp[par[0]] = par[1]
                                              
-                all_pfs_dict["{0}{1:05d}".format(pf_key, i)] = tmp
+                all_pfs_dict["{0}{1:04d}".format(pf_key, i)] = tmp
             
         return all_pfs_dict
         

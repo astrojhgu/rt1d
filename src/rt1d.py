@@ -9,7 +9,7 @@ Description: Driver script for a 1D radiative transfer code.
 
 """
 
-import sys
+import sys, os
 import numpy as np
 
 try:
@@ -44,6 +44,11 @@ if rank == 0:
 for i, pf in enumerate(all_pfs):
     if i % size != rank: continue
     this_pf = all_pfs[pf]
+        
+    try: os.mkdir("{0}".format(pf))
+    except OSError: 
+        os.system("rm -rf {0}".format(pf))
+        os.mkdir("{0}".format(pf))
     
     # Instantiate necessary classes.
     g = InitializeGrid(this_pf)   
@@ -53,16 +58,16 @@ for i, pf in enumerate(all_pfs):
     
     # Figure out data dump times, write out initial dataset.
     dd = np.arange(0, this_pf["StopTime"] + this_pf["dtDataDump"], this_pf["dtDataDump"])
-    w.WriteAllData(data, 0.0)    
+    w.WriteAllData(data, pf, 0, 0)    
     
     t = 0.0
     dt = this_pf["InitialTimestep"]
     wct = 1
     while t < this_pf["StopTime"]:
         data, dt = r.EvolvePhotons(data, t, dt)
-        
+                
         if t == dd[wct]:
-            w.WriteAllData(data, t)
+            w.WriteAllData(data, pf, wct, t)
             wct += 1
         elif (t + dt) > dd[wct]:
             dt = dd[wct] - t
