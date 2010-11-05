@@ -15,7 +15,7 @@ from math import *
 
 ### General Physics
 h = 6.626068*10**-27 			# Planck's constant - [h] = erg*s
-h_bar = h/(2*pi) 				# H-bar - [h_bar] = erg*s
+h_bar = h / ( 2 * pi) 			# H-bar - [h_bar] = erg*s
 c = 29979245800.0 				# Speed of light - [c] = cm/s
 k_B = 1.3806503*10**-16			# Boltzmann's constant - [k_B] = erg/K
 G = 6.673*10**-8 				# Gravitational constant - [G] = cm^3/g/s^2
@@ -34,6 +34,7 @@ cm_per_kpc = cm_per_pc*10**3
 cm_per_mpc = cm_per_pc*10**6
 cm_per_gpc = cm_per_mpc*10**3
 cm_per_km = 1.0*10**5
+cm_per_rsun = 695500 * cm_per_km
 g_per_msun = 1.98892*10**33
 s_per_yr = 365.25*24*3600
 s_per_myr = s_per_yr*10**6

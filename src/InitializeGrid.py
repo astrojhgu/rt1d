@@ -13,9 +13,18 @@ Notes: Do I want to keep track of CellWidth as well?
 
 import numpy as np
 from Cosmology import *
-from FieldList import *
 
-Y = 0.2477      # Primordial helium abundance by mass                      
+FieldList = \
+    ["Density", "Temperature", "HIDensity", "HIIDensity", "HeIDensity", \
+     "HeIIDensity", "HeIIIDensity", "ElectronDensity"]    
+
+m_e = 9.10938188*10**-28 		# Electron mass - [m_e] = g
+m_p = 1.67262158*10**-24		# Proton mass - [m_p] = g
+m_n = 1.67492729*10**-24        # Neutron mass - [m_n] = g
+
+m_H = m_p + m_e
+m_HeI = 2.0 * (m_p + m_n + m_e)
+m_HeII = 2.0 * (m_p + m_n) + m_e                  
 
 class InitializeGrid:
     def __init__(self, pf):
@@ -26,9 +35,10 @@ class InitializeGrid:
         self.TemperatureProfile = pf["TemperatureProfile"]
         self.InitialTemperature = pf["InitialTemperature"]
         self.InitialHIIFraction = pf["InitialHIIFraction"]
+        self.MultiSpecies = pf["MultiSpecies"]
         
-        if self.DensityProfile == 1: self.DensityUnits = self.Cosmology.MeanDensity(self.InitialRedshift)
-        else: self.DensityUnits = pf["DensityUnits"]                
+        self.Y = 0.2477 * self.MultiSpecies
+        self.DensityUnits = self.Cosmology.MeanBaryonDensity(self.InitialRedshift)
                         
         # Generic data array                
         self.data = np.ones(self.GridDimensions)
@@ -49,13 +59,12 @@ class InitializeGrid:
         Initialize the gas density - depends on parameter DensityProfile as follows:
         
             DensityProfile:
-                0: Uniform density given by DensityUnits.
-                1: Uniform density given by cosmic mean at z = InitialRedshift.
-                2: Density profile given by NFW model.  Requires r_s and c in this case too.
+                0: Uniform density given by cosmic mean at z = InitialRedshift.
+                1: Density profile given by NFW model.  Requires r_s and c in this case too.
         """        
         
-        if self.DensityProfile < 2: density = self.data * self.DensityUnits
-        elif self.DensityProfile == 2: print 'NFW profile not yet implemented!'
+        if self.DensityProfile == 0: density = self.data * self.DensityUnits
+        elif self.DensityProfile == 1: print 'NFW profile not yet implemented!'
             
         return density
         
@@ -76,14 +85,14 @@ class InitializeGrid:
         Initialize neutral hydrogen density.
         """
         
-        return (1.0 - Y) * (1.0 - self.InitialHIIFraction) * self.InitializeDensity()
+        return (1.0 - self.Y) * (1.0 - self.InitialHIIFraction) * self.InitializeDensity() / m_H
     
     def InitializeHIIDensity(self):
         """
         Initialize ionized hydrogen density.
         """
         
-        return (1.0 - Y) * self.InitialHIIFraction * self.InitializeDensity()   
+        return (1.0 - self.Y) * self.InitialHIIFraction * self.InitializeDensity() / m_H
         
     def InitializeHeIDensity(self):
         """
@@ -91,7 +100,7 @@ class InitializeGrid:
         to be the same as that of hydrogen.
         """
         
-        return Y * (1.0 - self.InitialHIIFraction) * self.InitializeDensity() 
+        return self.Y * (1.0 - self.InitialHIIFraction) * self.InitializeDensity() / m_HeI
         
     def InitializeHeIIDensity(self):
         """
@@ -99,7 +108,7 @@ class InitializeGrid:
         to be the same as that of hydrogen.
         """
         
-        return Y * self.InitialHIIFraction * self.InitializeDensity() 
+        return self.Y * self.InitialHIIFraction * self.InitializeDensity() / m_HeII
         
     def InitializeHeIIIDensity(self):
         """
@@ -108,5 +117,12 @@ class InitializeGrid:
         
         return self.data * 0.0 
         
+    def InitializeElectronDensity(self):
+        """
+        Initialize electron density - n_e = n_HII + n_HeII + 2n_HeIII (I'm pretty sure the equation in 
+        Thomas and Zaroubi 2007 is wrong - they had n_e = n_HII + n_HeI + 2n_HeII).
+        """
+        
+        return self.InitializeHIIDensity() + self.InitializeHeIIDensity() + 2.0 * self.InitializeHeIIIDensity()
         
         

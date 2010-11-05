@@ -33,5 +33,5 @@ class WriteData:
         
         f.close()
         
-        
+        print "Wrote {0}/{1}/{2}.h5".format(GlobalDir, prefix, DataDumpName)
         

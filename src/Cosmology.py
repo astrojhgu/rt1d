@@ -56,8 +56,11 @@ class Cosmology:
     def OmegaLambda(self, z):
 	    return self.OmegaLambdaNow / self.EvolutionFunction(z)**2
     
-    def MeanDensity(self, z):
+    def MeanMatterDensity(self, z):
         return self.OmegaMatter(z) * self.CriticalDensity(z)
+        
+    def MeanBaryonDensity(self, z):
+        return (self.OmegaBaryonNow / self.OmegaMatterNow) * self.MeanMatterDensity(z)
     
     def CriticalDensity(self, z):
         return (3.0 * self.HubbleParameter(z)**2) / (8.0 * na.pi * G)

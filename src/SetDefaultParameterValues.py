@@ -15,22 +15,33 @@ from Constants import *
 def SetDefaultParameterValues():
     pf = {
           # Grid parameters
-          "GridDimensions": 1024, \
+          "GridDimensions": 1000, \
+          
+          # Packages
+          "UseScipy": 1, \
+          "IntegrationMethod": 0, \
+          "InterpolationMethod": 1, \
+          
+          # Integral tabulation
+          "ColumnDensityBins": 50, \
           
           # Units
           "LengthUnits": cm_per_kpc, \
           "TimeUnits": s_per_myr, \
-          "DensityUnits": 1e-30, \
           
           # Control parameters
           "InitialTimestep": 0.01, \
           "StopTime": 50.0, \
-          "dtDataDump": 1.0, \
+          "dtDataDump": 5.0, \
           "DataDumpName": 'dd', \
           "SavePrefix": 'rt', \
+          "StartRadius": 0.01, \
+          
+          # General parameters
+          "MultiSpecies": 0, \
           
           # Initial conditions
-          "DensityProfile": 1, \
+          "DensityProfile": 0, \
           "InitialDensity": 0, \
           "TemperatureProfile": 0, \
           "InitialTemperature": 100, \
@@ -39,8 +50,13 @@ def SetDefaultParameterValues():
           
           # Source parameters
           "SourceSpectrum": 0, \
-          "SourceLuminosity": 1e40, \
+          "SourceTemperature": 1e4, \
+          "SourceRadius": 1.0, \
+          "SourceMass": 1e3, \
+          "SourcePowerLawIndex": 1.0, \
           "SourceLifetime": 50.0, \
+          "SourceMaxEnergy": 1e2, \
+          "SourceMinEnergy": 1, \
           
           # Cosmological Parameters (WMAP 7)
           "InitialRedshift": 20.0, \

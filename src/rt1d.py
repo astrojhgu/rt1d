@@ -22,6 +22,7 @@ except:
     size = 1
 
 # Class definitions
+from InitializeIntegralTables import *
 from InitializeParameterSpace import *
 from InitializeGrid import *
 from Radiate import *
@@ -44,38 +45,52 @@ if rank == 0:
 for i, pf in enumerate(all_pfs):
     if i % size != rank: continue
     this_pf = all_pfs[pf]
+    
+    TimeUnits = this_pf["TimeUnits"]
+    StopTime = this_pf["StopTime"] * TimeUnits
+    dt = this_pf["InitialTimestep"] * TimeUnits
+    dtDataDump = this_pf["dtDataDump"] * TimeUnits
         
     try: os.mkdir("{0}".format(pf))
     except OSError: 
         os.system("rm -rf {0}".format(pf))
         os.mkdir("{0}".format(pf))
     
-    # Instantiate necessary classes.
+    # Initialize grid
     g = InitializeGrid(this_pf)   
-    r = Radiate(this_pf)
-    w = WriteData(this_pf)
     data = g.InitializeFields()
+
+    # Initialize integral tables
+    iits = InitializeIntegralTables(this_pf, data)
+    itabs = iits.TabulateRateIntegrals()
+    
+    # Initialize radiation and write data classes
+    r = Radiate(this_pf, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
+    w = WriteData(this_pf)
     
     # Figure out data dump times, write out initial dataset.
-    dd = np.arange(0, this_pf["StopTime"] + this_pf["dtDataDump"], this_pf["dtDataDump"])
-    w.WriteAllData(data, pf, 0, 0)    
-    
+    ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
+    w.WriteAllData(data, pf, 0, 0)
+        
     t = 0.0
-    dt = this_pf["InitialTimestep"]
     wct = 1
-    while t < this_pf["StopTime"]:
+    while t <= StopTime:
         data, dt = r.EvolvePhotons(data, t, dt)
-                
-        if t == dd[wct]:
+                        
+        print "t = {0}".format(t / TimeUnits)                
+                        
+        if t == ddt[wct]:
             w.WriteAllData(data, pf, wct, t)
             wct += 1
-        elif (t + dt) > dd[wct]:
-            dt = dd[wct] - t
-        
+        elif (t + dt) > ddt[wct]:
+            dt = ddt[wct] - t
+        else:
+            dt = dt
+
         t += dt
         
     del g, r, w, data
-    print "Calculation {0} complete.".format(i + 1)
+    print "Calculation {0} ({1}) complete.".format(i + 1, pf)
 
     
 
