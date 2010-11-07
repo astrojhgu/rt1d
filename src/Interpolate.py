@@ -13,6 +13,31 @@ Notes:
 
 import numpy as np
 
+def Interpolate1D(dataset, array, value, method = 0):
+    """
+    Interpolate a 3D dataset using one of the following methods:
+    
+        0: Nearest neighbors
+        1: Average
+        2: Linear
+        3: Cubic spline
+        
+    The variable 'dataset' is the 1D lookup table, 'array' contains
+    the 1D array with the possible values for the independent variable.
+    The input 'value' is the number we want a result for.
+    
+    """
+    
+    xdiff = list(abs(array - value))
+    imin1 = xdiff.index(min(xdiff))
+    
+    if imin1 == 0: imin2 = imin1 + 1
+    elif imin1 == len(array) - 1: imin2 = imin1 - 1
+    else: imin1 = xdiff.index(min(xdiff[imin1 - 1], xdiff[imin1 + 1]))
+    
+    if method == 0: return dataset[imin1]
+    if method == 1: return np.interp(value, array, dataset)
+
 def Interpolate3D(dataset, arrays, values, method = 0):
     """
     Interpolate a 3D dataset using one of the following methods:

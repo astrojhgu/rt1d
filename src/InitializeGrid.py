@@ -15,7 +15,7 @@ import numpy as np
 from Cosmology import *
 
 FieldList = \
-    ["Density", "Temperature", "HIDensity", "HIIDensity", "HeIDensity", \
+    ["Temperature", "HIDensity", "HIIDensity", "HeIDensity", \
      "HeIIDensity", "HeIIIDensity", "ElectronDensity"]    
 
 m_e = 9.10938188*10**-28 		# Electron mass - [m_e] = g
@@ -29,11 +29,13 @@ m_HeII = 2.0 * (m_p + m_n) + m_e
 class InitializeGrid:
     def __init__(self, pf):
         self.Cosmology = Cosmology(pf)
-        self.GridDimensions = pf["GridDimensions"]
+        self.GridDimensions = int(pf["GridDimensions"])
+        self.StartRadius = pf["StartRadius"]
         self.InitialRedshift = pf["InitialRedshift"]
         self.DensityProfile = pf["DensityProfile"]
         self.TemperatureProfile = pf["TemperatureProfile"]
         self.InitialTemperature = pf["InitialTemperature"]
+        self.IonizationProfile = pf["IonizationProfile"]
         self.InitialHIIFraction = pf["InitialHIIFraction"]
         self.MultiSpecies = pf["MultiSpecies"]
         
@@ -41,20 +43,22 @@ class InitializeGrid:
         self.DensityUnits = self.Cosmology.MeanBaryonDensity(self.InitialRedshift)
                         
         # Generic data array                
-        self.data = np.ones(self.GridDimensions)
-                    
+        self.cells = np.arange(self.GridDimensions)
+        self.density = map(self.InitializeDensity, self.cells)
+        self.ionization = map(self.InitializeIonization, self.cells)
+            
     def InitializeFields(self):
         """
         Return dictionary of all fields.
         """
-        
+ 
         fields = {}
         for field in FieldList:
-            fields[field] = eval("self.Initialize{0}()".format(field))
-            
-        return fields
-            
-    def InitializeDensity(self):
+            fields[field] = np.array(eval("map(self.Initialize{0}, self.cells)".format(field)))
+        
+        return fields                
+                        
+    def InitializeDensity(self, cell):
         """
         Initialize the gas density - depends on parameter DensityProfile as follows:
         
@@ -63,12 +67,11 @@ class InitializeGrid:
                 1: Density profile given by NFW model.  Requires r_s and c in this case too.
         """        
         
-        if self.DensityProfile == 0: density = self.data * self.DensityUnits
-        elif self.DensityProfile == 1: print 'NFW profile not yet implemented!'
+        if self.DensityProfile == 0: density = self.DensityUnits
             
         return density
         
-    def InitializeTemperature(self):
+    def InitializeTemperature(self, cell):
         """
         Initialize temperature - depends on parameter TemperatureProfile as follows:
         
@@ -76,53 +79,72 @@ class InitializeGrid:
                 0: Uniform temperature given by InitialTemperature
         """
         
-        if self.TemperatureProfile == 0: temperature = self.data * self.InitialTemperature 
+        if self.TemperatureProfile == 0: temperature = self.InitialTemperature 
         
         return temperature
         
-    def InitializeHIDensity(self):
+    def InitializeIonization(self, cell):
+        """
+        Initialize ionization state - depends on parameter IonizationProfile as follows:
+        
+            IonizationProfile:
+                0: Uniform ionization state given by InitialHIIFraction
+                1: Uniform ionization state except for gas within 'StartRadius' is assumed
+                   to be completely ionized ('completely' meaning neutral fraction of 1e-4).
+                   
+        Returns the HII fraction in 'cell'.
+        """
+        
+        if self.IonizationProfile == 0: ionization = self.InitialHIIFraction 
+        if self.IonizationProfile == 1: 
+            if (float(cell) / self.GridDimensions) <= self.StartRadius: ionization = self.InitialHIIFraction
+            else: ionization = 0.0
+        
+        return ionization    
+        
+    def InitializeHIDensity(self, cell):
         """
         Initialize neutral hydrogen density.
         """
         
-        return (1.0 - self.Y) * (1.0 - self.InitialHIIFraction) * self.InitializeDensity() / m_H
+        return (1.0 - self.Y) * (1.0 - self.ionization[cell]) * self.density[cell] / m_H
     
-    def InitializeHIIDensity(self):
+    def InitializeHIIDensity(self, cell):
         """
         Initialize ionized hydrogen density.
         """
         
-        return (1.0 - self.Y) * self.InitialHIIFraction * self.InitializeDensity() / m_H
+        return (1.0 - self.Y) * self.ionization[cell] * self.density[cell] / m_H
         
-    def InitializeHeIDensity(self):
+    def InitializeHeIDensity(self, cell):
         """
         Initialize neutral helium density - initial ionized fraction of helium is assumed
         to be the same as that of hydrogen.
         """
         
-        return self.Y * (1.0 - self.InitialHIIFraction) * self.InitializeDensity() / m_HeI
+        return self.Y * (1.0 - self.ionization[cell]) * self.density[cell] / m_HeI
         
-    def InitializeHeIIDensity(self):
+    def InitializeHeIIDensity(self, cell):
         """
         Initialize ionized helium density - initial ionized fraction of helium is assumed
         to be the same as that of hydrogen.
         """
         
-        return self.Y * self.InitialHIIFraction * self.InitializeDensity() / m_HeII
+        return self.Y * self.ionization[cell] * self.density[cell] / m_HeII
         
-    def InitializeHeIIIDensity(self):
+    def InitializeHeIIIDensity(self, cell):
         """
         Initialize doubly ionized helium density - assumed to be zero.
         """
         
-        return self.data * 0.0 
+        return 0.0 
         
-    def InitializeElectronDensity(self):
+    def InitializeElectronDensity(self, cell):
         """
         Initialize electron density - n_e = n_HII + n_HeII + 2n_HeIII (I'm pretty sure the equation in 
         Thomas and Zaroubi 2007 is wrong - they had n_e = n_HII + n_HeI + 2n_HeII).
         """
         
-        return self.InitializeHIIDensity() + self.InitializeHeIIDensity() + 2.0 * self.InitializeHeIIIDensity()
+        return self.InitializeHIIDensity(cell) + self.InitializeHeIIDensity(cell) + 2.0 * self.InitializeHeIIIDensity(cell)
         
         

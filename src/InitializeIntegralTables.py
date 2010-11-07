@@ -37,23 +37,32 @@ class InitializeIntegralTables:
         self.pf = pf
         self.rs = RadiationSource(pf)
         self.SourceSpectrum = pf["SourceSpectrum"]
+        self.SourceTemperature = pf["SourceTemperature"]
+        self.SourceMass = pf["SourceMass"]
+        self.SourcePowerLawIndex = pf["SourcePowerLawIndex"]
+        self.InitialRedshift = pf["InitialRedshift"]
         self.dx = pf["LengthUnits"] / pf["GridDimensions"]
         self.Emin = pf["SourceMinEnergy"]
         self.Emax = pf["SourceMaxEnergy"]
+        self.MultiSpecies = pf["MultiSpecies"]
         self.HIColumnMin = 1e-5 * data["HIDensity"][0] * self.dx
         self.HIColumnMax = 10 * np.sum(data["HIDensity"] * self.dx)
-        self.HeIColumnMin = 1e-5 * data["HIDensity"][0] * self.dx
-        self.HeIColumnMax = 10 * np.sum(data["HeIDensity"] * self.dx)
-        self.HeIIColumnMin = 1e-5 * data["HeIIDensity"][0] * self.dx
-        self.HeIIColumnMax = 10 * np.sum(data["HeIIDensity"] * self.dx)
-        self.HINBins = pf["ColumnDensityBins"]
-        self.HeINBins = pf["ColumnDensityBins"]
-        self.HeIINBins = pf["ColumnDensityBins"]
-        
+        self.HINBins = pf["ColumnDensityBinsHI"]
+        self.HeINBins = pf["ColumnDensityBinsHeI"]
+        self.HeIINBins = pf["ColumnDensityBinsHeII"]
         self.HIColumn = np.logspace(np.log10(self.HIColumnMin), np.log10(self.HIColumnMax), self.HINBins)
-        self.HeIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
-        self.HeIIColumn = np.logspace(np.log10(self.HeIIColumnMin), np.log10(self.HeIIColumnMax), self.HeIINBins)
-        
+                
+        if self.MultiSpecies > 0: 
+            self.HeIColumnMin = 1e-5 * data["HIDensity"][0] * self.dx
+            self.HeIColumnMax = 10 * np.sum(data["HeIDensity"] * self.dx)
+            self.HeIIColumnMin = 1e-5 * data["HeIIDensity"][0] * self.dx
+            self.HeIIColumnMax = 10 * np.sum(data["HeIIDensity"] * self.dx)
+            self.HeIColumn = self.MultiSpecies * np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
+            self.HeIIColumn = self.MultiSpecies * np.logspace(np.log10(self.HeIIColumnMin), np.log10(self.HeIIColumnMax), self.HeIINBins)
+        else:
+            self.HeIColumn = np.zeros_like(self.HIColumn)
+            self.HeIIColumn = np.zeros_like(self.HIColumn)
+                
         try: os.mkdir("tabs")
         except OSError:
             pass
@@ -79,36 +88,38 @@ class InitializeIntegralTables:
         """
         Returns the filename following the convention:
                 
-            filename = SourceType_Source(Mass/Temperature)_{SourceSpectrum}_InitialRedshift_Dimension
+            filename = SourceType_Source(Mass/Temperature)_{SourceSpectrum}_InitialRedshift.h5
                 
-            SourceType:     bb or bh
+            SourceType:     bb, popIII, or bh
             SourceSpectrum: pl-alpha, agn, mcd (only applicable for bh sources)
-            Dimension:      Dimension^3 is the number of elements in the lookup table
         
         """
         
-        zi = "z{0}".format(self.pf["InitialRedshift"])
+        zi = "z{0}".format(self.InitialRedshift)
+        
+        if self.MultiSpecies == 0: dim = "1D"
+        else: dim = "3D"
         
         if self.SourceSpectrum == 0: 
             src = "bb"
-            mort = "{0}K".format(int(self.pf["SourceTemperature"]))
-            return "{0}_{1}_{2}.h5".format(src, mort, zi)
+            mort = "{0}K".format(int(self.SourceTemperature))
+            return "{0}_{1}_{2}_{3}.h5".format(src, mort, zi, dim)
             
         elif self.SourceSpectrum == 1:
             src = "popIII"
-            mort = "{0}M".format(int(self.pf["SourceMass"]))
-            return "{0}_{1}_{2}.h5".format(src, mort, zi)
+            mort = "{0}M".format(int(self.SourceMass))
+            return "{0}_{1}_{2}_{3}.h5".format(src, mort, zi, dim)
             
         else: 
             src = "bh"
-            mort = "{0}M".format(int(self.pf["SourceMass"]))
+            mort = "{0}M".format(int(self.SourceMass))
             
-            if self.pf["SourceSpectrum"] == 2: spec = "pl-{0}".format(self.pf["SourcePowerLawIndex"])
-            elif self.pf["SourceSpectrum"] == 3: spec = "agn"
-            elif self.pf["SourceSpectrum"] == 4: spec = "mcd"
+            if self.SourceSpectrum == 2: spec = "pl-{0}".format(self.pf["SourcePowerLawIndex"])
+            elif self.SourceSpectrum == 3: spec = "agn"
+            elif self.SourceSpectrum == 4: spec = "mcd"
             else: spec = "unknown"
         
-            return "{0}_{1}_{2}_{3}.h5".format(src, mort, spec, zi)
+            return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, spec, zi, dim)
             
     def ReadIntegralTable(self):
         """
@@ -124,14 +135,16 @@ class InitializeIntegralTables:
         itab = {}
         
         if os.path.exists("tabs/{0}".format(filename)):
-            print "Found an integral table for this source.  Reading tabs/{0}".format(filename)
+            print "Found an integral table for this source.  Reading tabs/{0}\n".format(filename)
             f = h5py.File("tabs/{0}".format(filename), 'r')
             
             for item in f["IntegralTable"]: itab[item] = f["IntegralTable"][item].value
             
             itab["HIColumnValues_x"] = f["ColumnVectors"]["HIColumnValues_x"].value
-            itab["HeIColumnValues_y"] = f["ColumnVectors"]["HeIColumnValues_y"].value
-            itab["HeIIColumnValues_z"] = f["ColumnVectors"]["HeIIColumnValues_z"].value
+            
+            if self.MultiSpecies > 0:
+                itab["HeIColumnValues_y"] = f["ColumnVectors"]["HeIColumnValues_y"].value
+                itab["HeIIColumnValues_z"] = f["ColumnVectors"]["HeIIColumnValues_z"].value
                 
             return itab
             
@@ -155,8 +168,10 @@ class InitializeIntegralTables:
         for integral in itabs: tab_grp.create_dataset(integral, data = itabs[integral])
     
         col_grp.create_dataset("HIColumnValues_x", data = self.HIColumn)
-        col_grp.create_dataset("HeIColumnValues_y", data = self.HeIColumn)
-        col_grp.create_dataset("HeIIColumnValues_z", data = self.HeIIColumn)
+        
+        if self.MultiSpecies > 0:
+            col_grp.create_dataset("HeIColumnValues_y", data = self.HeIColumn)
+            col_grp.create_dataset("HeIIColumnValues_z", data = self.HeIIColumn)
         
         f.close()
                     
@@ -180,17 +195,24 @@ class InitializeIntegralTables:
             return itabs
         else:
             itabs = {}     
-            tab = np.zeros([self.HINBins, self.HINBins, self.HINBins])
-            
-            for integral in IntegralList:
-                for i, ncol_HI in enumerate(self.HIColumn):
-                    print "Tabulating i = {0}...".format(i)
-                    for j, ncol_HeI in enumerate(self.HeIColumn):
-                        for k, ncol_HeII in enumerate(self.HeIIColumn):
-                            tab[i][j][k] = eval("self.{0}({1})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII]))    
-                                
-                itabs[integral] = tab      
-                
+
+            # If hydrogen-only
+            if self.MultiSpecies == 0:
+                tab = np.zeros(self.HINBins)
+                for integral in IntegralList:
+                    for i, ncol_HI in enumerate(self.HIColumn):
+                        tab[i] = eval("self.{0}({1})".format(integral, [ncol_HI, 0.0, 0.0]))
+                        
+            else:
+                tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
+                for integral in IntegralList:
+                    for i, ncol_HI in enumerate(self.HIColumn):
+                        print "Tabulating i = {0}...".format(i)
+                        for j, ncol_HeI in enumerate(self.HeIColumn):
+                            for k, ncol_HeII in enumerate(self.HeIIColumn):
+                                tab[i][j][k] = eval("self.{0}({1})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII]))    
+                                    
+            itabs[integral] = tab
             self.WriteIntegralTable(itabs)    
             return itabs
     

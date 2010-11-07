@@ -15,7 +15,7 @@ from Constants import *
 def SetDefaultParameterValues():
     pf = {
           # Grid parameters
-          "GridDimensions": 1000, \
+          "GridDimensions": 1500, \
           
           # Packages
           "UseScipy": 1, \
@@ -23,7 +23,9 @@ def SetDefaultParameterValues():
           "InterpolationMethod": 1, \
           
           # Integral tabulation
-          "ColumnDensityBins": 50, \
+          "ColumnDensityBinsHI": 100, \
+          "ColumnDensityBinsHeI": 50, \
+          "ColumnDensityBinsHeII": 50, \
           
           # Units
           "LengthUnits": cm_per_kpc, \
@@ -31,11 +33,13 @@ def SetDefaultParameterValues():
           
           # Control parameters
           "InitialTimestep": 0.01, \
+          "CurrentTime": 0.0, \
           "StopTime": 50.0, \
-          "dtDataDump": 5.0, \
+          "dtDataDump": 1.0, \
           "DataDumpName": 'dd', \
           "SavePrefix": 'rt', \
           "StartRadius": 0.01, \
+          "AdaptiveTimestep": 1, \
           
           # General parameters
           "MultiSpecies": 0, \
@@ -54,6 +58,7 @@ def SetDefaultParameterValues():
           "SourceRadius": 1.0, \
           "SourceMass": 1e3, \
           "SourcePowerLawIndex": 1.0, \
+          "SourceRadiativeEfficiency": 0.1, \
           "SourceLifetime": 50.0, \
           "SourceMaxEnergy": 1e2, \
           "SourceMinEnergy": 1, \

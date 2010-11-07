@@ -32,7 +32,9 @@ class Radiate:
         self.rs = RadiationSource(pf)
         self.pf = pf
         self.itabs = itabs
+        self.MultiSpecies = pf["MultiSpecies"]
         self.InterpolationMethod = pf["InterpolationMethod"]
+        self.AdaptiveTimestep = pf["AdaptiveTimestep"]
         self.GridDimensions = pf["GridDimensions"]
         self.LengthUnits = pf["LengthUnits"]
         self.StartRadius = pf["StartRadius"]
@@ -60,37 +62,49 @@ class Radiate:
             
             return Gamma_HI * n_HI - alpha_HII * n_e * n_HII
 
-        # Loop over cells radially, solve rate equations, update values in data
-        for cell in self.grid:
-            
-            if (cell * self.dx < (self.StartRadius * self.LengthUnits)): continue
-                        
-            # Column densities for absorbers
-            ncol_HI = np.sum(data["HIDensity"][0:cell] * self.dx)
-            ncol_HeI = np.sum(data["HeIDensity"][0:cell] * self.dx)
-            ncol_HeII = np.sum(data["HeIIDensity"][0:cell] * self.dx)
-                        
-            T = data["Temperature"][cell]
-            n_e = data["ElectronDensity"][cell]
-            n_HI = data["HIDensity"][cell]
-            n_HII = data["HIIDensity"][cell]
-            Gamma_HI = self.IonizationRateCoefficientHI(data, cell, t)
-            alpha_HII = self.RecombinationRateCoefficientHII(T)
-                        
-            newHII = odeint(HIIRateEquation, [n_HII, 0], [0, dt], \
-                args = (n_HI, n_e, Gamma_HI, alpha_HII,), mxstep = 1000)[1][0]                
+        while True:
+
+            HitIonizationLimit = False
+
+            # Loop over cells radially, solve rate equations, update values in data
+            for cell in self.grid:
                 
-            if newHII > (n_HI + n_HII):    
-                newHII = n_HI + n_HII - tiny_number
-                newHI = tiny_number
-            
-            newHI = (n_HI + n_HII) - newHII
-                                                                                                                                                       
-            newdata["HIIDensity"][cell] = newHII
-            newdata["HIDensity"][cell] = (n_HI + n_HII) - newHII
-            newdata["ElectronDensity"][cell] = newHII + newdata["HeIIDensity"][cell] + 2.0 * newdata["HeIIIDensity"][cell]
-                        
-        dt = dt
+                if (cell * self.dx < (self.StartRadius * self.LengthUnits)): continue
+                            
+                # Column densities for absorbers
+                ncol_HI = np.sum(data["HIDensity"][0:cell] * self.dx)
+                ncol_HeI = np.sum(data["HeIDensity"][0:cell] * self.dx)
+                ncol_HeII = np.sum(data["HeIIDensity"][0:cell] * self.dx)
+                            
+                T = data["Temperature"][cell]
+                n_e = data["ElectronDensity"][cell]
+                n_HI = data["HIDensity"][cell]
+                n_HII = data["HIIDensity"][cell]
+                Gamma_HI = self.IonizationRateCoefficientHI(data, cell, t)
+                alpha_HII = self.RecombinationRateCoefficientHII(T)
+
+                newHII = odeint(HIIRateEquation, [n_HII, 0], [0, dt], \
+                    args = (n_HI, n_e, Gamma_HI, alpha_HII,), mxstep = 1000)[1][0]                
+                                                                                                                
+                if newHII > (n_HI + n_HII):
+                    
+                    if self.AdaptiveTimestep == 0:
+                        newHII = n_HI + n_HII - tiny_number
+                    
+                    if self.AdaptiveTimestep == 1:
+                        dt /= 2
+                        HitIonizationLimit = True
+                        break
+                
+                newHI = (n_HI + n_HII) - newHII
+                
+                # Update quantities in 'data'.                                                                                                                                               
+                newdata["HIIDensity"][cell] = newHII
+                newdata["HIDensity"][cell] = (n_HI + n_HII) - newHII
+                newdata["ElectronDensity"][cell] = newHII + newdata["HeIIDensity"][cell] + 2.0 * newdata["HeIIIDensity"][cell]
+          
+            if HitIonizationLimit is False: break        
+                                
         return newdata, dt
         
     def RecombinationRateCoefficientHII(self, T):
@@ -108,10 +122,13 @@ class Radiate:
         ncol_HeI = np.sum(data["HeIDensity"][0:cell] * self.dx)
         ncol_HeII = np.sum(data["HeIIDensity"][0:cell] * self.dx)
         r = self.pf["LengthUnits"] * cell / self.pf["GridDimensions"]
+        
+        if self.MultiSpecies == 0:
+            HIPhotoIonizationRateIntegral = Interpolate1D(self.itabs["HIPhotoIonizationRateIntegral"], self.HIColumn, ncol_HI, self.InterpolationMethod)
+        else:
+            HIPhotoIonizationRateIntegral = Interpolate3D(self.itabs["HIPhotoIonizationRateIntegral"], [self.HIColumn, self.HeIColumn, self.HeIIColumn], [ncol_HI, ncol_HeI, ncol_HeII], self.InterpolationMethod)
                                 
-        PhotoIonizationTerm = self.rs.BolometricLuminosity(t) * \
-            Interpolate3D(self.itabs["HIPhotoIonizationRateIntegral"], [self.HIColumn, self.HeIColumn, self.HeIIColumn], [ncol_HI, ncol_HeI, ncol_HeII], self.InterpolationMethod) / \
-            4.0 / np.pi / r**2
+        PhotoIonizationTerm = self.rs.BolometricLuminosity(t) * HIPhotoIonizationRateIntegral / 4.0 / np.pi / r**2
                                                                                         
         return PhotoIonizationTerm
         
