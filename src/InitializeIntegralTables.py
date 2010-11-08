@@ -15,8 +15,7 @@ from ComputeCrossSections import *
 from RadiationSource import *
 from scipy.integrate import romberg as integrate
 import numpy as np
-import h5py
-import os
+import h5py, os
 
 E_HI = 13.6
 E_HeI = 24.6
@@ -51,6 +50,8 @@ class InitializeIntegralTables:
         self.HeINBins = pf["ColumnDensityBinsHeI"]
         self.HeIINBins = pf["ColumnDensityBinsHeII"]
         self.HIColumn = np.logspace(np.log10(self.HIColumnMin), np.log10(self.HIColumnMax), self.HINBins)
+        
+        self.rt1d = os.environ.get("RT1D")
                 
         if self.MultiSpecies > 0: 
             self.HeIColumnMin = 1e-5 * data["HIDensity"][0] * self.dx
@@ -134,24 +135,25 @@ class InitializeIntegralTables:
         filename = self.DetermineTableName()
         itab = {}
         
-        if os.path.exists("tabs/{0}".format(filename)):
-            print "Found an integral table for this source.  Reading tabs/{0}\n".format(filename)
-            f = h5py.File("tabs/{0}".format(filename), 'r')
-            
-            for item in f["IntegralTable"]: itab[item] = f["IntegralTable"][item].value
-            
-            itab["HIColumnValues_x"] = f["ColumnVectors"]["HIColumnValues_x"].value
-            
-            if self.MultiSpecies > 0:
-                itab["HeIColumnValues_y"] = f["ColumnVectors"]["HeIColumnValues_y"].value
-                itab["HeIIColumnValues_z"] = f["ColumnVectors"]["HeIIColumnValues_z"].value
-                
-            return itab
-            
+        if os.path.exists("{0}/input/{1}".format(rt1d, filename)): tabloc = "{0}/input/{1}".format(rt1d, filename)
+        elif os.path.exists("tabs/{0}".format(filename)): tabloc = "tabs/{0}".format(filename)
         else:
             print "Did not find a pre-existing integral table.  Generating tabs/{0} now...\n".format(filename)
             return None
         
+        print "Found an integral table for this source.  Reading tabs/{0}\n".format(filename)
+        f = h5py.File("tabs/{0}".format(filename), 'r')
+        
+        for item in f["IntegralTable"]: itab[item] = f["IntegralTable"][item].value
+        
+        itab["HIColumnValues_x"] = f["ColumnVectors"]["HIColumnValues_x"].value
+        
+        if self.MultiSpecies > 0:
+            itab["HeIColumnValues_y"] = f["ColumnVectors"]["HeIColumnValues_y"].value
+            itab["HeIIColumnValues_z"] = f["ColumnVectors"]["HeIIColumnValues_z"].value
+            
+        return itab
+                    
     def WriteIntegralTable(self, itabs):
         """
         Write out interpolation tables for the integrals that appear in our rate equations.

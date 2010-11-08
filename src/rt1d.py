@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 """
 rt1d.py
 
@@ -94,13 +95,15 @@ for i, pf in enumerate(all_pfs):
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
     t = this_pf["CurrentTime"]
     wct = int(t / dtDataDump) + 1
-    if not IsRestart: w.WriteAllData(data, 0, t)
+    if not IsRestart: 
+        w.WriteAllData(data, 0, t)
         
     while t <= StopTime:
         
+        if t == 0 and rank == 0: print "rt1d:  t = 0.0 / {0}".format(StopTime / TimeUnits)
+        
         # Progress bar
         if rank == 0:
-            if t == 0: print "rt1d:  t = 0.0 / {0}".format(StopTime / TimeUnits)
             pbar = ProgressBar(widgets = widget, maxval = dtDataDump / TimeUnits).start()
             pbar.update((t / TimeUnits) - ((wct - 1) * (dtDataDump / TimeUnits)))
         
@@ -109,10 +112,10 @@ for i, pf in enumerate(all_pfs):
                
         # Write-out data, or don't                                        
         if t == ddt[wct]:
+            pbar.finish()
             w.WriteAllData(data, wct, t)
-            if rank == 0: 
-                pbar.finish()
-                print "rt1d:  t = {0} / {1}".format(t / TimeUnits, StopTime / TimeUnits)
+            if rank == 0: print "rt1d:  t = {0} / {1}".format(t / TimeUnits, StopTime / TimeUnits)
+    
             wct += 1
         elif (t + dt) > ddt[wct]:
             dt = ddt[wct] - t
@@ -123,7 +126,7 @@ for i, pf in enumerate(all_pfs):
         
     elapsed = time.time() - start    
     del g, r, w, data
-    print "Calculation {0} ({1}) complete.  Elapsed time = {2} seconds.".format(i + 1, pf, round(elapsed, 2))
+    print "Calculation {0} ({1}) complete.  Elapsed time = {2} seconds.".format(i + 1, pf, int(elapsed))
 
     
 

@@ -11,6 +11,7 @@ driver of rt1d, calling our solvers which call all the various physics modules.
 """
 
 from RadiationSource import *
+from SecondaryElectrons import *
 from Interpolate import *
 from scipy.integrate import odeint
 import copy
@@ -30,6 +31,7 @@ SolverList = ["SolveHIRateEquation", "SolveHeIRateEquation", "SolveHeIIRateEquat
 class Radiate:
     def __init__(self, pf, itabs, n): 
         self.rs = RadiationSource(pf)
+        self.esec = SecondaryElectrons(pf)
         self.pf = pf
         self.itabs = itabs
         self.MultiSpecies = pf["MultiSpecies"]

@@ -43,6 +43,7 @@ def SetDefaultParameterValues():
           
           # General parameters
           "MultiSpecies": 0, \
+          "SecondaryElectronMethod": 0, \
           
           # Initial conditions
           "DensityProfile": 0, \
