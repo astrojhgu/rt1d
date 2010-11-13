@@ -93,10 +93,9 @@ for i, pf in enumerate(all_pfs):
     
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
-    t = this_pf["CurrentTime"]
+    t = this_pf["CurrentTime"] * TimeUnits
     wct = int(t / dtDataDump) + 1
-    if not IsRestart: 
-        w.WriteAllData(data, 0, t)
+    if not IsRestart: w.WriteAllData(data, 0, t)
         
     while t <= StopTime:
         

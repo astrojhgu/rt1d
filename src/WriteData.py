@@ -21,6 +21,7 @@ GlobalDir = os.getcwd()
 class WriteData:
     def __init__(self, pf):
         self.pf = pf
+        self.TimeUnits = pf["TimeUnits"]
         self.BaseName = pf["BaseName"]
 
     def WriteAllData(self, data, wct, t):
@@ -30,8 +31,10 @@ class WriteData:
 
         pf_grp = f.create_group("ParameterFile")
         data_grp = f.create_group("Data")
-                
-        for par in self.pf: pf_grp.create_dataset(par, data = self.pf[par])
+                        
+        for par in self.pf: 
+            if par == "CurrentTime": pf_grp.create_dataset(par, data = t / self.TimeUnits)
+            else: pf_grp.create_dataset(par, data = self.pf[par])
         for field in data: data_grp.create_dataset(field, data = data[field])
         
         f.close()

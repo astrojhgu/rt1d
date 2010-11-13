@@ -7,15 +7,17 @@ Created on 2010-08-25.
 
 Description: Tabulate integrals that appear in the rate equations.
 
-Notes: 
+To do:
+    -Add progressbar.
      
 """
 
 from ComputeCrossSections import *
 from RadiationSource import *
+from SecondaryElectrons import *
 from scipy.integrate import romberg as integrate
 import numpy as np
-import h5py, os
+import h5py, os, re
 
 E_HI = 13.6
 E_HeI = 24.6
@@ -29,12 +31,13 @@ m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
-IntegralList = ['HIPhotoIonizationRateIntegral']
+IntegralList = ['PhotoIonizationRateIntegralHI', 'ElectronHeatingIntegralHI', 'ElectronHeatingIntegralHeI', 'ElectronHeatingIntegralHeII', 'SecondaryIonizationRateIntegralHI']
 
 class InitializeIntegralTables: 
     def __init__(self, pf, data):
         self.pf = pf
         self.rs = RadiationSource(pf)
+        self.esec = SecondaryElectrons(pf)
         self.SourceSpectrum = pf["SourceSpectrum"]
         self.SourceTemperature = pf["SourceTemperature"]
         self.SourceMass = pf["SourceMass"]
@@ -58,8 +61,8 @@ class InitializeIntegralTables:
             self.HeIColumnMax = 10 * np.sum(data["HeIDensity"] * self.dx)
             self.HeIIColumnMin = 1e-5 * data["HeIIDensity"][0] * self.dx
             self.HeIIColumnMax = 10 * np.sum(data["HeIIDensity"] * self.dx)
-            self.HeIColumn = self.MultiSpecies * np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
-            self.HeIIColumn = self.MultiSpecies * np.logspace(np.log10(self.HeIIColumnMin), np.log10(self.HeIIColumnMax), self.HeIINBins)
+            self.HeIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
+            self.HeIIColumn = np.logspace(np.log10(self.HeIIColumnMin), np.log10(self.HeIIColumnMax), self.HeIINBins)
         else:
             self.HeIColumn = np.zeros_like(self.HIColumn)
             self.HeIIColumn = np.zeros_like(self.HIColumn)
@@ -67,23 +70,6 @@ class InitializeIntegralTables:
         try: os.mkdir("tabs")
         except OSError:
             pass
-            
-        #if self.pf["UseScipy"]:
-        #    if self.pf["IntegrationMethod"] == 0:
-        #        try: from scipy.integrate import romberg as integrate
-        #        except ImportError:
-        #            print "Module scipy not found.  Looks like we'll use our homegrown integration routines."
-        #            from Integrate import Romberg as integrate
-        #            
-        #    else:
-        #        try: from scipy.integrate import quad as integrate
-        #        except ImportError:
-        #            print "Module scipy not found.  Looks like we'll use our homegrown integration routines."
-        #            from Integrate import Romberg as integrate
-        #
-        #else: # Need to make my own quad routine.
-        #    if self.pf["IntegrationMethod"] == 0: from Integrate import Romberg as integrate
-        #    else: from Integrate import Romberg as integrate
         
     def DetermineTableName(self):    
         """
@@ -135,7 +121,7 @@ class InitializeIntegralTables:
         filename = self.DetermineTableName()
         itab = {}
         
-        if os.path.exists("{0}/input/{1}".format(rt1d, filename)): tabloc = "{0}/input/{1}".format(rt1d, filename)
+        if os.path.exists("{0}/input/{1}".format(self.rt1d, filename)): tabloc = "{0}/input/{1}".format(self.rt1d, filename)
         elif os.path.exists("tabs/{0}".format(filename)): tabloc = "tabs/{0}".format(filename)
         else:
             print "Did not find a pre-existing integral table.  Generating tabs/{0} now...\n".format(filename)
@@ -200,36 +186,87 @@ class InitializeIntegralTables:
 
             # If hydrogen-only
             if self.MultiSpecies == 0:
-                tab = np.zeros(self.HINBins)
                 for integral in IntegralList:
+                    tab = np.zeros(self.HINBins)
+                    if not re.search('HI', integral): continue
                     for i, ncol_HI in enumerate(self.HIColumn):
                         tab[i] = eval("self.{0}({1})".format(integral, [ncol_HI, 0.0, 0.0]))
                         
+                    itabs[integral] = tab
+                    del tab
+                    
+            # If we're including helium as well         
             else:
-                tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
                 for integral in IntegralList:
+                    tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
                     for i, ncol_HI in enumerate(self.HIColumn):
-                        print "Tabulating i = {0}...".format(i)
                         for j, ncol_HeI in enumerate(self.HeIColumn):
                             for k, ncol_HeII in enumerate(self.HeIIColumn):
                                 tab[i][j][k] = eval("self.{0}({1})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII]))    
                                     
-            itabs[integral] = tab
+                    itabs[integral] = tab
+                    del tab
+                    
             self.WriteIntegralTable(itabs)    
             return itabs
     
     def OpticalDepth(self, E, n):
         """
-        Returns the optical depth at energy E due to column densities of HI, HeI, and HeII.
+        Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which
+        are stored in the variable 'n' as a three element array.
         """
         
         tau = 0.0
         for i, column in enumerate(n):
             tau += PhotoIonizationCrossSection(E, i) * column
-                                                                                        
+                                                                                                
         return tau
+        
+    def ElectronHeatingIntegralHI(self, n = [0.0, 0.0, 0.0]):
+        """
+        Returns the amount of heat deposited by secondary electrons from HI ionizations.  This is 
+        the first term in TZ07 Eq. 12.
+        
+            units: cm^2 / s
+            notes: the dimensionality is resolved later when we multiply by the bolometric luminosity (erg / s),
+                   the number density of collision partners (cm^-3), and divide by 4 pi r^2 (cm^-2), leaving us 
+                   with a true heating rate in erg / cm^3 / s.
+        """    
+        
+        integrand = lambda E: PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
+            np.exp(-self.OpticalDepth(E, n)) / E
+                        
+        integral = integrate(integrand, E_HI, self.Emax)
+                                                                       
+        return integral
+            
+    def ElectronHeatingIntegralHeI(self, n = [0.0, 0.0, 0.0]):
+        """
+        Returns the amount of heat deposited by secondary electrons from HeI ionizations.  For full explanation, 
+        see 'ElectronHeatingIntegralHI'.
+        """    
+        
+        integrand = lambda E: PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
+            np.exp(-self.OpticalDepth(E, n)) / E
+            
+        integral = integrate(integrand, E_HeI, self.Emax)
+                                                               
+        return integral
+            
+    def ElectronHeatingIntegralHeII(self, n = [0.0, 0.0, 0.0]):
+        """
+        Returns the amount of heat deposited by secondary electrons from HeII ionizations.  For full explanation, 
+        see 'ElectronHeatingIntegralHI'.
+        """   
+        
+        integrand = lambda E: PhotoIonizationCrossSection(E, 2) * (E - E_HeII) * self.rs.Spectrum(E) * \
+            np.exp(-self.OpticalDepth(E, n)) / E   
+            
+        integral = integrate(integrand, E_HeII, self.Emax)
+                                                               
+        return integral    
     
-    def HIPhotoIonizationRateIntegral(self, n = [0.0, 0.0, 0.0]):
+    def PhotoIonizationRateIntegralHI(self, n = [0.0, 0.0, 0.0]):
         """
         Returns the value of the bound-free photoionization rate integral of HI.  However, because 
         source luminosities vary with time and distance, it is unnormalized.  To get a true 
@@ -238,11 +275,23 @@ class InitializeIntegralTables:
         """
         
         integrand = lambda E: PhotoIonizationCrossSection(E, 0) * self.rs.Spectrum(E) * \
-            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)
+            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
             
         integral = integrate(integrand, E_HI, self.Emax)
-                                                               
-        return integral
+                                                                                                      
+        return integral  
+        
+    def SecondaryIonizationRateIntegralHI(self, n = [0.0, 0.0, 0.0]):
+        """
+        
+        """
+        
+        integrand = lambda E: PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
+            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HI   
+            
+        integral = integrate(integrand, E_HI, self.Emax)
+                                                                                                      
+        return integral  
         
     def HISecondaryIonizationRateHI(self):
         pass

@@ -40,6 +40,8 @@ class RadiationSource:
     def __init__(self, pf):
         self.pf = pf
         self.s_type = pf["SourceSpectrum"]
+        self.tau = pf["SourceLifetime"]
+        self.TimeUnits = pf["TimeUnits"]
         
         if self.s_type == 0:
             """
@@ -110,7 +112,7 @@ class RadiationSource:
             if self.alpha == -1.0: 
                 integral = (1. / 1000.0**self.alpha) * (self.Emax - self.Emin)
             elif self.alpha == -2.0: 
-                integral = (1. / 1000.0**self.alpha) * na.log(self.Emax / self.Emin)    
+                integral = (1. / 1000.0**self.alpha) * np.log(self.Emax / self.Emin)    
             else: 
                 integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
                 (self.Emax**(self.alpha + 2.0) - self.Emin**(self.alpha + 2.0))   
@@ -122,6 +124,8 @@ class RadiationSource:
         Returns the bolometric luminosity of a source in units of erg/s.  For accreting black holes, the 
         bolometric luminosity can increase with time, hence the optional 't' argument.
         """
+        
+        if (t / self.TimeUnits) > self.tau: return 0.0
         
         if self.s_type == 0:
             return sigma_SB * self.T**4 * 4.0 * np.pi * (self.R * cm_per_rsun)**2

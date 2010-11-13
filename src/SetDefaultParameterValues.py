@@ -32,7 +32,7 @@ def SetDefaultParameterValues():
           "TimeUnits": s_per_myr, \
           
           # Control parameters
-          "InitialTimestep": 0.01, \
+          "InitialTimestep": 0.1, \
           "CurrentTime": 0.0, \
           "StopTime": 50.0, \
           "dtDataDump": 1.0, \
@@ -43,7 +43,7 @@ def SetDefaultParameterValues():
           
           # General parameters
           "MultiSpecies": 0, \
-          "SecondaryElectronMethod": 0, \
+          "SecondaryElectronMethod": 1, \
           
           # Initial conditions
           "DensityProfile": 0, \

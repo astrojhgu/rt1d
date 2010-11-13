@@ -79,7 +79,10 @@ class InitializeGrid:
                 0: Uniform temperature given by InitialTemperature
         """
         
-        if self.TemperatureProfile == 0: temperature = self.InitialTemperature 
+        if self.TemperatureProfile == 0: temperature = 2.725 * (1. + self.InitialRedshift)**3 / 251.
+        if self.TemperatureProfile == 1: 
+            if (float(cell) / self.GridDimensions) < self.StartRadius: temperature = 1e4
+            else: temperature = self.InitialTemperature
         
         return temperature
         
@@ -97,7 +100,7 @@ class InitializeGrid:
         
         if self.IonizationProfile == 0: ionization = self.InitialHIIFraction 
         if self.IonizationProfile == 1: 
-            if (float(cell) / self.GridDimensions) <= self.StartRadius: ionization = self.InitialHIIFraction
+            if (float(cell) / self.GridDimensions) < self.StartRadius: ionization = self.InitialHIIFraction
             else: ionization = 0.0
         
         return ionization    

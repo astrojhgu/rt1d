@@ -28,6 +28,9 @@ def Interpolate1D(dataset, array, value, method = 0):
     
     """
     
+    if len(array) == 3: array = array[0]
+    if type(value) is not int: value = value[0]
+        
     xdiff = list(abs(array - value))
     imin1 = xdiff.index(min(xdiff))
     
