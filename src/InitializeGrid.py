@@ -77,10 +77,12 @@ class InitializeGrid:
         
             TemperatureProfile:
                 0: Uniform temperature given by InitialTemperature
+                1: Uniform temperature given assuming the gas decouples from the CMB at z = 250
+                2: Gas within StartRadius at 10^4 K, InitialTemperature elsewhere
         """
-        
-        if self.TemperatureProfile == 0: temperature = 2.725 * (1. + self.InitialRedshift)**3 / 251.
-        if self.TemperatureProfile == 1: 
+        if self.TemperatureProfile == 0: temperature = self.InitialTemperature    
+        if self.TemperatureProfile == 1: temperature = 2.725 * (1. + self.InitialRedshift)**3 / 251.
+        if self.TemperatureProfile == 2: 
             if (float(cell) / self.GridDimensions) < self.StartRadius: temperature = 1e4
             else: temperature = self.InitialTemperature
         
@@ -92,8 +94,7 @@ class InitializeGrid:
         
             IonizationProfile:
                 0: Uniform ionization state given by InitialHIIFraction
-                1: Uniform ionization state except for gas within 'StartRadius' is assumed
-                   to be completely ionized ('completely' meaning neutral fraction of 1e-4).
+                1: Gas within 'StartRadius' has x_i = 0.9999, InitialHIIFraction elsewhere
                    
         Returns the HII fraction in 'cell'.
         """

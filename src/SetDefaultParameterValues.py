@@ -3,7 +3,7 @@ SetDefaultParameterValues.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
-Created on 2010-08-19.
+Created on 2010-10-19.
 
 Description: Complete parameter list with default values.  Stored as a python dictionary, read in when we initialize
 the parameter space.
@@ -33,6 +33,7 @@ def SetDefaultParameterValues():
           
           # Control parameters
           "InitialTimestep": 0.1, \
+          "TimestepSafetyFactor": 0.5, \
           "CurrentTime": 0.0, \
           "StopTime": 50.0, \
           "dtDataDump": 1.0, \
@@ -40,6 +41,9 @@ def SetDefaultParameterValues():
           "SavePrefix": 'rt', \
           "StartRadius": 0.01, \
           "AdaptiveTimestep": 1, \
+          
+          # Physics
+          "SolveTemperatureEvolution": 1, \
           
           # General parameters
           "MultiSpecies": 0, \
@@ -55,14 +59,19 @@ def SetDefaultParameterValues():
           
           # Source parameters
           "SourceSpectrum": 0, \
+          "SourceDiscretization": 0, \
           "SourceTemperature": 1e4, \
           "SourceRadius": 1.0, \
           "SourceMass": 1e3, \
           "SourcePowerLawIndex": 1.0, \
           "SourceRadiativeEfficiency": 0.1, \
           "SourceLifetime": 50.0, \
-          "SourceMaxEnergy": 1e2, \
-          "SourceMinEnergy": 1, \
+          "SourceMinEnergy": 100, \
+          "SourceMaxEnergy": 1e4, \
+          "SourceMinNormEnergy": 100, \
+          "SourceMaxNormEnergy": 1e4, \
+          "SourceSpectralEnergyBins": [13.61], \
+          "SourcePhotonLuminosity": 1e54, \
           
           # Cosmological Parameters (WMAP 7)
           "InitialRedshift": 20.0, \

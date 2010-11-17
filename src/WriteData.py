@@ -3,7 +3,7 @@ WriteData.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
-Created on 2010-08-18.
+Created on 2010-10-18.
 
 Description: Write out data to text or hdf5 files.  We will decide based on the value
 of the parameter 'WriteFormat' in the parameter file.

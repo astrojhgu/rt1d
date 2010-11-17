@@ -3,7 +3,7 @@ InitializeIntegralTables.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
-Created on 2010-08-25.
+Created on 2010-10-25.
 
 Description: Tabulate integrals that appear in the rate equations.
 
@@ -39,7 +39,10 @@ class InitializeIntegralTables:
         self.rs = RadiationSource(pf)
         self.esec = SecondaryElectrons(pf)
         self.SourceSpectrum = pf["SourceSpectrum"]
+        self.SourceDiscretization = pf["SourceDiscretization"]
+        self.SourceSpectralEnergyBins = pf["SourceSpectralEnergyBins"]
         self.SourceTemperature = pf["SourceTemperature"]
+        self.SourcePhotonLuminosity = pf["SourcePhotonLuminosity"]
         self.SourceMass = pf["SourceMass"]
         self.SourcePowerLawIndex = pf["SourcePowerLawIndex"]
         self.InitialRedshift = pf["InitialRedshift"]
@@ -77,7 +80,7 @@ class InitializeIntegralTables:
                 
             filename = SourceType_Source(Mass/Temperature)_{SourceSpectrum}_InitialRedshift.h5
                 
-            SourceType:     bb, popIII, or bh
+            SourceType:     mono, bb, popIII, or bh
             SourceSpectrum: pl-alpha, agn, mcd (only applicable for bh sources)
         
         """
@@ -86,6 +89,11 @@ class InitializeIntegralTables:
         
         if self.MultiSpecies == 0: dim = "1D"
         else: dim = "3D"
+        
+        if self.SourceSpectrum < 0: 
+            src = "mono"
+            lum = "{0:g}phot".format(int(self.SourcePhotonLuminosity))
+            return "{0}_{1}_{2}_{3}.h5".format(src, lum, zi, dim)
         
         if self.SourceSpectrum == 0: 
             src = "bb"
@@ -233,11 +241,18 @@ class InitializeIntegralTables:
                    with a true heating rate in erg / cm^3 / s.
         """    
         
-        integrand = lambda E: PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
-            np.exp(-self.OpticalDepth(E, n)) / E
+        if self.SourceDiscretization == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / E
+                                                        
+            integral = integrate(integrand, E_HI, self.Emax)
+            
+        else:
+            integral = 0
+            for E in self.SourceSpectralEnergyBins:
+                integral += PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / E
                         
-        integral = integrate(integrand, E_HI, self.Emax)
-                                                                       
         return integral
             
     def ElectronHeatingIntegralHeI(self, n = [0.0, 0.0, 0.0]):
@@ -274,10 +289,17 @@ class InitializeIntegralTables:
         and divide by 4*np.pi*r^2. 
         """
         
-        integrand = lambda E: PhotoIonizationCrossSection(E, 0) * self.rs.Spectrum(E) * \
-            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
-            
-        integral = integrate(integrand, E_HI, self.Emax)
+        if self.SourceDiscretization == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, 0) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
+                
+            integral = integrate(integrand, E_HI, self.Emax)
+                        
+        else:
+            integral = 0
+            for E in self.SourceSpectralEnergyBins:
+                integral += PhotoIonizationCrossSection(E, 0) * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)                
                                                                                                       
         return integral  
         
@@ -286,10 +308,17 @@ class InitializeIntegralTables:
         
         """
         
-        integrand = lambda E: PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
-            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HI   
+        if self.SourceDiscretization == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HI   
+                
+            integral = integrate(integrand, E_HI, self.Emax)
             
-        integral = integrate(integrand, E_HI, self.Emax)
+        else:
+            integral = 0
+            for E in self.SourceSpectralEnergyBins:
+                integral += PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HI 
                                                                                                       
         return integral  
         

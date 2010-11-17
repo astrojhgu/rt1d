@@ -100,11 +100,12 @@ for i, pf in enumerate(all_pfs):
     while t <= StopTime:
         
         if t == 0 and rank == 0: print "rt1d:  t = 0.0 / {0}".format(StopTime / TimeUnits)
-        
+
         # Progress bar
         if rank == 0:
             pbar = ProgressBar(widgets = widget, maxval = dtDataDump / TimeUnits).start()
-            pbar.update((t / TimeUnits) - ((wct - 1) * (dtDataDump / TimeUnits)))
+            try: pbar.update((t / TimeUnits) - ((wct - 1) * (dtDataDump / TimeUnits)))
+            except AssertionError: pass        
         
         # Evolve photons
         data, dt = r.EvolvePhotons(data, t, dt)
@@ -124,7 +125,6 @@ for i, pf in enumerate(all_pfs):
         t += dt
         
     elapsed = time.time() - start    
-    del g, r, w, data
     print "Calculation {0} ({1}) complete.  Elapsed time = {2} seconds.".format(i + 1, pf, int(elapsed))
 
     

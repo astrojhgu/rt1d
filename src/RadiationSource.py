@@ -3,7 +3,7 @@ RadiationSource.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
-Created on 2010-08-26.
+Created on 2010-10-26.
 
 Description: Radiation source class, contains all functions associated with initializing a 
 radiation source.  Mainly used for calculating and normalizing it's luminosity with time.
@@ -43,6 +43,13 @@ class RadiationSource:
         self.tau = pf["SourceLifetime"]
         self.TimeUnits = pf["TimeUnits"]
         
+        if self.s_type < 0:
+            """
+            Source of fixed monochromatic photon flux.
+            """
+            self.E = pf["SourceSpectralEnergyBins"][0]
+            self.L = pf["SourcePhotonLuminosity"]
+        
         if self.s_type == 0:
             """
             Blackbody.
@@ -64,6 +71,8 @@ class RadiationSource:
             self.M = pf["SourceMass"]
             self.Emin = pf["SourceMinEnergy"]
             self.Emax = pf["SourceMaxEnergy"]
+            self.EminNorm = pf["SourceMinNormEnergy"]
+            self.EmaxNorm = pf["SourceMaxNormEnergy"]
             self.alpha = -pf["SourcePowerLawIndex"] 
             self.epsilon = pf["SourceRadiativeEfficiency"]          
        
@@ -73,7 +82,7 @@ class RadiationSource:
         """
         Return the fraction of the bolometric luminosity emitted at this energy.  This quantity is dimensionless.
         """
-        
+                
         return self.LuminosityNormalization * self.SpecificIntensity(E) / self.BolometricLuminosity()
                 
     def SpecificIntensity(self, E):    
@@ -84,6 +93,8 @@ class RadiationSource:
             Units: erg / s / cm^2
             
         """
+        if self.s_type < 0:
+            return 1.0
         
         if self.s_type == 0 or self.s_type == 1:
             """
@@ -105,18 +116,21 @@ class RadiationSource:
         Returns a constant that normalizes a given spectrum to its bolometric luminosity.
         """
         
+        if self.s_type < 0:
+            integral = 1.0
+        
         if self.s_type == 0 or self.s_type == 1:
             integral, err = quad(self.SpecificIntensity, 0, np.inf)
             
         if self.s_type == 2:
             if self.alpha == -1.0: 
-                integral = (1. / 1000.0**self.alpha) * (self.Emax - self.Emin)
+                integral = (1. / 1000.0**self.alpha) * (self.EmaxNorm - self.EminNorm)
             elif self.alpha == -2.0: 
-                integral = (1. / 1000.0**self.alpha) * np.log(self.Emax / self.Emin)    
+                integral = (1. / 1000.0**self.alpha) * np.log(self.EmaxNorm / self.EminNorm)    
             else: 
                 integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
-                (self.Emax**(self.alpha + 2.0) - self.Emin**(self.alpha + 2.0))   
-                                              
+                (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))   
+                                                                                            
         return self.BolometricLuminosity(0.0) / integral  
         
     def BolometricLuminosity(self, t = 0.0):
@@ -126,6 +140,9 @@ class RadiationSource:
         """
         
         if (t / self.TimeUnits) > self.tau: return 0.0
+        
+        if self.s_type < 0:
+            return self.L / self.E
         
         if self.s_type == 0:
             return sigma_SB * self.T**4 * 4.0 * np.pi * (self.R * cm_per_rsun)**2

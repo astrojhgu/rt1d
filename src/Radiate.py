@@ -3,7 +3,7 @@ Radiate.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
-Created on 2010-08-18.
+Created on 2010-10-18.
 
 Description: This routine essentially runs the show.  The method 'EvolvePhotons' is the
 driver of rt1d, calling our solvers which call all the various physics modules.
@@ -39,13 +39,16 @@ class Radiate:
         self.pf = pf
         self.itabs = itabs
         self.MultiSpecies = pf["MultiSpecies"]
+        self.SolveTemperatureEvolution = pf["SolveTemperatureEvolution"]
         self.InterpolationMethod = pf["InterpolationMethod"]
         self.AdaptiveTimestep = pf["AdaptiveTimestep"]
         self.GridDimensions = pf["GridDimensions"]
         self.InitialRedshift = pf["InitialRedshift"]
         self.LengthUnits = pf["LengthUnits"]
         self.TimeUnits = pf["TimeUnits"]
+        self.TimestepSafetyFactor = pf["TimestepSafetyFactor"]
         self.StartRadius = pf["StartRadius"]
+        self.StartCell = int(self.StartRadius * self.GridDimensions)
         self.dx = self.LengthUnits / self.GridDimensions
         self.grid = np.arange(self.GridDimensions)
         self.HIColumn = n_col[0]
@@ -83,6 +86,8 @@ class Radiate:
             to temperature units will be done in the body of 'EvolvePhotons'. 
             
                 units: erg / cm^3 / s
+                notes: did TZ07 forget the Compton cooling term or is it included in the Compton heating
+                       term?
             """                        
             
             HeatGain = self.HeatGain(ncol, nabs, x_i, r, t)
@@ -116,32 +121,28 @@ class Radiate:
                 n_B = sum(nabs)
                 T = data["Temperature"][cell]
                 U = 3. * k_B * T * n_B / self.mu / 2.
-                r = self.LengthUnits * cell / self.GridDimensions                
-                                                                                
-                # Start by solving the HII rate equation                
+                r = self.LengthUnits * cell / self.GridDimensions     
+                                                                                                                                                     
+                # Some useful quantities for solving the HII rate equation                
                 Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, x_i, T, r, t)
                 alpha_HII = self.RecombinationRateCoefficientHII(T)
+                
+                # Compute timestep based on ionization timescale in closest cell to source
+                if self.AdaptiveTimestep and cell == self.StartCell: 
+                    dt = (1. / Gamma_HI) * self.TimestepSafetyFactor
+                
                 newHII = odeint(HIIRateEquation, [n_HII, 0], [0, dt], \
                     args = (n_HI, n_e, Gamma_HI, alpha_HII,), mxstep = 1000)[1][0] 
-                    
-                # Need to worry about ionizing more hydrogen than exists if our timestep is too big    
-                if newHII > (n_HI + n_HII) or newHII < 0.0:
-                    
-                    if self.AdaptiveTimestep == 0:
-                        newHII = (n_HI + n_HII) * (1. - 1e-6)
-                    
-                    if self.AdaptiveTimestep == 1: 
-                       dt /= 2
-                       HitIonizationLimit = True
-                       break
                                          
                 newHI = (n_HI + n_HII) - newHII  
-                                
-                # Next, solve the heat equation                         
-                newU = odeint(InternalEnergyRateEquation, [U, 0], [0, dt], \
-                    args = (nabs, ncol, nion, n_e, x_i, r,), mxstep = 1000)[1][0]   
-                    
-                newT = newU * 2. * self.mu / 3. / k_B / n_B 
+                                                
+                # Next, solve the heat equation  
+                if self.SolveTemperatureEvolution:                     
+                    newU = odeint(InternalEnergyRateEquation, [U, 0], [0, dt], \
+                        args = (nabs, ncol, nion, n_e, x_i, r,), mxstep = 1000)[1][0]   
+                        
+                    newT = newU * 2. * self.mu / 3. / k_B / n_B 
+                else: newT = T
                     
                 # Solve helium rate equations (not yet implemented)
                 newHeII = data["HeIIDensity"][cell]
@@ -163,28 +164,28 @@ class Radiate:
         
     def RecombinationRateCoefficientHII(self, T):
         """
-        Using approximation of Zaroubi et al. 2007.
+        Returns recombination rate coefficient, using approximation of Zaroubi et al. 2007.
+        
+            units: cm^3 / s
         """
         return 2.6e-13 * (T / 1.e4)**-0.85
         
     def IonizationRateCoefficientHI(self, ncol, n_e, x_i, T, r, t):
         """
-        Returns HI ionization rate coefficient, Gamma_HI.  Currently only has the photoionization term and collisional ionization term.
+        Returns ionization rate coefficient for HI, which we denote elsewhere as Gamma_HI.  Includes photo, collisional, 
+        and secondary ionizations from fast electrons.
         
-        n_col is a 3d array of HI, HeI, and HeII column densities
-        n_e is the number density of electrons (required for collisional ionization calculation)
-        r is the distance from the source of this cell.
-        
+            units: 1 / s
         """            
         PhotoIonizationTerm = self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["PhotoIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2      
         CollisionalIonizationTerm = self.rs.BolometricLuminosity(t) * n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T) / 4. / np.pi / r**2
         SecondaryIonizationTerm = self.esec.DepositionFraction(0.0, x_i, channel = 1) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2
-                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                          
         return PhotoIonizationTerm + CollisionalIonizationTerm + SecondaryIonizationTerm
         
     def HeatGain(self, ncol, nabs, x_i, r, t):
         """
-        Returns the total heating rate in a cell at radius r and time t.  These are all the terms in Eq. 12 of TZ07 on
+        Returns the total heating rate at radius r and time t.  These are all the terms in Eq. 12 of TZ07 on
         the RHS that are positive.
         
             units: erg / s / cm^3
@@ -241,6 +242,10 @@ class Radiate:
         
     def CollisionalIonizationCoolingCoefficient(self, T, species):
         """
+        Returns coefficient for cooling by collisional ionization.  These are equations B4.1a, b, and d respectively
+        from FK96.
+        
+            units: erg cm^3 / s
         """
         
         if species == 0: return 1.27e-21 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.58e5 / T)
@@ -248,6 +253,12 @@ class Radiate:
         if species == 2: return 4.95e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-6.31e5 / T)
     
     def CollisionalExcitationCoolingCoefficient(self, T, nabs, nion, species):
+        """
+        Returns coefficient for cooling by collisional excitation.  These are equations B4.3a, b, and c respectively
+        from FK96.
+        
+            units: erg cm^3 / s
+        """
         
         if species == 0: return 7.5e-19 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.18e5 / T)
         if species == 1: 
@@ -256,6 +267,12 @@ class Radiate:
         if species == 2: return 5.54e-17 * T**-0.397 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-4.73e5 / T)    
         
     def RecombinationCoolingCoefficient(self, T, species):
+        """
+        Returns coefficient for cooling by recombination.  These are equations B4.2a, b, and d respectively
+        from FK96.
+        
+            units: erg cm^3 / s
+        """
         
         if species == 0: return 6.5e-27 * T**0.5 * (T / 1e3)**-0.2 * (1.0 + (T / 1e6)**0.7)**-1.0
         if species == 1: return 1.55e-26 * T**0.3647
@@ -263,7 +280,9 @@ class Radiate:
         
     def DielectricRecombinationCoolingCoefficient(self, T):
         """
-        Fukugita & Kawasaki 1994 eq. B23.
+        Returns coefficient for cooling by dielectric recombination.  This is equation B4.2c from FK96.
+        
+            units: erg cm^3 / s
         """
         return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
         
