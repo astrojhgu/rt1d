@@ -41,6 +41,7 @@ class Radiate:
         self.MultiSpecies = pf["MultiSpecies"]
         self.SolveTemperatureEvolution = pf["SolveTemperatureEvolution"]
         self.InterpolationMethod = pf["InterpolationMethod"]
+        self.InitialTimestep = pf["InitialTimestep"] * pf["TimeUnits"]
         self.AdaptiveTimestep = pf["AdaptiveTimestep"]
         self.GridDimensions = pf["GridDimensions"]
         self.InitialRedshift = pf["InitialRedshift"]
@@ -102,7 +103,7 @@ class Radiate:
             # Loop over cells radially, solve rate equations, update values in data
             for cell in self.grid:
                 
-                if (cell * self.dx < (self.StartRadius * self.LengthUnits)): continue
+                if cell < self.StartCell: continue
                                              
                 # Nice names for all the quantities we need!
                 ncol_HI = np.sum(data["HIDensity"][0:cell] * self.dx)
@@ -122,20 +123,20 @@ class Radiate:
                 T = data["Temperature"][cell]
                 U = 3. * k_B * T * n_B / self.mu / 2.
                 r = self.LengthUnits * cell / self.GridDimensions     
-                                                                                                                                                     
+                                                                                                                                                                                                                       
                 # Some useful quantities for solving the HII rate equation                
                 Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, x_i, T, r, t)
                 alpha_HII = self.RecombinationRateCoefficientHII(T)
-                
+                                                                                                                                                
                 # Compute timestep based on ionization timescale in closest cell to source
-                if self.AdaptiveTimestep and cell == self.StartCell: 
-                    dt = (1. / Gamma_HI) * self.TimestepSafetyFactor
+                if self.AdaptiveTimestep and cell == (self.StartCell):
+                    dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, self.InitialTimestep)
                 
                 newHII = odeint(HIIRateEquation, [n_HII, 0], [0, dt], \
                     args = (n_HI, n_e, Gamma_HI, alpha_HII,), mxstep = 1000)[1][0] 
                                          
                 newHI = (n_HI + n_HII) - newHII  
-                                                
+                                                                
                 # Next, solve the heat equation  
                 if self.SolveTemperatureEvolution:                     
                     newU = odeint(InternalEnergyRateEquation, [U, 0], [0, dt], \
@@ -148,7 +149,7 @@ class Radiate:
                 newHeII = data["HeIIDensity"][cell]
                 newHeIII = data["HeIIIDensity"][cell]
                 newHeI = (n_HeI + n_HeII + n_HeIII) - newHeII - newHeIII
-                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                        
                 # Update quantities in 'data'.     
                 newdata["HIDensity"][cell] = newHI                                                                                                                                          
                 newdata["HIIDensity"][cell] = newHII
@@ -180,7 +181,7 @@ class Radiate:
         PhotoIonizationTerm = self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["PhotoIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2      
         CollisionalIonizationTerm = self.rs.BolometricLuminosity(t) * n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T) / 4. / np.pi / r**2
         SecondaryIonizationTerm = self.esec.DepositionFraction(0.0, x_i, channel = 1) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2
-                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                                                                                               
         return PhotoIonizationTerm + CollisionalIonizationTerm + SecondaryIonizationTerm
         
     def HeatGain(self, ncol, nabs, x_i, r, t):

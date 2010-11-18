@@ -300,7 +300,7 @@ class InitializeIntegralTables:
             for E in self.SourceSpectralEnergyBins:
                 integral += PhotoIonizationCrossSection(E, 0) * self.rs.Spectrum(E) * \
                     np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)                
-                                                                                                      
+                                                                                                                                                
         return integral  
         
     def SecondaryIonizationRateIntegralHI(self, n = [0.0, 0.0, 0.0]):

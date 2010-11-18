@@ -33,7 +33,7 @@ def Interpolate1D(dataset, array, value, method = 0):
         
     xdiff = list(abs(array - value))
     imin1 = xdiff.index(min(xdiff))
-    
+        
     if imin1 == 0: imin2 = imin1 + 1
     elif imin1 == len(array) - 1: imin2 = imin1 - 1
     else: imin1 = xdiff.index(min(xdiff[imin1 - 1], xdiff[imin1 + 1]))

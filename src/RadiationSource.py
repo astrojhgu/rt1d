@@ -42,6 +42,8 @@ class RadiationSource:
         self.s_type = pf["SourceSpectrum"]
         self.tau = pf["SourceLifetime"]
         self.TimeUnits = pf["TimeUnits"]
+        self.SourceDiscretization = pf["SourceDiscretization"]
+        self.SourceSpectralEnergyBins = pf["SourceSpectralEnergyBins"]
         
         if self.s_type < 0:
             """
@@ -116,20 +118,25 @@ class RadiationSource:
         Returns a constant that normalizes a given spectrum to its bolometric luminosity.
         """
         
-        if self.s_type < 0:
-            integral = 1.0
-        
-        if self.s_type == 0 or self.s_type == 1:
-            integral, err = quad(self.SpecificIntensity, 0, np.inf)
+        if self.SourceDiscretization:
+            integral = 0
+            for bin in self.SourceSpectralEnergyBins:
+                integral += self.SpecificIntensity(bin)
+        else:
+            if self.s_type < 0:
+                integral = 1.0
             
-        if self.s_type == 2:
-            if self.alpha == -1.0: 
-                integral = (1. / 1000.0**self.alpha) * (self.EmaxNorm - self.EminNorm)
-            elif self.alpha == -2.0: 
-                integral = (1. / 1000.0**self.alpha) * np.log(self.EmaxNorm / self.EminNorm)    
-            else: 
-                integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
-                (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))   
+            if self.s_type == 0 or self.s_type == 1:
+                integral, err = quad(self.SpecificIntensity, 0, np.inf)
+                
+            if self.s_type == 2:
+                if self.alpha == -1.0: 
+                    integral = (1. / 1000.0**self.alpha) * (self.EmaxNorm - self.EminNorm)
+                elif self.alpha == -2.0: 
+                    integral = (1. / 1000.0**self.alpha) * np.log(self.EmaxNorm / self.EminNorm)    
+                else: 
+                    integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
+                    (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))   
                                                                                             
         return self.BolometricLuminosity(0.0) / integral  
         

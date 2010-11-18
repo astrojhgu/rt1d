@@ -96,9 +96,9 @@ for i, pf in enumerate(all_pfs):
     t = this_pf["CurrentTime"] * TimeUnits
     wct = int(t / dtDataDump) + 1
     if not IsRestart: w.WriteAllData(data, 0, t)
-        
+                
     while t <= StopTime:
-        
+
         if t == 0 and rank == 0: print "rt1d:  t = 0.0 / {0}".format(StopTime / TimeUnits)
 
         # Progress bar
@@ -112,10 +112,9 @@ for i, pf in enumerate(all_pfs):
                
         # Write-out data, or don't                                        
         if t == ddt[wct]:
-            pbar.finish()
+            if rank == 0: pbar.finish()
             w.WriteAllData(data, wct, t)
             if rank == 0: print "rt1d:  t = {0} / {1}".format(t / TimeUnits, StopTime / TimeUnits)
-    
             wct += 1
         elif (t + dt) > ddt[wct]:
             dt = ddt[wct] - t
