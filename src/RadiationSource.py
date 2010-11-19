@@ -84,7 +84,7 @@ class RadiationSource:
         """
         Return the fraction of the bolometric luminosity emitted at this energy.  This quantity is dimensionless.
         """
-                
+                        
         return self.LuminosityNormalization * self.SpecificIntensity(E) / self.BolometricLuminosity()
                 
     def SpecificIntensity(self, E):    
@@ -149,7 +149,7 @@ class RadiationSource:
         if (t / self.TimeUnits) > self.tau: return 0.0
         
         if self.s_type < 0:
-            return self.L / self.E
+            return self.L * self.E * erg_per_ev
         
         if self.s_type == 0:
             return sigma_SB * self.T**4 * 4.0 * np.pi * (self.R * cm_per_rsun)**2

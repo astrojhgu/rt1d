@@ -77,9 +77,7 @@ class Radiate:
             
                 units: 1 /cm^3 / s
             """
-                        
-            #print Gamma_HI * n_HI, alpha_HII * n_e * n_HII_0[0]
-                        
+                                                
             return Gamma_HI * n_HI - alpha_HII * n_e * n_HII_0[0]
 
         def InternalEnergyRateEquation(T_0, t, nabs, ncol, nion, n_e, x_i, r):
@@ -98,73 +96,69 @@ class Radiate:
                                                                                                                                                                                                                                       
             return HeatGain - HeatLoss
             
-        while True:
-
-            HitIonizationLimit = False            
-
-            # Loop over cells radially, solve rate equations, update values in data
-            for cell in self.grid:
-                
-                if cell < self.StartCell: continue
-                                             
-                # Nice names for all the quantities we need!
-                ncol_HI = np.sum(data["HIDensity"][0:cell] * self.dx)
-                ncol_HeI = np.sum(data["HeIDensity"][0:cell] * self.dx)
-                ncol_HeII = np.sum(data["HeIIDensity"][0:cell] * self.dx)
-                ncol = [ncol_HI, ncol_HeI, ncol_HeII]
-                n_e = data["ElectronDensity"][cell]
-                n_HI = data["HIDensity"][cell]
-                n_HII = data["HIIDensity"][cell]
-                n_HeI = data["HeIDensity"][cell]
-                n_HeII = data["HeIIDensity"][cell]
-                n_HeIII = data["HeIIIDensity"][cell]
-                x_i = n_HII / (n_HI + n_HII)
-                nabs = [n_HI, n_HeI, n_HeII]
-                nion = [n_HII, n_HeII, n_HeIII]
-                n_B = sum(nabs)
-                T = data["Temperature"][cell]
-                U = 3. * k_B * T * n_B / self.mu / 2.
-                r = self.LengthUnits * cell / self.GridDimensions     
-                                                                                                                                                                                                                       
-                # Some useful quantities for solving the HII rate equation                
-                Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, x_i, T, r, t)
-                alpha_HII = self.RecombinationRateCoefficientHII(T)
-                                                                                                                                                                                                                                                        
-                # Compute timestep based on ionization timescale in closest cell to source
-                if self.AdaptiveTimestep and cell == (self.StartCell):
-                    #proj_newHII = (Gamma_HI * n_HI - alpha_HII * n_e * n_HII) * dt  # 
-                    dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, self.InitialTimestep)
-                    print dt / self.InitialTimestep
-                
-                newHII = odeint(HIIRateEquation, [n_HII, 0], [0, dt], \
-                    args = (n_HI, n_e, Gamma_HI, alpha_HII,), mxstep = 1000)[1][0] 
+        # Loop over cells radially, solve rate equations, update values in data
+        for cell in self.grid:
+            
+            if cell < self.StartCell: continue
                                          
-                newHI = (n_HI + n_HII) - newHII  
-                                                                
-                # Next, solve the heat equation  
-                if self.SolveTemperatureEvolution:                     
-                    newU = odeint(InternalEnergyRateEquation, [U, 0], [0, dt], \
-                        args = (nabs, ncol, nion, n_e, x_i, r,), mxstep = 1000)[1][0]   
-                        
-                    newT = newU * 2. * self.mu / 3. / k_B / n_B 
-                else: newT = T
+            # Nice names for all the quantities we need!
+            ncol_HI = np.sum(data["HIDensity"][0:cell] * self.dx)
+            ncol_HeI = np.sum(data["HeIDensity"][0:cell] * self.dx)
+            ncol_HeII = np.sum(data["HeIIDensity"][0:cell] * self.dx)
+            ncol = [ncol_HI, ncol_HeI, ncol_HeII]
+            n_e = data["ElectronDensity"][cell]
+            n_HI = data["HIDensity"][cell]
+            n_HII = data["HIIDensity"][cell]
+            n_H = n_HI + n_HII
+            n_HeI = data["HeIDensity"][cell]
+            n_HeII = data["HeIIDensity"][cell]
+            n_HeIII = data["HeIIIDensity"][cell]
+            x_i = n_HII / (n_HI + n_HII)
+            nabs = [n_HI, n_HeI, n_HeII]
+            nion = [n_HII, n_HeII, n_HeIII]
+            n_B = sum(nabs)
+            T = data["Temperature"][cell]
+            U = 3. * k_B * T * n_B / self.mu / 2.
+            r = self.LengthUnits * cell / self.GridDimensions     
+                                                                                                                                                                                                                   
+            # Some useful quantities for solving the HII rate equation                
+            Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, x_i, T, r, t)
+            alpha_HII = self.RecombinationRateCoefficientHII(T)
+                                                                                                                                                                                                                                                    
+            # Compute timestep based on ionization timescale in closest cell to source
+            if self.AdaptiveTimestep and cell == (self.StartCell):
+                dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, self.InitialTimestep)
+                                                                                
+            newHII = odeint(HIIRateEquation, [n_HII, 0], [0, dt], \
+                args = (n_HI, n_e, Gamma_HI, alpha_HII,), mxstep = 10000)[1][0]
+                                                            
+            if newHII > n_H:
+                newHII = 0.9999 * n_H
+                                                     
+            newHI = (n_HI + n_HII) - newHII  
+                                                            
+            # Next, solve the heat equation  
+            if self.SolveTemperatureEvolution:                     
+                newU = odeint(InternalEnergyRateEquation, [U, 0], [0, dt], \
+                    args = (nabs, ncol, nion, n_e, x_i, r,), mxstep = 1000)[1][0]   
                     
-                # Solve helium rate equations (not yet implemented)
-                newHeII = data["HeIIDensity"][cell]
-                newHeIII = data["HeIIIDensity"][cell]
-                newHeI = (n_HeI + n_HeII + n_HeIII) - newHeII - newHeIII
-                                                                                                                                                                                                                                        
-                # Update quantities in 'data'.     
-                newdata["HIDensity"][cell] = newHI                                                                                                                                          
-                newdata["HIIDensity"][cell] = newHII
-                newdata["HeIDensity"][cell] = newHeI
-                newdata["HeIIDensity"][cell] = newHeII
-                newdata["HeIIIDensity"][cell] = newHeIII
-                newdata["ElectronDensity"][cell] = newHII + newdata["HeIIDensity"][cell] + 2.0 * newdata["HeIIIDensity"][cell]
-                newdata["Temperature"][cell] = newT
-          
-            if HitIonizationLimit is False: break  
-                                
+                newT = newU * 2. * self.mu / 3. / k_B / n_B 
+            else: newT = T
+                
+            # Solve helium rate equations (not yet implemented)
+            newHeII = data["HeIIDensity"][cell]
+            newHeIII = data["HeIIIDensity"][cell]
+            newHeI = (n_HeI + n_HeII + n_HeIII) - newHeII - newHeIII
+                                                                                                                                                                                                                                    
+            # Update quantities in 'data'.     
+            newdata["HIDensity"][cell] = newHI                                                                                                                                          
+            newdata["HIIDensity"][cell] = newHII
+            newdata["HeIDensity"][cell] = newHeI
+            newdata["HeIIDensity"][cell] = newHeII
+            newdata["HeIIIDensity"][cell] = newHeIII
+            newdata["ElectronDensity"][cell] = newHII + newdata["HeIIDensity"][cell] + 2.0 * newdata["HeIIIDensity"][cell]
+            newdata["Temperature"][cell] = newT
+                                        
         return newdata, dt
         
     def RecombinationRateCoefficientHII(self, T):
@@ -185,7 +179,7 @@ class Radiate:
         PhotoIonizationTerm = self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["PhotoIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2      
         CollisionalIonizationTerm = self.rs.BolometricLuminosity(t) * n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T) / 4. / np.pi / r**2
         SecondaryIonizationTerm = self.esec.DepositionFraction(0.0, x_i, channel = 1) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2
-                                                                                                                                                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
         return PhotoIonizationTerm + CollisionalIonizationTerm + SecondaryIonizationTerm
         
     def HeatGain(self, ncol, nabs, x_i, r, t):

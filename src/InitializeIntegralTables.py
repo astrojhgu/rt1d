@@ -84,26 +84,29 @@ class InitializeIntegralTables:
             SourceSpectrum: pl-alpha, agn, mcd (only applicable for bh sources)
         
         """
-        
+                
         zi = "z{0}".format(self.InitialRedshift)
         
         if self.MultiSpecies == 0: dim = "1D"
         else: dim = "3D"
         
+        if self.SourceDiscretization == 0: cont = 'cont'
+        else: cont = 'disc'
+        
         if self.SourceSpectrum < 0: 
             src = "mono"
-            lum = "{0:g}phot".format(int(self.SourcePhotonLuminosity))
-            return "{0}_{1}_{2}_{3}.h5".format(src, lum, zi, dim)
+            mort = "{0:g}phot".format(int(self.SourcePhotonLuminosity))
+            return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, zi, dim, cont)
         
         if self.SourceSpectrum == 0: 
             src = "bb"
             mort = "{0}K".format(int(self.SourceTemperature))
-            return "{0}_{1}_{2}_{3}.h5".format(src, mort, zi, dim)
+            return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, zi, dim, cont)
             
         elif self.SourceSpectrum == 1:
             src = "popIII"
             mort = "{0}M".format(int(self.SourceMass))
-            return "{0}_{1}_{2}_{3}.h5".format(src, mort, zi, dim)
+            return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, zi, dim, cont)
             
         else: 
             src = "bh"
@@ -114,7 +117,7 @@ class InitializeIntegralTables:
             elif self.SourceSpectrum == 4: spec = "mcd"
             else: spec = "unknown"
         
-            return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, spec, zi, dim)
+            return "{0}_{1}_{2}_{3}_{4}_{5}.h5".format(src, mort, spec, zi, dim, cont)
             
     def ReadIntegralTable(self):
         """
@@ -299,8 +302,8 @@ class InitializeIntegralTables:
             integral = 0
             for E in self.SourceSpectralEnergyBins:
                 integral += PhotoIonizationCrossSection(E, 0) * self.rs.Spectrum(E) * \
-                    np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)                
-                                                                                                                                                
+                    np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)     
+                                                                                                                                                                    
         return integral  
         
     def SecondaryIonizationRateIntegralHI(self, n = [0.0, 0.0, 0.0]):

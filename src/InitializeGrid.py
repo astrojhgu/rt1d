@@ -33,6 +33,7 @@ class InitializeGrid:
         self.StartRadius = pf["StartRadius"]
         self.InitialRedshift = pf["InitialRedshift"]
         self.DensityProfile = pf["DensityProfile"]
+        self.InitialDensity = pf["InitialDensity"]
         self.TemperatureProfile = pf["TemperatureProfile"]
         self.InitialTemperature = pf["InitialTemperature"]
         self.IonizationProfile = pf["IonizationProfile"]
@@ -40,7 +41,6 @@ class InitializeGrid:
         self.MultiSpecies = pf["MultiSpecies"]
         
         self.Y = 0.2477 * self.MultiSpecies
-        self.DensityUnits = self.Cosmology.MeanBaryonDensity(self.InitialRedshift)
                         
         # Generic data array                
         self.cells = np.arange(self.GridDimensions)
@@ -67,7 +67,9 @@ class InitializeGrid:
                 1: Density profile given by NFW model.  Requires r_s and c in this case too.
         """        
         
-        if self.DensityProfile == 0: density = self.DensityUnits
+        if self.DensityProfile == -1: density = 1.87e-4 * m_H
+        if self.DensityProfile == 0: density = self.InitialDensity * m_H
+        if self.DensityProfile == 1: density = self.Cosmology.MeanBaryonDensity(self.InitialRedshift)
             
         return density
         

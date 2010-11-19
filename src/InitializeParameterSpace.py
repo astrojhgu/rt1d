@@ -58,7 +58,7 @@ class InitializeParameterSpace:
                         raise ValueError('The format of this parameter is not understood.')
                     
             pf_dict[parname.strip()] = parval
-            
+                    
         return pf_dict
         
     def AllParameterSets(self):
@@ -76,10 +76,13 @@ class InitializeParameterSpace:
         for par in pf:
             if type(pf[par]) is tuple: 
                 mi, ma, nbins, loglin = pf[par]
+                mi = float(mi)
+                ma = float(ma)
+                nbins = float(nbins)
                 if loglin == 'lin': parvals = np.arange(mi, ma * 1.0001, (ma - mi) / (nbins - 1))
                 elif loglin == 'log': parvals = np.logspace(np.log10(mi), np.log10(ma), nbins)
                 else: raise ValueError('Spacing must be linear or logarithmic.')
-                
+                                                                
                 for val in parvals:
                     allparvals.append((par, val))
                 
@@ -93,13 +96,12 @@ class InitializeParameterSpace:
         elif tupct == 1:
             allcombos = it.combinations(allparvals, tupct)
             
-            tmp = pf
             for i, combo in enumerate(allcombos):
+                tmp = copy.deepcopy(pf)
                 tmp[combo[0][0]] = combo[0][1]
-                all_pfs_dict["{0}{1:04d}".format(pf_key, i)] = tmp
-            
-            return all_pfs_dict
-            
+                all_pfs_dict["{0}{1:04d}".format(pf_key, i)] = copy.deepcopy(tmp) 
+                del tmp
+                                                    
         else:
             allcombos = it.combinations(allparvals, tupct)
             
@@ -119,7 +121,9 @@ class InitializeParameterSpace:
                 for par in combo:
                     tmp[par[0]] = par[1]
                                              
-                all_pfs_dict["{0}{1:04d}".format(pf_key, i)] = tmp
+                all_pfs_dict["{0}{1:04d}".format(pf_key, i)] = tmp 
+            
+           
             
         return all_pfs_dict
         
