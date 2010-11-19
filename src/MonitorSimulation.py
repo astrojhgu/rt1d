@@ -28,7 +28,7 @@ class MonitorSimulation:
         # Construct r-array
         self.r = self.grid * self.LengthUnits / self.GridDimensions / cm_per_kpc
     
-    def Monitor(self, data):
+    def Monitor(self, data, t):
         """
         Make some plots.
         """
@@ -40,4 +40,5 @@ class MonitorSimulation:
         pl.loglog(self.r, x_H, color = 'k')
         pl.xlabel(r'$r \ (\mathrm{kpc})$')
         pl.ylabel(r'$x_H$')  
+        pl.title(r'$t = {0} \ \mathrm{Myr}$'.format(t))
         pl.draw()

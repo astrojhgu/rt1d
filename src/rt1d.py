@@ -111,7 +111,7 @@ for i, pf in enumerate(all_pfs):
         
         # Evolve photons
         data, dt = r.EvolvePhotons(data, t, dt)
-        if rank == 0 and this_pf["MonitorSimulation"]: ms.Monitor(data)
+        if rank == 0 and this_pf["MonitorSimulation"]: ms.Monitor(data, t / TimeUnits)
                
         # Write-out data, or don't                                        
         if t == ddt[wct]:

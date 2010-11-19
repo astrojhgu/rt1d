@@ -62,10 +62,19 @@ t = np.array(t)
 func = lambda t: rs * (1. - np.exp(-t / trec))**(1. / 3.) + StartRadius
 t_anl = np.arange(0, 1.1 * max(t), TimeUnits / s_per_myr / 25.)
 r_anl = map(func, t_anl)
+r_anl_bin = map(func, t)
     
+error = np.divide(r - r_anl_bin, r_anl_bin)    
+    
+pl.subplot(211)    
 pl.plot(t, r, marker = 'o', color = 'blue', label = 'Numerical Solution')
 pl.plot(t_anl, r_anl, linestyle = '-', color = 'black', label = 'Analytic Solution')
-pl.xlabel(r'$t \ (\mathrm{MyR})$')
 pl.ylabel(r'$r \ (\mathrm{kpc})$')  
-pl.legend(loc = 'lower right')  
+pl.legend(loc = 'lower right') 
+
+pl.subplot(212)
+pl.plot(t, error)
+pl.ylim(-0.01, 0.01)
+pl.xlabel(r'$t \ (\mathrm{MyR})$')
+pl.ylabel(r'$\% \ \mathrm{Error}$') 
 pl.show()
