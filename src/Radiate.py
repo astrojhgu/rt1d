@@ -77,7 +77,9 @@ class Radiate:
             
                 units: 1 /cm^3 / s
             """
-            
+                        
+            #print Gamma_HI * n_HI, alpha_HII * n_e * n_HII_0[0]
+                        
             return Gamma_HI * n_HI - alpha_HII * n_e * n_HII_0[0]
 
         def InternalEnergyRateEquation(T_0, t, nabs, ncol, nion, n_e, x_i, r):
@@ -127,10 +129,12 @@ class Radiate:
                 # Some useful quantities for solving the HII rate equation                
                 Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, x_i, T, r, t)
                 alpha_HII = self.RecombinationRateCoefficientHII(T)
-                                                                                                                                                
+                                                                                                                                                                                                                                                        
                 # Compute timestep based on ionization timescale in closest cell to source
                 if self.AdaptiveTimestep and cell == (self.StartCell):
+                    #proj_newHII = (Gamma_HI * n_HI - alpha_HII * n_e * n_HII) * dt  # 
                     dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, self.InitialTimestep)
+                    print dt / self.InitialTimestep
                 
                 newHII = odeint(HIIRateEquation, [n_HII, 0], [0, dt], \
                     args = (n_HI, n_e, Gamma_HI, alpha_HII,), mxstep = 1000)[1][0] 
@@ -181,7 +185,7 @@ class Radiate:
         PhotoIonizationTerm = self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["PhotoIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2      
         CollisionalIonizationTerm = self.rs.BolometricLuminosity(t) * n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T) / 4. / np.pi / r**2
         SecondaryIonizationTerm = self.esec.DepositionFraction(0.0, x_i, channel = 1) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2
-                                                                                                                                                                                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                                                                                                                                                                                        
         return PhotoIonizationTerm + CollisionalIonizationTerm + SecondaryIonizationTerm
         
     def HeatGain(self, ncol, nabs, x_i, r, t):

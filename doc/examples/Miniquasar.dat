@@ -6,8 +6,8 @@
 
 # Setup
 GridDimensions                      = 1500
-LengthUnits                         = 3.08568e+21       # 1 kpc
-TimeUnits                           = 31557600.0        # 1 Myr
+LengthUnits                         = 3.08568e21        # 1 kpc
+TimeUnits                           = 31557600e6        # 1 Myr
 
 # Packages
 UseScipy                            = 1
