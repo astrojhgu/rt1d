@@ -268,6 +268,12 @@ class InitializeIntegralTables:
             np.exp(-self.OpticalDepth(E, n)) / E
             
         integral = integrate(integrand, E_HeI, self.Emax)
+        
+        else:
+            integral = 0
+            for E in self.SourceSpectralEnergyBins:
+                integral += PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / E
                                                                
         return integral
             
@@ -281,6 +287,12 @@ class InitializeIntegralTables:
             np.exp(-self.OpticalDepth(E, n)) / E   
             
         integral = integrate(integrand, E_HeII, self.Emax)
+        
+        else:
+            integral = 0
+            for E in self.SourceSpectralEnergyBins:
+                integral += PhotoIonizationCrossSection(E, 2) * (E - E_HeII) * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / E
                                                                
         return integral    
     

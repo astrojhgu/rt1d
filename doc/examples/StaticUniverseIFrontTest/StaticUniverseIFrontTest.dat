@@ -1,0 +1,72 @@
+#####
+####
+###  Template parameter file for 1D radiative transfer code
+####
+#####
+
+# Setup
+GridDimensions                      = 10000
+LengthUnits                         = 3.08568e23        # 100 kpc
+TimeUnits                           = 31557600e6        # 1 Myr
+
+# Packages
+UseScipy                            = 1
+IntegrationMethod                   = 0
+InterpolationMethod                 = 1
+MonitorSimulation                   = 1
+
+# Integral tabulation
+ColumnDensityBinsHI                 = 500
+ColumnDensityBinsHeI                = 50
+ColumnDensityBinsHeII               = 50
+
+# Control parameters
+AdaptiveTimestep                    = 0
+InitialTimestep                     = 0.1
+TimestepSafetyFactor                = 0.5 
+StopTime                            = 100.0
+dtDataDump                          = 0.25
+StartRadius                         = 0.0001
+DataDumpName                        = dd
+SavePrefix                          = rt
+
+# Physics
+MultiSpecies                        = 0
+SecondaryElectronMethod             = 1
+SolveTemperatureEvolution           = 0
+CosmologicalExpansion               = 0
+
+# Initial conditions
+InitialRedshift                     = 20.0
+DensityProfile                      = -1
+InitialDensity                      = 0
+TemperatureProfile                  = 0
+InitialTemperature                  = 1e4
+IonizationProfile                   = 1
+InitialHIIFraction                  = 0.9999
+
+# Source properties
+SourceSpectrum                      = -1
+SourceDiscretization                = 1
+SourceTemperature                   = 1e4
+SourceRadius                        = 1.0
+SourceMass                          = 1e3
+SourceRadiativeEfficiency           = 0.1
+SourceLifetime                      = 100.0
+
+# Spectral parameters
+SourceMinEnergy                     = 100           # All energies in eV
+SourceMaxEnergy                     = 1e4
+SourceMinNormEnergy                 = 100
+SourceMaxNormEnergy                 = 1e4
+SourcePowerLawIndex                 = 1.5
+SourcePhotonLuminosity              = 1e50          # Only for SourceSpectrum < 0
+SourceSpectralEnergyBins            = [13.61] 
+
+# Cosmological Parameters (WMAP 7)
+OmegaMatterNow                      = 0.272
+OmegaBaryonNow                      = 0.044
+OmegaLambdaNow                      = 0.728
+HubbleParameterNow                  = 0.702
+
+
