@@ -21,6 +21,7 @@ def SetDefaultParameterValues():
           "UseScipy": 1, \
           "IntegrationMethod": 0, \
           "InterpolationMethod": 1, \
+          "MonitorSimulation": 0, \
           
           # Integral tabulation
           "ColumnDensityBinsHI": 100, \

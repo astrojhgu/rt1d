@@ -25,7 +25,6 @@ TimeUnits = f["ParameterFile"]["TimeUnits"].value
 StartRadius = f["ParameterFile"]["StartRadius"].value * LengthUnits / cm_per_kpc
 StartCell = f["ParameterFile"]["StartRadius"].value * GridDims
 sigma_r = LengthUnits / GridDims / cm_per_kpc 
-sigma_t = TimeUnits / s_per_myr
 
 # Analytic solution
 T = f["Data"]["Temperature"].value[0]
@@ -61,10 +60,9 @@ r = np.array(r)
 t = np.array(t)
 
 func = lambda t: rs * (1. - np.exp(-t / trec))**(1. / 3.) + StartRadius
-t_anl = np.arange(0, max(t), TimeUnits / s_per_myr / 25.)
+t_anl = np.arange(0, 1.1 * max(t), TimeUnits / s_per_myr / 25.)
 r_anl = map(func, t_anl)
     
-pl.errorbar(t, r, xerr = sigma_t, yerr = sigma_r)    
 pl.plot(t, r, marker = 'o', color = 'blue', label = 'Numerical Solution')
 pl.plot(t_anl, r_anl, linestyle = '-', color = 'black', label = 'Analytic Solution')
 pl.xlabel(r'$t \ (\mathrm{MyR})$')

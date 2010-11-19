@@ -30,6 +30,7 @@ from InitializeGrid import *
 from Radiate import *
 from WriteData import *
 from ReadRestartFile import *
+from MonitorSimulation import *
 
 all_pfs = {}
 
@@ -87,9 +88,10 @@ for i, pf in enumerate(all_pfs):
     iits = InitializeIntegralTables(this_pf, data)
     itabs = iits.TabulateRateIntegrals()
     
-    # Initialize radiation and write data classes
+    # Initialize radiation, write data, and monitor classes
     r = Radiate(this_pf, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
     w = WriteData(this_pf)
+    ms = MonitorSimulation(this_pf)
     
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
@@ -109,6 +111,7 @@ for i, pf in enumerate(all_pfs):
         
         # Evolve photons
         data, dt = r.EvolvePhotons(data, t, dt)
+        if rank == 0 and this_pf["MonitorSimulation"]: ms.Monitor(data)
                
         # Write-out data, or don't                                        
         if t == ddt[wct]:

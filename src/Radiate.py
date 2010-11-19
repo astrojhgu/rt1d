@@ -43,6 +43,7 @@ class Radiate:
         self.InterpolationMethod = pf["InterpolationMethod"]
         self.InitialTimestep = pf["InitialTimestep"] * pf["TimeUnits"]
         self.AdaptiveTimestep = pf["AdaptiveTimestep"]
+        self.InitialHIIFraction = pf["InitialHIIFraction"]
         self.GridDimensions = pf["GridDimensions"]
         self.InitialRedshift = pf["InitialRedshift"]
         self.LengthUnits = pf["LengthUnits"]
@@ -126,14 +127,14 @@ class Radiate:
             alpha_HII = self.RecombinationRateCoefficientHII(T)
                                                                                                                                                                                                                                                     
             # Compute timestep based on ionization timescale in closest cell to source
-            if self.AdaptiveTimestep and cell == (self.StartCell):
+            if self.AdaptiveTimestep and cell == self.StartCell:
                 dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, self.InitialTimestep)
                                                                                 
             newHII = odeint(HIIRateEquation, [n_HII, 0], [0, dt], \
                 args = (n_HI, n_e, Gamma_HI, alpha_HII,), mxstep = 10000)[1][0]
                                                             
-            if newHII > n_H:
-                newHII = 0.9999 * n_H
+            if (newHII > n_H) or (newHII < self.InitialHIIFraction):
+                newHII = self.InitialHIIFraction * n_H
                                                      
             newHI = (n_HI + n_HII) - newHII  
                                                             
