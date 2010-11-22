@@ -15,7 +15,7 @@ import numpy as np
 
 def Interpolate1D(dataset, array, value, method = 0):
     """
-    Interpolate a 3D dataset using one of the following methods:
+    Interpolate a 1D dataset using one of the following methods:
     
         0: Nearest neighbors
         1: Average
@@ -30,6 +30,9 @@ def Interpolate1D(dataset, array, value, method = 0):
     
     if len(array) == 3: array = array[0]
     if type(value) is not int: value = value[0]
+    
+    if value < min(array): value = min(array)
+    if value > max(array): value = max(array)
         
     xdiff = list(abs(array - value))
     imin1 = xdiff.index(min(xdiff))

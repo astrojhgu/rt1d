@@ -15,15 +15,15 @@ Notes:
 
 """
 
-import numpy as na
+import numpy as np
 import pylab as pl
-from Misc import *
+from scipy.integrate import romberg
 
 c = 29979245800.0
 G = 6.673*10**-8
 km_per_mpc = 3.08568 * 10**13 * 10**6
 cm_per_mpc = 3.08568 * 10**13 * 10**5 * 10**6
-sqdeg_per_std = (180.0**2) / (na.pi**2)
+sqdeg_per_std = (180.0**2) / (np.pi**2)
 
 class Cosmology:
     def __init__(self, pf):
@@ -33,21 +33,27 @@ class Cosmology:
         self.OmegaCDMNow = self.OmegaMatterNow - self.OmegaBaryonNow
         self.HubbleParameterNow = pf["HubbleParameterNow"] * 100 / km_per_mpc
         
-        self.CriticalDensityNow = (3 * self.HubbleParameterNow**2) / (8 * na.pi * G)
+        self.CriticalDensityNow = (3 * self.HubbleParameterNow**2) / (8 * np.pi * G)
         
     def LookbackTime(self, z_i, z_f):
         AgeIntegrand = lambda z: (1.0 / (z + 1.0) / self.EvolutionFunction(z))
         
-        return (Romberg(AgeIntegrand, z_i, z_f) / self.HubbleParameterNow)    
+        return (romberg(AgeIntegrand, z_i, z_f) / self.HubbleParameterNow)    
+        
+    def TimeToRedshiftConverter(self, t_i, t_f, z_i):
+        """
+        High redshift approximation.
+        """
+        return ((1. + z_i)**(-3. / 2.) + (3. * self.HubbleParameterNow * np.sqrt(self.OmegaMatterNow) * (t_f - t_i) / 2.))**(-2. / 3.) - 1.
         
     def ScaleFactor(self, z):
         return 1.0 / (1.0 + z)
         
     def EvolutionFunction(self, z):
-        return na.sqrt(self.OmegaMatterNow * (1.0 + z)**3  + self.OmegaLambdaNow)
+        return np.sqrt(self.OmegaMatterNow * (1.0 + z)**3  + self.OmegaLambdaNow)
         
     def HubbleParameter(self, z):	
-        return self.HubbleParameterNow * na.sqrt(self.OmegaMatterNow * (1.0 + z)**3 + 
+        return self.HubbleParameterNow * np.sqrt(self.OmegaMatterNow * (1.0 + z)**3 + 
             self.OmegaLambdaNow) 
     
     def OmegaMatter(self, z):
@@ -63,7 +69,7 @@ class Cosmology:
         return (self.OmegaBaryonNow / self.OmegaMatterNow) * self.MeanMatterDensity(z)
     
     def CriticalDensity(self, z):
-        return (3.0 * self.HubbleParameter(z)**2) / (8.0 * na.pi * G)
+        return (3.0 * self.HubbleParameter(z)**2) / (8.0 * np.pi * G)
         
             
     

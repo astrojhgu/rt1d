@@ -42,6 +42,7 @@ def SetDefaultParameterValues():
           "SavePrefix": 'rt', \
           "StartRadius": 0.01, \
           "AdaptiveTimestep": 1, \
+          "MaxHIIFraction": 0.9999, \
           
           # Physics
           "SolveTemperatureEvolution": 1, \

@@ -15,7 +15,7 @@ To do:
 from ComputeCrossSections import *
 from RadiationSource import *
 from SecondaryElectrons import *
-from scipy.integrate import romberg as integrate
+from scipy.integrate import quad as integrate
 import numpy as np
 import h5py, os, re
 
@@ -31,7 +31,12 @@ m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
-IntegralList = ['PhotoIonizationRateIntegralHI', 'ElectronHeatingIntegralHI', 'ElectronHeatingIntegralHeI', 'ElectronHeatingIntegralHeII', 'SecondaryIonizationRateIntegralHI']
+IntegralList = ['PhotoIonizationRateIntegralHI',
+                'PhotoIonizationRateIntegralHeI',
+                'ElectronHeatingIntegralHI', 
+                'ElectronHeatingIntegralHeI', 
+                'ElectronHeatingIntegralHeII', 
+                'SecondaryIonizationRateIntegralHI']
 
 class InitializeIntegralTables: 
     def __init__(self, pf, data):
@@ -50,8 +55,8 @@ class InitializeIntegralTables:
         self.Emin = pf["SourceMinEnergy"]
         self.Emax = pf["SourceMaxEnergy"]
         self.MultiSpecies = pf["MultiSpecies"]
-        self.HIColumnMin = 1e-5 * data["HIDensity"][0] * self.dx
-        self.HIColumnMax = 10 * np.sum(data["HIDensity"] * self.dx)
+        self.HIColumnMin = 1e3 * data["HIDensity"][0] * self.dx
+        self.HIColumnMax =  5 * np.sum(data["HIDensity"] * self.dx)
         self.HINBins = pf["ColumnDensityBinsHI"]
         self.HeINBins = pf["ColumnDensityBinsHeI"]
         self.HeIINBins = pf["ColumnDensityBinsHeII"]
@@ -60,10 +65,10 @@ class InitializeIntegralTables:
         self.rt1d = os.environ.get("RT1D")
                 
         if self.MultiSpecies > 0: 
-            self.HeIColumnMin = 1e-5 * data["HIDensity"][0] * self.dx
-            self.HeIColumnMax = 10 * np.sum(data["HeIDensity"] * self.dx)
-            self.HeIIColumnMin = 1e-5 * data["HeIIDensity"][0] * self.dx
-            self.HeIIColumnMax = 10 * np.sum(data["HeIIDensity"] * self.dx)
+            self.HeIColumnMin = 1e3 * data["HeIDensity"][0] * self.dx
+            self.HeIColumnMax = 5 * np.sum(data["HeIDensity"] * self.dx)
+            self.HeIIColumnMin = 1e3 * data["HeIIDensity"][0] * self.dx
+            self.HeIIColumnMax = 5 * np.sum(data["HeIIDensity"] * self.dx)
             self.HeIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
             self.HeIIColumn = np.logspace(np.log10(self.HeIIColumnMin), np.log10(self.HeIIColumnMax), self.HeIINBins)
         else:
@@ -250,13 +255,15 @@ class InitializeIntegralTables:
                                                         
             integral = integrate(integrand, E_HI, self.Emax)
             
+            return integral[0]
+            
         else:
             integral = 0
             for E in self.SourceSpectralEnergyBins:
                 integral += PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
                     np.exp(-self.OpticalDepth(E, n)) / E
                         
-        return integral
+            return integral
             
     def ElectronHeatingIntegralHeI(self, n = [0.0, 0.0, 0.0]):
         """
@@ -264,10 +271,13 @@ class InitializeIntegralTables:
         see 'ElectronHeatingIntegralHI'.
         """    
         
-        integrand = lambda E: PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
-            np.exp(-self.OpticalDepth(E, n)) / E
-            
-        integral = integrate(integrand, E_HeI, self.Emax)
+        if self.SourceDiscretization == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / E
+                
+            integral = integrate(integrand, E_HeI, self.Emax)
+        
+            return integral[0]
         
         else:
             integral = 0
@@ -275,7 +285,7 @@ class InitializeIntegralTables:
                 integral += PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
                     np.exp(-self.OpticalDepth(E, n)) / E
                                                                
-        return integral
+            return integral
             
     def ElectronHeatingIntegralHeII(self, n = [0.0, 0.0, 0.0]):
         """
@@ -283,10 +293,13 @@ class InitializeIntegralTables:
         see 'ElectronHeatingIntegralHI'.
         """   
         
-        integrand = lambda E: PhotoIonizationCrossSection(E, 2) * (E - E_HeII) * self.rs.Spectrum(E) * \
-            np.exp(-self.OpticalDepth(E, n)) / E   
+        if self.SourceDiscretization == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, 2) * (E - E_HeII) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / E   
+                
+            integral = integrate(integrand, E_HeII, self.Emax)
             
-        integral = integrate(integrand, E_HeII, self.Emax)
+            return integral[0]
         
         else:
             integral = 0
@@ -294,7 +307,7 @@ class InitializeIntegralTables:
                 integral += PhotoIonizationCrossSection(E, 2) * (E - E_HeII) * self.rs.Spectrum(E) * \
                     np.exp(-self.OpticalDepth(E, n)) / E
                                                                
-        return integral    
+            return integral    
     
     def PhotoIonizationRateIntegralHI(self, n = [0.0, 0.0, 0.0]):
         """
@@ -309,14 +322,19 @@ class InitializeIntegralTables:
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
                 
             integral = integrate(integrand, E_HI, self.Emax)
-                        
+            
+            return integral[0]
+                  
         else:
             integral = 0
             for E in self.SourceSpectralEnergyBins:
                 integral += PhotoIonizationCrossSection(E, 0) * self.rs.Spectrum(E) * \
                     np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)     
                                                                                                                                                                     
-        return integral  
+            return integral
+        
+    def PhotoIonizationRateIntegralHeI(self):
+        pass    
         
     def SecondaryIonizationRateIntegralHI(self, n = [0.0, 0.0, 0.0]):
         """
@@ -329,16 +347,15 @@ class InitializeIntegralTables:
                 
             integral = integrate(integrand, E_HI, self.Emax)
             
+            return integral[0]
+            
         else:
             integral = 0
             for E in self.SourceSpectralEnergyBins:
                 integral += PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
                     np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HI 
                                                                                                       
-        return integral  
-        
-    def HISecondaryIonizationRateHI(self):
-        pass
+            return integral
         
     def HISecondaryIonizationRateHeI(self):
         pass

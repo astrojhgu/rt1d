@@ -31,6 +31,7 @@ class InitializeGrid:
         self.Cosmology = Cosmology(pf)
         self.GridDimensions = int(pf["GridDimensions"])
         self.StartRadius = pf["StartRadius"]
+        self.StartCell = int(self.StartRadius * self.GridDimensions)
         self.InitialRedshift = pf["InitialRedshift"]
         self.DensityProfile = pf["DensityProfile"]
         self.InitialDensity = pf["InitialDensity"]
@@ -83,9 +84,9 @@ class InitializeGrid:
                 2: Gas within StartRadius at 10^4 K, InitialTemperature elsewhere
         """
         if self.TemperatureProfile == 0: temperature = self.InitialTemperature    
-        if self.TemperatureProfile == 1: temperature = 2.725 * (1. + self.InitialRedshift)**3 / 251.
+        if self.TemperatureProfile == 1: temperature = 2.725 * (1. + self.InitialRedshift)**3. / 251.
         if self.TemperatureProfile == 2: 
-            if (float(cell) / self.GridDimensions) < self.StartRadius: temperature = 1e4
+            if cell < self.StartCell: temperature = 1e4
             else: temperature = self.InitialTemperature
         
         return temperature
@@ -113,14 +114,14 @@ class InitializeGrid:
         Initialize neutral hydrogen density.
         """
         
-        return (1.0 - self.Y) * (1.0 - self.ionization[cell]) * self.density[cell] / m_H
+        return (1. - self.Y) * (1. - self.ionization[cell]) * self.density[cell] / m_H
     
     def InitializeHIIDensity(self, cell):
         """
         Initialize ionized hydrogen density.
         """
         
-        return (1.0 - self.Y) * self.ionization[cell] * self.density[cell] / m_H
+        return (1. - self.Y) * self.ionization[cell] * self.density[cell] / m_H
         
     def InitializeHeIDensity(self, cell):
         """
@@ -128,7 +129,7 @@ class InitializeGrid:
         to be the same as that of hydrogen.
         """
         
-        return self.Y * (1.0 - self.ionization[cell]) * self.density[cell] / m_HeI
+        return self.Y * (1. - self.ionization[cell]) * self.density[cell] / m_HeI
         
     def InitializeHeIIDensity(self, cell):
         """
@@ -143,7 +144,7 @@ class InitializeGrid:
         Initialize doubly ionized helium density - assumed to be zero.
         """
         
-        return 0.0 
+        return 0. 
         
     def InitializeElectronDensity(self, cell):
         """
@@ -151,6 +152,6 @@ class InitializeGrid:
         Thomas and Zaroubi 2007 is wrong - they had n_e = n_HII + n_HeI + 2n_HeII).
         """
         
-        return self.InitializeHIIDensity(cell) + self.InitializeHeIIDensity(cell) + 2.0 * self.InitializeHeIIIDensity(cell)
+        return self.InitializeHIIDensity(cell) + self.InitializeHeIIDensity(cell) + 2. * self.InitializeHeIIIDensity(cell)
         
         

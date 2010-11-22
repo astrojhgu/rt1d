@@ -13,9 +13,13 @@ driver of rt1d, calling our solvers which call all the various physics modules.
 from RadiationSource import *
 from SecondaryElectrons import *
 from Interpolate import *
+from Cosmology import *
 from scipy.integrate import odeint
 import numpy as np
 import copy
+from mpi4py import MPI
+
+rank = MPI.COMM_WORLD.rank
 
 m_e = 9.10938188*10**-28 		# Electron mass - [m_e] = g
 m_p = 1.67262158*10**-24		# Proton mass - [m_p] = g
@@ -33,9 +37,10 @@ m_HeII = 2.0 * (m_p + m_n) + m_e
 tiny_number = 1e-10
 
 class Radiate:
-    def __init__(self, pf, itabs, n_col): 
+    def __init__(self, pf, data, itabs, n_col): 
         self.rs = RadiationSource(pf)
         self.esec = SecondaryElectrons(pf)
+        self.cosmo = Cosmology(pf)
         self.pf = pf
         self.itabs = itabs
         self.MultiSpecies = pf["MultiSpecies"]
@@ -43,6 +48,8 @@ class Radiate:
         self.InterpolationMethod = pf["InterpolationMethod"]
         self.InitialTimestep = pf["InitialTimestep"] * pf["TimeUnits"]
         self.AdaptiveTimestep = pf["AdaptiveTimestep"]
+        self.MaxHIIFraction = pf["MaxHIIFraction"]
+        self.CosmologicalExpansion = pf["CosmologicalExpansion"]
         self.InitialHIIFraction = pf["InitialHIIFraction"]
         self.GridDimensions = pf["GridDimensions"]
         self.InitialRedshift = pf["InitialRedshift"]
@@ -51,12 +58,14 @@ class Radiate:
         self.TimestepSafetyFactor = pf["TimestepSafetyFactor"]
         self.StartRadius = pf["StartRadius"]
         self.StartCell = int(self.StartRadius * self.GridDimensions)
+        self.InitialHydrogenDensity = (data["HIDensity"][0] + data["HIIDensity"][0]) / (1. + self.InitialRedshift)**3
+        self.InitialHeliumDensity = (data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0]) / (1. + self.InitialRedshift)**3
         self.dx = self.LengthUnits / self.GridDimensions
         self.grid = np.arange(self.GridDimensions)
         self.HIColumn = n_col[0]
         self.HeIColumn = n_col[1]
         self.HeIIColumn = n_col[2]
-        
+                                
         # Always pass three element arrays, the interpolation routines will sort out whether or not they need all three elements.
         if self.MultiSpecies == 0: 
             self.Interpolate = lambda itab, n: Interpolate1D(itab, n_col, n, self.InterpolationMethod)
@@ -71,6 +80,7 @@ class Radiate:
         """
         
         newdata = copy.deepcopy(data)
+        z = self.cosmo.TimeToRedshiftConverter(0., t, self.InitialRedshift)
         
         def HIIRateEquation(n_HII_0, t, n_HI, n_e, Gamma_HI, alpha_HII):
             """
@@ -81,7 +91,7 @@ class Radiate:
                                                 
             return Gamma_HI * n_HI - alpha_HII * n_e * n_HII_0[0]
 
-        def InternalEnergyRateEquation(T_0, t, nabs, ncol, nion, n_e, x_i, r):
+        def InternalEnergyRateEquation(T_0, t, nabs, ncol, nion, n_e, n_B, x_i, z, r):
             """
             Returns the rate of change of the gas internal energy.  This is the RHS of Eq. 12 in TZ07, 
             though currently we're missing the Compton heating and Hubble cooling terms.  The conversion
@@ -93,59 +103,80 @@ class Radiate:
             """                        
             
             HeatGain = self.HeatGain(ncol, nabs, x_i, r, t)
-            HeatLoss = self.HeatLoss(nabs, nion, n_e, T_0[0])            
+            HeatLoss = self.HeatLoss(nabs, nion, n_e, n_B, T_0[0], z)            
                                                                                                                                                                                                                                       
             return HeatGain - HeatLoss
             
         # Loop over cells radially, solve rate equations, update values in data
         for cell in self.grid:
-            
-            if cell < self.StartCell: continue
                                          
             # Nice names for all the quantities we need!
+            x_HI = copy.deepcopy(data["HIDensity"][cell] / (data["HIDensity"][cell] + data["HIIDensity"][cell]))
+            x_HII = copy.deepcopy(data["HIIDensity"][cell] / (data["HIDensity"][cell] + data["HIIDensity"][cell]))            
+
+            if self.MultiSpecies:
+                x_HeI = copy.deepcopy(data["HeIDensity"][cell] / (data["HeIDensity"][cell] + data["HeIIDensity"][cell] + data["HeIIIDensity"][cell]))
+                x_HeII = copy.deepcopy(data["HeIIDensity"][cell] / (data["HeIDensity"][cell] + data["HeIIDensity"][cell] + data["HeIIIDensity"][cell]))
+                x_HeIII = copy.deepcopy(data["HeIIIDensity"][cell] / (data["HeIDensity"][cell] + data["HeIIDensity"][cell] + data["HeIIIDensity"][cell]))
+            
+            else: x_HeI = x_HeII = x_HeIII = 0.0 
+                                    
+            # If we're in an expanding universe, dilute densities by (1 + z)^3    
+            if self.CosmologicalExpansion: 
+                data["HIDensity"][cell] = x_HI * self.InitialHydrogenDensity * (1. + z)**3
+                data["HIIDensity"][cell] = x_HII * self.InitialHydrogenDensity * (1. + z)**3
+                data["HeIDensity"][cell] = x_HeI * self.InitialHeliumDensity * (1. + z)**3
+                data["HeIIDensity"][cell] = x_HeII * self.InitialHeliumDensity * (1. + z)**3
+                data["HeIIIDensity"][cell] = x_HeIII * self.InitialHeliumDensity * (1. + z)**3    
+                data["ElectronDensity"][cell] = data["HIIDensity"][cell] + data["HeIIDensity"][cell] + 2. * data["HeIIIDensity"][cell]
+                
+            if cell < self.StartCell: continue    
+                
+            n_e = data["ElectronDensity"][cell]
+            n_HI = data["HIDensity"][cell]
+            n_HII = data["HIIDensity"][cell]
+            n_HeI = data["HeIDensity"][cell]
+            n_HeII = data["HeIIDensity"][cell]
+            n_HeIII = data["HeIIIDensity"][cell] 
+                                   
             ncol_HI = np.sum(data["HIDensity"][0:cell] * self.dx)
             ncol_HeI = np.sum(data["HeIDensity"][0:cell] * self.dx)
             ncol_HeII = np.sum(data["HeIIDensity"][0:cell] * self.dx)
             ncol = [ncol_HI, ncol_HeI, ncol_HeII]
-            n_e = data["ElectronDensity"][cell]
-            n_HI = data["HIDensity"][cell]
-            n_HII = data["HIIDensity"][cell]
-            n_H = n_HI + n_HII
-            n_HeI = data["HeIDensity"][cell]
-            n_HeII = data["HeIIDensity"][cell]
-            n_HeIII = data["HeIIIDensity"][cell]
-            x_i = n_HII / (n_HI + n_HII)
             nabs = [n_HI, n_HeI, n_HeII]
             nion = [n_HII, n_HeII, n_HeIII]
+            n_H = n_HI + n_HII
             n_B = sum(nabs)
             T = data["Temperature"][cell]
             U = 3. * k_B * T * n_B / self.mu / 2.
             r = self.LengthUnits * cell / self.GridDimensions     
-                                                                                                                                                                                                                   
+                                                                                                                                                                                                                               
             # Some useful quantities for solving the HII rate equation                
-            Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, x_i, T, r, t)
+            Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, x_HII, T, r, t)
             alpha_HII = self.RecombinationRateCoefficientHII(T)
-                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                
             # Compute timestep based on ionization timescale in closest cell to source
             if self.AdaptiveTimestep and cell == self.StartCell:
                 dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, self.InitialTimestep)
-                                                                                
+                                                                                                                                              
             newHII = odeint(HIIRateEquation, [n_HII, 0], [0, dt], \
-                args = (n_HI, n_e, Gamma_HI, alpha_HII,), mxstep = 10000)[1][0]
-                                                            
-            if (newHII > n_H) or (newHII < self.InitialHIIFraction):
-                newHII = self.InitialHIIFraction * n_H
+                args = (n_HI, n_e, Gamma_HI, alpha_HII,), mxstep = 10000, rtol = 1e-13, atol = 1e-13)[1][0]
+            
+            # Hack                                                                                            
+            if newHII > n_H: newHII = self.MaxHIIFraction * n_H
+            #elif (newHII <= n_H) and (n_HII == self.MaxHIIFraction * n_H): newHII = self.MaxHIIFraction * n_H
+            #else: newHII = newHII
                                                      
-            newHI = (n_HI + n_HII) - newHII  
-                                                            
+            newHI = n_H - newHII  
+                                                                                                      
             # Next, solve the heat equation  
             if self.SolveTemperatureEvolution:                     
                 newU = odeint(InternalEnergyRateEquation, [U, 0], [0, dt], \
-                    args = (nabs, ncol, nion, n_e, x_i, r,), mxstep = 1000)[1][0]   
+                    args = (nabs, ncol, nion, n_e, n_B, x_HII, z, r,), mxstep = 10000)[1][0]   
                     
                 newT = newU * 2. * self.mu / 3. / k_B / n_B 
             else: newT = T
-                
+                            
             # Solve helium rate equations (not yet implemented)
             newHeII = data["HeIIDensity"][cell]
             newHeIII = data["HeIIIDensity"][cell]
@@ -157,7 +188,7 @@ class Radiate:
             newdata["HeIDensity"][cell] = newHeI
             newdata["HeIIDensity"][cell] = newHeII
             newdata["HeIIIDensity"][cell] = newHeIII
-            newdata["ElectronDensity"][cell] = newHII + newdata["HeIIDensity"][cell] + 2.0 * newdata["HeIIIDensity"][cell]
+            newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
             newdata["Temperature"][cell] = newT
                                         
         return newdata, dt
@@ -170,7 +201,7 @@ class Radiate:
         """
         return 2.6e-13 * (T / 1.e4)**-0.85
         
-    def IonizationRateCoefficientHI(self, ncol, n_e, x_i, T, r, t):
+    def IonizationRateCoefficientHI(self, ncol, n_e, x_HII, T, r, t):
         """
         Returns ionization rate coefficient for HI, which we denote elsewhere as Gamma_HI.  Includes photo, collisional, 
         and secondary ionizations from fast electrons.
@@ -179,11 +210,11 @@ class Radiate:
         """            
         PhotoIonizationTerm = self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["PhotoIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2      
         CollisionalIonizationTerm = self.rs.BolometricLuminosity(t) * n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T) / 4. / np.pi / r**2
-        SecondaryIonizationTerm = self.esec.DepositionFraction(0.0, x_i, channel = 1) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2
+        SecondaryIonizationTerm = self.esec.DepositionFraction(0.0, x_HII, channel = 1) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
         return PhotoIonizationTerm + CollisionalIonizationTerm + SecondaryIonizationTerm
         
-    def HeatGain(self, ncol, nabs, x_i, r, t):
+    def HeatGain(self, ncol, nabs, x_HII, r, t):
         """
         Returns the total heating rate at radius r and time t.  These are all the terms in Eq. 12 of TZ07 on
         the RHS that are positive.
@@ -196,11 +227,11 @@ class Radiate:
             try: heat += nabs[i] * self.Interpolate(self.itabs[integral], ncol)
             except KeyError: pass
                   
-        heat *= self.esec.DepositionFraction(0.0, x_i, channel = 0) * self.rs.BolometricLuminosity(t) / 4.0 / np.pi / r**2 
-                                                                        
+        heat *= self.esec.DepositionFraction(0.0, x_HII, channel = 0) * self.rs.BolometricLuminosity(t) / 4.0 / np.pi / r**2 
+                                                                                              
         return heat
     
-    def HeatLoss(self, nabs, nion, n_e, T):
+    def HeatLoss(self, nabs, nion, n_e, n_B, T, z):
         """
         Returns the total cooling rate for a cell of temperature T and with species densities given in 'nabs', 'nion', and 'n_e'. 
         This quantity is the sum of all terms on the RHS of Eq. 12 in TZ07 that are negative (except for the Hubble cooling term), 
@@ -234,6 +265,9 @@ class Radiate:
         cool += sum(nion) * 1.42e-27 * 1.1 * np.sqrt(T)     # Check on Gaunt factor
                 
         cool *= n_e
+        
+        # Hubble cooling
+        cool += 2. * self.cosmo.HubbleParameter(z) * (k_B * T * n_B / self.mu)
         
         return cool
         
