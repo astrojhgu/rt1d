@@ -27,6 +27,7 @@ def SetDefaultParameterValues():
           "ColumnDensityBinsHI": 100, \
           "ColumnDensityBinsHeI": 50, \
           "ColumnDensityBinsHeII": 50, \
+          "ExitAfterIntegralTabulation": 0, \
           
           # Units
           "LengthUnits": cm_per_kpc, \

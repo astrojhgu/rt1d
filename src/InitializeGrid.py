@@ -21,10 +21,7 @@ FieldList = \
 m_e = 9.10938188*10**-28 		# Electron mass - [m_e] = g
 m_p = 1.67262158*10**-24		# Proton mass - [m_p] = g
 m_n = 1.67492729*10**-24        # Neutron mass - [m_n] = g
-
-m_H = m_p + m_e
-m_HeI = 2.0 * (m_p + m_n + m_e)
-m_HeII = 2.0 * (m_p + m_n) + m_e                  
+m_H = m_p + m_e                  
 
 class InitializeGrid:
     def __init__(self, pf):
@@ -129,7 +126,7 @@ class InitializeGrid:
         to be the same as that of hydrogen.
         """
         
-        return self.Y * (1. - self.ionization[cell]) * self.density[cell] / m_HeI
+        return self.Y * (1. - self.ionization[cell]) * self.density[cell] / m_H
         
     def InitializeHeIIDensity(self, cell):
         """
@@ -137,7 +134,7 @@ class InitializeGrid:
         to be the same as that of hydrogen.
         """
         
-        return self.Y * self.ionization[cell] * self.density[cell] / m_HeII
+        return self.Y * self.ionization[cell] * self.density[cell] / m_H
         
     def InitializeHeIIIDensity(self, cell):
         """

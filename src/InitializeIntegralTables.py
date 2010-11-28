@@ -16,8 +16,21 @@ from ComputeCrossSections import *
 from RadiationSource import *
 from SecondaryElectrons import *
 from scipy.integrate import quad as integrate
+from progressbar import *
 import numpy as np
 import h5py, os, re
+
+try:
+    from mpi4py import MPI
+    rank = MPI.COMM_WORLD.rank
+    size = MPI.COMM_WORLD.size
+except:
+    ImportError("Module mpi4py not found.  No worries, we'll just run in serial.")
+    rank = 0
+    size = 1
+
+# Widget for progressbar.
+widget = ["rt1d: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 
 E_HI = 13.6
 E_HeI = 24.6
@@ -31,12 +44,15 @@ m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
-IntegralList = ['PhotoIonizationRateIntegralHI',
-                'PhotoIonizationRateIntegralHeI',
-                'ElectronHeatingIntegralHI', 
-                'ElectronHeatingIntegralHeI', 
-                'ElectronHeatingIntegralHeII', 
-                'SecondaryIonizationRateIntegralHI']
+IntegralList = ['PhotoIonizationRateIntegralHI', \
+                'PhotoIonizationRateIntegralHeI', \
+                'PhotoIonizationRateIntegralHeII', \
+                'ElectronHeatingIntegralHI', \
+                'ElectronHeatingIntegralHeI', \
+                'ElectronHeatingIntegralHeII', \
+                'SecondaryIonizationRateIntegralHI', \
+                'SecondaryIonizationRateIntegralHeI', \
+                'SecondaryIonizationRateIntegralHeII']
 
 class InitializeIntegralTables: 
     def __init__(self, pf, data):
@@ -213,16 +229,27 @@ class InitializeIntegralTables:
                     
             # If we're including helium as well         
             else:
+                
                 for integral in IntegralList:
+                    
+                    # This could take a while
+                    if rank == 0: print "\nComputing value of {0}...".format(integral)
+                    if rank == 0: pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start() 
+                    
                     tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
-                    for i, ncol_HI in enumerate(self.HIColumn):
+                    for i, ncol_HI in enumerate(self.HIColumn):  
+                                                
                         for j, ncol_HeI in enumerate(self.HeIColumn):
                             for k, ncol_HeII in enumerate(self.HeIIColumn):
                                 tab[i][j][k] = eval("self.{0}({1})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII]))    
-                                    
+                       
+                        if rank == 0:
+                            try: pbar.update(i + 1)
+                            except AssertionError: pass
+                       
                     itabs[integral] = tab
                     del tab
-                    
+                                        
             self.WriteIntegralTable(itabs)    
             return itabs
     
@@ -333,8 +360,53 @@ class InitializeIntegralTables:
                                                                                                                                                                     
             return integral
         
-    def PhotoIonizationRateIntegralHeI(self):
-        pass    
+    def PhotoIonizationRateIntegralHeI(self, n = [0.0, 0.0, 0.0]):
+        """
+        Returns the value of the bound-free photoionization rate integral of HI.  However, because 
+        source luminosities vary with time and distance, it is unnormalized.  To get a true 
+        photoionization rate, one must multiply these values by the spectrum's normalization factor
+        and divide by 4*np.pi*r^2. 
+        """
+        
+        if self.SourceDiscretization == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, 1) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
+                
+            integral = integrate(integrand, E_HeI, self.Emax)
+            
+            return integral[0]
+                  
+        else:
+            integral = 0
+            for E in self.SourceSpectralEnergyBins:
+                integral += PhotoIonizationCrossSection(E, 1) * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)     
+                                                                                                                                                                    
+            return integral
+            
+    def PhotoIonizationRateIntegralHeII(self, n = [0.0, 0.0, 0.0]):
+        """
+        Returns the value of the bound-free photoionization rate integral of HI.  However, because 
+        source luminosities vary with time and distance, it is unnormalized.  To get a true 
+        photoionization rate, one must multiply these values by the spectrum's normalization factor
+        and divide by 4*np.pi*r^2. 
+        """
+        
+        if self.SourceDiscretization == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, 2) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
+                
+            integral = integrate(integrand, E_HeII, self.Emax)
+            
+            return integral[0]
+                  
+        else:
+            integral = 0
+            for E in self.SourceSpectralEnergyBins:
+                integral += PhotoIonizationCrossSection(E, 2) * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)     
+                                                                                                                                                                    
+            return integral
         
     def SecondaryIonizationRateIntegralHI(self, n = [0.0, 0.0, 0.0]):
         """
@@ -356,21 +428,50 @@ class InitializeIntegralTables:
                     np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HI 
                                                                                                       
             return integral
+            
+    def SecondaryIonizationRateIntegralHeI(self, n = [0.0, 0.0, 0.0]):
+        """
         
-    def HISecondaryIonizationRateHeI(self):
-        pass
+        """
         
-    def HeIPhotoIonizationRate(self):
-        pass
+        if self.SourceDiscretization == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HeI   
+                
+            integral = integrate(integrand, E_HeI, self.Emax)
+            
+            return integral[0]
+            
+        else:
+            integral = 0
+            for E in self.SourceSpectralEnergyBins:
+                integral += PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HeI 
+                                                                                                      
+            return integral
+            
+    def SecondaryIonizationRateIntegralHeII(self, n = [0.0, 0.0, 0.0]):
+        """
         
-    def HeISecondaryIonizationRateHI(self):
-        pass
+        """
         
-    def HeISecondaryIonizationRateHeI(self):
-        pass
+        if self.SourceDiscretization == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, 2) * (E - E_HeII) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HeII   
+                
+            integral = integrate(integrand, E_HeII, self.Emax)
+            
+            return integral[0]
+            
+        else:
+            integral = 0
+            for E in self.SourceSpectralEnergyBins:
+                integral += PhotoIonizationCrossSection(E, 2) * (E - E_HeII) * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HeII 
+                                                                                                      
+            return integral
         
-    def HeIIPhotoIonizationRate(self):
-        pass
+ 
         
     
         

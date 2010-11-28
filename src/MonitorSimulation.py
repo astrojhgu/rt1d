@@ -36,8 +36,9 @@ class MonitorSimulation:
         """
                                         
         # A few fields
-        x_H = data["HIDensity"] / (data["HIDensity"] + data["HIIDensity"])
-        mi = min(min(x_H), 0.1 * self.MinHIFraction)
+        x_HI = data["HIDensity"] / (data["HIDensity"] + data["HIIDensity"])
+        x_HeI = data["HeIDensity"] / (data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"])
+        min_HI = min(min(x_HI), 0.1 * self.MinHIFraction)
         T = data["Temperature"]
         
         # Clear previous figure
@@ -45,15 +46,17 @@ class MonitorSimulation:
         
         # Plot neutral fraction and temperature
         pl.subplot(211)
-        pl.loglog(self.r, x_H, color = 'k')
-        pl.loglog([self.StartRadius, self.StartRadius], [mi, 1], linestyle = '--')
-        pl.ylim(mi, 1)
-        pl.ylabel(r'$x_H$')  
+        pl.loglog(self.r, x_HI, linestyle = '-', color = 'k', label = r'$x_{HI}$')
+        pl.loglog(self.r, x_HeI, linestyle = ':', color = 'k', label = r'$x_{HeI}$')
+        pl.loglog([self.StartRadius, self.StartRadius], [min_HI, 1], linestyle = '--', color = 'k')
+        pl.ylim(min_HI, 1)
+        pl.ylabel(r'$x$')  
+        pl.legend()
         pl.title("t = {0} Myr".format(t / s_per_myr))
         
         pl.subplot(212)
         pl.loglog(self.r, T, color = 'k')
-        pl.loglog([self.StartRadius, self.StartRadius], [10, 1e6], linestyle = '--')
+        pl.loglog([self.StartRadius, self.StartRadius], [10, 1e6], linestyle = '--', color = 'k')
         pl.ylim(10, 1.5 * max(T))
         pl.xlabel(r'$r \ (\mathrm{kpc})$')
         pl.ylabel(r'$T \ (\mathrm{K})$')

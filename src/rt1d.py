@@ -60,7 +60,7 @@ if rank == 0:
 # Loop over parameter sets. 
 for i, pf in enumerate(all_pfs):
     if i % size != rank: continue
-    
+
     start = time.time()
     
     this_pf = all_pfs[pf]
@@ -87,7 +87,8 @@ for i, pf in enumerate(all_pfs):
     # Initialize integral tables
     iits = InitializeIntegralTables(this_pf, data)
     itabs = iits.TabulateRateIntegrals()
-    
+    if this_pf["ExitAfterIntegralTabulation"]: continue
+        
     # Initialize radiation, write data, and monitor classes
     r = Radiate(this_pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
     w = WriteData(this_pf)
