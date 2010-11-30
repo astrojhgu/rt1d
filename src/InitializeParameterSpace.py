@@ -38,7 +38,7 @@ class InitializeParameterSpace:
             
             # Read in the parameter name and the parameter value(s).
             parname, eq, parval = line.partition("=")
-                        
+                                                
             try: parval = float(parval)
             except ValueError:
                 if parval.strip().isalnum(): 

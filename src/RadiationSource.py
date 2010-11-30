@@ -39,45 +39,60 @@ SchaererTable = {
 class RadiationSource:
     def __init__(self, pf):
         self.pf = pf
-        self.s_type = pf["SourceSpectrum"]
+        self.SourceType = pf["SourceType"]
         self.tau = pf["SourceLifetime"]
         self.TimeUnits = pf["TimeUnits"]
-        self.SourceDiscretization = pf["SourceDiscretization"]
-        self.SourceSpectralEnergyBins = pf["SourceSpectralEnergyBins"]
         
-        if self.s_type < 0:
+        # Source discretization
+        self.DiscreteSpectrumMethod = pf["DiscreteSpectrumMethod"]
+        self.DiscreteSpectrumMinEnergy = pf["DiscreteSpectrumMinEnergy"]
+        self.DiscreteSpectrumMaxEnergy = pf["DiscreteSpectrumMaxEnergy"]
+        self.DiscreteSpectrumNumberOfBins = pf["DiscreteSpectrumNumberOfBins"]
+        
+        if self.DiscreteSpectrumMethod == 1:
+            self.DiscreteSpectrumSED = pf["DiscreteSpectrumSED"]
+        elif self.DiscreteSpectrumMethod == 2:
+            self.DiscreteSpectrumSED = np.linspace(self.DiscreteSpectrumMinEnergy, self.DiscreteSpectrumMaxEnergy, self.DiscreteSpectrumNumberOfBins)
+        elif self.DiscreteSpectrumMethod == 3:
+            self.DiscreteSpectrumSED = np.logspace(self.DiscreteSpectrumMinEnergy, self.DiscreteSpectrumMaxEnergy, self.DiscreteSpectrumNumberOfBins)
+        else:
+            pass
+        
+        # Set source-specific parameters
+        if self.SourceType < 0:
             """
             Source of fixed monochromatic photon flux.
             """
-            self.E = pf["SourceSpectralEnergyBins"][0]
-            self.L = pf["SourcePhotonLuminosity"]
+            self.E = pf["DiscreteSpectrumSED"][0]
+            self.L = pf["SpectrumPhotonLuminosity"]
         
-        if self.s_type == 0:
+        if self.SourceType == 0:
             """
             Blackbody.
             """
             self.T = pf["SourceTemperature"]
             self.R = pf["SourceRadius"]
         
-        if self.s_type == 1:
+        if self.SourceType == 1:
             """
             Population III star (Schaerer 2002, Table 3).
             """
             self.T = pf["SourceTemperature"]
             self.M = pf["SourceMass"]
         
-        if self.s_type == 2:
+        if self.SourceType == 2:
             """
             Power-law source, break energy of 1 keV (Madau 2004).
             """
             self.M = pf["SourceMass"]
-            self.Emin = pf["SourceMinEnergy"]
-            self.Emax = pf["SourceMaxEnergy"]
-            self.EminNorm = pf["SourceMinNormEnergy"]
-            self.EmaxNorm = pf["SourceMaxNormEnergy"]
-            self.alpha = -pf["SourcePowerLawIndex"] 
-            self.epsilon = pf["SourceRadiativeEfficiency"]          
-       
+            self.Emin = pf["SpectrumMinEnergy"]
+            self.Emax = pf["SpectrumMaxEnergy"]
+            self.EminNorm = pf["SpectrumMinNormEnergy"]
+            self.EmaxNorm = pf["SpectrumMaxNormEnergy"]
+            self.alpha = -pf["SpectrumPowerLawIndex"] 
+            self.epsilon = pf["SourceRadiativeEfficiency"] 
+        
+        # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()
         
     def Spectrum(self, E):
@@ -95,16 +110,16 @@ class RadiationSource:
             Units: erg / s / cm^2
             
         """
-        if self.s_type < 0:
+        if self.SourceType < 0:
             return 1.0
         
-        if self.s_type == 0 or self.s_type == 1:
+        if self.SourceType == 0 or self.SourceType == 1:
             """
             Why doesn't this integrate to sigma * T^4 off the bat?
             """
             return 2.0 * (E * erg_per_ev)**3 * (np.exp(E * erg_per_ev / k_B / self.T) - 1.0)**-1 / h**2 / c**2
             
-        if self.s_type == 2:
+        if self.SourceType == 2:
             """
             A simple power law X-ray spectrum with spectral index alpha and break 
             energy h*nu_0 = 1keV (Madau et al. 2004).  Unlike the previous two spectral types,
@@ -118,18 +133,18 @@ class RadiationSource:
         Returns a constant that normalizes a given spectrum to its bolometric luminosity.
         """
         
-        if self.SourceDiscretization:
+        if self.DiscreteSpectrumMethod > 0:
             integral = 0
-            for bin in self.SourceSpectralEnergyBins:
+            for bin in self.DiscreteSpectrumSED:
                 integral += self.SpecificIntensity(bin)
         else:
-            if self.s_type < 0:
+            if self.SourceType < 0:
                 integral = 1.0
             
-            if self.s_type == 0 or self.s_type == 1:
+            if self.SourceType == 0 or self.SourceType == 1:
                 integral, err = quad(self.SpecificIntensity, 0, np.inf)
                 
-            if self.s_type == 2:
+            if self.SourceType == 2:
                 if self.alpha == -1.0: 
                     integral = (1. / 1000.0**self.alpha) * (self.EmaxNorm - self.EminNorm)
                 elif self.alpha == -2.0: 
@@ -148,16 +163,16 @@ class RadiationSource:
         
         if (t / self.TimeUnits) > self.tau: return 0.0
         
-        if self.s_type < 0:
+        if self.SourceType < 0:
             return self.L * self.E * erg_per_ev
         
-        if self.s_type == 0:
+        if self.SourceType == 0:
             return sigma_SB * self.T**4 * 4.0 * np.pi * (self.R * cm_per_rsun)**2
         
-        if self.s_type == 1:
+        if self.SourceType == 1:
             return 10**SchaererTable["Luminosity"][SchaererTable["Mass"].index(self.M)] * lsun
             
-        if self.s_type > 1:
+        if self.SourceType > 1:
             Mnow = self.M * np.exp( ((1.0 - self.epsilon) / self.epsilon) * t / t_edd)
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
             

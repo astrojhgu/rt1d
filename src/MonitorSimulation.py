@@ -19,6 +19,7 @@ class MonitorSimulation:
     def __init__(self, pf):
         self.pf = pf
         self.GridDimensions = pf["GridDimensions"]
+        self.MultiSpecies = pf["MultiSpecies"]
         self.LengthUnits = pf["LengthUnits"]
         self.TimeUnits = pf["TimeUnits"]
         self.InitialHIIFraction = pf["InitialHIIFraction"]
@@ -47,7 +48,7 @@ class MonitorSimulation:
         # Plot neutral fraction and temperature
         pl.subplot(211)
         pl.loglog(self.r, x_HI, linestyle = '-', color = 'k', label = r'$x_{HI}$')
-        pl.loglog(self.r, x_HeI, linestyle = ':', color = 'k', label = r'$x_{HeI}$')
+        if self.MultiSpecies > 0: pl.loglog(self.r, x_HeI, linestyle = ':', color = 'k', label = r'$x_{HeI}$')
         pl.loglog([self.StartRadius, self.StartRadius], [min_HI, 1], linestyle = '--', color = 'k')
         pl.ylim(min_HI, 1)
         pl.ylabel(r'$x$')  

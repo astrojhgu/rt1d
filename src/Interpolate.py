@@ -12,6 +12,7 @@ Notes:
 """
 
 import numpy as np
+#from scipy.interpolate import griddata
 
 def Interpolate1D(dataset, array, value, method = 0):
     """
@@ -39,10 +40,11 @@ def Interpolate1D(dataset, array, value, method = 0):
         
     if imin1 == 0: imin2 = imin1 + 1
     elif imin1 == len(array) - 1: imin2 = imin1 - 1
-    else: imin1 = xdiff.index(min(xdiff[imin1 - 1], xdiff[imin1 + 1]))
-    
+    else: imin2 = xdiff.index(min(xdiff[imin1 - 1], xdiff[imin1 + 1]))
+
     if method == 0: return dataset[imin1]
-    if method == 1: return np.interp(value, array, dataset)
+    if method == 1: return np.mean([dataset[imin1], dataset[imin2]])
+    if method == 2: return np.interp(value, array, dataset)
 
 def Interpolate3D(dataset, arrays, values, method = 0):
     """
@@ -51,7 +53,8 @@ def Interpolate3D(dataset, arrays, values, method = 0):
         0: Nearest neighbors
         1: Average of 8 interpolation points
         2: Trilinear 
-        3: crazy fancy interpolation algorithm
+        3: Cubic spline
+        4: crazy fancy interpolation algorithm
         
     The variable 'dataset' is the 3D lookup table, 'arrays' contains
     three 1D array with the possible values for the x, y, and z
@@ -79,10 +82,11 @@ def Interpolate3D(dataset, arrays, values, method = 0):
     if kmin1 == 0: kmin2 = kmin1 + 1
     elif kmin1 == len(arrays[2]) - 1: kmin2 = kmin1 - 1
     else: kmin2 = zdiff.index(min(zdiff[kmin1 - 1], zdiff[kmin1 + 1]))
-    
-    #print imin1, jmin1, kmin1, dataset[imin1][jmin1][kmin1]
-    
-    if method == 0: return dataset[imin1][jmin1][kmin1]
+        
+    #print imin1, jmin1, kmin1    
+        
+    if method == 0: 
+        return dataset[imin1][jmin1][kmin1]
     
     if method == 1:
         i1 = min(imin1, imin2)
@@ -102,5 +106,11 @@ def Interpolate3D(dataset, arrays, values, method = 0):
         v8 = dataset[i2][j2][k2]
                 
         return np.mean([v1, v2, v3, v4, v5, v6, v7, v8])
+        
+    #if method == 2:
+    #    return griddata(values, dataset, (arrays[0], arrays[1], arrays[2]), method='nearest')
+        
+        
+        
         
         

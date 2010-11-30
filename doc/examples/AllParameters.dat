@@ -3,69 +3,80 @@
 ###  Template parameter file for 1D radiative transfer code
 ####
 #####
-
-# Setup
-GridDimensions                      = 1500
-LengthUnits                         = 3.08568e21        # 1 kpc
-TimeUnits                           = 31557600e6        # 1 Myr
-
+          
 # Packages
-UseScipy                            = 1
-IntegrationMethod                   = 0
-InterpolationMethod                 = 1
+UseScipy                                = 1
+IntegrationMethod                       = 0 
+InterpolationMethod                     = 1 
+MonitorSimulation                       = 0 
 
 # Integral tabulation
-ColumnDensityBinsHI                 = 100
-ColumnDensityBinsHeI                = 50
-ColumnDensityBinsHeII               = 50
+ColumnDensityBinsHI                     = 100 
+ColumnDensityBinsHeI                    = 50 
+ColumnDensityBinsHeII                   = 50 
+ExitAfterIntegralTabulation             = 0 
+
+# Grid parameters
+GridDimensions                          = 1000 
+
+# Units
+LengthUnits                             = 3.08568e21
+TimeUnits                               = 31557600e6
 
 # Control parameters
-AdaptiveTimestep                    = 1
-InitialTimestep                     = 0.1
-TimestepSafetyFactor                = 0.5 
-StopTime                            = 50.0
-dtDataDump                          = 1.0
-StartRadius                         = 0.01
-DataDumpName                        = dd
-SavePrefix                          = rt
+CurrentTime                             = 0.0 
+StopTime                                = 50.0 
+InitialTimestep                         = 0.1 
+AdaptiveTimestep                        = 0
+TimestepSafetyFactor                    = 0.5 
+StartRadius                             = 0.01 
+MaxHIIFraction                          = 0.9999 
+dtDataDump                              = 1.0 
+DataDumpName                            = dd
+SavePrefix                              = rt 
 
 # Physics
-MultiSpecies                        = 0
-SecondaryElectronMethod             = 1
-SolveTemperatureEvolution           = 1
-CosmologicalExpansion               = 0
+SolveTemperatureEvolution               = 1 
+MultiSpecies                            = 0 
+SecondaryElectronMethod                 = 1 
+CosmologicalExpansion                   = 0 
 
 # Initial conditions
-InitialRedshift                     = 20.0
-DensityProfile                      = 0
-InitialDensity                      = 0
-TemperatureProfile                  = 0
-InitialTemperature                  = 100
-IonizationProfile                   = 1
-InitialHIIFraction                  = 0.9999
+DensityProfile                          = 1 
+InitialDensity                          = 0 
+TemperatureProfile                      = 1 
+InitialTemperature                      = 100 
+IonizationProfile                       = 1 
+InitialHIIFraction                      = 1e-4 
 
-# Source properties
-SourceSpectrum                      = 0
-SourceDiscretization                = 0
-SourceTemperature                   = 1e4
-SourceRadius                        = 1.0
-SourceMass                          = 1e3
-SourceRadiativeEfficiency           = 0.1
-SourceLifetime                      = 50.0
+# Source parameters
+SourceType                              = 2 
+SourceTemperature                       = 1e4 
+SourceRadius                            = 1.0 
+SourceMass                              = 1e3 
+SourceLifetime                          = 50.0 
+SourceRadiativeEfficiency               = 0.1 
 
 # Spectral parameters
-SourceMinEnergy                     = 100           # All energies in eV
-SourceMaxEnergy                     = 1e4
-SourceMinNormEnergy                 = 100
-SourceMaxNormEnergy                 = 1e4
-SourcePowerLawIndex                 = 1.5
-SourcePhotonLuminosity              = 1e54          # Only for SourceSpectrum < 0
-SourceSpectralEnergyBins            = [13.61] 
+SpectrumPowerLawIndex                   = 1.5 
+SpectrumMinEnergy                       = 100 
+SpectrumMaxEnergy                       = 1e4 
+SpectrumMinNormEnergy                   = 100 
+SpectrumMaxNormEnergy                   = 1e4 
+SpectrumPhotonLuminosity                = 1e50 
+
+# Discretization parameters
+DiscreteSpectrumMethod                  = 0
+DiscreteSpectrumMinEnergy               = 100. 
+DiscreteSpectrumMaxEnergy               = 1e4 
+DiscreteSpectrumNumberOfBins            = 20 
+DiscreteSpectrumSED                     = [13.61] 
 
 # Cosmological Parameters (WMAP 7)
-OmegaMatterNow                      = 0.272
-OmegaBaryonNow                      = 0.044
-OmegaLambdaNow                      = 0.728
-HubbleParameterNow                  = 0.702
+InitialRedshift                         = 20.0 
+OmegaMatterNow                          = 0.272 
+OmegaBaryonNow                          = 0.044 
+OmegaLambdaNow                          = 0.728 
+HubbleParameterNow                      = 0.702
 
 
