@@ -54,7 +54,7 @@ class RadiationSource:
         elif self.DiscreteSpectrumMethod == 2:
             self.DiscreteSpectrumSED = np.linspace(self.DiscreteSpectrumMinEnergy, self.DiscreteSpectrumMaxEnergy, self.DiscreteSpectrumNumberOfBins)
         elif self.DiscreteSpectrumMethod == 3:
-            self.DiscreteSpectrumSED = np.logspace(self.DiscreteSpectrumMinEnergy, self.DiscreteSpectrumMaxEnergy, self.DiscreteSpectrumNumberOfBins)
+            self.DiscreteSpectrumSED = np.logspace(np.log10(self.DiscreteSpectrumMinEnergy), np.log10(self.DiscreteSpectrumMaxEnergy), self.DiscreteSpectrumNumberOfBins)
         else:
             pass
         

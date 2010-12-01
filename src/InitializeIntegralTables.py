@@ -89,7 +89,7 @@ class InitializeIntegralTables:
         elif self.DiscreteSpectrumMethod == 2:
             self.DiscreteSpectrumSED = np.linspace(self.DiscreteSpectrumMinEnergy, self.DiscreteSpectrumMaxEnergy, self.DiscreteSpectrumNumberOfBins)
         elif self.DiscreteSpectrumMethod == 3:
-            self.DiscreteSpectrumSED = np.logspace(self.DiscreteSpectrumMinEnergy, self.DiscreteSpectrumMaxEnergy, self.DiscreteSpectrumNumberOfBins)
+            self.DiscreteSpectrumSED = np.logspace(np.log10(self.DiscreteSpectrumMinEnergy), np.log10(self.DiscreteSpectrumMaxEnergy), self.DiscreteSpectrumNumberOfBins)
         else:
             pass
         
@@ -134,8 +134,8 @@ class InitializeIntegralTables:
         if self.MultiSpecies == 0: dim = "1D"
         else: dim = "3D"
         
-        if self.DiscreteSpectrumMethod == 0: cont = 'cont'
-        else: cont = 'disc'
+        if self.DiscreteSpectrumMethod == 0: cont = 'infbin'
+        else: cont = "{0}bin".format(int(self.DiscreteSpectrumNumberOfBins))
         
         if self.SourceType < 0: 
             src = "mono"
