@@ -10,11 +10,11 @@ Description: General module for command line analysis of rt1d data.
 Notes: Should be studying for comps...
 
 Brief Tutorial:
-    from rtanl import *
-    rt = rtanl('ParameterFile.dat')
-    sim = rt.LoadDataset()
+    from rtanl import *                         # This is now taken care of by mods.py
+    mpf = rtanl('MasterParameterFile.dat')
+    sim = mpf.LoadDataset()
     
-    T = sim[0].T    # Pulls out temperature field from dd0001!
+    T = sim[0].T    # Retrieves temperature from dd0000!
      
 """
 
@@ -43,8 +43,8 @@ class DataDump:
         self.n_HeII = dd["HeIIDensity"].value
         self.n_HeIII = dd["HeIIIDensity"].value
         
-        self.n_H = n_HI + n_HII
-        self.n_He = n_HeI + n_HeII + n_HeIII
+        self.n_H = self.n_HI + self.n_HII
+        self.n_He = self.n_HeI + self.n_HeII + self.n_HeIII
         
         self.x_HI = self.n_HI / self.n_H
         self.x_HII = self.n_HII / self.n_H
@@ -129,8 +129,6 @@ class rtanl:
             if not re.search('.h5', f): continue
             alldds.append(f)
             
-        
-        
         ds = {}
         for ddf in alldds:
             f = h5py.File("{0}/{1}/{2}/{3}".format(self.gd, self.sd, dsn, ddf))
@@ -138,10 +136,21 @@ class rtanl:
             ds[int(ID)] = DataDump(f["Data"], f["ParameterFile"])
             f.close()
             
-        return ds
+        return ds, pf
             
-            
-
+    def make_image(self, dataset, pf):
+        """
+        Make an image!
+        """
+        
+        img = np.zeros((pf["GridDimensions"], pf["GridDimensions"]))     # Radius vs. Temperature vs. x_HI for now
+        for i, r in enumerate(dataset[50].r):
+            for j, T in enumerate(dataset[50].T):
+                img[i][j] = dataset[50].x_HI[i]
+        
+        
+                
+        return img
            
                 
                 

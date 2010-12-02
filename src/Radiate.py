@@ -81,6 +81,7 @@ class Radiate:
         
         newdata = copy.deepcopy(data)
         z = self.cosmo.TimeToRedshiftConverter(0., t, self.InitialRedshift)
+        maxdt = 0.0
         
         def HIIRateEquation(n_HII_0, t, n_HI, n_e, Gamma_HI, alpha_HII):
             """
@@ -210,13 +211,25 @@ class Radiate:
                 xi_HeII = 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
                                                                                                                                                                                                                                                                                    
             # Compute timestep based on ionization timescale in closest cell to source
-            if self.AdaptiveTimestep > 0 and cell == self.StartCell:
-                if self.AdaptiveTimestep == 1: 
-                    dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, self.InitialTimestep)
-                if self.AdaptiveTimestep == 2: 
-                    dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, (1. / Gamma_HeI) * self.TimestepSafetyFactor,
-                        self.InitialTimestep)
-            
+            #if self.AdaptiveTimestep > 0 and cell == self.StartCell:
+            #    if self.AdaptiveTimestep == 1: 
+            #        dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, self.InitialTimestep)
+            #    if self.AdaptiveTimestep == 2: 
+            #        dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, (1. / Gamma_HeI) * self.TimestepSafetyFactor,
+            #            self.InitialTimestep)
+                        
+            # New adaptive timestepping - this info will be used on the next timestep 
+            if self.AdaptiveTimestep > 0:
+                maxdt_H = n_H / (Gamma_HI * n_HI - alpha_HII * n_e * n_HII)
+                maxdt_He = n_He / \
+                        (Gamma_HeI * n_HeI - Beta_HeI * n_e * n_HeI + Beta_HeII * n_e * n_HeII - \
+                        alpha_HeII * n_e * n_HeII + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * n_HeII)
+                
+                if not np.isfinite(maxdt_H): maxdt_H = 0.0
+                if not np.isfinite(maxdt_He): maxdt_He = 0.0
+                 
+                maxdt = self.TimestepSafetyFactor * max(maxdt_H, maxdt_He, maxdt)
+                  
             # Solve the HII rate equation                                                                                                                                  
             newHII = odeint(HIIRateEquation, [n_HII, 0], [0, dt], Dfun = HIIRateEqJacobian, \
                 args = (n_HI, n_e, Gamma_HI, alpha_HII,), mxstep = 10000)[1][0]
@@ -268,8 +281,10 @@ class Radiate:
             newdata["HeIIIDensity"][cell] = newHeIII
             newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
             newdata["Temperature"][cell] = newT
+                     
+        nextdt = min(self.InitialTimestep, maxdt)             
                                         
-        return newdata, dt
+        return newdata, nextdt
         
     def IonizationRateCoefficientHI(self, ncol, n_e, n_HI, n_HeI, x_HII, T, r, t):
         """
