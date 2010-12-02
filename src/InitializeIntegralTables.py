@@ -135,7 +135,9 @@ class InitializeIntegralTables:
         else: dim = "3D"
         
         if self.DiscreteSpectrumMethod == 0: cont = 'infbin'
-        else: cont = "{0}bin".format(int(self.DiscreteSpectrumNumberOfBins))
+        elif self.DiscreteSpectrumMethod == 1: cont = "{0}bin".format(int(self.DiscreteSpectrumNumberOfBins))
+        elif self.DiscreteSpectrumMethod == 2: cont = "{0}linbin".format(int(self.DiscreteSpectrumNumberOfBins))
+        elif self.DiscreteSpectrumMethod == 3: cont = "{0}logbin".format(int(self.DiscreteSpectrumNumberOfBins))
         
         if self.SourceType < 0: 
             src = "mono"
