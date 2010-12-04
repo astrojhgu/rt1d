@@ -134,9 +134,8 @@ class RadiationSource:
         """
         
         if self.DiscreteSpectrumMethod > 0:
-            integral = 0
-            for bin in self.DiscreteSpectrumSED:
-                integral += self.SpecificIntensity(bin)
+            integral = np.sum(self.SpecificIntensity(self.DiscreteSpectrumSED))
+            
         else:
             if self.SourceType < 0:
                 integral = 1.0

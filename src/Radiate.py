@@ -209,26 +209,22 @@ class Radiate:
                 if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))
                 else: alpha_HeIII *= (1.43 - 0.076 * np.log(T))
                 xi_HeII = 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
-                                                                                                                                                                                                                                                                                   
-            # Compute timestep based on ionization timescale in closest cell to source
-            #if self.AdaptiveTimestep > 0 and cell == self.StartCell:
-            #    if self.AdaptiveTimestep == 1: 
-            #        dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, self.InitialTimestep)
-            #    if self.AdaptiveTimestep == 2: 
-            #        dt = min((1. / Gamma_HI) * self.TimestepSafetyFactor, (1. / Gamma_HeI) * self.TimestepSafetyFactor,
-            #            self.InitialTimestep)
-                        
+                                                                    
             # New adaptive timestepping - this info will be used on the next timestep 
             if self.AdaptiveTimestep > 0:
-                maxdt_H = n_H / (Gamma_HI * n_HI - alpha_HII * n_e * n_HII)
-                maxdt_He = n_He / \
+                newmaxdt = n_H / (Gamma_HI * n_HI - alpha_HII * n_e * n_HII)
+                if not np.isfinite(newmaxdt): newmaxdt = 0.0
+                
+                if self.MultiSpecies > 0:
+                    maxdt_He = n_He / \
                         (Gamma_HeI * n_HeI - Beta_HeI * n_e * n_HeI + Beta_HeII * n_e * n_HeII - \
                         alpha_HeII * n_e * n_HeII + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * n_HeII)
                 
-                if not np.isfinite(maxdt_H): maxdt_H = 0.0
-                if not np.isfinite(maxdt_He): maxdt_He = 0.0
-                 
-                maxdt = self.TimestepSafetyFactor * max(maxdt_H, maxdt_He, maxdt)
+                    if not np.isfinite(maxdt_He): maxdt_He = 0.0
+                    
+                    newmaxdt = max(newmaxdt_H, maxdt_He)
+
+                maxdt = self.TimestepSafetyFactor * max(newmaxdt, maxdt)
                   
             # Solve the HII rate equation                                                                                                                                  
             newHII = odeint(HIIRateEquation, [n_HII, 0], [0, dt], Dfun = HIIRateEqJacobian, \
@@ -281,8 +277,9 @@ class Radiate:
             newdata["HeIIIDensity"][cell] = newHeIII
             newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
             newdata["Temperature"][cell] = newT
-                     
-        nextdt = min(self.InitialTimestep, maxdt)             
+           
+        if self.AdaptiveTimestep > 0: nextdt = min(self.InitialTimestep, maxdt) 
+        else: nextdt = dt            
                                         
         return newdata, nextdt
         
