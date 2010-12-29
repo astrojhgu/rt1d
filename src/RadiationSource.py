@@ -50,7 +50,7 @@ class RadiationSource:
         self.DiscreteSpectrumNumberOfBins = pf["DiscreteSpectrumNumberOfBins"]
         
         if self.DiscreteSpectrumMethod == 1:
-            self.DiscreteSpectrumSED = pf["DiscreteSpectrumSED"]
+            self.DiscreteSpectrumSED = np.array(pf["DiscreteSpectrumSED"])
         elif self.DiscreteSpectrumMethod == 2:
             self.DiscreteSpectrumSED = np.linspace(self.DiscreteSpectrumMinEnergy, self.DiscreteSpectrumMaxEnergy, self.DiscreteSpectrumNumberOfBins)
         elif self.DiscreteSpectrumMethod == 3:

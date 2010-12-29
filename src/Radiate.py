@@ -17,9 +17,6 @@ from Cosmology import *
 from scipy.integrate import odeint
 import numpy as np
 import copy
-from mpi4py import MPI
-
-rank = MPI.COMM_WORLD.rank
 
 m_e = 9.10938188*10**-28 		# Electron mass - [m_e] = g
 m_p = 1.67262158*10**-24		# Proton mass - [m_p] = g
@@ -148,43 +145,53 @@ class Radiate:
             HeatLoss = self.HeatLoss(nabs, nion, n_e, n_B, T_0[0], z)            
                                                                                                                                                                                                                                       
             return HeatGain - HeatLoss
+
+        # The meat of the matter, with some array-optimization.
             
+        # Nice names for all the quantities we need!
+        x_HI_arr = data["HIDensity"] / (data["HIDensity"] + data["HIIDensity"])
+        x_HII_arr = data["HIIDensity"] / (data["HIDensity"] + data["HIIDensity"])
+
+        if self.MultiSpecies:
+            x_HeI_arr = data["HeIDensity"] / (data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"])
+            x_HeII_arr = data["HeIIDensity"] / (data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"])
+            x_HeIII_arr = data["HeIIIDensity"] / (data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"])
+        
+        else: x_HeI_arr = x_HeII_arr = x_HeIII_arr = np.zeros_like(x_HI_arr)
+                                                        
+        # If we're in an expanding universe, dilute densities by (1 + z)^3    
+        if self.CosmologicalExpansion: 
+            data["HIDensity"] = x_HI * self.InitialHydrogenDensity * (1. + z)**3
+            data["HIIDensity"] = x_HII * self.InitialHydrogenDensity * (1. + z)**3
+            data["HeIDensity"] = x_HeI * self.InitialHeliumDensity * (1. + z)**3
+            data["HeIIDensity"] = x_HeII * self.InitialHeliumDensity * (1. + z)**3
+            data["HeIIIDensity"] = x_HeIII * self.InitialHeliumDensity * (1. + z)**3    
+            data["ElectronDensity"] = data["HIIDensity"] + data["HeIIDensity"] + 2. * data["HeIIIDensity"]
+
+        ncol_HI = np.cumsum(data["HIDensity"]) * self.dx
+        ncol_HeI = np.cumsum(data["HeIDensity"]) * self.dx
+        ncol_HeII = np.cumsum(data["HeIIDensity"]) * self.dx
+
         # Loop over cells radially, solve rate equations, update values in data
         for cell in self.grid:
-                                         
-            # Nice names for all the quantities we need!
-            x_HI = copy.deepcopy(data["HIDensity"][cell] / (data["HIDensity"][cell] + data["HIIDensity"][cell]))
-            x_HII = copy.deepcopy(data["HIIDensity"][cell] / (data["HIDensity"][cell] + data["HIIDensity"][cell]))            
+        
+            if cell < self.StartCell: continue
 
-            if self.MultiSpecies:
-                x_HeI = copy.deepcopy(data["HeIDensity"][cell] / (data["HeIDensity"][cell] + data["HeIIDensity"][cell] + data["HeIIIDensity"][cell]))
-                x_HeII = copy.deepcopy(data["HeIIDensity"][cell] / (data["HeIDensity"][cell] + data["HeIIDensity"][cell] + data["HeIIIDensity"][cell]))
-                x_HeIII = copy.deepcopy(data["HeIIIDensity"][cell] / (data["HeIDensity"][cell] + data["HeIIDensity"][cell] + data["HeIIIDensity"][cell]))
-            
-            else: x_HeI = x_HeII = x_HeIII = 0.0 
-                                                            
-            # If we're in an expanding universe, dilute densities by (1 + z)^3    
-            if self.CosmologicalExpansion: 
-                data["HIDensity"][cell] = x_HI * self.InitialHydrogenDensity * (1. + z)**3
-                data["HIIDensity"][cell] = x_HII * self.InitialHydrogenDensity * (1. + z)**3
-                data["HeIDensity"][cell] = x_HeI * self.InitialHeliumDensity * (1. + z)**3
-                data["HeIIDensity"][cell] = x_HeII * self.InitialHeliumDensity * (1. + z)**3
-                data["HeIIIDensity"][cell] = x_HeIII * self.InitialHeliumDensity * (1. + z)**3    
-                data["ElectronDensity"][cell] = data["HIIDensity"][cell] + data["HeIIDensity"][cell] + 2. * data["HeIIIDensity"][cell]
-                
-            if cell < self.StartCell: continue    
-                
             n_e = data["ElectronDensity"][cell]
             n_HI = data["HIDensity"][cell]
             n_HII = data["HIIDensity"][cell]
             n_HeI = data["HeIDensity"][cell]
             n_HeII = data["HeIIDensity"][cell]
             n_HeIII = data["HeIIIDensity"][cell] 
-                                   
-            ncol_HI = np.sum(data["HIDensity"][0:cell] * self.dx)
-            ncol_HeI = np.sum(data["HeIDensity"][0:cell] * self.dx)
-            ncol_HeII = np.sum(data["HeIIDensity"][0:cell] * self.dx)
-            ncol = [ncol_HI, ncol_HeI, ncol_HeII]
+            
+            x_HI = x_HI_arr[cell]
+            x_HII = x_HII_arr[cell]
+            if self.MultiSpecies:
+                x_HeI = x_HeI_arr[cell]
+                x_HeII = x_HeII_arr[cell]
+                x_HeIII = x_HeIII_arr[cell]
+            
+            ncol = [ncol_HI[cell], ncol_HeI[cell], ncol_HeII[cell]]
             nabs = [n_HI, n_HeI, n_HeII]
             nion = [n_HII, n_HeII, n_HeIII]
             n_H = n_HI + n_HII
