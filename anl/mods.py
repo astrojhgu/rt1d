@@ -19,5 +19,7 @@ from rtanl import *
 print "\nWelcome to irt!\n"
 
 print "Standard rt1d analysis module has been loaded.  To get started: \n"
-print "    mpf = rtanl(MainParameterFile)"
-print "    sim = mpf.LoadDataset(parvals = {}, filename = None)\n"
+print "    mpf = rtan(MainParameterFile)"
+print "    sim, pf = mpf.load(parvals = {}, filename = None)\n"
+print "    T = sim[50].T\n"
+

@@ -14,7 +14,7 @@ Notes:
 
 import numpy as np
 from scipy.integrate import quad
-import numpy as np
+from scipy.optimize import fsolve
 
 h = 6.626068 * 10**-27 			                            # Planck's constant - [h] = erg*s
 k_B = 1.3806503 * 10**-16			                        # Boltzmann's constant - [k_B] = erg/K
@@ -48,15 +48,7 @@ class RadiationSource:
         self.DiscreteSpectrumMinEnergy = pf["DiscreteSpectrumMinEnergy"]
         self.DiscreteSpectrumMaxEnergy = pf["DiscreteSpectrumMaxEnergy"]
         self.DiscreteSpectrumNumberOfBins = pf["DiscreteSpectrumNumberOfBins"]
-        
-        if self.DiscreteSpectrumMethod == 1:
-            self.DiscreteSpectrumSED = np.array(pf["DiscreteSpectrumSED"])
-        elif self.DiscreteSpectrumMethod == 2:
-            self.DiscreteSpectrumSED = np.linspace(self.DiscreteSpectrumMinEnergy, self.DiscreteSpectrumMaxEnergy, self.DiscreteSpectrumNumberOfBins)
-        elif self.DiscreteSpectrumMethod == 3:
-            self.DiscreteSpectrumSED = np.logspace(np.log10(self.DiscreteSpectrumMinEnergy), np.log10(self.DiscreteSpectrumMaxEnergy), self.DiscreteSpectrumNumberOfBins)
-        else:
-            pass
+        self.DiscreteSpectrumBinEdges = pf["DiscreteSpectrumBinEdges"]
         
         # Set source-specific parameters
         if self.SourceType < 0:
@@ -91,7 +83,36 @@ class RadiationSource:
             self.EmaxNorm = pf["SpectrumMaxNormEnergy"]
             self.alpha = -pf["SpectrumPowerLawIndex"] 
             self.epsilon = pf["SourceRadiativeEfficiency"] 
-        
+                
+        # Source discretization
+        if self.DiscreteSpectrumMethod == 1:
+            self.DiscreteSpectrumSED = np.array(pf["DiscreteSpectrumSED"])
+        elif self.DiscreteSpectrumMethod == 2:
+            self.DiscreteSpectrumSED = np.linspace(self.DiscreteSpectrumMinEnergy, self.DiscreteSpectrumMaxEnergy, self.DiscreteSpectrumNumberOfBins)
+        elif self.DiscreteSpectrumMethod == 3:
+            self.DiscreteSpectrumSED = np.logspace(np.log10(self.DiscreteSpectrumMinEnergy), np.log10(self.DiscreteSpectrumMaxEnergy), self.DiscreteSpectrumNumberOfBins)
+        elif self.DiscreteSpectrumMethod >= 4:
+            
+            self.DiscreteSpectrumSED = np.zeros_like(self.DiscreteSpectrumBinEdges)
+            for i, edge in enumerate(self.DiscreteSpectrumBinEdges): 
+                
+                # Calculate bandpass upper limit
+                if i < len(self.DiscreteSpectrumBinEdges) - 1: ulim = self.DiscreteSpectrumBinEdges[i + 1]
+                else: ulim = self.DiscreteSpectrumMaxEnergy
+                
+                E_exp = lambda E: E * self.SpecificIntensity(E)  # Mean energy
+                E_med = lambda E: (quad(self.SpecificIntensity, edge, E)[0] / quad(self.SpecificIntensity, edge, ulim)[0]) - 0.5 # Median energy
+                
+                if self.DiscreteSpectrumMethod == 4:
+                    self.DiscreteSpectrumSED[i] = quad(E_exp, edge, ulim)[0] / quad(self.SpecificIntensity, edge, ulim)[0]
+                elif self.DiscreteSpectrumMethod == 5:
+                    self.DiscreteSpectrumSED[i] = fsolve(E_med, np.mean([edge, ulim]))
+                    
+                # Force all energy above last bin to be emitted at last bin    
+                self.DiscreteSpectrumSED[-1] = self.DiscreteSpectrumBinEdges[-1]
+        else:
+            pass
+            
         # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()
         
@@ -109,34 +130,78 @@ class RadiationSource:
         
             Units: erg / s / cm^2
             
-        """
-        if self.SourceType < 0:
-            return 1.0
+        """       
         
-        if self.SourceType == 0 or self.SourceType == 1:
-            """
-            Why doesn't this integrate to sigma * T^4 off the bat?
-            """
-            return 2.0 * (E * erg_per_ev)**3 * (np.exp(E * erg_per_ev / k_B / self.T) - 1.0)**-1 / h**2 / c**2
+        if self.DiscreteSpectrumMethod < 4:
+            if self.SourceType < 0:
+                return 1.0
             
-        if self.SourceType == 2:
+            if self.SourceType == 0 or self.SourceType == 1:
+                return self.BlackBody(E)
+                
+            if self.SourceType == 2:
+                return self.PowerLaw(E)
+        
+        
+        # Bandpass averaging    
+        else:
             """
-            A simple power law X-ray spectrum with spectral index alpha and break 
-            energy h*nu_0 = 1keV (Madau et al. 2004).  Unlike the previous two spectral types,
-            this quantity is completely unnormalized and cannot be considered a specific intensity.
-            """
+            find bin edges for this energy.
+            integrate spectrum over this energy range
+            return integrated intensity over bandpass
             
-            return E * (E / 1000.0)**self.alpha
+            """
+                        
+            for i, edge in enumerate(self.DiscreteSpectrumBinEdges):
+                if (E < self.DiscreteSpectrumBinEdges[i]):
+                    return 0.0
+                    
+                elif i < len(self.DiscreteSpectrumBinEdges) - 1:
+                    
+                    if (E > edge) and (E < self.DiscreteSpectrumBinEdges[i + 1]):
+                        
+                        if self.SourceType == 0 or self.SourceType == 1:
+                            I = quad(self.BlackBody, edge, self.DiscreteSpectrumBinEdges[i + 1])[0]
+                        elif self.SourceType == 2:   
+                            I = quad(self.PowerLaw, edge, self.DiscreteSpectrumBinEdges[i + 1])[0]
+
+                        return I
+                
+                else:
+                    if E >= self.DiscreteSpectrumBinEdges[-1]:
+                        if self.SourceType == 0 or self.SourceType == 1:
+                            I = quad(self.BlackBody, edge, np.inf)[0]
+                        elif self.SourceType == 2:   
+                            I = quad(self.PowerLaw, edge, self.Emax)[0]
+
+                        return I
+        
+    def BlackBody(self, E):
+        """
+        Returns specific intensity of blackbody at self.T.  Not yet normalized.
+        """        
+        return 2.0 * (E * erg_per_ev)**3 * (np.exp(E * erg_per_ev / k_B / self.T) - 1.0)**-1 / h**2 / c**2
+                        
+    def PowerLaw(self, E):
+        """
+        Returns specific intensity of power law spectrum with index self.alpha.  Should generalize
+        so that we can adjust the break energy (currently set to 1 keV) in a parameter.
+        """    
+        """
+        A simple power law X-ray spectrum with spectral index alpha and break 
+        energy h*nu_0 = 1keV (Madau et al. 2004).  Unlike the previous two spectral types,
+        this quantity is completely unnormalized and cannot be considered a specific intensity.
+        """
+        
+        return E * (E / 1000.0)**self.alpha
+        
         
     def NormalizeLuminosity(self):
         """
         Returns a constant that normalizes a given spectrum to its bolometric luminosity.
         """
-        
-        if self.DiscreteSpectrumMethod > 0:
-            integral = np.sum(self.SpecificIntensity(self.DiscreteSpectrumSED))
             
-        else:
+        if self.DiscreteSpectrumMethod == 0:
             if self.SourceType < 0:
                 integral = 1.0
             
@@ -150,7 +215,15 @@ class RadiationSource:
                     integral = (1. / 1000.0**self.alpha) * np.log(self.EmaxNorm / self.EminNorm)    
                 else: 
                     integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
-                    (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))   
+                    (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))  
+                    
+        elif self.DiscreteSpectrumMethod < 4:
+            integral = np.sum(self.SpecificIntensity(self.DiscreteSpectrumSED)) 
+            
+        else:
+            integral = 0
+            for i, element in enumerate(self.DiscreteSpectrumSED):
+                integral += self.SpecificIntensity(element)
                                                                                             
         return self.BolometricLuminosity(0.0) / integral  
         

@@ -29,7 +29,7 @@ sigma_r = LengthUnits / GridDims / cm_per_kpc
 # Analytic solution
 T = f["Data"]["Temperature"].value[0]
 n_H = f["Data"]["HIDensity"].value[-1]
-Ndot = f["ParameterFile"]["SourcePhotonLuminosity"].value
+Ndot = f["ParameterFile"]["SpectrumPhotonLuminosity"].value
 alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
 trec = 1. / alpha_HII / n_H / s_per_myr
 rs = (3. * Ndot / 4. / np.pi / alpha_HII / n_H**2)**(1. / 3.) / cm_per_kpc

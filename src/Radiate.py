@@ -229,7 +229,7 @@ class Radiate:
                 
                     if not np.isfinite(maxdt_He): maxdt_He = 0.0
                     
-                    newmaxdt = max(newmaxdt_H, maxdt_He)
+                    newmaxdt = max(newmaxdt, maxdt_He)
 
                 maxdt = self.TimestepSafetyFactor * max(newmaxdt, maxdt)
                   

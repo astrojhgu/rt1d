@@ -86,6 +86,8 @@ def SetDefaultParameterValues():
           "DiscreteSpectrumMinEnergy": 100., \
           "DiscreteSpectrumMaxEnergy": 1e4, \
           "DiscreteSpectrumNumberOfBins": 20, \
+          "DiscreteSpectrumSmoothingWidth": 10, \
+          "DiscreteSpectrumBinEdges": [13.6, 20, 30, 40, 50], \
           "DiscreteSpectrumSED": [13.61], \
           
           # Cosmological Parameters (WMAP 7)
