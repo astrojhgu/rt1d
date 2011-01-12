@@ -17,6 +17,9 @@ import itertools as it
 import copy
 from SetDefaultParameterValues import *
 
+cm_per_kpc = 3.08568 * 10**21
+s_per_myr = 365.25 * 24 * 3600 * 10**6
+
 class InitializeParameterSpace:
     def __init__(self, pf):
         self.pf = pf
@@ -38,7 +41,14 @@ class InitializeParameterSpace:
             
             # Read in the parameter name and the parameter value(s).
             parname, eq, parval = line.partition("=")
-                                                
+            
+            # ProblemType option
+            if parname.strip() == 'ProblemType' and float(parval) > 0:
+                pf_new = self.ProblemType(float(parval))
+                for param in pf_new: pf_dict[param] = pf_new[param]
+                break
+                
+            # Else, actually read in the parameter file                                    
             try: parval = float(parval)
             except ValueError:
                 if parval.strip().isalnum(): 
@@ -125,4 +135,32 @@ class InitializeParameterSpace:
             
            
         return all_pfs_dict
+        
+    def ProblemType(self, pt):
+        """
+        Storage bin for predefined problem types, 'pt's, like those used in the radiative transfer comparison project,
+        or John and Tom's 2010 ENZO-MORAY paper.
+        """
+        
+        # EM-1, RT1: Pure hydrogen, isothermal HII region expansion
+        if pt == 1:
+            pf = {"ProblemType": 1, "UseScipy": 1, "IntegrationMethod": 0, "InterpolationMethod": 1, "MonitorSimulation": 0, \
+                  "ColumnDensityBinsHI": 100, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
+                  "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
+                  "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 1.0, "DataDumpName": 'dd', \
+                  "SavePrefix": 'rt', "SolveTemperatureEvolution": 0, "MultiSpecies": 0, "SecondaryElectronMethod": 1, "CosmologicalExpansion": 0, \
+                  "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e4, \
+                  "IonizationProfile": 0, "InitialHIIFraction": 1.2e-3, "SourceType": 0, "SourceLifetime": 500.0, \
+                  "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [13.6000001]
+                 }            
+            
+        return pf    
+            
+            
+            
+            
+            
+            
+            
+        
         

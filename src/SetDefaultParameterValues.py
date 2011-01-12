@@ -19,6 +19,9 @@ from Constants import *
 
 def SetDefaultParameterValues():
     pf = {
+    
+          # Override
+          "ProblemType": 0, \
           
           # Packages
           "UseScipy": 1, \

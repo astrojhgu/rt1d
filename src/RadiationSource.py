@@ -51,28 +51,28 @@ class RadiationSource:
         self.DiscreteSpectrumBinEdges = pf["DiscreteSpectrumBinEdges"]
         
         # Set source-specific parameters
-        if self.SourceType < 0:
+        if self.SourceType == 0:
             """
             Source of fixed monochromatic photon flux.
             """
             self.E = pf["DiscreteSpectrumSED"][0]
             self.L = pf["SpectrumPhotonLuminosity"]
         
-        if self.SourceType == 0:
+        if self.SourceType == 1:
             """
             Blackbody.
             """
             self.T = pf["SourceTemperature"]
             self.R = pf["SourceRadius"]
         
-        if self.SourceType == 1:
+        if self.SourceType == 2:
             """
             Population III star (Schaerer 2002, Table 3).
             """
             self.T = pf["SourceTemperature"]
             self.M = pf["SourceMass"]
         
-        if self.SourceType == 2:
+        if self.SourceType == 3:
             """
             Power-law source, break energy of 1 keV (Madau 2004).
             """
@@ -134,13 +134,13 @@ class RadiationSource:
         """       
         
         if self.DiscreteSpectrumMethod < 4:
-            if self.SourceType < 0:
+            if self.SourceType == 0:
                 return 1.0
             
-            if self.SourceType == 0 or self.SourceType == 1:
+            if self.SourceType == 1 or self.SourceType == 2:
                 return self.BlackBody(E)
                 
-            if self.SourceType == 2:
+            if self.SourceType == 3:
                 return self.PowerLaw(E)
         
         
@@ -161,18 +161,18 @@ class RadiationSource:
                     
                     if (E > edge) and (E < self.DiscreteSpectrumBinEdges[i + 1]):
                         
-                        if self.SourceType == 0 or self.SourceType == 1:
+                        if self.SourceType == 1 or self.SourceType == 2:
                             I = quad(self.BlackBody, edge, self.DiscreteSpectrumBinEdges[i + 1])[0]
-                        elif self.SourceType == 2:   
+                        elif self.SourceType == 3:   
                             I = quad(self.PowerLaw, edge, self.DiscreteSpectrumBinEdges[i + 1])[0]
 
                         return I
                 
                 else:
                     if E >= self.DiscreteSpectrumBinEdges[-1]:
-                        if self.SourceType == 0 or self.SourceType == 1:
+                        if self.SourceType == 1 or self.SourceType == 2:
                             I = quad(self.BlackBody, edge, np.inf)[0]
-                        elif self.SourceType == 2:   
+                        elif self.SourceType == 3:   
                             I = quad(self.PowerLaw, edge, self.Emax)[0]
 
                         return I
@@ -203,13 +203,13 @@ class RadiationSource:
         """
             
         if self.DiscreteSpectrumMethod == 0:
-            if self.SourceType < 0:
+            if self.SourceType == 0:
                 integral = 1.0
             
-            if self.SourceType == 0 or self.SourceType == 1:
+            if self.SourceType == 1 or self.SourceType == 2:
                 integral, err = quad(self.SpecificIntensity, 0, np.inf)
                 
-            if self.SourceType == 2:
+            if self.SourceType == 3:
                 if self.alpha == -1.0: 
                     integral = (1. / 1000.0**self.alpha) * (self.EmaxNorm - self.EminNorm)
                 elif self.alpha == -2.0: 
@@ -236,16 +236,16 @@ class RadiationSource:
         
         if (t / self.TimeUnits) > self.tau: return 0.0
         
-        if self.SourceType < 0:
+        if self.SourceType == 0:
             return self.L * self.E * erg_per_ev
         
-        if self.SourceType == 0:
+        if self.SourceType == 1:
             return sigma_SB * self.T**4 * 4.0 * np.pi * (self.R * cm_per_rsun)**2
         
-        if self.SourceType == 1:
+        if self.SourceType == 2:
             return 10**SchaererTable["Luminosity"][SchaererTable["Mass"].index(self.M)] * lsun
             
-        if self.SourceType > 1:
+        if self.SourceType > 3:
             Mnow = self.M * np.exp( ((1.0 - self.epsilon) / self.epsilon) * t / t_edd)
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
             

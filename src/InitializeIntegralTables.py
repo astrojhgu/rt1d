@@ -140,17 +140,17 @@ class InitializeIntegralTables:
         elif self.rs.DiscreteSpectrumMethod == 3: cont = "{0}logbin".format(int(self.rs.DiscreteSpectrumNumberOfBins))
         else: cont = "{0}binBA".format(int(self.rs.DiscreteSpectrumNumberOfBins))
         
-        if self.SourceType < 0: 
+        if self.SourceType == 0: 
             src = "mono"
             mort = "{0:g}phot".format(int(self.SpectrumPhotonLuminosity))
             return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, zi, dim, cont)
         
-        if self.SourceType == 0: 
+        if self.SourceType == 1: 
             src = "bb"
             mort = "{0}K".format(int(self.SourceTemperature))
             return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, zi, dim, cont)
             
-        elif self.SourceType == 1:
+        elif self.SourceType == 2:
             src = "popIII"
             mort = "{0}M".format(int(self.SourceMass))
             return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, zi, dim, cont)
