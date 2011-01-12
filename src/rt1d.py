@@ -69,7 +69,7 @@ for i, pf in enumerate(all_pfs):
     StopTime = this_pf["StopTime"] * TimeUnits
     dt = this_pf["InitialTimestep"] * TimeUnits
     dtDataDump = this_pf["dtDataDump"] * TimeUnits
-    
+        
     # Widget for progressbar.
     widget = ["rt1d: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
             

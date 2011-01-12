@@ -14,7 +14,7 @@ import numpy as np
 import pylab as pl
 import os
 from Constants import *
-from rtanl import *
+from rtan import *
 
 print "\nWelcome to irt!\n"
 

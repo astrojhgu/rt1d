@@ -110,6 +110,7 @@ class RadiationSource:
                     
                 # Force all energy above last bin to be emitted at last bin    
                 self.DiscreteSpectrumSED[-1] = self.DiscreteSpectrumBinEdges[-1]
+                self.DiscreteSpectrumNumberOfBins = len(self.DiscreteSpectrumSED)
         else:
             pass
             

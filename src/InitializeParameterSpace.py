@@ -124,6 +124,5 @@ class InitializeParameterSpace:
                 all_pfs_dict["{0}{1:04d}".format(pf_key, i)] = tmp 
             
            
-            
         return all_pfs_dict
         
