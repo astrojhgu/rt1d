@@ -387,7 +387,7 @@ class Radiate:
         cool += 4. * k_B * (T - T_cmb) * (np.pi**2 / 15.) * (k_B * T_cmb / hbar / c)**3 * (k_B * T_cmb / m_e / c**2) * sigma_T * c
         
         # Cooling by free-free emission
-        cool += sum(nion) * 1.42e-27 * 1.1 * np.sqrt(T)     # Check on Gaunt factor
+        cool += [nion[0] + nion[1] + 4. * nion[2]] * 1.42e-27 * 1.1 * np.sqrt(T) # Check on Gaunt factor
                 
         cool *= n_e
         
