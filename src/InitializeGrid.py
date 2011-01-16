@@ -101,8 +101,8 @@ class InitializeGrid:
         
         if self.IonizationProfile == 0: ionization = self.InitialHIIFraction 
         if self.IonizationProfile == 1: 
-            if (float(cell) / self.GridDimensions) < self.StartRadius: ionization = self.InitialHIIFraction
-            else: ionization = 0.0
+            if (float(cell) / self.GridDimensions) < self.StartRadius: ionization = 0.99999999999
+            else: ionization = self.InitialHIIFraction
         
         return ionization    
         

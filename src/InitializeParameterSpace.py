@@ -41,14 +41,14 @@ class InitializeParameterSpace:
             
             # Read in the parameter name and the parameter value(s).
             parname, eq, parval = line.partition("=")
-            
+                        
             # ProblemType option
             if parname.strip() == 'ProblemType' and float(parval) > 0:
                 pf_new = self.ProblemType(float(parval))
                 for param in pf_new: pf_dict[param] = pf_new[param]
                 break
                 
-            # Else, actually read in the parameter file                                    
+            # Else, actually read in the parameter                                     
             try: parval = float(parval)
             except ValueError:
                 if parval.strip().isalnum(): 
@@ -138,21 +138,35 @@ class InitializeParameterSpace:
         
     def ProblemType(self, pt):
         """
-        Storage bin for predefined problem types, 'pt's, like those used in the radiative transfer comparison project,
-        or John and Tom's 2010 ENZO-MORAY paper.
+        Storage bin for predefined problem types, 'pt's, like those used in the radiative transfer comparison project ('RT'),
+        or John and Tom's 2010 ENZO-MORAY ('EM') paper.
         """
         
         # EM-1, RT1: Pure hydrogen, isothermal HII region expansion
         if pt == 1:
-            pf = {"ProblemType": 1, "UseScipy": 1, "IntegrationMethod": 0, "InterpolationMethod": 1, "MonitorSimulation": 0, \
-                  "ColumnDensityBinsHI": 100, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
+            pf = {"ProblemType": 1, "UseScipy": 1, "IntegrationMethod": 0, "InterpolationMethod": 2, "MonitorSimulation": 0, \
+                  "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
                   "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
-                  "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 1.0, "DataDumpName": 'dd', \
+                  "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 0.1, "DataDumpName": 'dd', \
                   "SavePrefix": 'rt', "SolveTemperatureEvolution": 0, "MultiSpecies": 0, "SecondaryElectronMethod": 1, "CosmologicalExpansion": 0, \
                   "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e4, \
-                  "IonizationProfile": 0, "InitialHIIFraction": 1.2e-3, "SourceType": 0, "SourceLifetime": 500.0, \
-                  "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [13.6000001]
+                  "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 0, "SourceLifetime": 500.0, \
+                  "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [13.6]
                  }            
+        
+        # EM-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum (supposedly samples 1e5 K BB)
+        if pt == 2:
+            pf = {"ProblemType": 2, "UseScipy": 1, "IntegrationMethod": 0, "InterpolationMethod": 2, "MonitorSimulation": 0, \
+                  "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
+                  "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
+                  "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 0.1, "DataDumpName": 'dd', \
+                  "SavePrefix": 'rt', "SolveTemperatureEvolution": 1, "MultiSpecies": 0, "SecondaryElectronMethod": 1, "CosmologicalExpansion": 0, \
+                  "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
+                  "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 500.0, \
+                  "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
+                  "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188]
+                 }      
+                
             
         return pf    
             

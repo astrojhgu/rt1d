@@ -45,14 +45,18 @@ for dd in os.listdir(os.getcwd()):
     f = h5py.File(dd, 'r')
     x_H = f["Data"]["HIDensity"].value / (f["Data"]["HIDensity"].value + f["Data"]["HIIDensity"].value)
     
-    # Find position of I-front - don't use interpolation since slope is often infinite
+    # Find position of I-front - interpolate over small range about min(x_H - 0.5)
     pd = abs(x_H - 0.5)
+    pdpm = x_H - 0.5
     pos = list(pd).index(min(pd))
+    tmp = [pdpm[pos - 1], pdpm[pos], pdpm[pos + 1]]
+    
+    newpos = np.interp(0.0, tmp, [pos - 1, pos, pos + 1])
     
     # Read in time (should be in code units)
     time = f["ParameterFile"]["CurrentTime"].value
                         
-    r.append(pos * LengthUnits / GridDims / cm_per_kpc)
+    r.append(newpos * LengthUnits / GridDims / cm_per_kpc)
     t.append(time * TimeUnits / s_per_myr)
     f.close()
 
@@ -74,7 +78,7 @@ pl.legend(loc = 'lower right')
 
 pl.subplot(212)
 pl.plot(t, error)
-pl.ylim(-1., 1.)
+pl.ylim(-5, 5)
 pl.xlabel(r'$t \ (\mathrm{MyR})$')
 pl.ylabel(r'$\% \ \mathrm{Error}$') 
 pl.show()

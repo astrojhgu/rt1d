@@ -78,22 +78,8 @@ class InitializeIntegralTables:
         self.SpectrumMinEnergy = pf["SpectrumMinEnergy"]
         self.SpectrumMaxEnergy = pf["SpectrumMaxEnergy"]
         
-        # Source discretization DONT THINK ANY OF THIS IS NECESSARY - JUST USE rs.whatever
-        #self.rs.DiscreteSpectrumMethod = pf["DiscreteSpectrumMethod"]
-        #self.DiscreteSpectrumMinEnergy = pf["DiscreteSpectrumMinEnergy"]
-        #self.DiscreteSpectrumMaxEnergy = pf["DiscreteSpectrumMaxEnergy"]
-        #self.DiscreteSpectrumNumberOfBins = pf["DiscreteSpectrumNumberOfBins"]
-        #
-        #if self.rs.DiscreteSpectrumMethod == 1:
-        #    self.rs.DiscreteSpectrumSED = np.array(pf["DiscreteSpectrumSED"])
-        #elif self.rs.DiscreteSpectrumMethod == 2:
-        #    self.rs.DiscreteSpectrumSED = np.linspace(self.DiscreteSpectrumMinEnergy, self.DiscreteSpectrumMaxEnergy, self.DiscreteSpectrumNumberOfBins)
-        #elif self.rs.DiscreteSpectrumMethod == 3:
-        #    self.rs.DiscreteSpectrumSED = np.logspace(np.log10(self.DiscreteSpectrumMinEnergy), np.log10(self.DiscreteSpectrumMaxEnergy), self.DiscreteSpectrumNumberOfBins)
-        #else:
-        #    pass
-        
-        self.HIColumnMin = 1e3 * data["HIDensity"][0] * self.dx
+        # Column densities
+        self.HIColumnMin = data["HIDensity"][0] * self.dx
         self.HIColumnMax =  10 * np.sum(data["HIDensity"] * self.dx)
         self.HINBins = pf["ColumnDensityBinsHI"]
         self.HeINBins = pf["ColumnDensityBinsHeI"]
@@ -135,7 +121,7 @@ class InitializeIntegralTables:
         else: dim = "3D"
         
         if self.rs.DiscreteSpectrumMethod == 0: cont = 'infbin'
-        elif self.rs.DiscreteSpectrumMethod == 1: cont = "{0}bin".format(int(self.rs.DiscreteSpectrumNumberOfBins))
+        elif self.rs.DiscreteSpectrumMethod == 1: cont = "{0}bin".format(int(len(self.rs.DiscreteSpectrumSED)))
         elif self.rs.DiscreteSpectrumMethod == 2: cont = "{0}linbin".format(int(self.rs.DiscreteSpectrumNumberOfBins))
         elif self.rs.DiscreteSpectrumMethod == 3: cont = "{0}logbin".format(int(self.rs.DiscreteSpectrumNumberOfBins))
         else: cont = "{0}binBA".format(int(self.rs.DiscreteSpectrumNumberOfBins))

@@ -86,7 +86,7 @@ class Radiate:
             
                 units: 1 /cm^3 / s
             """
-                                                
+                                                                        
             return Gamma_HI * n_HI - alpha_HII * n_e * n_HII_0[0]
             
         def HIIRateEqJacobian(n_HII_0, t, n_HI, n_e, Gamma_HI, alpha_HII):
@@ -176,7 +176,7 @@ class Radiate:
         for cell in self.grid:
         
             if cell < self.StartCell: continue
-
+            
             n_e = data["ElectronDensity"][cell]
             n_HI = data["HIDensity"][cell]
             n_HII = data["HIIDensity"][cell]

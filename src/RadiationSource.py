@@ -49,6 +49,7 @@ class RadiationSource:
         self.DiscreteSpectrumMaxEnergy = pf["DiscreteSpectrumMaxEnergy"]
         self.DiscreteSpectrumNumberOfBins = pf["DiscreteSpectrumNumberOfBins"]
         self.DiscreteSpectrumBinEdges = pf["DiscreteSpectrumBinEdges"]
+        self.DiscreteSpectrumRelLum = pf["DiscreteSpectrumRelLum"]
         
         # Set source-specific parameters
         if self.SourceType == 0:
@@ -122,7 +123,10 @@ class RadiationSource:
         Return the fraction of the bolometric luminosity emitted at this energy.  This quantity is dimensionless.
         """
                         
-        return self.LuminosityNormalization * self.SpecificIntensity(E) / self.BolometricLuminosity()
+        if self.DiscreteSpectrumMethod == 1:
+            return self.DiscreteSpectrumRelLum    
+        else:                
+            return self.LuminosityNormalization * self.SpecificIntensity(E) / self.BolometricLuminosity()
                 
     def SpecificIntensity(self, E):    
         """ 
@@ -225,7 +229,7 @@ class RadiationSource:
             integral = 0
             for i, element in enumerate(self.DiscreteSpectrumSED):
                 integral += self.SpecificIntensity(element)
-                                                                                            
+                                                                                                                                                        
         return self.BolometricLuminosity(0.0) / integral  
         
     def BolometricLuminosity(self, t = 0.0):
