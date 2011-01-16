@@ -24,8 +24,8 @@ try:
     from mpi4py import MPI
     rank = MPI.COMM_WORLD.rank
     size = MPI.COMM_WORLD.size
-except:
-    ImportError("Module mpi4py not found.  No worries, we'll just run in serial.")
+except ImportError:
+    print "Module mpi4py not found.  No worries, we'll just run in serial."
     rank = 0
     size = 1
 

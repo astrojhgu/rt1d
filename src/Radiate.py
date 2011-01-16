@@ -66,10 +66,12 @@ class Radiate:
         # Always pass three element arrays, the interpolation routines will sort out whether or not they need all three elements.
         if self.MultiSpecies == 0: 
             self.Interpolate = lambda itab, n: Interpolate1D(itab, n_col, n, self.InterpolationMethod)
-            self.mu = 1.0 #?
+            self.Y = 0.
+            self.X = 1.
         else: 
             self.Interpolate = lambda itab, n: Interpolate3D(itab, n_col, n, self.InterpolationMethod)
-            self.mu = 1.4 #?
+            self.Y = 0.2477
+            self.X = 1. - Y
         
     def EvolvePhotons(self, data, t, dt):
         """
@@ -130,7 +132,7 @@ class Radiate:
 
             return [[0, t], [alpha_HeIII * n_e, 0]]
 
-        def InternalEnergyRateEquation(T_0, t, nabs, ncol, nion, n_e, n_B, x_i, z, r):
+        def InternalEnergyRateEquation(T_0, t, nabs, ncol, nion, n_e, n_B, x_i, z, mu, r):
             """
             Returns the rate of change of the gas internal energy.  This is the RHS of Eq. 12 in TZ07, 
             though currently we're missing the Compton heating and Hubble cooling terms.  The conversion
@@ -142,7 +144,7 @@ class Radiate:
             """                        
             
             HeatGain = self.HeatGain(ncol, nabs, x_i, r, t)
-            HeatLoss = self.HeatLoss(nabs, nion, n_e, n_B, T_0[0], z)            
+            HeatLoss = self.HeatLoss(nabs, nion, n_e, n_B, T_0[0], z, mu)            
                                                                                                                                                                                                                                       
             return HeatGain - HeatLoss
 
@@ -186,19 +188,21 @@ class Radiate:
             
             x_HI = x_HI_arr[cell]
             x_HII = x_HII_arr[cell]
+            mu = 1. / (self.X * (1. + x_HII))
             if self.MultiSpecies:
                 x_HeI = x_HeI_arr[cell]
                 x_HeII = x_HeII_arr[cell]
                 x_HeIII = x_HeIII_arr[cell]
+                mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
             
             ncol = [ncol_HI[cell], ncol_HeI[cell], ncol_HeII[cell]]
             nabs = [n_HI, n_HeI, n_HeII]
             nion = [n_HII, n_HeII, n_HeIII]
             n_H = n_HI + n_HII
             n_He = n_HeI + n_HeII + n_HeIII
-            n_B = sum(nabs)
+            n_B = n_H + n_He + n_e
             T = data["Temperature"][cell]
-            U = 3. * k_B * T * n_B / self.mu / 2.
+            U = 3. * k_B * T * n_B / mu / 2.
             r = self.LengthUnits * cell / self.GridDimensions  
                                                                                                                                                                                                                                            
             # Some useful quantities for solving the HII rate equation                
@@ -271,9 +275,9 @@ class Radiate:
             # Next, solve the heat equation  
             if self.SolveTemperatureEvolution:                     
                 newU = odeint(InternalEnergyRateEquation, [U, 0], [0, dt], \
-                    args = (nabs, ncol, nion, n_e, n_B, x_HII, z, r,), mxstep = 10000)[1][0]   
+                    args = (nabs, ncol, nion, n_e, n_B, x_HII, z, mu, r,), mxstep = 10000)[1][0]   
                     
-                newT = newU * 2. * self.mu / 3. / k_B / n_B 
+                newT = newU * 2. * mu / 3. / k_B / n_B 
             else: newT = T            
                                                                                                                                                                                                                                     
             # Update quantities in 'data'.     
@@ -352,7 +356,7 @@ class Radiate:
                                                                                               
         return heat
     
-    def HeatLoss(self, nabs, nion, n_e, n_B, T, z):
+    def HeatLoss(self, nabs, nion, n_e, n_B, T, z, mu):
         """
         Returns the total cooling rate for a cell of temperature T and with species densities given in 'nabs', 'nion', and 'n_e'. 
         This quantity is the sum of all terms on the RHS of Eq. 12 in TZ07 that are negative (except for the Hubble cooling term), 
@@ -388,7 +392,7 @@ class Radiate:
         cool *= n_e
         
         # Hubble cooling
-        if self.CosmologicalExpansion: cool += 2. * self.cosmo.HubbleParameter(z) * (k_B * T * n_B / self.mu)
+        if self.CosmologicalExpansion: cool += 2. * self.cosmo.HubbleParameter(z) * (k_B * T * n_B / mu)
         
         return cool
         

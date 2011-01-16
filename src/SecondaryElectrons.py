@@ -49,7 +49,7 @@ class SecondaryElectrons:
             
         and
         
-            Method = 0: OFF - ignoring the effects of secondary electrons
+            Method = 0: OFF - all secondary electron energy goes to heat
             Method = 1: Empirical fits of Shull & vanSteenberg 1985
             Method = 2: Lookup tables of Furlanetto & Stoever 2010
             
@@ -61,7 +61,8 @@ class SecondaryElectrons:
         if E == 0.0: E = tiny_number
         
         if self.Method == 0:
-            return 0.0
+            if channel == 0: return 1.0
+            else: return 0.0
             
         if self.Method == 1: 
             if channel == 0: 
