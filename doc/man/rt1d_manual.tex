@@ -59,6 +59,19 @@ In order of appearance in \texttt{rt1d.py}.
 %%%
 \section{Parameters}
 
+\subsection{Problem Types}
+These were added for convenience in January, 2011.  If you want to make changes to these test problems you can, just make sure \texttt{ProblemType} is the first (uncommented) line in your parameter file.  Additional parameters afterwards will be interpreted as usual.
+
+\begin{description}
+    
+\item [\texttt{ProblemType = 1}] This will set up a standard test with known analytic solution: the propagation of an ionization front in an isothermal, hydrogen-only, static universe.  The spectrum used is monochromatic at $E = 13.6 \ \text{eV}$, with photon luminosity $L_{\nu} = 5\times 10^{48} \ s^{-1}$.  The initial density, temperature, and box size are the same as the values used in Test 1 of Wise \& Abel 2010. 
+
+\item [\texttt{ProblemType = 2}] This problem is almost exactly the same as \texttt{ProblemType = 1}.  However, the temperature is allowed to evolve, and instead of using a monochromatic spectrum, we sample a $10^5$ K blackbody with four energy groups.  Again, the initial density, temperature, box size, and energy groups are the same as the values used in Test 1 of Wise \& Abel 2010.  
+
+\item [\texttt{ProblemType = 2.1}] Same as \texttt{ProblemType = 2} for everything, except we use a continuous blackbody spectrum rather than a discrete one.
+
+\end{description}
+
 \subsection{Initial Conditions}
 \begin{description}
     

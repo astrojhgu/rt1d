@@ -46,7 +46,6 @@ class InitializeParameterSpace:
             if parname.strip() == 'ProblemType' and float(parval) > 0:
                 pf_new = self.ProblemType(float(parval))
                 for param in pf_new: pf_dict[param] = pf_new[param]
-                break
                 
             # Else, actually read in the parameter                                     
             try: parval = float(parval)
@@ -176,7 +175,7 @@ class InitializeParameterSpace:
                   "SavePrefix": 'rt', "SolveTemperatureEvolution": 1, "MultiSpecies": 0, "SecondaryElectronMethod": 0, "CosmologicalExpansion": 0, \
                   "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
                   "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 500.0, \
-                  "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 0
+                  "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 0, "SpectrumMinEnergy": 10., "SpectrumMaxEnergy": 100,
                  }               
                 
             

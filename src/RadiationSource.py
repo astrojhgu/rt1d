@@ -228,7 +228,7 @@ class RadiationSource:
         else:
             integral = 0
             for i, element in enumerate(self.DiscreteSpectrumSED):
-                integral += self.SpecificIntensity(element)
+                integral += self.SpecificIntensity(element)  
                                                                                                                                                         
         return self.BolometricLuminosity(0.0) / integral  
         
@@ -249,7 +249,7 @@ class RadiationSource:
         if self.SourceType == 2:
             return 10**SchaererTable["Luminosity"][SchaererTable["Mass"].index(self.M)] * lsun
             
-        if self.SourceType > 3:
+        if self.SourceType > 2:
             Mnow = self.M * np.exp( ((1.0 - self.epsilon) / self.epsilon) * t / t_edd)
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
             

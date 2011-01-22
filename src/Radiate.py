@@ -71,7 +71,7 @@ class Radiate:
         else: 
             self.Interpolate = lambda itab, n: Interpolate3D(itab, n_col, n, self.InterpolationMethod)
             self.Y = 0.2477
-            self.X = 1. - Y
+            self.X = 1. - self.Y
         
     def EvolvePhotons(self, data, t, dt):
         """
@@ -359,13 +359,13 @@ class Radiate:
     def HeatLoss(self, nabs, nion, n_e, n_B, T, z, mu):
         """
         Returns the total cooling rate for a cell of temperature T and with species densities given in 'nabs', 'nion', and 'n_e'. 
-        This quantity is the sum of all terms on the RHS of Eq. 12 in TZ07 that are negative (except for the Hubble cooling term), 
+        This quantity is the sum of all terms on the RHS of Eq. 12 in TZ07 that are negative, 
         though we do not apply the minus sign until later, in 'ThermalRateEquation'.
         
             units: erg / s / cm^3
         """
             
-        T_cmb = 2.725 * (1. + self.InitialRedshift)    
+        T_cmb = 2.725 * (1. + self.InitialRedshift)  # should InitialRedshift actually be z?   
         cool = 0
         
         # Cooling by collisional ionization
@@ -383,11 +383,11 @@ class Radiate:
         # Cooling by dielectronic recombination
         cool += nion[2] * self.DielectricRecombinationCoolingCoefficient(T)
         
-        # Compton cooling
+        # Compton cooling - from FK96
         cool += 4. * k_B * (T - T_cmb) * (np.pi**2 / 15.) * (k_B * T_cmb / hbar / c)**3 * (k_B * T_cmb / m_e / c**2) * sigma_T * c
         
         # Cooling by free-free emission
-        cool += [nion[0] + nion[1] + 4. * nion[2]] * 1.42e-27 * 1.1 * np.sqrt(T) # Check on Gaunt factor
+        cool += (nion[0] + nion[1] + 4. * nion[2]) * 1.42e-27 * 1.1 * np.sqrt(T) # Check on Gaunt factor        
                 
         cool *= n_e
         

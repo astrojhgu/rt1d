@@ -55,6 +55,10 @@ IntegralList = ['PhotoIonizationRateIntegralHI', \
                 'SecondaryIonizationRateIntegralHeI_HI', \
                 'SecondaryIonizationRateIntegralHeI_HeI', \
                 'SecondaryIonizationRateIntegralHeII']
+                #'ComptonHeatingIntegralHI', \
+                #'ComptonHeatingIntegralHeI', \
+                #'ComptonHeatingIntegralHeII'
+                #]
 
 class InitializeIntegralTables: 
     def __init__(self, pf, data):
@@ -605,7 +609,24 @@ class InitializeIntegralTables:
                 
             return np.sum(integral)
         
- 
+    #def ComptonHeatingIntegralHI(self, n = [0.0, 0.0, 0.0]):
+    #    """
+    #    Second term in TZ08.
+    #    """
+    #    
+    #    if self.rs.DiscreteSpectrumMethod == 0:
+    #        integrand = lambda E: self.rs.Spectrum(E) * (E - )\
+    #            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HeII   
+    #            
+    #        integral = integrate(integrand, E_HeII, self.SpectrumMaxEnergy)
+    #        
+    #        return integral[0]
+        
+        
+        
+        
+        
+        
         
     
         
