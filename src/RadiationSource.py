@@ -49,7 +49,7 @@ class RadiationSource:
         self.DiscreteSpectrumMaxEnergy = pf["DiscreteSpectrumMaxEnergy"]
         self.DiscreteSpectrumNumberOfBins = pf["DiscreteSpectrumNumberOfBins"]
         self.DiscreteSpectrumBinEdges = pf["DiscreteSpectrumBinEdges"]
-        self.DiscreteSpectrumRelLum = pf["DiscreteSpectrumRelLum"]
+        self.DiscreteSpectrumRelLum = pf["DiscreteSpectrumRelLum"] 
         
         # Set source-specific parameters
         if self.SourceType == 0:

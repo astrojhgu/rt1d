@@ -296,7 +296,7 @@ class InitializeIntegralTables:
             integrand = lambda E: PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / E
                                                         
-            integral = integrate(integrand, E_HI, self.SpectrumMaxEnergy)
+            integral = integrate(integrand, E_HI, self.SpectrumMaxEnergy, epsrel = 1e-16)
             
             return integral[0]
             
@@ -381,8 +381,8 @@ class InitializeIntegralTables:
         if self.rs.DiscreteSpectrumMethod == 0:
             integrand = lambda E: PhotoIonizationCrossSection(E, 0) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
-                
-            integral = integrate(integrand, E_HI, self.SpectrumMaxEnergy)
+            
+            integral = integrate(integrand, E_HI, self.SpectrumMaxEnergy, epsrel = 1e-16)
             
             return integral[0]
                   

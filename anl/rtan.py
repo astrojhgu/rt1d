@@ -28,6 +28,8 @@ from SetDefaultParameterValues import *
 from ComputeCrossSections import *
 from RadiationSource import *
 
+np.seterr(all='ignore')
+
 class DataDump:
     def __init__(self, dd, pf, load_cols = True):
         """
