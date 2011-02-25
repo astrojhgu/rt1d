@@ -302,10 +302,10 @@ class Radiate:
             units: 1 / s
         """     
                
-        PhotoIonizationTerm = self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["PhotoIonizationRateIntegralHI"], ncol) / 4. / np.pi / r**2      
+        PhotoIonizationTerm = self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["PhotoIonizationRate{0}".format(0)], ncol) / 4. / np.pi / r**2      
         CollisionalIonizationTerm = self.rs.BolometricLuminosity(t) * n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T) / 4. / np.pi / r**2
-        SecondaryIonizationTerm_H = self.esec.DepositionFraction(0.0, x_HII, channel = 1) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateIntegralHI_HI"], ncol) / 4. / np.pi / r**2
-        if self.MultiSpecies > 0: SecondaryIonizationTerm_He = self.esec.DepositionFraction(0.0, x_HII, channel = 1) * (n_HeI / n_HI) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateIntegralHI_HeI"], ncol) / 4. / np.pi / r**2                        
+        SecondaryIonizationTerm_H = self.esec.DepositionFraction(0.0, x_HII, channel = 1) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateHI{0}".format(0)], ncol) / 4. / np.pi / r**2
+        #if self.MultiSpecies > 0: SecondaryIonizationTerm_He = self.esec.DepositionFraction(0.0, x_HII, channel = 1) * (n_HeI / n_HI) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateHI"], ncol) / 4. / np.pi / r**2                        
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
         return PhotoIonizationTerm + CollisionalIonizationTerm + SecondaryIonizationTerm_H #+ SecondaryIonizationTerm_He
         
@@ -348,8 +348,8 @@ class Radiate:
         """
                          
         heat = 0           
-        for i, integral in enumerate(["ElectronHeatingIntegralHI", "ElectronHeatingIntegralHeI", "ElectronHeatingIntegralHeII"]): 
-            try: heat += nabs[i] * self.Interpolate(self.itabs[integral], ncol)
+        for species in range(3): 
+            try: heat += nabs[species] * self.Interpolate(self.itabs["ElectronHeatingRate{0}".format(species)], ncol)
             except KeyError: pass
                   
         heat *= self.esec.DepositionFraction(0.0, x_HII, channel = 0) * self.rs.BolometricLuminosity(t) / 4.0 / np.pi / r**2 

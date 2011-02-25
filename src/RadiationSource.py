@@ -51,6 +51,12 @@ class RadiationSource:
         self.DiscreteSpectrumBinEdges = pf["DiscreteSpectrumBinEdges"]
         self.DiscreteSpectrumRelLum = pf["DiscreteSpectrumRelLum"] 
         
+        # Spectrum bounds
+        self.Emin = pf["SpectrumMinEnergy"]
+        self.Emax = pf["SpectrumMaxEnergy"]
+        self.EminNorm = pf["SpectrumMinNormEnergy"]
+        self.EmaxNorm = pf["SpectrumMaxNormEnergy"]
+        
         # Set source-specific parameters
         if self.SourceType == 0:
             """
@@ -78,10 +84,6 @@ class RadiationSource:
             Power-law source, break energy of 1 keV (Madau 2004).
             """
             self.M = pf["SourceMass"]
-            self.Emin = pf["SpectrumMinEnergy"]
-            self.Emax = pf["SpectrumMaxEnergy"]
-            self.EminNorm = pf["SpectrumMinNormEnergy"]
-            self.EmaxNorm = pf["SpectrumMaxNormEnergy"]
             self.alpha = -pf["SpectrumPowerLawIndex"] 
             self.epsilon = pf["SourceRadiativeEfficiency"] 
                 

@@ -32,9 +32,7 @@ except ImportError:
 # Widget for progressbar.
 widget = ["rt1d: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 
-E_HI = 13.6
-E_HeI = 24.6
-E_HeII = 54.4
+E_th = [13.6, 24.6, 54.4]
 
 m_e = 9.10938188*10**-28 		# Electron mass - [m_e] = g
 m_p = 1.67262158*10**-24		# Proton mass - [m_p] = g
@@ -44,21 +42,23 @@ m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
-IntegralList = ['PhotoIonizationRateIntegralHI', \
-                'PhotoIonizationRateIntegralHeI', \
-                'PhotoIonizationRateIntegralHeII', \
-                'ElectronHeatingIntegralHI', \
-                'ElectronHeatingIntegralHeI', \
-                'ElectronHeatingIntegralHeII', \
-                'SecondaryIonizationRateIntegralHI_HI', \
-                'SecondaryIonizationRateIntegralHI_HeI', \
-                'SecondaryIonizationRateIntegralHeI_HI', \
-                'SecondaryIonizationRateIntegralHeI_HeI', \
-                'SecondaryIonizationRateIntegralHeII']
-                #'ComptonHeatingIntegralHI', \
-                #'ComptonHeatingIntegralHeI', \
-                #'ComptonHeatingIntegralHeII'
-                #]
+IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', 'SecondaryIonizationRateHI']#, 'ComptonHeatingRate']
+
+#IntegralList = ['PhotoIonizationRateIntegralHI', \
+#                'PhotoIonizationRateIntegralHeI', \
+#                'PhotoIonizationRateIntegralHeII', \
+#                'ElectronHeatingIntegralHI', \
+#                'ElectronHeatingIntegralHeI', \
+#                'ElectronHeatingIntegralHeII', \
+#                'SecondaryIonizationRateIntegralHI_HI', \
+#                'SecondaryIonizationRateIntegralHI_HeI', \
+#                'SecondaryIonizationRateIntegralHeI_HI', \
+#                'SecondaryIonizationRateIntegralHeI_HeI', \
+#                'SecondaryIonizationRateIntegralHeII']
+#                #'ComptonHeatingIntegralHI', \
+#                #'ComptonHeatingIntegralHeI', \
+#                #'ComptonHeatingIntegralHeII'
+#                #]
 
 class InitializeIntegralTables: 
     def __init__(self, pf, data):
@@ -236,11 +236,12 @@ class InitializeIntegralTables:
             if self.MultiSpecies == 0:
                 for integral in IntegralList:
                     tab = np.zeros(self.HINBins)
-                    if re.search('HeI', integral): continue
+                    #if re.search('HeI', integral): continue
                     for i, ncol_HI in enumerate(self.HIColumn):
-                        tab[i] = eval("self.{0}({1})".format(integral, [ncol_HI, 0.0, 0.0]))
+                        tab[i] = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0.0, 0.0]))
                         
-                    itabs[integral] = tab
+                    # Append species to name - here, will always be zero (hydrogen only)    
+                    itabs["{0}{1}".format(integral, 0)] = tab
                     del tab
                     
             # If we're including helium as well         
@@ -280,6 +281,129 @@ class InitializeIntegralTables:
             tau += PhotoIonizationCrossSection(E, i) * column
                                                                                                 
         return tau
+        
+    def PhotoIonizationRate(self, n = [0.0, 0.0, 0.0], species = 0):
+        """
+        Returns the value of the bound-free photoionization rate integral of 'species'.  However, because 
+        source luminosities vary with time and distance, it is unnormalized.  To get a true 
+        photoionization rate, one must multiply these values by the spectrum's normalization factor
+        and divide by 4*np.pi*r^2. 
+        """
+        
+        if self.rs.DiscreteSpectrumMethod == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, species) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
+            
+            integral = integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-16)[0]
+                        
+            return integral
+                  
+        elif self.rs.DiscreteSpectrumMethod <= 3:
+            integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, species) * self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * \
+                np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) / (self.rs.DiscreteSpectrumSED * erg_per_ev)     
+                                                                                                                                                                                
+            return np.sum(integral)
+            
+        else:
+            integral = 0
+            for i, element in enumerate(self.rs.DiscreteSpectrumSED):
+                integral += PhotoIonizationCrossSection(element, species) * self.rs.Spectrum(element) * \
+                    np.exp(-self.OpticalDepth(element, n)) / (element * erg_per_ev) 
+                
+            return np.sum(integral)
+            
+    def ElectronHeatingRate(self, n = [0.0, 0.0, 0.0], species = 0):    
+        """
+        Returns the amount of heat deposited by secondary electrons from ionizations of 'species'.  This is 
+        the first term in TZ07 Eq. 12.
+        
+            units: cm^2 / s
+            notes: the dimensionality is resolved later when we multiply by the bolometric luminosity (erg / s),
+                   the number density of collision partners (cm^-3), and divide by 4 pi r^2 (cm^-2), leaving us 
+                   with a true heating rate in erg / cm^3 / s.
+        """    
+        
+        if self.rs.DiscreteSpectrumMethod == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / E
+                                                        
+            integral = integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-16)[0]
+            
+            return integral
+            
+        elif self.rs.DiscreteSpectrumMethod <= 3:
+            integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, species) * (self.rs.DiscreteSpectrumSED - E_th[species]) * \
+                self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) / self.rs.DiscreteSpectrumSED
+            
+            return np.sum(integral)
+            
+        else:
+            integral = 0
+            for i, element in enumerate(self.rs.DiscreteSpectrumSED):
+                integral += PhotoIonizationCrossSection(element, species) * (element - E_th[species]) * \
+                    self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) / element
+                    
+            return np.sum(integral)    
+        
+    def SecondaryIonizationRateHI(self, n = [0.0, 0.0, 0.0], species = 0):
+        """
+        HI ionization rate due to fast secondary electrons from hydrogen or helium ionizations.  This is the second integral
+        in Eq. 4 in TZ07.
+        """
+        
+        if self.rs.DiscreteSpectrumMethod == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_th[0]   
+                
+            integral = integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy)[0]
+            
+            return integral
+            
+        elif self.rs.DiscreteSpectrumMethod <= 3:
+            integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, species) * (self.rs.DiscreteSpectrumSED - E_th[species]) * \
+                self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) \
+                / (self.rs.DiscreteSpectrumSED * erg_per_ev) / E_th[0] 
+            
+            return np.sum(integral)
+            
+        else:
+            integral = 0
+            for i, element in enumerate(self.rs.DiscreteSpectrumSED):
+                integral += PhotoIonizationCrossSection(element, species) * (element - E_th[species]) * \
+                    self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) \
+                    / (element * erg_per_ev) / E_HI 
+                
+            return np.sum(integral)   
+            
+    def SecondaryIonizationRateIntegralHI_HeI(self, n = [0.0, 0.0, 0.0]):
+        """
+        HI ionization rate due to fast secondary electrons from helium ionizations.  This is the third integral
+        in Eq. 4 in TZ07.
+        """
+        
+        if self.rs.DiscreteSpectrumMethod == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
+                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HI   
+                
+            integral = integrate(integrand, E_HeI, self.SpectrumMaxEnergy)
+            
+            return integral[0]
+            
+        elif self.rs.DiscreteSpectrumMethod <= 3:
+            integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 1) * (self.rs.DiscreteSpectrumSED - E_HI) * \
+                self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) \
+                / (self.rs.DiscreteSpectrumSED * erg_per_ev) / E_HI 
+                                                                                                      
+            return np.sum(integral) 
+            
+        else:
+            integral = 0
+            for i, element in enumerate(self.rs.DiscreteSpectrumSED):
+                integral += PhotoIonizationCrossSection(element, 1) * (element - E_HI) * \
+                    self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) \
+                    / (element * erg_per_ev) / E_HI
+                
+            return np.sum(integral) 
         
     def ElectronHeatingIntegralHI(self, n = [0.0, 0.0, 0.0]):
         """
