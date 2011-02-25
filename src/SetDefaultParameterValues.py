@@ -18,88 +18,96 @@ To do: New naming convention:
 from Constants import *
 
 def SetDefaultParameterValues():
-    pf = {
+    pf = \
+       {
     
-          # Override
-          "ProblemType": 0, \
+        # Override
+        "ProblemType": 0, \
           
-          # Packages
-          "UseScipy": 1, \
-          "IntegrationMethod": 0, \
-          "InterpolationMethod": 1, \
-          "MonitorSimulation": 1, \
+        # Packages
+        "ODEIntegrator": 1, \
+        "ODEAdaptiveStep": 1, \
+        "ODEMinStep": 0, \
+        "ODEMaxStep": 0.1, \
+        "ODErtol": 1e-8, \
+        "ODEatol": 1e-8, \
+        "ODEmaxiter": 1000, \
+        "IntegrationMethod": 0, \
+        "InterpolationMethod": 1, \
+        "MonitorSimulation": 0, \
           
-          # Integral tabulation
-          "ColumnDensityBinsHI": 100, \
-          "ColumnDensityBinsHeI": 50, \
-          "ColumnDensityBinsHeII": 50, \
-          "ExitAfterIntegralTabulation": 0, \
+        # Integral tabulation
+        "ColumnDensityBinsHI": 100, \
+        "ColumnDensityBinsHeI": 50, \
+        "ColumnDensityBinsHeII": 50, \
+        "ExitAfterIntegralTabulation": 0, \
           
-          # Grid parameters
-          "GridDimensions": 1000, \
+        # Grid parameters
+        "GridDimensions": 1000, \
           
-          # Units
-          "LengthUnits": cm_per_kpc, \
-          "TimeUnits": s_per_myr, \
+        # Units
+        "LengthUnits": cm_per_kpc, \
+        "TimeUnits": s_per_myr, \
           
-          # Control parameters
-          "CurrentTime": 0.0, \
-          "StopTime": 50.0, \
-          "InitialTimestep": 0.1, \
-          "AdaptiveTimestep": 0, \
-          "TimestepSafetyFactor": 0.5, \
-          "StartRadius": 0.001, \
-          "MaxHIIFraction": 0.9999, \
-          "dtDataDump": 1.0, \
-          "DataDumpName": 'dd', \
-          "SavePrefix": 'rt', \
+        # Control parameters
+        "CurrentTime": 0.0, \
+        "StopTime": 50.0, \
+        "InitialTimestep": 0.1, \
+        "AdaptiveTimestep": 0, \
+        "TimestepSafetyFactor": 0.5, \
+        "StartRadius": 0.001, \
+        "MaxHIIFraction": 0.9999, \
+        "dtDataDump": 1.0, \
+        "DataDumpName": 'dd', \
+        "SavePrefix": 'rt', \
+        
+        # Physics
+        "SolveTemperatureEvolution": 1, \
+        "MultiSpecies": 0, \
+        "SecondaryElectronMethod": 1, \
+        "ComptonCooling": 1, \
+        "CosmologicalExpansion": 0, \
+        
+        # Initial conditions
+        "DensityProfile": 0, \
+        "InitialDensity": 0, \
+        "TemperatureProfile": 0, \
+        "InitialTemperature": 100, \
+        "IonizationProfile": 0, \
+        "InitialHIIFraction": 1e-4, \
           
-          # Physics
-          "SolveTemperatureEvolution": 1, \
-          "MultiSpecies": 0, \
-          "SecondaryElectronMethod": 1, \
-          "CosmologicalExpansion": 0, \
+        # Source parameters
+        "SourceType": 0, \
+        "SourceTemperature": 1e4, \
+        "SourceRadius": 1.0, \
+        "SourceMass": 1e3, \
+        "SourceLifetime": 50.0, \
+        "SourceRadiativeEfficiency": 0.1, \
           
-          # Initial conditions
-          "DensityProfile": 0, \
-          "InitialDensity": 0, \
-          "TemperatureProfile": 0, \
-          "InitialTemperature": 100, \
-          "IonizationProfile": 0, \
-          "InitialHIIFraction": 1e-4, \
+        # Spectral parameters
+        "SpectrumPowerLawIndex": 1.0, \
+        "SpectrumMinEnergy": 100, \
+        "SpectrumMaxEnergy": 1e4, \
+        "SpectrumMinNormEnergy": 100, \
+        "SpectrumMaxNormEnergy": 1e4, \
+        "SpectrumPhotonLuminosity": 1e54, \
           
-          # Source parameters
-          "SourceType": 0, \
-          "SourceTemperature": 1e4, \
-          "SourceRadius": 1.0, \
-          "SourceMass": 1e3, \
-          "SourceLifetime": 50.0, \
-          "SourceRadiativeEfficiency": 0.1, \
+        # Discretization parameters
+        "DiscreteSpectrumMethod": 0, \
+        "DiscreteSpectrumMinEnergy": 100., \
+        "DiscreteSpectrumMaxEnergy": 1e4, \
+        "DiscreteSpectrumNumberOfBins": 20, \
+        "DiscreteSpectrumBinEdges": [13.6, 20, 30, 40], \
+        "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
+        "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], \
           
-          # Spectral parameters
-          "SpectrumPowerLawIndex": 1.0, \
-          "SpectrumMinEnergy": 100, \
-          "SpectrumMaxEnergy": 1e4, \
-          "SpectrumMinNormEnergy": 100, \
-          "SpectrumMaxNormEnergy": 1e4, \
-          "SpectrumPhotonLuminosity": 1e54, \
+        # Cosmological Parameters (WMAP 7)
+        "InitialRedshift": 20.0, \
+        "OmegaMatterNow": 0.272, \
+        "OmegaBaryonNow": 0.044, \
+        "OmegaLambdaNow": 0.728, \
+        "HubbleParameterNow": 0.702
           
-          # Discretization parameters
-          "DiscreteSpectrumMethod": 0, \
-          "DiscreteSpectrumMinEnergy": 100., \
-          "DiscreteSpectrumMaxEnergy": 1e4, \
-          "DiscreteSpectrumNumberOfBins": 20, \
-          "DiscreteSpectrumBinEdges": [13.6, 20, 30, 40], \
-          "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
-          "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], \
-          
-          # Cosmological Parameters (WMAP 7)
-          "InitialRedshift": 20.0, \
-          "OmegaMatterNow": 0.272, \
-          "OmegaBaryonNow": 0.044, \
-          "OmegaLambdaNow": 0.728, \
-          "HubbleParameterNow": 0.702
-          
-         }
+        }
 
     return pf
