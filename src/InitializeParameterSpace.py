@@ -146,7 +146,7 @@ class InitializeParameterSpace:
             pf = {"ProblemType": 1, "UseScipy": 1, "IntegrationMethod": 0, "InterpolationMethod": 2, "MonitorSimulation": 0, \
                   "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
                   "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
-                  "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 0.1, "DataDumpName": 'dd', \
+                  "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 5.0, "DataDumpName": 'dd', \
                   "SavePrefix": 'rt', "SolveTemperatureEvolution": 0, "MultiSpecies": 0, "SecondaryElectronMethod": 0, "CosmologicalExpansion": 0, \
                   "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e4, \
                   "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 0, "SourceLifetime": 500.0, \

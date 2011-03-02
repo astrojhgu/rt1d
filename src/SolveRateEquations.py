@@ -25,9 +25,12 @@ Coupled ODE Example:
 """
 
 import numpy as np
+import pylab as pl
+
+np.seterr(all = 'ignore')
 
 class SolveRateEquations:
-    def __init__(self, stepper = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
+    def __init__(self, pf, stepper = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
         Dfun = None, maxiter = 100):
         """
         This 'odeint' class is the driver for ODE integration via the implicit Euler
@@ -45,6 +48,10 @@ class SolveRateEquations:
                 *Both are used, limit really set by which one is smaller.
                 
         """
+
+        self.MultiSpecies = pf["MultiSpecies"]
+        self.SolveTemperatureEvolution = pf["SolveTemperatureEvolution"]
+        
         self.stepper = stepper
         self.rtol = rtol
         self.atol = atol
@@ -52,12 +59,15 @@ class SolveRateEquations:
         self.hmin = hmin    
         self.maxiter = maxiter    # Max number of iterations for root finding          
 
-        self.solve = self.ImplicitEuler     
+        self.solve = self.ImplicitEuler
+
+        if pf["RootFinder"] == 0: self.rootfinder = self.Bisection
+        elif pf["RootFinder"] == 1: self.rootfinder = self.FalsePosition
         
         # Set adaptive timestepping method
         if self.stepper == 1: self.adapt = self.StepDoubling     
         
-    def integrate(self, f, y0, x0, xf, Dfun, *args):
+    def integrate(self, f, y0, x0, xf, Dfun, hpre, *args):
         """
         This routine does all the work.
         
@@ -69,51 +79,36 @@ class SolveRateEquations:
             
         """
 
-        h = self.hmax
+        if hpre is None: h = self.hmax
+        else: h = hpre
+        
         x = [x0]
         if type(y0) is tuple: y = [np.array(y0)]
         else: y = [y0]
-                
-        # Widget for progressbar.
-        if self.pbar: widget = ["odeint: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ']        
-                
+
         i = 1
         while x[i - 1] < xf: 
             xnext = x[i - 1] + h
             ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)
             
-            # Update progress bar
-            if self.pbar:                    
-                try: 
-                    pbar = ProgressBar(widgets = widget, maxval = xf).start()
-                    pbar.update(xnext)
-                except AssertionError: pass
-            
             adapted = False                    
-                                                                                
+
             # If adaptive stepping is turned on
             if self.stepper > 0:
-                dabs, drel = self.adapt(f, y[i - 1], x[i - 1], ynext, xnext, h, args)
+                drel = self.adapt(f, y[i - 1], x[i - 1], ynext, xnext, h, Dfun, args)
                                                                                                
-                # Special treatment if system of ODE's.  Limit set by worst integration in set.
-                try:
-                    for k, err in enumerate(dabs):
-                        if (abs(dabs[k]) > self.atol) or (abs(drel[k]) > self.rtol):
-                            h = max(self.hmin, h / 2.)
-                            adapted = True
-                            break
-                
-                # If only a single ODE.
-                except TypeError:
-                    if (abs(dabs) > self.atol) or (abs(drel) > self.rtol): 
+                # Limit determined by worst integration in set of equations.
+                for k, err in enumerate(drel):
+                    if (err > self.rtol):
                         h = max(self.hmin, h / 2.)
                         adapted = True
-            
+                        break
+                
             # Ensure we end exactly at xf.        
             if xnext > xf: h = (xf - x[i - 1])  
             
-            # If we've gotten this far without adaptively stepping, make h = self.hmax once again
-            if adapted is False: h = self.hmax
+            # If we've gotten this far without adaptively stepping, increase h for the next timestep
+            if adapted is False: h = min(self.hmax, 2. * h)
             
             # If we didn't meet our error requirement, repeat loop with different h
             if adapted and h != self.hmin: continue               
@@ -125,70 +120,202 @@ class SolveRateEquations:
         # If we're dealing with coupled equations, re-organize return list.    
         if type(y0) is tuple: y = zip(*y)
                             
-        return np.array(x), np.array(y)    
+        return np.array(x), np.array(y), h   
            
-    def ImplicitEuler(self, f, yi, xi, h, Dfun, args = ()):
+    def ImplicitEuler(self, f, yi, xi, h, Dfun, args):
         """
         Integrate ODE using backward (implicit) Euler method.  Must apply
         minimization technique separately for each yi, hence the odd array
         manipulation and loop.
         """                
-         
+
         yip1 = []
         for i, element in enumerate(yi):
-            newf = lambda y: y - h * f(np.array([y] * len(yi)), xi + h)[i] - yi[i]
-            yip1.append(self.Newton(newf, yi[i], Dfun))
-                
-        rtn = yi + h * f(np.array(yip1), xi + h, args)
 
-        return rtn
+            # If isothermal or Hydrogen only, do not change certain value
+            if (self.MultiSpecies == 0 and (i == 1 or i == 2)) or (self.SolveTemperatureEvolution == 0 and i == 3):
+                yip1.append(yi[i])
+
+            else:
+                newargs = list(args)
+                newargs.append(i)
+            
+                def ynext(y):
+                    if i == 0: return y - h * f(np.array([y, yi[1], yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
+                    if i == 1: return y - h * f(np.array([yi[0], y, yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
+                    if i == 2: return y - h * f(np.array([yi[0], yi[1], y, yi[3]]), xi + h, newargs)[i] - yi[i]
+                    if i == 3: return y - h * f(np.array([yi[0], yi[1], yi[2], y]), xi + h, newargs)[i] - yi[i]
+
+                yip1.append(self.rootfinder(ynext, yi[i]))
+
+        rtn = yi + h * f(np.array(yip1), xi + h, args)
+        if self.MultiSpecies == 0:
+            rtn[1] = yip1[1]
+            rtn[2] = yip1[2]
+        if self.SolveTemperatureEvolution == 0:
+            rtn[3] = yip1[3]
         
-    def StepDoubling(self, f, yi, xi, yip1, xip1, h, args = ()):    
+        return rtn
+
+    # def ynext(y, yi, i, xi, h, newargs):
+    #     """
+    #     Function needed by our rootfinder.
+    #     """
+        
+    #     if i == 0: return y - h * f(np.array([y, yi[1], yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
+    #     if i == 1: return y - h * f(np.array([yi[0], y, yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
+    #     if i == 2: return y - h * f(np.array([yi[0], yi[1], y, yi[3]]), xi + h, newargs)[i] - yi[i]
+    #     if i == 3: return y - h * f(np.array([yi[0], yi[1], yi[2], y]), xi + h, newargs)[i] - yi[i]
+    
+
+    def StepDoubling(self, f, yi, xi, yip1, xip1, h, Dfun, args):    
         """
         Calculate y_n+1 in two ways - first via a single step spanning 2h, and second
         using two steps spanning h each.  The difference gives an estimate of the 
         truncation error, which we can use to adapt our step size in self.integrate.
         """
         
-        ynp2_os = self.solve(f, yi, xi, 2. * h, args) # y_n+2 using one step
-        ynp2_ts = self.solve(f, yip1, xip1, h, args)  # y_n+2 using two steps
+        ynp2_os = self.solve(f, yi, xi, 2. * h, Dfun, args) # y_n+2 using one step
+        ynp2_ts = self.solve(f, yip1, xip1, h, Dfun, args)  # y_n+2 using two steps
+
+        err_rel = (ynp2_ts - ynp2_os) / ynp2_ts
+        for i, element in enumerate(err_rel):
+            if not np.isfinite(element):
+                err_rel[i] = 0.0
         
-        return ynp2_ts - ynp2_os, (ynp2_ts - ynp2_os) / ynp2_ts
+        return err_rel
         
-    def Newton(self, f, x_guess, Dfun, args = ()):
+    def Newton(self, f, y_guess, Dfun, args):
         """
-        Find the roots of the function f using the Newton-Raphson method.       
+        Find the roots of the function f using the Newton-Raphson method. x = y? 
         """    
-    
-        xnow = x_guess
-        xpre = x_guess + self.atol     # Sort of arbitrary
-        
+
+        j = args[-1]
+        ynow = y_guess         # To be passed to Dfun
+        ynow_j = y_guess[j]    # To be passed to f
+
+        # Sort of arbitrary
+        if j < 3: ypre_j = y_guess[j] - y_guess[j] / 10000.    
+        else: ypre_j = y_guess[j] + y_guess[j] / 10000.
+
         i = 0
         err = 1
-        while err > self.atol:
-            
-            # If the function's derivative is not provided, estimate it.
+        while err > self.rtol:
+                        
             fp = None
-            if Dfun is not None: fp = Dfun(xnow, args)
-            if fp is None: fp = (f(xpre) - f(xnow)) / (xpre - xnow)
-            
+
+            # If we've supplied the derivative, calculate it
+            if Dfun is not None: fp = Dfun(ynow, args)
+
+            # If the function's derivative is not provided, estimate it ("f prime")
+            if fp is None: fp = (f(ypre_j) - f(ynow_j)) / (ypre_j - ynow_j)
+
+            # If the slope is zero, we're at minimum? NO NO NO
+            if fp == 0.0: break
+
             # Calculate new estimate of the root
-            dx = f(xnow) / fp
-            xpre = xnow
-            xnow -= dx
+            dy = f(ynow_j) / fp
+            ypre_j = ynow_j
+            ynow_j -= dy
                      
             # Calculate deviation between this estimate and last            
-            err = abs(xpre - xnow)
+            err = abs(ypre_j - ynow_j) / ypre_j
 
             # If we've reached the maximum number of iterations, break
             if i >= self.maxiter: 
                 print "Maximum number of iterations reached."
                 break
             else: i += 1
+
+        return ynow_j
+
+    def Bracket(self, f, y_guess):
+        """
+        Bracket root by finding points where function goes from positive to negative.
+        """
+        
+        f1 = f(y_guess)
+        f2 = f(y_guess + 0.01 * y_guess)
+        df = f2 - f1
+        
+        # Determine whether increasing or decreasing y_guess will lead us to zero
+        if (f1 > 0 and df < 0) or (f1 < 0 and df > 0): sign = 1
+        else: sign = -1
+        
+        # Find root bracketing points
+        ypre = y_guess
+        ynow = y_guess + sign * 0.01 * y_guess
+        fpre = f1
+        fnow = f(ynow)
+        while (np.sign(fnow) == np.sign(fpre)):
+            ypre = ynow
+            ynow += sign * 0.1 * ynow
+            fpre = f(ypre)
+            fnow = f(ynow)
+                    
+        y1 = min(ynow, ypre)
+        y2 = max(ynow, ypre)
+        
+        if not np.all([np.sign(fpre), np.sign(fnow)]): 
+            y1 -= self.atol
+            y2 += self.atol
+                
+        return y1, y2
+
+    def Bisection(self, f, y_guess):
+        """
+        Find root of function using bisection method.
+        """
+
+        y1, y2 = self.Bracket(f, y_guess)
+    
+        # Narrow bracketed range with bisection until tolerance is met
+        i = 0
+        while abs(y2 - y1) > self.atol:
+            midpt = np.mean([y1, y2])
+            fmid = f(midpt)
+    
+            if np.sign(fmid) < 0: y1 = midpt
+            else: y2 = midpt
             
-        return xnow
+            if fmid == 0.0: break
+            
+        return y2
         
+    def FalsePosition(self, f, y_guess):
+        """
+        Find root using false position method.  Should converge faster than bisection.
+        Secand method might beat this, but not guaranteed to keep solution bracketed.
+        """ 
         
+        # Find points that bracket root
+        y1, y2 = self.Bracket(f, y_guess)
+        
+        # Narrow bracketed range with bisection until tolerance is met
+        i = 0
+        broke = False
+        while abs(y2 - y1) > self.atol:
+            f1 = f(y1)
+            f2 = f(y2)
+                
+            midpt = np.interp(0, [f1, f2], [y1, y2])
+            fmid = f(midpt)
+            
+            if np.sign(fmid) < 0: y1 = midpt
+            else: y2 = midpt
+                        
+            if (y1 == midpt) or (y2 == midpt): 
+                broke = True
+                break
+                
+            if i >= self.maxiter: 
+                print "Maximum number of iterations reached."
+                break
+            else: i += 1    
+                                
+        if broke == True: y2 = self.Bisection(f, y_guess)
+            
+        return y2   # Don't want the negative function value (in general)
         
         
         

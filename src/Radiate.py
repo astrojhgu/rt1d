@@ -15,23 +15,36 @@ from SecondaryElectrons import *
 from Interpolate import *
 from Cosmology import *
 from SolveRateEquations import *
+from progressbar import *
 import numpy as np
 import copy
 
+try:
+    from mpi4py import MPI
+    rank = MPI.COMM_WORLD.rank
+    size = MPI.COMM_WORLD.size
+except ImportError:
+    print "Module mpi4py not found.  No worries, we'll just run in serial."
+    rank = 0
+    size = 1
+
 m_e = 9.10938188*10**-28 		# Electron mass - [m_e] = g
 m_p = 1.67262158*10**-24		# Proton mass - [m_p] = g
-m_n = 1.67492729*10**-24        # Neutron mass - [m_n] = g
+m_n = 1.67492729*10**-24                # Neutron mass - [m_n] = g
 k_B = 1.3806503*10**-16			# Boltzmann's constant - [k_B] = erg/K
 sigma_T = 6.65*10**-25			# Cross section for Thomson scattering - [sigma_T] = cm^2
 h = 6.626068*10**-27 			# Planck's constant - [h] = erg*s
 hbar = h / (2 * np.pi) 			# H-bar - [h_bar] = erg*s
-c = 29979245800.0 				# Speed of light - [c] = cm/s
+c = 29979245800.0 			# Speed of light - [c] = cm/s
 
 m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
 tiny_number = 1e-10
+
+# Widget for progressbar.
+widget = ["Ray Casting: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 
 class Radiate:
     def __init__(self, pf, data, itabs, n_col): 
@@ -64,6 +77,15 @@ class Radiate:
         self.HIColumn = n_col[0]
         self.HeIColumn = n_col[1]
         self.HeIIColumn = n_col[2]
+        
+        self.AdaptiveStep = pf["ODEAdaptiveStep"]
+        self.MaxStep = pf["ODEMaxStep"] * self.TimeUnits
+        self.MinStep = pf["ODEMinStep"] * self.TimeUnits
+        self.atol = pf["ODEatol"]
+        self.rtol = pf["ODErtol"]
+        
+        self.solver = SolveRateEquations(pf, stepper = self.AdaptiveStep, hmin = self.MinStep, hmax = self.MaxStep, \
+            rtol = self.rtol, atol = self.atol, Dfun = None, maxiter = pf["ODEmaxiter"])
                                 
         # Always pass three element arrays, the interpolation routines will sort out whether or not they need all three elements.
         if self.MultiSpecies == 0: 
@@ -75,11 +97,7 @@ class Radiate:
             self.Y = 0.2477
             self.X = 1. - self.Y
 
-        # Initialize ODE integrator
-        self.solver = SolveRateEquations(stepper = pf["ODEAdaptiveStep"], hmin = pf["ODEMinStep"], hmax = pf["ODEMaxStep"], \
-            rtol = pf["ODErtol"], atol = pf["ODEatol"], Dfun = None, maxiter = pf["ODEmaxiter"])
-
-    def qdot(self, q, dq = False, args):
+    def qdot(self, q, t, args):
         """
         This function returns the right-hand side of our ODE's.
 
@@ -88,149 +106,138 @@ class Radiate:
         for q[0, 1, 2]: units: 1 /cm^3 / s
         for q[3]: units: erg / cm^3 / s
 
-        args = [r, t, z, mu, n_HI, x_HII, n_HeI, n_e, Gamma_HI, Gamma_HeI, Gamma_HeII, alpha_HII, alpha_HeII, alpha_HeIII,
-        Beta_HeI, Beta_HeII, xi_HeII, ncol, nabs, nion, n_H, n_He, n_B]
+        args = [r, z, mu, n_HI, x_HII, n_HeI, n_e, ncol, nabs, nion, n_H, n_He, n_B]
 
+        args = [r, z, mu, n_H, n_He]
+        
         dq = True means we're returning the derivative of right-hand side of equations. Helps Newton-Raphson
         """
 
-        # Boat-load of extra arguments
-        r = args[0]
-        t = args[1]
-        z = args[2]
-        mu = args[3]
-        n_HI = args[4]
-        x_HII = args[5]
-        n_HeI = args[6]
-        n_e = args[7]
-        Gamma_HI = args[8]
-        Gamma_HeI = args[9]
-        Gamma_HeII = args[10]
-        alpha_HII = args[11]
-        alpha_HeII = args[12]
-        alpha_HeIII = args[13]
-        Beta_HeI = args[14]
-        Beta_HeII = args[15]
-        xi_HeII = args[16]
-        nabs = args[17]
-        nion = args[18]
-        n_H = args[19]
-        n_He = args[20]
-        n_B = args[21]
+        # Extra arguments
+        r = args[0]                         
+        z = args[1]
+        mu = args[2]
+        n_H = args[3]
+        n_He = args[4]
+        i = args[-1]
 
-        if not dq:
-            # Always solve hydrogen rate equation (Eq. 1 in TZ08)
-            newHII = Gamma_HI * n_HI - alpha_HII * n_e * q[0]
+        # Derived quantities
+        n_HI = n_H - q[0]
+        n_HII = q[0]
+        x_HII = n_HII / n_H
+        n_HeI = n_He - (q[1] + q[2]) 
+        n_HeII = q[1]
+        n_HeIII = q[2]
+        n_e = n_HII + n_HeII + 2.0 * n_HeIII
+        ncol = [n_HI, n_HeI, n_HeII]
+        nion = [n_HII, n_HeII, n_HeIII]
+        nabs = [n_H, n_HeI, n_HeII]
+        n_B = n_H + n_He + n_e
+
+        E = q[3]
+        T = E * 2. * mu / 3. / k_B / n_B
+
+        # First, solve for rate coefficients
+        Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, n_HI, n_HeI, x_HII, T, r, t)
+        alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
+
+        if self.MultiSpecies > 0: 
+            Gamma_HeI = self.IonizationRateCoefficientHeI(ncol, n_HI, n_HeI, x_HII, r, t)
+            Gamma_HeII = self.IonizationRateCoefficientHeII(ncol, x_HII, r, t)
+            Beta_HeI = 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T)
+            Beta_HeII = 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)
+            alpha_HeII = 9.94e-11 * T**-0.48                                                            ## WHICH ALPHA_HEIII IS RIGHT FOR US?
+            alpha_HeIII = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1.
+            if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))
+            else: alpha_HeIII *= (1.43 - 0.076 * np.log(T))
+            xi_HeII = 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
+        else: Gamma_HeI = Gamma_HeII = Beta_HeI = Beta_HeII = alpha_HeII = alpha_HeIII = alpha_HeIII = xi_HeII = 0.
+        
+        # Always solve hydrogen rate equation (Eq. 1 in TZ08)
+        newHII = Gamma_HI * n_HI - alpha_HII * n_e * q[0]
        
-            # Only solve helium rate equations if self.MultiSpeces = 1  (Eqs. 2 & 3 in TZ08)
-            if self.MultiSpecies:
-                newHeII = Gamma_HeI * n_HeI - Beta_HeI * n_e * n_HeI + Beta_HeII * n_e * q[1] - \
-                          alpha_HeII * n_e * q[1] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * q[1]
-                newHeIII = Gamma_HeII * n_HeII - Beta_HeII * n_e * n_HeII + alpha_HeIII * n_e * q[2]
-            else:
-                newHeII = q[1]
-                newHeIII = q[2]
-
-                # Only solve internal energy equation if we're not doing an isothermal calculation  (Eq. 12 in TZ08)
-            if self.SolveTemperatureEvolution:
-                newE = self.HeatGain(ncol, nabs, x_HII, r, t) - self.HeatLoss(nabs, nion, n_e, n_B, q[3], z, mu)      
-            else:
-                newE = q[3]
-
-        # Otherwise, return the derivative of the RHS of our rate equations.
+        # Only solve helium rate equations if self.MultiSpeces = 1  (Eqs. 2 & 3 in TZ08)
+        if self.MultiSpecies:
+            newHeII = Gamma_HeI * n_HeI - Beta_HeI * n_e * n_HeI + Beta_HeII * n_e * q[1] - \
+                      alpha_HeII * n_e * q[1] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * q[1]
+            newHeIII = Gamma_HeII * n_HeII - Beta_HeII * n_e * n_HeII + alpha_HeIII * n_e * q[2]
         else:
-            newHII = -alpha_HII * n_e
+            newHeII = q[1]
+            newHeIII = q[2]
 
-            if self.MultiSpecies:
-                newHeII = Gamma_HeI * n_HeI - Beta_HeI * n_e * n_HeI + Beta_HeII * n_e * q[1] - \
-                          alpha_HeII * n_e * q[1] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * q[1]
-                newHeIII = Gamma_HeII * n_HeII - Beta_HeII * n_e * n_HeII + alpha_HeIII * n_e * q[2]
-            else:
-                newHeII = 0.0
-                newHeIII = 0.0
+        # Only solve internal energy equation if we're not doing an isothermal calculation  (Eq. 12 in TZ08)
+        if self.SolveTemperatureEvolution:
+            newE = self.HeatGain(ncol, nabs, x_HII, r, t) - self.HeatLoss(nabs, nion, n_e, n_B, q[3], z, mu)      
+        else:
+            newE = q[3]                
 
-            if self.SolveTemperatureEvolution:
-                newE = self.HeatGain(ncol, nabs, x_HII, r, t) - self.HeatLoss(nabs, nion, n_e, n_B, q[3], z, mu)      
-            else:
-                newE = None
+        return np.array([newHII, newHeII, newHeIII, newE])
 
-        return newHII, newHeII, newHeIII, newE
+    def dqdot(self, q, args):
+        """
+        Return derivatives of RHS of the rate equations.
+
+        i = which element we return (don't want them all for Newton!)
+        """
+
+        # Extra arguments
+        r = args[0]                         
+        z = args[1]
+        mu = args[2]
+        n_H = args[3]
+        n_He = args[4]
+        i = args[-1]
+
+        # Derived quantities
+        n_HI = n_H - q[0]
+        n_HII = q[0]
+        x_HII = n_HII / n_H
+        n_HeI = n_He - (q[1] + q[2]) 
+        n_HeII = q[1]
+        n_HeIII = q[2]
+        n_e = n_HII + n_HeII + 2.0 * n_HeIII
+        ncol = [n_HI, n_HeI, n_HeII]
+        nion = [n_HII, n_HeII, n_HeIII]
+        n_B = n_H + n_He + n_e
+
+        E = q[3]
+        T = E * 2. * mu / 3. / k_B / n_B
+
+        # Calculate a few things
+        alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
+        if self.MultiSpecies > 0: 
+            Beta_HeII = 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)
+            alpha_HeII = 9.94e-11 * T**-0.48
+            alpha_HeIII = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1.
+            if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))
+            else: alpha_HeIII *= (1.43 - 0.076 * np.log(T))
+            xi_HeII = 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
+
+        # Compute derivatives
+        newHII = -alpha_HII * n_e
+
+        if self.MultiSpecies:
+            newHeII = Beta_HeII * n_e *  - alpha_HeII * n_e - xi_HeII * n_e
+            newHeIII = alpha_HeIII * n_e
+        else:
+            newHeII = 0.0
+            newHeIII = 0.0
+
+        # The temperature rate equation is a bunch of integrals, so we'll have to approximate its derivative later
+        if self.SolveTemperatureEvolution: newE = None
+        else: newE = E
+
+        return np.array([newHII, newHeII, newHeIII, newE])[i]
         
-    def HIIRateEquation(n_HII_0, t, n_HI, n_e, Gamma_HI, alpha_HII):
-        """
-        Returns the rate of change of the HII number density.  This is the RHS of Eq. 1 in TZ07.
-        
-        units: 1 /cm^3 / s
-        """
-                                                                        
-        return Gamma_HI * n_HI - alpha_HII * n_e * n_HII_0[0]
-    
-    def HIIRateEqJacobian(n_HII_0, t, n_HI, n_e, Gamma_HI, alpha_HII):
-        """
-        Gradient of the HII rate equation, this somehow helps the ODE solver.
-        """
-
-        return [[0, t], [- alpha_HII * n_e, 0]]
-
-    def HeIIRateEquation(n_HeII_0, t, n_HeI, n_e, Gamma_HeI, Beta_HeI, Beta_HeII, alpha_HeII, alpha_HeIII, xi_HeII):
-        """
-        Returns the rate of change of the HeII number density.  This is the RHS of Eq. 2 in TZ07.
-            
-        units: 1 /cm^3 / s
-        """
-            
-        return Gamma_HeI * n_HeI - Beta_HeI * n_e * n_HeI + Beta_HeII * n_e * n_HeII_0[0] - \
-            alpha_HeII * n_e * n_HeII_0[0] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * n_HeII_0[0]
-        
-    def HeIIRateEqJacobian(n_HeII_0, t, n_HeI, n_e, Gamma_HeI, Beta_HeI, Beta_HeII, alpha_HeII, alpha_HeIII, xi_HeII):
-        """
-        Gradient of the HeII rate equation, this somehow helps the ODE solver.
-        """
-
-        return [[0, t], [Beta_HeII * n_e - alpha_HeII * n_e - xi_HeII * n_e, 0]] 
-         
-                
-    def HeIIIRateEquation(n_HeIII_0, t, n_HeII, n_e, Gamma_HeII, Beta_HeII, alpha_HeIII):
-        """
-        Returns the rate of change of the HeIII number density.  This is the RHS of Eq. 3 in TZ07.
-            
-        units: 1 /cm^3 / s
-        """
-                        
-        return Gamma_HeII * n_HeII - Beta_HeII * n_e * n_HeII + alpha_HeIII * n_e * n_HeIII_0[0]
-
-    def HeIIIRateEqJacobian(n_HeIII_0, t, n_HeII, n_e, Gamma_HeII, Beta_HeII, alpha_HeIII):
-        """
-        Gradient of the HeIII rate equation, this somehow helps the ODE solver.
-        """
-
-        return [[0, t], [alpha_HeIII * n_e, 0]]
-
-    def InternalEnergyRateEquation(T_0, t, nabs, ncol, nion, n_e, n_B, x_i, z, mu, r):
-        """
-        Returns the rate of change of the gas internal energy.  This is the RHS of Eq. 12 in TZ07, 
-        though currently we're missing the Compton heating and Hubble cooling terms.  The conversion
-        to temperature units will be done in the body of 'EvolvePhotons'. 
-            
-        units: erg / cm^3 / s
-        notes: did TZ07 forget the Compton cooling term or is it included in the Compton heating term?
-        """                        
-            
-        HeatGain = self.HeatGain(ncol, nabs, x_i, r, t)
-        HeatLoss = self.HeatLoss(nabs, nion, n_e, n_B, T_0[0], z, mu)            
-
-        return HeatGain - HeatLoss
-
-    def EvolvePhotons(self, data, t, dt):
+    def EvolvePhotons(self, data, t, dt, h):
         """
         This routine calls our solvers and updates 'data'.
         """
         
         newdata = copy.deepcopy(data)
         z = self.cosmo.TimeToRedshiftConverter(0., t, self.InitialRedshift)
-        maxdt = 0.0
-                    
-        # Nice names for all the quantities we need!
+
+        # Nice names for ionized fractions
         x_HI_arr = data["HIDensity"] / (data["HIDensity"] + data["HIIDensity"])
         x_HII_arr = data["HIIDensity"] / (data["HIDensity"] + data["HIIDensity"])
 
@@ -255,8 +262,16 @@ class Radiate:
         ncol_HeI = np.cumsum(data["HeIDensity"]) * self.dx
         ncol_HeII = np.cumsum(data["HeIIDensity"]) * self.dx
 
+        if rank == 0: print "rt1d: {0} < t < {1}".format(t / self.TimeUnits, (t + dt) / self.TimeUnits)            
+
         # Loop over cells radially, solve rate equations, update values in data -> newdata
         for cell in self.grid:
+
+            # Progress bar
+            if rank == 0:
+                pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
+                try: pbar.update(cell)
+                except AssertionError: pass 
 
             # If within our buffer zone (where we don't solve rate equations), continue
             if cell < self.StartCell: continue
@@ -276,10 +291,6 @@ class Radiate:
             x_HeII = x_HeII_arr[cell]
             x_HeIII = x_HeIII_arr[cell]
 
-            # Internal energy - we'll solve an internal energy rate equation instead of temperature
-            T = data["Temperature"][cell]
-            E = 3. * k_B * T * n_B / mu / 2.
-
             # Compute mean molecular weight for this cell
             if self.MultiSpecies: mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
             else: mu = 1. / (self.X * (1. + x_HII))
@@ -292,58 +303,46 @@ class Radiate:
             n_He = n_HeI + n_HeII + n_HeIII
             n_B = n_H + n_He + n_e
 
+            # Compute internal energy for this cell
+            T = data["Temperature"][cell]
+            E = 3. * k_B * T * n_B / mu / 2.
+
             # Compute radius
             r = self.LengthUnits * cell / self.GridDimensions  
 
-            # Some useful quantities for solving the HII rate equation                
-            Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, n_HI, n_HeI, x_HII, T, r, t)
-            alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
-            
-            # Some useful quantities for solving the HeII and HeIII rate equations
-            if self.MultiSpecies > 0: 
-                Gamma_HeI = self.IonizationRateCoefficientHeI(ncol, n_HI, n_HeI, x_HII, r, t)
-                Gamma_HeII = self.IonizationRateCoefficientHeII(ncol, x_HII, r, t)
-                Beta_HeI = 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T)
-                Beta_HeII = 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)
-                alpha_HeII = 9.94e-11 * T**-0.48
-                alpha_HeIII = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1.
-                if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))
-                else: alpha_HeIII *= (1.43 - 0.076 * np.log(T))
-                xi_HeII = 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
-            else: Gamma_HeI = Gamma_HeII = Beta_HeI = Beta_HeII = alpha_HeII = alpha_HeIII = alpha_HeIII = xi_HeII = 0.
-                                                                    
             ######################################
             ######## Solve Rate Equations ########
             ######################################
 
-            tarr, qnew = solver.integrate(qdot, (n_HII, n_HeII, n_HeIII, E), 0., dt, Dfun, \
-                r, t, z, mu, n_HI, x_HII, n_HeI, n_e, Gamma_HI, Gamma_HeI, Gamma_HeII, alpha_HII, alpha_HeII,
-                alpha_HeIII, Beta_HeI, Beta_HeII, xi_HeII, ncol, nabs, nion, n_H, n_He, n_B)
+            tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), 0., dt, self.dqdot, h, \
+                r, z, mu, n_H, n_He)
 
             # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
             newHII, newHeII, newHeIII, newE = qnew
 
             # Convert from internal energy back to temperature
-            newT = newE * 2. * mu / 3. / k_B / n_B
+            newT = newE[-1] * 2. * mu / 3. / k_B / n_B
 
             # Determine new values for neutral species
-            newHI = n_H - newHII
-            newHeI = n_He - (newHeII + newHeIII)
+            newHI = n_H - newHII[-1]
+            newHeI = n_He - (newHeII[-1] + newHeIII[-1])
 
             # Update quantities in 'data' -> 'newdata'     
             newdata["HIDensity"][cell] = newHI                                                                                                                         
-            newdata["HIIDensity"][cell] = newHII
+            newdata["HIIDensity"][cell] = newHII[-1]
             newdata["HeIDensity"][cell] = newHeI
-            newdata["HeIIDensity"][cell] = newHeII
-            newdata["HeIIIDensity"][cell] = newHeIII
-            newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
+            newdata["HeIIDensity"][cell] = newHeII[-1]
+            newdata["HeIIIDensity"][cell] = newHeIII[-1]
+            newdata["ElectronDensity"][cell] = newHII[-1] + newHeII[-1] + 2.0 * newHeIII[-1]
             newdata["Temperature"][cell] = newT
 
             #######################
             ######## DONE #########      
             #######################
-            
-        return newdata, nextdt
+
+        if rank == 0: pbar.finish()
+        
+        return newdata, dt, h
         
     def IonizationRateCoefficientHI(self, ncol, n_e, n_HI, n_HeI, x_HII, T, r, t):
         """
@@ -353,9 +352,15 @@ class Radiate:
             units: 1 / s
         """     
                
-        PhotoIonizationTerm = self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["PhotoIonizationRate{0}".format(0)], ncol) / 4. / np.pi / r**2      
-        CollisionalIonizationTerm = self.rs.BolometricLuminosity(t) * n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T) / 4. / np.pi / r**2
-        SecondaryIonizationTerm_H = self.esec.DepositionFraction(0.0, x_HII, channel = 1) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateHI{0}".format(0)], ncol) / 4. / np.pi / r**2
+        PhotoIonizationTerm = self.rs.BolometricLuminosity(t) * \
+                              self.Interpolate(self.itabs["PhotoIonizationRate{0}".format(0)], ncol) \
+                              / 4. / np.pi / r**2      
+        CollisionalIonizationTerm = self.rs.BolometricLuminosity(t) * \
+                                    n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T) \
+                                    / 4. / np.pi / r**2
+        SecondaryIonizationTerm_H = self.esec.DepositionFraction(0.0, x_HII, channel = 1) * self.rs.BolometricLuminosity(t) * \
+                                    self.Interpolate(self.itabs["SecondaryIonizationRateHI{0}".format(0)], ncol) \
+                                    / 4. / np.pi / r**2
         #if self.MultiSpecies > 0: SecondaryIonizationTerm_He = self.esec.DepositionFraction(0.0, x_HII, channel = 1) * (n_HeI / n_HI) * self.rs.BolometricLuminosity(t) * self.Interpolate(self.itabs["SecondaryIonizationRateHI"], ncol) / 4. / np.pi / r**2                        
 
         return PhotoIonizationTerm + CollisionalIonizationTerm + SecondaryIonizationTerm_H #+ SecondaryIonizationTerm_He
@@ -416,7 +421,7 @@ class Radiate:
             units: erg / s / cm^3
         """
             
-        T_cmb = 2.725 * (1. + self.InitialRedshift)  # should InitialRedshift actually be z?  Yes. 
+        T_cmb = 2.725 * (1. + z)
         cool = 0
         
         # Cooling by collisional ionization

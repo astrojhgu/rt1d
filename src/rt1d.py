@@ -12,7 +12,6 @@ Description: Driver script for a 1D radiative transfer code.
 
 import sys, os, time
 import numpy as np
-from progressbar import *
 
 try:
     from mpi4py import MPI
@@ -30,7 +29,6 @@ from InitializeGrid import *
 from Radiate import *
 from WriteData import *
 from ReadRestartFile import *
-from MonitorSimulation import *
 
 all_pfs = {}
 
@@ -69,10 +67,7 @@ for i, pf in enumerate(all_pfs):
     StopTime = this_pf["StopTime"] * TimeUnits
     dt = this_pf["InitialTimestep"] * TimeUnits
     dtDataDump = this_pf["dtDataDump"] * TimeUnits
-        
-    # Widget for progressbar.
-    widget = ["rt1d: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
-            
+    
     # Initialize grid and file system
     if IsRestart: data = ICs
     else:
@@ -92,33 +87,22 @@ for i, pf in enumerate(all_pfs):
     # Initialize radiation, write data, and monitor classes
     r = Radiate(this_pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
     w = WriteData(this_pf)
-    ms = MonitorSimulation(this_pf)
     
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
     t = this_pf["CurrentTime"] * TimeUnits
+    h = this_pf["ODEMaxStep"] * TimeUnits
     wct = int(t / dtDataDump) + 1
     if not IsRestart: w.WriteAllData(data, 0, t)
                 
     while t <= StopTime:
 
-        if rank == 0 and this_pf["MonitorSimulation"]: ms.Monitor(data, t)
-        if rank == 0 and t == 0: print "rt1d:  t = 0.0 / {0}".format(StopTime / TimeUnits)
-
-        # Progress bar
-        if rank == 0:
-            pbar = ProgressBar(widgets = widget, maxval = dtDataDump / TimeUnits).start()
-            try: pbar.update((t / TimeUnits) - ((wct - 1) * (dtDataDump / TimeUnits)))
-            except AssertionError: pass        
-        
         # Evolve photons
-        data, dt = r.EvolvePhotons(data, t, dt)
+        data, dt, h = r.EvolvePhotons(data, t, dt, h)
         
         # Write-out data, or don't                                        
         if t == ddt[wct]:
-            if rank == 0: pbar.finish()
             w.WriteAllData(data, wct, t)
-            if rank == 0: print "rt1d:  t = {0} / {1}".format(t / TimeUnits, StopTime / TimeUnits)
             wct += 1
         elif (t + dt) > ddt[wct]:
             dt = ddt[wct] - t
@@ -130,6 +114,7 @@ for i, pf in enumerate(all_pfs):
     elapsed = time.time() - start    
     print "Calculation {0} ({1}) complete.  Elapsed time = {2} seconds.".format(i + 1, pf, int(elapsed))
 
-    
+
+
 
 

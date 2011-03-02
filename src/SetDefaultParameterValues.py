@@ -24,17 +24,18 @@ def SetDefaultParameterValues():
         # Override
         "ProblemType": 0, \
           
-        # Packages
-        "ODEIntegrator": 1, \
-        "ODEAdaptiveStep": 1, \
-        "ODEMinStep": 0, \
-        "ODEMaxStep": 0.1, \
-        "ODErtol": 1e-8, \
-        "ODEatol": 1e-8, \
-        "ODEmaxiter": 1000, \
+        # Integration
         "IntegrationMethod": 0, \
         "InterpolationMethod": 1, \
-        "MonitorSimulation": 0, \
+        
+        # ODE Solver
+        "ODEAdaptiveStep": 1, \
+        "ODEMinStep": 0.01, \
+        "ODEMaxStep": 0.1, \
+        "ODErtol": 1e-6, \
+        "ODEatol": 1e-8, \
+        "ODEmaxiter": 100, \
+        "RootFinder": 0, \
           
         # Integral tabulation
         "ColumnDensityBinsHI": 100, \

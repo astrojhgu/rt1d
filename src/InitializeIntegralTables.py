@@ -236,7 +236,6 @@ class InitializeIntegralTables:
             if self.MultiSpecies == 0:
                 for integral in IntegralList:
                     tab = np.zeros(self.HINBins)
-                    #if re.search('HeI', integral): continue
                     for i, ncol_HI in enumerate(self.HIColumn):
                         tab[i] = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0.0, 0.0]))
                         
