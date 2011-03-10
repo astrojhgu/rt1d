@@ -61,8 +61,9 @@ class SolveRateEquations:
 
         self.solve = self.ImplicitEuler
 
-        if pf["RootFinder"] == 0: self.rootfinder = self.Bisection
-        elif pf["RootFinder"] == 1: self.rootfinder = self.FalsePosition
+        if pf["RootFinder"] == 0: self.rootfinder = self.Newton
+        elif pf["RootFinder"] == 1: self.rootfinder = self.Bisection
+        elif pf["RootFinder"] == 2: self.rootfinder = self.FalsePosition
         
         # Set adaptive timestepping method
         if self.stepper == 1: self.adapt = self.StepDoubling     
@@ -185,41 +186,28 @@ class SolveRateEquations:
         
         return err_rel
         
-    def Newton(self, f, y_guess, Dfun, args):
+    def Newton(self, f, y_guess):
         """
-        Find the roots of the function f using the Newton-Raphson method. x = y? 
+        Find the roots of the function f using the Newton-Raphson method.
         """    
 
-        j = args[-1]
-        ynow = y_guess         # To be passed to Dfun
-        ynow_j = y_guess[j]    # To be passed to f
-
-        # Sort of arbitrary
-        if j < 3: ypre_j = y_guess[j] - y_guess[j] / 10000.    
-        else: ypre_j = y_guess[j] + y_guess[j] / 10000.
+        ynow = y_guess
+        ypre = y_guess + 1e-5   # Crude
 
         i = 0
         err = 1
         while err > self.rtol:
-                        
-            fp = None
-
-            # If we've supplied the derivative, calculate it
-            if Dfun is not None: fp = Dfun(ynow, args)
-
+            
             # If the function's derivative is not provided, estimate it ("f prime")
-            if fp is None: fp = (f(ypre_j) - f(ynow_j)) / (ypre_j - ynow_j)
-
-            # If the slope is zero, we're at minimum? NO NO NO
-            if fp == 0.0: break
-
+            fp = (f(ypre) - f(ynow)) / (ypre - ynow)
+            
             # Calculate new estimate of the root
-            dy = f(ynow_j) / fp
-            ypre_j = ynow_j
-            ynow_j -= dy
+            dy = f(ynow) / fp
+            ypre = ynow
+            ynow -= dy
                      
             # Calculate deviation between this estimate and last            
-            err = abs(ypre_j - ynow_j) / ypre_j
+            err = abs(ypre - ynow) / ypre
 
             # If we've reached the maximum number of iterations, break
             if i >= self.maxiter: 
@@ -227,7 +215,7 @@ class SolveRateEquations:
                 break
             else: i += 1
 
-        return ynow_j
+        return ynow
 
     def Bracket(self, f, y_guess):
         """
