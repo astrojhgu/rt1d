@@ -8,13 +8,14 @@ Created on 2010-10-25.
 Description: Tabulate integrals that appear in the rate equations.
 
 To do:
-    -Add progressbar.
+    -Add progressbar, allow integral tabulation in parallel.
      
 """
 
-from ComputeCrossSections import *
-from RadiationSource import *
-from SecondaryElectrons import *
+from rt1d.mods.Constants import *
+from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
+from rt1d.mods.RadiationSource import RadiationSource
+from rt1d.mods.SecondaryElectrons import SecondaryElectrons
 from scipy.integrate import quad as integrate
 from progressbar import *
 import numpy as np
@@ -43,22 +44,6 @@ m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
 IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', 'SecondaryIonizationRateHI']#, 'ComptonHeatingRate']
-
-#IntegralList = ['PhotoIonizationRateIntegralHI', \
-#                'PhotoIonizationRateIntegralHeI', \
-#                'PhotoIonizationRateIntegralHeII', \
-#                'ElectronHeatingIntegralHI', \
-#                'ElectronHeatingIntegralHeI', \
-#                'ElectronHeatingIntegralHeII', \
-#                'SecondaryIonizationRateIntegralHI_HI', \
-#                'SecondaryIonizationRateIntegralHI_HeI', \
-#                'SecondaryIonizationRateIntegralHeI_HI', \
-#                'SecondaryIonizationRateIntegralHeI_HeI', \
-#                'SecondaryIonizationRateIntegralHeII']
-#                #'ComptonHeatingIntegralHI', \
-#                #'ComptonHeatingIntegralHeI', \
-#                #'ComptonHeatingIntegralHeII'
-#                #]
 
 class InitializeIntegralTables: 
     def __init__(self, pf, data):

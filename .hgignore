@@ -1,0 +1,8 @@
+syntax: glob
+
+# General things
+*.pyc
+*~
+*.hdf5
+*.h5
+build/*
