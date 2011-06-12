@@ -1,5 +1,5 @@
 """
-rt1d.py
+RT1D.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder

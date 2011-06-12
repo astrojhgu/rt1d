@@ -1,6 +1,5 @@
-#! /usr/bin/env python
 """
-rt1d.py
+RT1D.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
@@ -23,12 +22,7 @@ except ImportError:
     size = 1
 
 # Class definitions
-from InitializeIntegralTables import *
-from InitializeParameterSpace import *
-from InitializeGrid import *
-from Radiate import *
-from WriteData import *
-from ReadRestartFile import *
+import rt1d.mods as rtm
 
 all_pfs = {}
 
@@ -36,7 +30,7 @@ all_pfs = {}
 if sys.argv[1] == '-r':
     IsRestart = True
     rf = "{0}/{1}".format(os.getcwd(), sys.argv[2])
-    pf, ICs = ReadRestartFile(rf)
+    pf, ICs = rtm.ReadRestartFile(rf)
     all_pfs["{0}0000".format(pf["SavePrefix"])] = pf
     del pf
 
@@ -45,7 +39,7 @@ else:
     pf = sys.argv[1]
 
     # Instantiate initialization class and build parameter space.
-    ps = InitializeParameterSpace(pf)
+    ps = rtm.InitializeParameterSpace(pf)
     all_pfs = ps.AllParameterSets()
     del pf
 
@@ -65,13 +59,13 @@ for i, pf in enumerate(all_pfs):
     this_pf["BaseName"] = pf
     TimeUnits = this_pf["TimeUnits"]
     StopTime = this_pf["StopTime"] * TimeUnits
-    dt = this_pf["InitialTimestep"] * TimeUnits
+    dt = this_pf["GlobalTimestep"] * TimeUnits
     dtDataDump = this_pf["dtDataDump"] * TimeUnits
     
     # Initialize grid and file system
     if IsRestart: data = ICs
     else:
-        g = InitializeGrid(this_pf)   
+        g = rtm.InitializeGrid(this_pf)   
         data = g.InitializeFields()
         
         try: os.mkdir("{0}".format(pf))
@@ -80,13 +74,13 @@ for i, pf in enumerate(all_pfs):
             os.mkdir("{0}".format(pf))
 
     # Initialize integral tables
-    iits = InitializeIntegralTables(this_pf, data)
+    iits = rtm.InitializeIntegralTables(this_pf, data)
     itabs = iits.TabulateRateIntegrals()
     if this_pf["ExitAfterIntegralTabulation"]: continue
         
     # Initialize radiation, write data, and monitor classes
-    r = Radiate(this_pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
-    w = WriteData(this_pf)
+    r = rtm.Radiate(this_pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
+    w = rtm.WriteData(this_pf)
     
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
@@ -94,12 +88,13 @@ for i, pf in enumerate(all_pfs):
     h = this_pf["ODEMaxStep"] * TimeUnits
     wct = int(t / dtDataDump) + 1
     if not IsRestart: w.WriteAllData(data, 0, t)
-                
-    while t <= StopTime:
+                    
+    while t < StopTime:
 
         # Evolve photons
-        data, dt, h = r.EvolvePhotons(data, t, dt, h)
-        
+        data, h = r.EvolvePhotons(data, t, dt, h)
+        t += dt
+                
         # Write-out data, or don't                                        
         if t == ddt[wct]:
             w.WriteAllData(data, wct, t)
@@ -108,8 +103,6 @@ for i, pf in enumerate(all_pfs):
             dt = ddt[wct] - t
         else:
             dt = dt
-
-        t += dt
         
     elapsed = time.time() - start    
     print "Calculation {0} ({1}) complete.  Elapsed time = {2} seconds.".format(i + 1, pf, int(elapsed))
