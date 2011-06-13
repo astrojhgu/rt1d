@@ -15,7 +15,7 @@ To do: New naming convention:
      
 """
 
-from Constants import *
+from rt1d.mods.Constants import *
 
 def SetDefaultParameterValues():
     pf = \
@@ -41,10 +41,10 @@ def SetDefaultParameterValues():
         # Integral tabulation
         "HIColumnMin": 1e15, \
         "HIColumnMax": 1e22, \
-        "HeIColumnMin": 1e16, \
-        "HeIColumnMax": 1e20, \
-        "HeIIColumnMin": 1e16, \
-        "HeIIColumnMax": 1e19, \
+        "HeIColumnMin": 1e17, \
+        "HeIColumnMax": 1e22, \
+        "HeIIColumnMin": 1e18, \
+        "HeIIColumnMax": 1e23, \
         "ColumnDensityBinsHI": 50, \
         "ColumnDensityBinsHeI": 10, \
         "ColumnDensityBinsHeII": 10, \

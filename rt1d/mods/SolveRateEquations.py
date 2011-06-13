@@ -81,8 +81,6 @@ class SolveRateEquations:
             
         """
         
-        print args
-
         if hpre is None: h = self.hmax
         else: h = hpre
         
@@ -138,7 +136,7 @@ class SolveRateEquations:
         yip1 = []
         for i, element in enumerate(yi):
 
-            # If isothermal or Hydrogen only, do not change certain value
+            # If isothermal or Hydrogen only, do not change temperature or helium values
             if (self.MultiSpecies == 0 and (i == 1 or i == 2)) or (self.SolveTemperatureEvolution == 0 and i == 3):
                 yip1.append(yi[i])
 
@@ -153,7 +151,7 @@ class SolveRateEquations:
                     if i == 3: return y - h * f(np.array([yi[0], yi[1], yi[2], y]), xi + h, newargs)[i] - yi[i]
 
                 yip1.append(self.rootfinder(ynext, yi[i]))
-
+                
         rtn = yi + h * f(np.array(yip1), xi + h, args)
         if self.MultiSpecies == 0:
             rtn[1] = yip1[1]
@@ -183,14 +181,18 @@ class SolveRateEquations:
     def Newton(self, f, y_guess):
         """
         Find the roots of the function f using the Newton-Raphson method.
+        
+        Let's remind ourselves what f and y_guess are:
+            y_guess is [nHI, nHeI, nHeII, T], right?
+        
         """    
 
         ynow = y_guess
-
+                
         i = 0
         err = 1
         while err > self.atol:
-            fp = (f(ynow + 1e-8) - f(ynow - 1e-8)) / 2e-8
+            fp = (f(ynow + 1e-3 * ynow) - f(ynow - 1e-3 * ynow)) / (2e-3 * ynow)   # Is this OK?
             
             # Calculate new estimate of the root
             dy = f(ynow) / fp
@@ -205,41 +207,8 @@ class SolveRateEquations:
                 print "Maximum number of iterations reached."
                 break
             else: i += 1
-                        
+                                                
         return ynow
-
-    def Bracket(self, f, y_guess):
-        """
-        Bracket root by finding points where function goes from positive to negative.
-        """
-        
-        f1 = f(y_guess)
-        f2 = f(y_guess + 0.01 * y_guess)
-        df = f2 - f1
-        
-        # Determine whether increasing or decreasing y_guess will lead us to zero
-        if (f1 > 0 and df < 0) or (f1 < 0 and df > 0): sign = 1
-        else: sign = -1
-        
-        # Find root bracketing points
-        ypre = y_guess
-        ynow = y_guess + sign * 0.01 * y_guess
-        fpre = f1
-        fnow = f(ynow)
-        while (np.sign(fnow) == np.sign(fpre)):
-            ypre = ynow
-            ynow += sign * 0.1 * ynow
-            fpre = f(ypre)
-            fnow = f(ynow)
-                    
-        y1 = min(ynow, ypre)
-        y2 = max(ynow, ypre)
-        
-        if not np.all([np.sign(fpre), np.sign(fnow)]): 
-            y1 -= self.atol
-            y2 += self.atol
-                
-        return y1, y2
 
     def Bisection(self, f, y_guess):
         """
@@ -296,7 +265,39 @@ class SolveRateEquations:
             
         return y2   # Don't want the negative function value (in general)
         
+    def Bracket(self, f, y_guess):
+        """
+        Bracket root by finding points where function goes from positive to negative.
+        """
         
+        f1 = f(y_guess)
+        f2 = f(y_guess + 0.01 * y_guess)
+        df = f2 - f1
+        
+        # Determine whether increasing or decreasing y_guess will lead us to zero
+        if (f1 > 0 and df < 0) or (f1 < 0 and df > 0): sign = 1
+        else: sign = -1
+        
+        # Find root bracketing points
+        ypre = y_guess
+        ynow = y_guess + sign * 0.01 * y_guess
+        fpre = f1
+        fnow = f(ynow)
+        while (np.sign(fnow) == np.sign(fpre)):
+            ypre = ynow
+            ynow += sign * 0.1 * ynow
+            fpre = f(ypre)
+            fnow = f(ynow)
+                    
+        y1 = min(ynow, ypre)
+        y2 = max(ynow, ypre)
+        
+        if not np.all([np.sign(fpre), np.sign(fnow)]): 
+            y1 -= self.atol
+            y2 += self.atol
+                
+        return y1, y2
+    
         
         
         

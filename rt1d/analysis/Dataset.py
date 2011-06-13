@@ -6,6 +6,11 @@ Affiliation: University of Colorado at Boulder
 Created on 2010-12-01.
 
 Description: General module for command line analysis of rt1d data.
+    
+Tutorial:
+import rt1d.analysis as rta
+ds = rta.Dataset('./pf.dat')
+data, pf = ds.load()     
      
 """
 
@@ -13,11 +18,6 @@ import os, re, h5py
 import numpy as np
 import pylab as pl
 from scipy.integrate import quad as integrate
-#from Constants import *
-#from InitializeParameterSpace import *
-#from SetDefaultParameterValues import *
-#from ComputeCrossSections import *
-#from RadiationSource import *
 
 np.seterr(all='ignore')
 
@@ -53,7 +53,7 @@ class Dataset:
         self.sd = self.pf.rsplit('/', 1)[0] 
                 
         # Steal parameter space initialization from rt1d itself
-        self.ips = InitializeParameterSpace(self.pf)
+        self.ips = rtm.InitializeParameterSpace(self.pf)
         
         # Create master parameter file (dict of all parameter files)
         self.mpf = self.ips.AllParameterSets()

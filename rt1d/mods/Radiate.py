@@ -10,14 +10,14 @@ driver of rt1d, calling our solvers which call all the various physics modules.
      
 """
 
-from RadiationSource import *
-from SecondaryElectrons import *
-from Interpolate import *
-from Cosmology import *
-from SolveRateEquations import *
-from progressbar import *
 import numpy as np
 import copy, scipy
+from rt1d.mods.RadiationSource import RadiationSource
+from rt1d.mods.SecondaryElectrons import SecondaryElectrons
+from rt1d.mods.Interpolate import *
+from rt1d.mods.Cosmology import Cosmology
+from rt1d.mods.SolveRateEquations import SolveRateEquations
+from progressbar import *
 
 try:
     from mpi4py import MPI
@@ -40,8 +40,6 @@ c = 29979245800.0 			    # Speed of light - [c] = cm/s
 m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
-
-tiny_number = 1e-10
 
 # Widget for progressbar.
 widget = ["Ray Casting: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
@@ -112,7 +110,7 @@ class Radiate:
         args = [r, z, mu, n_H, n_He, ncol]        
         """
 
-        #print args
+        args = args[0]
 
         # Extra arguments
         r = args[0]                         
@@ -122,8 +120,6 @@ class Radiate:
         n_He = args[4]
         ncol = args[5]
         
-        #print r, z, mu, n_H, n_He, ncol
-
         # Derived quantities
         n_HI = n_H - q[0]
         n_HII = q[0]
@@ -242,7 +238,7 @@ class Radiate:
             # Compute mean molecular weight for this cell
             if self.MultiSpecies: mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
             else: mu = 1. / (self.X * (1. + x_HII))
-                        
+                                    
             # For convenience         
             ncol = [ncol_HI[cell], ncol_HeI[cell], ncol_HeII[cell]]
             nabs = [n_HI, n_HeI, n_HeII]
@@ -261,18 +257,38 @@ class Radiate:
             ######################################
             ######## Solve Rate Equations ########
             ######################################
+            
             tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                 r, z, mu, n_H, n_He, ncol)
+            
+            # for testing
+            #alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85    
+            #Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, n_HI, n_HeI, x_HII, T, r, t)   
                 
-            #qnew = scipy.integrate.odeint(self.qdot, [n_HII, n_HeII, n_HeIII, E], [t, t + dt], args = (r, z, mu, n_H, n_He, ncol))[0]    
+            #qnew = scipy.integrate.odeint(self.qdot, [n_HII, n_HeII, n_HeIII, E], [t, t + dt], args = (r, z, mu, n_H, n_He, ncol))[0]
+            #def func(n_HII, t, n_HI, n_e, Gamma_HI, alpha_HII): return n_HI * Gamma_HI - alpha_HII * n_e * n_HII[0]
+            #    
+            #def HIIRateEqJacobian(n_HII_0, t, n_HI, n_e, Gamma_HI, alpha_HII):
+            #    """
+            #    Gradient of the HII rate equation, this somehow helps the ODE solver.
+            #    """
+            #    
+            #    return [[0, t], [- alpha_HII * n_e, 0]]    
+            #    
+            #newHII = scipy.integrate.odeint(func, [n_HII, 0], [0, dt], args = (n_HI, n_e, Gamma_HI, alpha_HII), Dfun = HIIRateEqJacobian, mxstep = 10000)[1][0]
 
             # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
             newHII, newHeII, newHeIII, newE = qnew
+                        
+            # What *was* this for? testing scipy it turns out
+            #newHII = [0, newHII]
+            #newHeII = [0, newHeII]
+            #newHeIII = [0, newHeIII]
+            #newE = [0, newE]
+            #newHeII = [0, 0]
+            #newHeIII = [0, 0]
+            #newE = [0, 0]
             
-            newHII = [0, newHII]
-            newHeII = [0, newHeII]
-            newHeIII = [0, newHeIII]
-            newE = [0, newE]
 
             # Convert from internal energy back to temperature
             newT = newE[-1] * 2. * mu / 3. / k_B / n_B
@@ -289,7 +305,7 @@ class Radiate:
             newdata["HeIIIDensity"][cell] = newHeIII[-1]
             newdata["ElectronDensity"][cell] = newHII[-1] + newHeII[-1] + 2.0 * newHeIII[-1]
             newdata["Temperature"][cell] = newT
-
+            
             #######################
             ######## DONE #########      
             #######################
