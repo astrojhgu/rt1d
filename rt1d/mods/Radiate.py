@@ -56,7 +56,8 @@ class Radiate:
         self.SolveTemperatureEvolution = pf["SolveTemperatureEvolution"]
         self.ComptonCooling = pf["ComptonCooling"]
         self.CollisionalIonization = pf["CollisionalIonization"]
-        self.SecondaryIonization = pf["CollisionalIonization"]
+        self.CollisionalExcitation = pf["CollisionalExcitation"]
+        self.SecondaryIonization = pf["SecondaryIonization"]
         self.InitialTemperature = pf["InitialTemperature"]
         
         self.InterpolationMethod = pf["InterpolationMethod"]
@@ -166,7 +167,8 @@ class Radiate:
 
         # Only solve internal energy equation if we're not doing an isothermal calculation  (Eq. 12 in TZ08)
         if self.SolveTemperatureEvolution:
-            newE = self.HeatGain(ncol, nabs, x_HII, r, t) - self.HeatLoss(nabs, nion, n_e, n_B, q[3], z, mu)      
+            newE = np.max(self.HeatGain(ncol, nabs, x_HII, r, t) - \
+                self.HeatLoss(nabs, nion, n_e, n_B, q[3] * 2. * mu / 3. / k_B / n_B, z, mu), 0.0) # Is this OK?
         else:
             newE = q[3]                
             
@@ -219,7 +221,7 @@ class Radiate:
 
             # If within our buffer zone (where we don't solve rate equations), continue
             if cell < self.StartCell: continue
-
+                
             # Read in densities for this cell
             n_e = data["ElectronDensity"][cell]
             n_HI = data["HIDensity"][cell]
@@ -261,35 +263,9 @@ class Radiate:
             tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                 r, z, mu, n_H, n_He, ncol)
             
-            # for testing
-            #alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85    
-            #Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, n_HI, n_HeI, x_HII, T, r, t)   
-                
-            #qnew = scipy.integrate.odeint(self.qdot, [n_HII, n_HeII, n_HeIII, E], [t, t + dt], args = (r, z, mu, n_H, n_He, ncol))[0]
-            #def func(n_HII, t, n_HI, n_e, Gamma_HI, alpha_HII): return n_HI * Gamma_HI - alpha_HII * n_e * n_HII[0]
-            #    
-            #def HIIRateEqJacobian(n_HII_0, t, n_HI, n_e, Gamma_HI, alpha_HII):
-            #    """
-            #    Gradient of the HII rate equation, this somehow helps the ODE solver.
-            #    """
-            #    
-            #    return [[0, t], [- alpha_HII * n_e, 0]]    
-            #    
-            #newHII = scipy.integrate.odeint(func, [n_HII, 0], [0, dt], args = (n_HI, n_e, Gamma_HI, alpha_HII), Dfun = HIIRateEqJacobian, mxstep = 10000)[1][0]
-
             # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
             newHII, newHeII, newHeIII, newE = qnew
                         
-            # What *was* this for? testing scipy it turns out
-            #newHII = [0, newHII]
-            #newHeII = [0, newHeII]
-            #newHeIII = [0, newHeIII]
-            #newE = [0, newE]
-            #newHeII = [0, 0]
-            #newHeIII = [0, 0]
-            #newE = [0, 0]
-            
-
             # Convert from internal energy back to temperature
             newT = newE[-1] * 2. * mu / 3. / k_B / n_B
 
@@ -298,7 +274,7 @@ class Radiate:
             newHeI = n_He - (newHeII[-1] + newHeIII[-1])
 
             # Update quantities in 'data' -> 'newdata'     
-            newdata["HIDensity"][cell] = newHI                                                                                                                         
+            newdata["HIDensity"][cell] = newHI                                                                                                                        
             newdata["HIIDensity"][cell] = newHII[-1]
             newdata["HeIDensity"][cell] = newHeI
             newdata["HeIIDensity"][cell] = newHeII[-1]
@@ -400,29 +376,31 @@ class Radiate:
         """
             
         T_cmb = 2.725 * (1. + z)
-        cool = 0
+        cool = 0.
         
         # Cooling by collisional ionization
-        for i, n in enumerate(nabs):
-            cool += n * self.CollisionalIonizationCoolingCoefficient(T, i)
+        if self.CollisionalIonization:
+            for i, n in enumerate(nabs):
+                cool += n * self.CollisionalIonizationCoolingCoefficient(T, i)
                 
         # Cooling by collisional excitation
-        for i, n in enumerate(nabs):
-            cool += n * self.CollisionalExcitationCoolingCoefficient(T, nabs, nion, i)
+        if self.CollisionalExcitation:
+            for i, n in enumerate(nabs):
+                cool += n * self.CollisionalExcitationCoolingCoefficient(T, nabs, nion, i)
         
         # Cooling by recombinations
         for i, n in enumerate(nion):
             cool += n * self.RecombinationCoolingCoefficient(T, i)
                         
         # Cooling by dielectronic recombination
-        cool += nion[2] * self.DielectricRecombinationCoolingCoefficient(T)
+        #cool += nion[2] * self.DielectricRecombinationCoolingCoefficient(T)
         
         # Compton cooling - from FK96
         if self.ComptonCooling:
             cool += 4. * k_B * (T - T_cmb) * (np.pi**2 / 15.) * (k_B * T_cmb / hbar / c)**3 * (k_B * T_cmb / m_e / c**2) * sigma_T * c
         
-        # Cooling by free-free emission
-        cool += (nion[0] + nion[1] + 4. * nion[2]) * 1.42e-27 * 1.1 * np.sqrt(T) # Check on Gaunt factor        
+        ## Cooling by free-free emission
+        #cool += (nion[0] + nion[1] + 4. * nion[2]) * 1.42e-27 * 1.1 * np.sqrt(T) # Check on Gaunt factor        
                 
         cool *= n_e
         
@@ -456,7 +434,9 @@ class Radiate:
         if species == 1: 
             if self.MultiSpecies == 0: return 0.0
             else: return 9.1e-27 * T**-0.1687 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.31e4 / T) * nion[1] / nabs[1]   # CONFUSION
-        if species == 2: return 5.54e-17 * T**-0.397 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-4.73e5 / T)    
+        if species == 2: 
+            if self.MultiSpecies == 0: return 0.0
+            else: return 5.54e-17 * T**-0.397 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-4.73e5 / T)    
         
     def RecombinationCoolingCoefficient(self, T, species):
         """

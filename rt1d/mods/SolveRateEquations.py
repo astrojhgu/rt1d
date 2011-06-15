@@ -92,6 +92,13 @@ class SolveRateEquations:
         while x[i - 1] < xf: 
             xnext = x[i - 1] + h
             ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)
+
+            finite = np.isfinite(ynext)
+            positive = np.greater_equal(ynext, 0.)
+            if not np.all(finite) or not np.all(positive): 
+                print ynext
+                h = max(self.hmin, h / 2.)
+                continue
             
             adapted = False  
             
@@ -188,7 +195,7 @@ class SolveRateEquations:
         """    
 
         ynow = y_guess
-                
+                        
         i = 0
         err = 1
         while err > self.atol:
@@ -197,8 +204,8 @@ class SolveRateEquations:
             # Calculate new estimate of the root
             dy = f(ynow) / fp
             ypre = ynow
-            ynow -= dy      
-                     
+            ynow -= dy   
+                                 
             # Calculate deviation between this estimate and last            
             err = abs(ypre - ynow)
 

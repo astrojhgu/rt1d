@@ -71,10 +71,13 @@ def SetDefaultParameterValues():
         # Physics
         "SolveTemperatureEvolution": 1, \
         "MultiSpecies": 0, \
-        "SecondaryElectronMethod": 1, \
         "CollisionalIonization": 1, \
+        "CollisionalExcitation": 1, \
+        # Replace SecondaryelectronMethod with SecondaryIonization (can be greater than 1)
         "SecondaryIonization": 1, \
+        "SecondaryElectronMethod": 1, \
         "ComptonCooling": 0, \
+        "HubbleCooling": 0, \
         "CosmologicalExpansion": 0, \
         
         # Initial conditions
