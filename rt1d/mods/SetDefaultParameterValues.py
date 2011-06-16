@@ -25,16 +25,14 @@ def SetDefaultParameterValues():
         "ProblemType": 0, \
           
         # Integration
-        "IntegrationMethod": 0, \
         "InterpolationMethod": 0, \
         
         # ODE Solver
         "ODEAdaptiveStep": 1, \
-        "ODEAdaptiveFreq": 1, \
-        "ODEMinStep": 0.01, \
+        "ODEMinStep": 0.001, \
         "ODEMaxStep": 0.1, \
         "ODErtol": 1e-6, \
-        "ODEatol": 1e-8, \
+        "ODEatol": 1e-6, \
         "ODEmaxiter": 100, \
         "RootFinder": 0, \
           
@@ -62,22 +60,18 @@ def SetDefaultParameterValues():
         "StopTime": 50.0, \
         "GlobalTimestep": 0.05, \
         "AdaptiveTimestep": 0, \
-        "TimestepSafetyFactor": 0.5, \
         "StartRadius": 0.001, \
-        "dtDataDump": 1.0, \
+        "dtDataDump": 0.1, \
         "DataDumpName": 'dd', \
         "SavePrefix": 'rt', \
         
         # Physics
-        "SolveTemperatureEvolution": 1, \
+        "Isothermal": 0, \
         "MultiSpecies": 0, \
         "CollisionalIonization": 1, \
         "CollisionalExcitation": 1, \
-        # Replace SecondaryelectronMethod with SecondaryIonization (can be greater than 1)
         "SecondaryIonization": 1, \
-        "SecondaryElectronMethod": 1, \
-        "ComptonCooling": 0, \
-        "HubbleCooling": 0, \
+        "ComptonCooling": 1, \
         "CosmologicalExpansion": 0, \
         
         # Initial conditions
@@ -90,7 +84,7 @@ def SetDefaultParameterValues():
           
         # Source parameters
         "SourceType": 0, \
-        "SourceTemperature": 1e4, \
+        "SourceTemperature": 1e5, \
         "SourceRadius": 1.0, \
         "SourceMass": 1e3, \
         "SourceLifetime": 50.0, \

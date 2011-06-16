@@ -31,7 +31,7 @@ np.seterr(invalid = 'ignore')
 
 class SolveRateEquations:
     def __init__(self, pf, stepper = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
-        Dfun = None, maxiter = 100, stepfreq = 1):
+        Dfun = None, maxiter = 100):
         """
         This 'odeint' class is the driver for ODE integration via the implicit Euler
         method, which is done below by the 'integrate' routine.  
@@ -50,10 +50,9 @@ class SolveRateEquations:
         """
 
         self.MultiSpecies = pf["MultiSpecies"]
-        self.SolveTemperatureEvolution = pf["SolveTemperatureEvolution"]
+        self.Isothermal = pf["Isothermal"]
         
         self.stepper = stepper
-        self.stepfreq = stepfreq
         self.rtol = rtol
         self.atol = atol
         self.hmax = hmax
@@ -93,17 +92,30 @@ class SolveRateEquations:
             xnext = x[i - 1] + h
             ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)
 
+            #print i, ynext, h / self.hmax
+
+            # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
             finite = np.isfinite(ynext)
             positive = np.greater_equal(ynext, 0.)
             if not np.all(finite) or not np.all(positive): 
-                print ynext
                 h = max(self.hmin, h / 2.)
                 continue
+                                
+            # Limit quantities to 10% changes per timestep.
+            #changes = list(abs(ynext - y[i - 1]) / y[i - 1])
+            #if not self.MultiSpecies: 
+            #    changes.pop(1)
+            #    changes.pop(1)
+            #
+            #if not np.all(np.less_equal(changes, 0.1)):
+            #    #print changes, ynext
+            #    h = max(self.hmin, h / 2.)
+            #    continue
             
             adapted = False  
             
             # If adaptive stepping is turned on
-            if self.stepper > 0 and (h != self.hmin or i % self.stepfreq == 0 or i == 1):
+            if self.stepper > 0 and (h != self.hmin or i == 1):
                 drel = self.adapt(f, y[i - 1], x[i - 1], ynext, xnext, h, Dfun, args)
                                                                                                                
                 # Limit determined by worst integration in set of equations.
@@ -144,7 +156,7 @@ class SolveRateEquations:
         for i, element in enumerate(yi):
 
             # If isothermal or Hydrogen only, do not change temperature or helium values
-            if (self.MultiSpecies == 0 and (i == 1 or i == 2)) or (self.SolveTemperatureEvolution == 0 and i == 3):
+            if (self.MultiSpecies == 0 and (i == 1 or i == 2)) or (self.Isothermal and i == 3):
                 yip1.append(yi[i])
 
             else:
@@ -163,7 +175,7 @@ class SolveRateEquations:
         if self.MultiSpecies == 0:
             rtn[1] = yip1[1]
             rtn[2] = yip1[2]
-        if self.SolveTemperatureEvolution == 0:
+        if self.Isothermal:
             rtn[3] = yip1[3]
         
         return rtn
@@ -195,7 +207,7 @@ class SolveRateEquations:
         """    
 
         ynow = y_guess
-                        
+                                                
         i = 0
         err = 1
         while err > self.atol:
@@ -205,7 +217,7 @@ class SolveRateEquations:
             dy = f(ynow) / fp
             ypre = ynow
             ynow -= dy   
-                                 
+                                             
             # Calculate deviation between this estimate and last            
             err = abs(ypre - ynow)
 

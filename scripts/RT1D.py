@@ -59,9 +59,9 @@ for i, pf in enumerate(all_pfs):
     this_pf["BaseName"] = pf
     TimeUnits = this_pf["TimeUnits"]
     StopTime = this_pf["StopTime"] * TimeUnits
-    dt = this_pf["GlobalTimestep"] * TimeUnits
+    dt = this_pf["ODEMaxStep"] * TimeUnits
     dtDataDump = this_pf["dtDataDump"] * TimeUnits
-    
+        
     # Initialize grid and file system
     if IsRestart: data = ICs
     else:

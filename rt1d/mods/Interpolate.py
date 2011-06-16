@@ -67,9 +67,7 @@ def Interpolate3D(dataset, arrays, values, method = 0):
     if kmin1 == 0: kmin2 = kmin1 + 1
     elif kmin1 == len(arrays[2]) - 1: kmin2 = kmin1 - 1
     else: kmin2 = zdiff.index(min(zdiff[kmin1 - 1], zdiff[kmin1 + 1]))
-        
-    #print imin1, jmin1, kmin1    
-        
+                
     if method == 0: 
         return dataset[imin1][jmin1][kmin1]
     

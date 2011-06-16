@@ -21,7 +21,9 @@ FieldList = \
 m_e = 9.10938188*10**-28 		# Electron mass - [m_e] = g
 m_p = 1.67262158*10**-24		# Proton mass - [m_p] = g
 m_n = 1.67492729*10**-24        # Neutron mass - [m_n] = g
-m_H = m_p + m_e                  
+m_H = m_p + m_e        
+
+tiny_number = 1e-10          
 
 class InitializeGrid:
     def __init__(self, pf):
@@ -138,10 +140,10 @@ class InitializeGrid:
         
     def InitializeHeIIIDensity(self, cell):
         """
-        Initialize doubly ionized helium density - assumed to be zero.
+        Initialize doubly ionized helium density - assumed to be very small (can't be exactly zero or it will crash the root finder).
         """
         
-        return 0. 
+        return self.Y * tiny_number * self.ionization[cell] * self.density[cell] / m_H
         
     def InitializeElectronDensity(self, cell):
         """

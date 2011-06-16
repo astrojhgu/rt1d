@@ -143,11 +143,11 @@ class InitializeParameterSpace:
         
         # EM-1, RT1: Pure hydrogen, isothermal HII region expansion (Wise & Abel 2011 Test 5?)
         if pt == 1:
-            pf = {"ProblemType": 1, "IntegrationMethod": 0, "InterpolationMethod": 0, "MonitorSimulation": 0, \
+            pf = {"ProblemType": 1, "InterpolationMethod": 0, "MonitorSimulation": 0, \
                   "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
                   "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
                   "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 5.0, "DataDumpName": 'dd', \
-                  "SavePrefix": 'rt', "SolveTemperatureEvolution": 0, "MultiSpecies": 0, "SecondaryElectronMethod": 0, "CosmologicalExpansion": 0, \
+                  "SavePrefix": 'rt', "Isothermal": 1, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
                   "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e4, \
                   "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 0, "SourceLifetime": 500.0, \
                   "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [13.61], \
@@ -156,11 +156,11 @@ class InitializeParameterSpace:
                  
         # TZ08, RT1, EM-1: Pure hydrogen, isothermal (with parameters of TZ07) not sure about initial HIIFraction  
         if pt == 1.1:
-            pf = {"ProblemType": 1.1, "IntegrationMethod": 0, "InterpolationMethod": 0, "MonitorSimulation": 0, \
+            pf = {"ProblemType": 1.1, "InterpolationMethod": 0, "MonitorSimulation": 0, \
                   "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 100. * cm_per_kpc, \
                   "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 100.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
                   "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 1.0, "DataDumpName": 'dd', \
-                  "SavePrefix": 'rt', "SolveTemperatureEvolution": 0, "MultiSpecies": 0, "SecondaryElectronMethod": 0, "CosmologicalExpansion": 0, \
+                  "SavePrefix": 'rt', "Isothermal": 1, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
                   "DensityProfile": 0, "InitialDensity": 1.87e-4, "TemperatureProfile": 0, "InitialTemperature": 1e4, \
                   "IonizationProfile": 1, "InitialHIIFraction": 1e-4, "SourceType": 0, "SourceLifetime": 500.0, \
                   "SpectrumPhotonLuminosity": 1e54, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [13.6], \
@@ -169,11 +169,11 @@ class InitializeParameterSpace:
         
         # EM-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum (supposedly samples 1e5 K BB)
         if pt == 2:
-            pf = {"ProblemType": 2, "UseScipy": 1, "IntegrationMethod": 0, "InterpolationMethod": 0, "MonitorSimulation": 0, \
+            pf = {"ProblemType": 2, "UseScipy": 1, "InterpolationMethod": 0, "MonitorSimulation": 0, \
                   "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
                   "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
                   "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 10., "DataDumpName": 'dd', \
-                  "SavePrefix": 'rt', "SolveTemperatureEvolution": 1, "MultiSpecies": 0, "SecondaryElectronMethod": 0, "CosmologicalExpansion": 0, \
+                  "SavePrefix": 'rt', "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
                   "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
                   "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 500.0, \
                   "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
@@ -182,11 +182,11 @@ class InitializeParameterSpace:
                 
         # EM-2: Everything the same, except for complete (non-discretized) BB spectrum         
         if pt == 2.1:
-            pf = {"ProblemType": 2.1, "UseScipy": 1, "IntegrationMethod": 0, "InterpolationMethod": 0, "MonitorSimulation": 0, \
+            pf = {"ProblemType": 2.1, "UseScipy": 1, "InterpolationMethod": 0, "MonitorSimulation": 0, \
                   "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
                   "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
                   "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 10., "DataDumpName": 'dd', \
-                  "SavePrefix": 'rt', "SolveTemperatureEvolution": 1, "MultiSpecies": 0, "SecondaryElectronMethod": 0, "CosmologicalExpansion": 0, \
+                  "SavePrefix": 'rt', "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
                   "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
                   "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 500.0, \
                   "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 0, "SpectrumMinEnergy": 0.1, "SpectrumMaxEnergy": 100,

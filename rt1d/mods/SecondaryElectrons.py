@@ -20,7 +20,7 @@ tiny_number = 1e-30
 class SecondaryElectrons:
     def __init__(self, pf):
         self.pf = pf
-        self.Method = self.pf["SecondaryElectronMethod"]
+        self.Method = self.pf["SecondaryIonization"]
         self.NumberOfEnergyBins = 258
         self.NumberOfXiBins = 14
         
