@@ -40,6 +40,12 @@ class InitializeGrid:
         self.InitialHIIFraction = pf["InitialHIIFraction"]
         self.MultiSpecies = pf["MultiSpecies"]
         
+        self.Clump = pf["Clump"]
+        if self.Clump:
+            self.ClumpPosition = pf["ClumpPosition"] * self.GridDimensions
+            self.ClumpOverdensity = pf["ClumpOverdensity"]
+            self.ClumpWidth = pf["ClumpWidth"] * self.GridDimensions
+        
         self.Y = 0.2477 * self.MultiSpecies
                         
         # Generic data array                
@@ -70,7 +76,10 @@ class InitializeGrid:
         if self.DensityProfile == -1: density = 1.87e-4 * m_H
         if self.DensityProfile == 0: density = self.InitialDensity * m_H
         if self.DensityProfile == 1: density = self.Cosmology.MeanBaryonDensity(self.InitialRedshift)
-            
+        
+        if self.Clump: 
+            density += density * self.ClumpOverdensity * np.exp(-(cell - self.ClumpPosition)**2 / 2. / self.ClumpWidth**2)
+                        
         return density
         
     def InitializeTemperature(self, cell):

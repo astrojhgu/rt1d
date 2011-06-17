@@ -51,7 +51,7 @@ if rank == 0:
 
 # Loop over parameter sets. 
 for i, pf in enumerate(all_pfs):
-    if i % size != rank: continue
+    #if i % size != rank: continue
 
     start = time.time()
     
@@ -61,27 +61,28 @@ for i, pf in enumerate(all_pfs):
     StopTime = this_pf["StopTime"] * TimeUnits
     dt = this_pf["ODEMaxStep"] * TimeUnits
     dtDataDump = this_pf["dtDataDump"] * TimeUnits
-        
+            
     # Initialize grid and file system
     if IsRestart: data = ICs
     else:
         g = rtm.InitializeGrid(this_pf)   
         data = g.InitializeFields()
         
-        try: os.mkdir("{0}".format(pf))
-        except OSError: 
-            os.system("rm -rf {0}".format(pf))
-            os.mkdir("{0}".format(pf))
+        if rank == 0:
+            try: os.mkdir("{0}".format(pf))
+            except OSError: 
+                os.system("rm -rf {0}".format(pf))
+                os.mkdir("{0}".format(pf))
 
     # Initialize integral tables
     iits = rtm.InitializeIntegralTables(this_pf, data)
     itabs = iits.TabulateRateIntegrals()
     if this_pf["ExitAfterIntegralTabulation"]: continue
-        
+                
     # Initialize radiation, write data, and monitor classes
     r = rtm.Radiate(this_pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
     w = rtm.WriteData(this_pf)
-    
+        
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
     t = this_pf["CurrentTime"] * TimeUnits
@@ -97,7 +98,7 @@ for i, pf in enumerate(all_pfs):
                 
         # Write-out data, or don't                                        
         if t == ddt[wct]:
-            w.WriteAllData(data, wct, t)
+            if rank == 0: w.WriteAllData(data, wct, t)
             wct += 1
         elif (t + dt) > ddt[wct]:
             dt = ddt[wct] - t

@@ -92,8 +92,6 @@ class SolveRateEquations:
             xnext = x[i - 1] + h
             ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)
 
-            #print i, ynext, h / self.hmax
-
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
             finite = np.isfinite(ynext)
             positive = np.greater_equal(ynext, 0.)

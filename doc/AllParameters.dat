@@ -59,6 +59,10 @@ TemperatureProfile              = 0             # Uniform
 InitialTemperature              = 100 
 IonizationProfile               = 0             # Neutral everywhere except within r_i
 InitialHIIFraction              = 1e-4 
+ClumpPosition                   = None
+ClumpWidth                      = None
+ClumpOverdensity                = None
+
   
 # Source parameters
 SourceType                      = 0             # Blackbody

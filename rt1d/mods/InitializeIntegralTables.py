@@ -43,6 +43,8 @@ m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
+tiny_number = 1e-10
+
 IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', 'SecondaryIonizationRateHI', 'SecondaryIonizationRateHeI']#, 'ComptonHeatingRate']
 
 class InitializeIntegralTables: 
@@ -85,8 +87,8 @@ class InitializeIntegralTables:
             self.HeIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
             self.HeIIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeIINBins)
         else:
-            self.HeIColumn = np.zeros_like(self.HIColumn)
-            self.HeIIColumn = np.zeros_like(self.HIColumn)
+            self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
+            self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
                   
         # Make output directory          
         try: os.mkdir("tabs")
@@ -106,9 +108,7 @@ class InitializeIntegralTables:
             SourceType: pl-alpha, agn, mcd (only applicable for bh sources)
         
         """
-                
-        zi = "z{0}".format(self.InitialRedshift)
-        
+                        
         if self.MultiSpecies == 0: dim = "1D"
         else: dim = "3D"
         
@@ -121,28 +121,27 @@ class InitializeIntegralTables:
         if self.SourceType == 0: 
             src = "mono"
             mort = "{0:g}phot".format(int(self.SpectrumPhotonLuminosity))
-            return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, zi, dim, cont)
+            return "{0}_{1}_{2}_{3}.h5".format(src, mort, dim, cont)
         
         if self.SourceType == 1: 
             src = "bb"
             mort = "{0}K".format(int(self.SourceTemperature))
-            return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, zi, dim, cont)
-            
-        elif self.SourceType == 2:
-            src = "popIII"
-            mort = "{0}M".format(int(self.SourceMass))
-            return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, zi, dim, cont)
+            return "{0}_{1}_{2}_{3}.h5".format(src, mort, dim, cont)
+                                                              
+        elif self.SourceType == 2:                            
+            src = "popIII"                                    
+            mort = "{0}M".format(int(self.SourceMass))        
+            return "{0}_{1}_{2}_{3}.h5".format(src, mort, dim, cont)
             
         else: 
             src = "bh"
             mort = "{0}M".format(int(self.SourceMass))
             
-            if self.SourceType == 2: spec = "pl-{0}".format(self.SpectrumPowerLawIndex)
-            elif self.SourceType == 3: spec = "agn"
+            if self.SourceType == 3: spec = "pl"
             elif self.SourceType == 4: spec = "mcd"
             else: spec = "unknown"
         
-            return "{0}_{1}_{2}_{3}_{4}_{5}.h5".format(src, mort, spec, zi, dim, cont)
+            return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, spec, dim, cont)
             
     def ReadIntegralTable(self):
         """
@@ -225,7 +224,7 @@ class InitializeIntegralTables:
                 for integral in IntegralList:
                     tab = np.zeros(self.HINBins)
                     for i, ncol_HI in enumerate(self.HIColumn):
-                        tab[i] = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0.0, 0.0]))
+                        tab[i] = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0, 0]))
                         
                     # Append species to name - here, will always be zero (hydrogen only)    
                     itabs["{0}{1}".format(integral, 0)] = tab                    
@@ -254,7 +253,7 @@ class InitializeIntegralTables:
                        
                         itabs["{0}{1}".format(integral, species)] = tab
                         del tab
-                                        
+                                                     
             self.WriteIntegralTable(itabs)    
             return itabs
     
@@ -389,378 +388,7 @@ class InitializeIntegralTables:
                     / (element * erg_per_ev) / E_HeI                                                                                  
                                                                                                                                       
             return np.sum(integral)                                                                                                               
-            
-    #def SecondaryIonizationRateIntegralHI_HeI(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    HI ionization rate due to fast secondary electrons from helium ionizations.  This is the third integral
-    #    in Eq. 4 in TZ07.
-    #    """
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HI   
-    #            
-    #        integral = integrate(integrand, E_HeI, self.SpectrumMaxEnergy)
-    #        
-    #        return integral[0]
-    #        
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 1) * (self.rs.DiscreteSpectrumSED - E_HI) * \
-    #            self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) \
-    #            / (self.rs.DiscreteSpectrumSED * erg_per_ev) / E_HI 
-    #                                                                                                  
-    #        return np.sum(integral) 
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 1) * (element - E_HI) * \
-    #                self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) \
-    #                / (element * erg_per_ev) / E_HI
-    #            
-    #        return np.sum(integral) 
-    #    
-    #def ElectronHeatingIntegralHI(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    Returns the amount of heat deposited by secondary electrons from HI ionizations.  This is 
-    #    the first term in TZ07 Eq. 12.
-    #    
-    #        units: cm^2 / s
-    #        notes: the dimensionality is resolved later when we multiply by the bolometric luminosity (erg / s),
-    #               the number density of collision partners (cm^-3), and divide by 4 pi r^2 (cm^-2), leaving us 
-    #               with a true heating rate in erg / cm^3 / s.
-    #    """    
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / E
-    #                                                    
-    #        integral = integrate(integrand, E_HI, self.SpectrumMaxEnergy, epsrel = 1e-16)
-    #        
-    #        return integral[0]
-    #        
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 0) * (self.rs.DiscreteSpectrumSED - E_HI) * \
-    #            self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) / self.rs.DiscreteSpectrumSED
-    #        
-    #        return np.sum(integral)
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 0) * (element - E_HI) * \
-    #                self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) / element
-    #                
-    #        return np.sum(integral)
-    #        
-    #def ElectronHeatingIntegralHeI(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    Returns the amount of heat deposited by secondary electrons from HeI ionizations.  For full explanation, 
-    #    see 'ElectronHeatingIntegralHI'.
-    #    """    
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / E
-    #            
-    #        integral = integrate(integrand, E_HeI, self.SpectrumMaxEnergy)
-    #    
-    #        return integral[0]
-    #    
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 1) * (self.rs.DiscreteSpectrumSED - E_HeI) * \
-    #            self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) / self.rs.DiscreteSpectrumSED
-    #                                                           
-    #        return np.sum(integral)
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 1) * (element - E_HeI) * \
-    #                self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) / element
-    #                
-    #        return np.sum(integral)
-    #        
-    #def ElectronHeatingIntegralHeII(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    Returns the amount of heat deposited by secondary electrons from HeII ionizations.  For full explanation, 
-    #    see 'ElectronHeatingIntegralHI'.
-    #    """   
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 2) * (E - E_HeII) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / E   
-    #            
-    #        integral = integrate(integrand, E_HeII, self.SpectrumMaxEnergy)
-    #        
-    #        return integral[0]
-    #    
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 2) * (self.rs.DiscreteSpectrumSED - E_HeII) * \
-    #            self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) / self.rs.DiscreteSpectrumSED
-    #                                                           
-    #        return np.sum(integral)
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 2) * (element - E_HeII) * \
-    #                self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) / element
-    #            
-    #        return np.sum(integral)
-    #
-    #def PhotoIonizationRateIntegralHI(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    Returns the value of the bound-free photoionization rate integral of HI.  However, because 
-    #    source luminosities vary with time and distance, it is unnormalized.  To get a true 
-    #    photoionization rate, one must multiply these values by the spectrum's normalization factor
-    #    and divide by 4*np.pi*r^2. 
-    #    """
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 0) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
-    #        
-    #        integral = integrate(integrand, E_HI, self.SpectrumMaxEnergy, epsrel = 1e-16)
-    #        
-    #        return integral[0]
-    #              
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 0) * self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * \
-    #            np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) / (self.rs.DiscreteSpectrumSED * erg_per_ev)     
-    #                                                                                                                                                                            
-    #        return np.sum(integral)
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 0) * self.rs.Spectrum(element) * \
-    #                np.exp(-self.OpticalDepth(element, n)) / (element * erg_per_ev) 
-    #            
-    #        return np.sum(integral)
-    #    
-    #def PhotoIonizationRateIntegralHeI(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    Returns the value of the bound-free photoionization rate integral of HI.  However, because 
-    #    source luminosities vary with time and distance, it is unnormalized.  To get a true 
-    #    photoionization rate, one must multiply these values by the spectrum's normalization factor
-    #    and divide by 4*np.pi*r^2. 
-    #    """
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 1) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
-    #            
-    #        integral = integrate(integrand, E_HeI, self.SpectrumMaxEnergy)
-    #        
-    #        return integral[0]
-    #              
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 1) * self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * \
-    #            np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) / (self.rs.DiscreteSpectrumSED * erg_per_ev)     
-    #                                                                                                                                                                
-    #        return np.sum(integral)
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 1) * self.rs.Spectrum(element) * \
-    #                np.exp(-self.OpticalDepth(element, n)) / (element * erg_per_ev)
-    #            
-    #        return np.sum(integral)
-    #        
-    #def PhotoIonizationRateIntegralHeII(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    Returns the value of the bound-free photoionization rate integral of HI.  However, because 
-    #    source luminosities vary with time and distance, it is unnormalized.  To get a true 
-    #    photoionization rate, one must multiply these values by the spectrum's normalization factor
-    #    and divide by 4*np.pi*r^2. 
-    #    """
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 2) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
-    #            
-    #        integral = integrate(integrand, E_HeII, self.SpectrumMaxEnergy)
-    #        
-    #        return integral[0]
-    #              
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 2) * self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * \
-    #            np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) / (self.rs.DiscreteSpectrumSED * erg_per_ev)     
-    #                                                                                                                                                                
-    #        return np.sum(integral)
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 2) * self.rs.Spectrum(element) * \
-    #                np.exp(-self.OpticalDepth(element, n)) / (element * erg_per_ev) 
-    #            
-    #        return np.sum(integral)
-    #    
-    #def SecondaryIonizationRateIntegralHI_HI(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    HI ionization rate due to fast secondary electrons from hydrogen ionizations.  This is the second integral
-    #    in Eq. 4 in TZ07.
-    #    """
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HI   
-    #            
-    #        integral = integrate(integrand, E_HI, self.SpectrumMaxEnergy)
-    #        
-    #        return integral[0]
-    #        
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 0) * (self.rs.DiscreteSpectrumSED - E_HI) * \
-    #            self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) \
-    #            / (self.rs.DiscreteSpectrumSED * erg_per_ev) / E_HI 
-    #        
-    #        return np.sum(integral)
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 0) * (element - E_HI) * \
-    #                self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) \
-    #                / (element * erg_per_ev) / E_HI 
-    #            
-    #        return np.sum(integral)
-    #
-    #def SecondaryIonizationRateIntegralHI_HeI(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    HI ionization rate due to fast secondary electrons from helium ionizations.  This is the third integral
-    #    in Eq. 4 in TZ07.
-    #    """
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HI   
-    #            
-    #        integral = integrate(integrand, E_HeI, self.SpectrumMaxEnergy)
-    #        
-    #        return integral[0]
-    #        
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 1) * (self.rs.DiscreteSpectrumSED - E_HI) * \
-    #            self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) \
-    #            / (self.rs.DiscreteSpectrumSED * erg_per_ev) / E_HI 
-    #                                                                                                  
-    #        return np.sum(integral) 
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 1) * (element - E_HI) * \
-    #                self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) \
-    #                / (element * erg_per_ev) / E_HI
-    #            
-    #        return np.sum(integral)
-    # 
-    #def SecondaryIonizationRateIntegralHeI_HeI(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    HeI ionization rate due to fast secondary electrons from helium ionizations.  This is the second integral
-    #    in Eq. 5 in TZ07.
-    #    """
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 1) * (E - E_HeI) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HeI   
-    #            
-    #        integral = integrate(integrand, E_HeI, self.SpectrumMaxEnergy)
-    #        
-    #        return integral[0]
-    #        
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 1) * (self.rs.DiscreteSpectrumSED - E_HeI) * \
-    #            self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) \
-    #            / (self.rs.DiscreteSpectrumSED * erg_per_ev) / E_HeI 
-    #                                                                                                  
-    #        return np.sum(integral)
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 1) * (element - E_HeI) * \
-    #                self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) \
-    #                / (element * erg_per_ev) / E_HeI
-    #            
-    #        return np.sum(integral)
-    #        
-    #def SecondaryIonizationRateIntegralHeI_HI(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    HeI ionization rate due to fast secondary electrons from hydrogen ionizations.  This is the third integral
-    #    in Eq. 5 in TZ07.
-    #    """
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 0) * (E - E_HI) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HeI   
-    #            
-    #        integral = integrate(integrand, E_HeI, self.SpectrumMaxEnergy)
-    #        
-    #        return integral[0]
-    #        
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 0) * (self.rs.DiscreteSpectrumSED - E_HI) * \
-    #            self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) \
-    #            / (self.rs.DiscreteSpectrumSED * erg_per_ev) / E_HeI 
-    #                                                                                                  
-    #        return np.sum(integral)        
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 0) * (element - E_HI) * \
-    #                self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) \
-    #                / (element * erg_per_ev) / E_HeI 
-    #            
-    #        return np.sum(integral)
-    #        
-    #def SecondaryIonizationRateIntegralHeII(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    
-    #    """
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: PhotoIonizationCrossSection(E, 2) * (E - E_HeII) * self.rs.Spectrum(E) * \
-    #            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HeII   
-    #            
-    #        integral = integrate(integrand, E_HeII, self.SpectrumMaxEnergy)
-    #        
-    #        return integral[0]
-    #        
-    #    elif self.rs.DiscreteSpectrumMethod <= 3:
-    #        integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, 2) * (self.rs.DiscreteSpectrumSED - E_HeII) * \
-    #            self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) \
-    #            / (self.rs.DiscreteSpectrumSED * erg_per_ev) / E_HeII
-    #                                                                                   
-    #        return np.sum(integral)
-    #        
-    #    else:
-    #        integral = 0
-    #        for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-    #            integral += PhotoIonizationCrossSection(element, 2) * (element - E_HeII) * \
-    #                self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) \
-    #                / (element * erg_per_ev) / E_HeII
-    #            
-    #        return np.sum(integral)
-    #    
-    #def ComptonHeatingIntegralHI(self, n = [0.0, 0.0, 0.0]):
-    #    """
-    #    Second term in TZ08.
-    #    """
-    #    
-    #    if self.rs.DiscreteSpectrumMethod == 0:
-    #        integrand = lambda E: self.rs.Spectrum(E) * (E - )\
-    #            np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_HeII   
-    #            
-    #        integral = integrate(integrand, E_HeII, self.SpectrumMaxEnergy)
-    #        
-    #        return integral[0]
-        
+
         
         
         

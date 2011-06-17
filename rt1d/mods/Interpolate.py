@@ -28,7 +28,7 @@ class Interpolate:
         self.dHIColumn = np.diff(np.log10(self.HIColumn))[0]
         self.dHeIColumn = np.diff(np.log10(self.HeIColumn))[0]
         self.dHeIIColumn = np.diff(np.log10(self.HeIIColumn))[0]
-        
+                                
         self.itabs = itabs  # This is a dictionary with all the lookup tables
         
         if self.pf["MultiSpecies"] == 0: self.interp = self.InterpolateLinear1D
@@ -56,12 +56,15 @@ class Interpolate:
         k = int(round((np.log10(value[2]) - self.HeIIColumnMin) / self.dHeIIColumn))
         k = min(self.HeIINbins - 1, max(0, i))
         
+        #print i, j, k, integral, self.itabs[integral][i][j][k]
+                
         return self.itabs[integral][i][j][k]
         
     def InterpolateAvg3D(self, value, integral):
         """
         Return the average of the 8 points surrounding the value of interest.
         """    
+        
         pass
         
     

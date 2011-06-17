@@ -81,6 +81,10 @@ def SetDefaultParameterValues():
         "InitialTemperature": 100, \
         "IonizationProfile": 0, \
         "InitialHIIFraction": 1e-4, \
+        "Clump": 0, \
+        "ClumpPosition": 0.1, \
+        "ClumpWidth": 0.05, \
+        "ClumpOverdensity": 100, \
           
         # Source parameters
         "SourceType": 0, \
