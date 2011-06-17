@@ -63,7 +63,7 @@ def SetDefaultParameterValues():
         "StartRadius": 0.001, \
         "dtDataDump": 0.1, \
         "DataDumpName": 'dd', \
-        "SavePrefix": 'rt', \
+        "OutputDirectory": './', \
         
         # Physics
         "Isothermal": 0, \

@@ -24,69 +24,73 @@ except ImportError:
 # Class definitions
 import rt1d.mods as rtm
 
-all_pfs = {}
-
-# Currently we only understand parameter files and the '-r' restart flag.  
-if sys.argv[1] == '-r':
+# If restart or batch do cool things
+all_pfs = []
+if sys.argv[1].strip('-') == 'r':
     IsRestart = True
-    rf = "{0}/{1}".format(os.getcwd(), sys.argv[2])
-    pf, ICs = rtm.ReadRestartFile(rf)
-    all_pfs["{0}0000".format(pf["SavePrefix"])] = pf
+    pf, ICs = rtm.ReadRestartFile(sys.argv[2])  
+    all_pfs.append(pf)
     del pf
-
+elif sys.argv[1].strip('-') == 'b':
+    IsRestart = False
+    f = open(sys.argv[2], 'r')
+    for line in f: 
+        pf = rtm.ReadParameterFile(line.strip())
+        all_pfs.append(pf)
+        del pf
+    f.close()
 else:
     IsRestart = False
-    pf = sys.argv[1]
-
-    # Instantiate initialization class and build parameter space.
-    ps = rtm.InitializeParameterSpace(pf)
-    all_pfs = ps.AllParameterSets()
+    pf = rtm.ReadParameterFile(sys.argv[1])
+    all_pfs.append(pf)
     del pf
-
+    
+# Print some output to the screen        
 if rank == 0: 
     print "\nStarting rt1d..."
     print "Initializing {0} 1D radiative transfer calculation(s)...".format(len(all_pfs)) 
-    if IsRestart: print "Restarting from {0}".format(rf)
+    if IsRestart: print "Restarting from {0}".format(sys.argv[2])
     print "Press ctrl-C to quit at any time.\n" 
 
-# Loop over parameter sets. 
-for i, pf in enumerate(all_pfs):
-    #if i % size != rank: continue
+start = time.time()
 
-    start = time.time()
-    
-    this_pf = all_pfs[pf]
-    this_pf["BaseName"] = pf
-    TimeUnits = this_pf["TimeUnits"]
-    StopTime = this_pf["StopTime"] * TimeUnits
-    dt = this_pf["ODEMaxStep"] * TimeUnits
-    dtDataDump = this_pf["dtDataDump"] * TimeUnits
+# Loop over parameter sets. 
+for i, pf in enumerate(all_pfs):    
+    TimeUnits = pf["TimeUnits"]
+    StopTime = pf["StopTime"] * TimeUnits
+    dt = pf["ODEMaxStep"] * TimeUnits
+    dtDataDump = pf["dtDataDump"] * TimeUnits
             
     # Initialize grid and file system
     if IsRestart: data = ICs
     else:
-        g = rtm.InitializeGrid(this_pf)   
+        g = rtm.InitializeGrid(pf)   
         data = g.InitializeFields()
         
         if rank == 0:
-            try: os.mkdir("{0}".format(pf))
-            except OSError: 
-                os.system("rm -rf {0}".format(pf))
-                os.mkdir("{0}".format(pf))
+            if pf["OutputDirectory"] != './':
+                try: os.mkdir("{0}".format(pf["OutputDirectory"]))
+                except OSError: 
+                    os.system("rm -rf {0}".format(pf["OutputDirectory"]))
+                    os.mkdir("{0}".format(pf["OutputDirectory"]))            
+            made = True
+        else: made = False
+        
+        if size > 1: MPI.COMM_WORLD.bcast(made, root = 0)    
 
     # Initialize integral tables
-    iits = rtm.InitializeIntegralTables(this_pf, data)
+    iits = rtm.InitializeIntegralTables(pf, data)
     itabs = iits.TabulateRateIntegrals()
-    if this_pf["ExitAfterIntegralTabulation"]: continue
+    if pf["ExitAfterIntegralTabulation"]: continue
                 
     # Initialize radiation, write data, and monitor classes
-    r = rtm.Radiate(this_pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
-    w = rtm.WriteData(this_pf)
+    r = rtm.Radiate(pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
+    w = rtm.WriteData(pf)
         
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
-    t = this_pf["CurrentTime"] * TimeUnits
-    h = this_pf["ODEMaxStep"] * TimeUnits
+    t = pf["CurrentTime"] * TimeUnits
+    h = pf["ODEMaxStep"] * TimeUnits
     wct = int(t / dtDataDump) + 1
     if not IsRestart: w.WriteAllData(data, 0, t)
                     
@@ -106,7 +110,7 @@ for i, pf in enumerate(all_pfs):
             dt = dt
         
     elapsed = time.time() - start    
-    print "Calculation {0} ({1}) complete.  Elapsed time = {2} seconds.".format(i + 1, pf, int(elapsed))
+    print "Calculation {0} complete (output to {1}).  Elapsed time = {2} seconds.".format(i + 1, pf["OutputDirectory"], int(elapsed))
 
 
 

@@ -233,7 +233,9 @@ class InitializeIntegralTables:
             # If we're including helium as well         
             else:
                                 
-                for integral in IntegralList:                    
+                for h, integral in enumerate(IntegralList):
+                    
+                    if h % size != rank: continue                    
                     
                     for species in np.arange(3):
                         

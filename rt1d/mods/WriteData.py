@@ -27,12 +27,12 @@ class WriteData:
     def __init__(self, pf):
         self.pf = pf
         self.TimeUnits = pf["TimeUnits"]
-        self.BaseName = pf["BaseName"]
+        self.OutputDirectory = pf["OutputDirectory"]
 
     def WriteAllData(self, data, wct, t):
         DataDumpName = "{0}{1:04d}".format(self.pf["DataDumpName"], wct)
                                 
-        f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.BaseName, DataDumpName), 'w') 
+        f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.OutputDirectory, DataDumpName), 'w') 
 
         pf_grp = f.create_group("ParameterFile")
         data_grp = f.create_group("Data")
@@ -44,5 +44,5 @@ class WriteData:
         
         f.close()
         
-        if rank == 0: print "Wrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.BaseName, DataDumpName)
+        if rank == 0: print "Wrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.OutputDirectory, DataDumpName)
         
