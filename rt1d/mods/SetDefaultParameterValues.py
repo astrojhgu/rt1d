@@ -107,7 +107,6 @@ def SetDefaultParameterValues():
         "DiscreteSpectrumMinEnergy": 100., \
         "DiscreteSpectrumMaxEnergy": 1e4, \
         "DiscreteSpectrumNumberOfBins": 20, \
-        "DiscreteSpectrumBinEdges": [13.6, 20, 30, 40], \
         "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
         "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], \
           

@@ -78,7 +78,7 @@ def ProblemType(pt):
     
     # EM-1, RT1: Pure hydrogen, isothermal HII region expansion (Wise & Abel 2011 Test 5?)
     if pt == 1:
-        pf = {"ProblemType": 1, "InterpolationMethod": 0, "MonitorSimulation": 0, \
+        pf = {"ProblemType": 1, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
               "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 5.0, "DataDumpName": 'dd', \
@@ -91,7 +91,7 @@ def ProblemType(pt):
              
     # TZ08, RT1, EM-1: Pure hydrogen, isothermal (with parameters of TZ07) not sure about initial HIIFraction  
     if pt == 1.1:
-        pf = {"ProblemType": 1.1, "InterpolationMethod": 0, "MonitorSimulation": 0, \
+        pf = {"ProblemType": 1.1, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 100. * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 100.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
               "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 1.0, "DataDumpName": 'dd', \
@@ -104,7 +104,7 @@ def ProblemType(pt):
     
     # EM-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum (supposedly samples 1e5 K BB)
     if pt == 2:
-        pf = {"ProblemType": 2, "UseScipy": 1, "InterpolationMethod": 0, "MonitorSimulation": 0, \
+        pf = {"ProblemType": 2, "UseScipy": 1, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
               "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 10., "DataDumpName": 'dd', \
@@ -117,7 +117,7 @@ def ProblemType(pt):
             
     # EM-2: Everything the same, except for complete (non-discretized) BB spectrum         
     if pt == 2.1:
-        pf = {"ProblemType": 2.1, "UseScipy": 1, "InterpolationMethod": 0, "MonitorSimulation": 0, \
+        pf = {"ProblemType": 2.1, "UseScipy": 1, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
               "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 10., "DataDumpName": 'dd', \
