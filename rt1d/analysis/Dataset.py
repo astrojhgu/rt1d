@@ -10,17 +10,13 @@ Description: General module for command line analysis of rt1d data.
 Tutorial:
 import rt1d.analysis as rta
 ds = rta.Dataset('./pf.dat')
-data, pf = ds.load()     
+pl.loglog(ds.data[10].r / cm_per_kpc, ds[10].T)  # Plot the temperature profile!
      
 """
 
 import os, re, h5py
 import numpy as np
 import pylab as pl
-from scipy.integrate import quad as integrate
-
-np.seterr(all='ignore')
-
 import rt1d.mods as rtm
 from rt1d.analysis.DataDump import DataDump
         

@@ -80,7 +80,7 @@ for i, pf in enumerate(all_pfs):
 
     # Initialize integral tables
     iits = rtm.InitializeIntegralTables(pf, data)
-    itabs = iits.TabulateRateIntegrals()
+    itabs = iits.TabulateRateIntegrals()        
     if pf["ExitAfterIntegralTabulation"]: continue
                 
     # Initialize radiation, write data, and monitor classes
@@ -102,12 +102,17 @@ for i, pf in enumerate(all_pfs):
                 
         # Write-out data, or don't                                        
         if t == ddt[wct]:
-            if rank == 0: w.WriteAllData(data, wct, t)
+            wrote = False
+            if rank == 0: 
+                w.WriteAllData(data, wct, t)
+                wrote = True
             wct += 1
         elif (t + dt) > ddt[wct]:
             dt = ddt[wct] - t
         else:
             dt = dt
+            
+        if size > 1: MPI.COMM_WORLD.bcast(wrote, root = 0)    
         
     elapsed = time.time() - start    
     print "Calculation {0} complete (output to {1}).  Elapsed time = {2} seconds.".format(i + 1, pf["OutputDirectory"], int(elapsed))

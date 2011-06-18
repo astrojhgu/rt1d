@@ -221,12 +221,13 @@ class InitializeIntegralTables:
 
             # If hydrogen-only
             if self.MultiSpecies == 0:
-                for integral in IntegralList:
+                for h, integral in enumerate(IntegralList):
+                                        
                     tab = np.zeros(self.HINBins)
                     for i, ncol_HI in enumerate(self.HIColumn):
                         tab[i] = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0, 0]))
-                        
-                    # Append species to name - here, will always be zero (hydrogen only)    
+                                             
+                    # Append species to name - here, will always be zero (hydrogen only)  
                     itabs["{0}{1}".format(integral, 0)] = tab                    
                     del tab
                     
@@ -234,9 +235,7 @@ class InitializeIntegralTables:
             else:
                                 
                 for h, integral in enumerate(IntegralList):
-                    
-                    if h % size != rank: continue                    
-                    
+                                                                  
                     for species in np.arange(3):
                         
                         # This could take a while
@@ -253,10 +252,13 @@ class InitializeIntegralTables:
                                 try: pbar.update(i + 1)
                                 except AssertionError: pass
                        
+                        if size > 1: tab = MPI.COMM_WORLD.allreduce(tab, tab)
+                        
                         itabs["{0}{1}".format(integral, species)] = tab
                         del tab
                                                      
-            self.WriteIntegralTable(itabs)    
+            self.WriteIntegralTable(itabs)
+                
             return itabs
     
     def OpticalDepth(self, E, n):

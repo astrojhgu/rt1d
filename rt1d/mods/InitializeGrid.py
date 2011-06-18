@@ -23,7 +23,7 @@ m_p = 1.67262158*10**-24		# Proton mass - [m_p] = g
 m_n = 1.67492729*10**-24        # Neutron mass - [m_n] = g
 m_H = m_p + m_e        
 
-tiny_number = 1e-10          
+tiny_number = 1e-8          
 
 class InitializeGrid:
     def __init__(self, pf):
@@ -145,7 +145,7 @@ class InitializeGrid:
         to be the same as that of hydrogen.
         """
         
-        return self.Y * self.ionization[cell] * self.density[cell] / m_H
+        return self.Y * tiny_number * self.ionization[cell] * self.density[cell] / m_H
         
     def InitializeHeIIIDensity(self, cell):
         """

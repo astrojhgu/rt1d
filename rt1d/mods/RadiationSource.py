@@ -125,11 +125,7 @@ class RadiationSource:
         """        
         return 2.0 * (E * erg_per_ev)**3 * (np.exp(E * erg_per_ev / k_B / self.T) - 1.0)**-1 / h**2 / c**2
                         
-    def PowerLaw(self, E):
-        """
-        Returns specific intensity of power law spectrum with index self.alpha.  Should generalize
-        so that we can adjust the break energy (currently set to 1 keV) in a parameter.
-        """    
+    def PowerLaw(self, E):    
         """
         A simple power law X-ray spectrum with spectral index alpha and break 
         energy h*nu_0 = 1keV (Madau et al. 2004).  Unlike the previous two spectral types,
@@ -137,7 +133,6 @@ class RadiationSource:
         """
         
         return E * (E / 1000.0)**self.alpha
-        
         
     def NormalizeLuminosity(self):
         """
@@ -159,7 +154,7 @@ class RadiationSource:
                 else: 
                     integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
                     (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))  
-                    
+                               
         else: integral = np.sum(self.SpecificIntensity(self.DiscreteSpectrumSED))  
                                                                                                                                                         
         return self.BolometricLuminosity(0.0) / integral  

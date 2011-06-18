@@ -104,11 +104,11 @@ def ProblemType(pt):
     
     # EM-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum (supposedly samples 1e5 K BB)
     if pt == 2:
-        pf = {"ProblemType": 2, "UseScipy": 1, "InterpolationMethod": 0, \
+        pf = {"ProblemType": 2, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
-              "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 10., "DataDumpName": 'dd', \
-              "SavePrefix": 'rt', "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
+              "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 0.1, "DataDumpName": 'dd', \
+              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
               "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
               "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 500.0, \
               "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
@@ -117,11 +117,11 @@ def ProblemType(pt):
             
     # EM-2: Everything the same, except for complete (non-discretized) BB spectrum         
     if pt == 2.1:
-        pf = {"ProblemType": 2.1, "UseScipy": 1, "InterpolationMethod": 0, \
+        pf = {"ProblemType": 2.1, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
-              "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 10., "DataDumpName": 'dd', \
-              "SavePrefix": 'rt', "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
+              "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 0.1, "DataDumpName": 'dd', \
+              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
               "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
               "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 500.0, \
               "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 0, "SpectrumMinEnergy": 0.1, "SpectrumMaxEnergy": 100,

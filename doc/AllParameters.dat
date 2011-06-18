@@ -18,7 +18,7 @@ AdaptiveTimestep                = 1
 StartRadius                     = 0.001 
 dtDataDump                      = 0.1 
 DataDumpName                    = dd 
-SavePrefix                      = rt 
+OutputDirectory                 = ./
 
 # ODE Solver
 ODEMinStep                      = 1e-3 
@@ -58,10 +58,11 @@ InitialDensity                  = 0
 TemperatureProfile              = 0             # Uniform 
 InitialTemperature              = 100 
 IonizationProfile               = 0             # Neutral everywhere except within r_i
-InitialHIIFraction              = 1e-4 
-ClumpPosition                   = None
-ClumpWidth                      = None
-ClumpOverdensity                = None
+InitialHIIFraction              = 1e-4
+Clump                           = 0 
+ClumpPosition                   = 0.1
+ClumpWidth                      = 0.02
+ClumpOverdensity                = 100
 
   
 # Source parameters
