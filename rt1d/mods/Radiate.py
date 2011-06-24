@@ -41,7 +41,7 @@ m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
-tiny_number = 1e-8
+tiny_number = 1e-20
 
 # Widget for progressbar.
 widget = ["Ray Casting: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
@@ -63,7 +63,7 @@ class Radiate:
         self.InitialTemperature = pf["InitialTemperature"]
         
         self.InterpolationMethod = pf["InterpolationMethod"]
-        self.AdaptiveTimestep = pf["AdaptiveTimestep"]
+        self.AdaptiveTimestep = pf["ODEAdaptiveStep"]
         self.CosmologicalExpansion = pf["CosmologicalExpansion"]
         self.InitialHIIFraction = pf["InitialHIIFraction"]
         self.GridDimensions = pf["GridDimensions"]
@@ -86,7 +86,12 @@ class Radiate:
         self.atol = pf["ODEatol"]
         self.rtol = pf["ODErtol"]
         
-        self.solver = SolveRateEquations(pf, stepper = self.AdaptiveStep, hmin = self.MinStep, hmax = self.MaxStep, \
+        guesses = [data["HIDensity"][0] + data["HIIDensity"][0], 
+                   data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0], 
+                   data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0], 
+                   3 * self.InitialTemperature * k_B * (self.InitialHydrogenDensity + self.InitialHeliumDensity) / 2.]
+                
+        self.solver = SolveRateEquations(pf, guesses = guesses, stepper = self.AdaptiveStep, hmin = self.MinStep, hmax = self.MaxStep, \
             rtol = self.rtol, atol = self.atol, Dfun = None, maxiter = pf["ODEmaxiter"])
                                 
         self.Interpolate = Interpolate(self.pf, n_col, self.itabs)                        
@@ -147,7 +152,7 @@ class Radiate:
             if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))
             else: alpha_HeIII *= (1.43 - 0.076 * np.log(T))
             xi_HeII = 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
-        else: Gamma_HeI = Gamma_HeII = Beta_HeI = Beta_HeII = alpha_HeII = alpha_HeIII = alpha_HeIII = xi_HeII = 0.
+        else: Gamma_HeI = Gamma_HeII = Beta_HeI = Beta_HeII = alpha_HeII = alpha_HeIII = alpha_HeIII = xi_HeII = tiny_number
                                                                 
         # Always solve hydrogen rate equation (Eq. 1 in TZ08)
         newHII = Gamma_HI * n_HI - alpha_HII * n_e * q[0]
@@ -175,9 +180,8 @@ class Radiate:
         This routine calls our solvers and updates 'data'.
         """
         
-        #newdata = copy.deepcopy(data)
         newdata = {}
-        for key in data.keys(): newdata[key] = np.zeros_like(data[key])
+        for key in data.keys(): newdata[key] = np.ones_like(data[key]) * tiny_number
         z = self.cosmo.TimeToRedshiftConverter(0., t, self.InitialRedshift)
 
         # Nice names for ionized fractions
@@ -190,7 +194,7 @@ class Radiate:
             x_HeIII_arr = data["HeIIIDensity"] / (data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"])
         
         # This is not a good idea in general, but in this case they'll never be touched again.
-        else: x_HeI_arr = x_HeII_arr = x_HeIII_arr = np.zeros_like(x_HI_arr)
+        else: x_HeI_arr = x_HeII_arr = x_HeIII_arr = np.ones_like(x_HI_arr) * tiny_number
                                                         
         # If we're in an expanding universe, dilute densities by (1 + z)^3    
         if self.CosmologicalExpansion: 
@@ -212,17 +216,14 @@ class Radiate:
         for cell in self.grid:
             
             if cell % size != rank: continue
-            
-            #print cell, rank
-            
+                        
             # If within our buffer zone (where we don't solve rate equations), continue
             if cell < self.StartCell: continue
-                        
+                                                
             # Progress bar
             if rank == 0:
                 pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
                 pbar.update(cell)
-                #except AssertionError: pass 
             
             # Read in densities for this cell
             n_e = data["ElectronDensity"][cell]
@@ -271,8 +272,11 @@ class Radiate:
             newT = newE[-1] * 2. * mu / 3. / k_B / n_B
 
             # Determine new values for neutral species
-            newHI = max(n_H - newHII[-1], tiny_number)
-            newHeI = max(n_He - (newHeII[-1] + newHeIII[-1]), tiny_number)
+            #newHI = max(n_H - newHII[-1], tiny_number)
+            #newHeI = max(n_He - (newHeII[-1] + newHeIII[-1]), tiny_number)
+
+            newHI = n_H - newHII[-1]
+            newHeI = n_He - newHeII[-1]
 
             # Update quantities in 'data' -> 'newdata'     
             newdata["HIDensity"][cell] = newHI                                                                                                                        
@@ -300,19 +304,20 @@ class Radiate:
         
             units: 1 / s
         """     
-               
+           
+        # Photo-Ionization       
         IonizationRate = Lbol * \
                          self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(0)) \
                          / 4. / np.pi / r**2      
         
-        if self.CollisionalIonization:
-            IonizationRate += n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)
+        # Collisional Ionization
+        IonizationRate += n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)
         
         if self.SecondaryIonization:
             IonizationRate += Lbol * \
-                             self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
-                             self.Interpolate.interp(ncol, "SecondaryIonizationRateHI{0}".format(0)) \
-                             / 4. / np.pi / r**2
+                              self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
+                              self.Interpolate.interp(ncol, "SecondaryIonizationRateHI{0}".format(0)) \
+                              / 4. / np.pi / r**2                                                        
                         
             if self.MultiSpecies > 0:
                 IonizationRate += Lbol * (n_HeI / n_HI) * \
@@ -397,9 +402,8 @@ class Radiate:
         cool = 0.
         
         # Cooling by collisional ionization
-        if self.CollisionalIonization:
-            for i, n in enumerate(nabs):
-                cool += n * self.CollisionalIonizationCoolingCoefficient(T, i)
+        for i, n in enumerate(nabs):
+            cool += n * self.CollisionalIonizationCoolingCoefficient(T, i)
                 
         # Cooling by collisional excitation
         if self.CollisionalExcitation:

@@ -43,7 +43,7 @@ m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
-tiny_number = 1e-10
+tiny_number = 1e-30
 
 IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', 'SecondaryIonizationRateHI', 'SecondaryIonizationRateHeI']#, 'ComptonHeatingRate']
 
@@ -352,7 +352,7 @@ class InitializeIntegralTables:
                 self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) \
                 / (self.rs.DiscreteSpectrumSED * erg_per_ev) / E_th[0] 
             
-            return np.sum(integral)
+            return max(np.sum(integral), tiny_number)
             
         else:
             integral = 0

@@ -105,9 +105,9 @@ def ProblemType(pt):
     # EM-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum (supposedly samples 1e5 K BB)
     if pt == 2:
         pf = {"ProblemType": 2, "InterpolationMethod": 0, \
-              "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
-              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, "AdaptiveTimestep": 0,  \
-              "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 0.1, "DataDumpName": 'dd', \
+              "ColumnDensityBinsHI": 500, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
+              "TimeUnits": s_per_myr, "StopTime": 500.0, 
+              "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 1.0, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
               "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
               "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 500.0, \
@@ -126,6 +126,22 @@ def ProblemType(pt):
               "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 500.0, \
               "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 0, "SpectrumMinEnergy": 0.1, "SpectrumMaxEnergy": 100,
              }               
+    
+    # EM-3: I-front trapping in a dense clump
+    if pt == 3:
+        pf = {"ProblemType": 3, "InterpolationMethod": 0, \
+              "ColumnDensityBinsHI": 500, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
+              "TimeUnits": s_per_myr, "StopTime": 15.0, 
+              "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 1.0, "DataDumpName": 'dd', \
+              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
+              "DensityProfile": 0, "InitialDensity": 2e-4, "TemperatureProfile": 0, "InitialTemperature": 8e3, \
+              "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 500.0, \
+              "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
+              "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], "SpectrumMinEnergy": 0.1, "SpectrumMaxEnergy": 100,
+              "Clump": 1, "ClumpPosition": 0.76, "ClumpOverdensity": 200, "ClumpRadius": 0.8 / 6.6, "ClumpTemperature": 40.,
+              "SpectrumPhotonLuminosity": 3e51
+             }               
+             
             
         
     return pf    

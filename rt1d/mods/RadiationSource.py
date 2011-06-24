@@ -59,9 +59,9 @@ class RadiationSource:
         # Set source-specific parameters
         if self.SourceType == 0:
             """
-            Source of fixed monochromatic photon flux.
+            Source of fixed monochromatic/polychromatic photon flux.
             """
-            self.E = pf["DiscreteSpectrumSED"][0]
+            self.E = pf["DiscreteSpectrumSED"]
             self.L = pf["SpectrumPhotonLuminosity"]
         
         if self.SourceType == 1:
@@ -168,7 +168,7 @@ class RadiationSource:
         if (t / self.TimeUnits) > self.tau: return 0.0
         
         if self.SourceType == 0:
-            return self.L * self.E * erg_per_ev
+            return self.L * np.sum(self.DiscreteSpectrumSED * self.DiscreteSpectrumRelLum * erg_per_ev)
         
         if self.SourceType == 1:
             return sigma_SB * self.T**4 * 4.0 * np.pi * (self.R * cm_per_rsun)**2

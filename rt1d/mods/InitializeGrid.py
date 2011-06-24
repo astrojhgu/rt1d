@@ -44,7 +44,9 @@ class InitializeGrid:
         if self.Clump:
             self.ClumpPosition = pf["ClumpPosition"] * self.GridDimensions
             self.ClumpOverdensity = pf["ClumpOverdensity"]
-            self.ClumpWidth = pf["ClumpWidth"] * self.GridDimensions
+            self.ClumpRadius = pf["ClumpRadius"] * self.GridDimensions
+            self.ClumpTemperature = pf["ClumpTemperature"]
+            self.ClumpDensityProfile = pf["ClumpDensityProfile"]
         
         self.Y = 0.2477 * self.MultiSpecies
                         
@@ -78,7 +80,11 @@ class InitializeGrid:
         if self.DensityProfile == 1: density = self.Cosmology.MeanBaryonDensity(self.InitialRedshift)
         
         if self.Clump: 
-            density += density * self.ClumpOverdensity * np.exp(-(cell - self.ClumpPosition)**2 / 2. / self.ClumpWidth**2)
+            if self.ClumpDensityProfile == 0:
+                if (cell >= (self.ClumpPosition - self.ClumpRadius)) and (cell <= (self.ClumpPosition + self.ClumpRadius)):
+                    density *= self.ClumpOverdensity
+            if self.ClumpDensityProfile == 1:
+                density += density * self.ClumpOverdensity * np.exp(-(cell - self.ClumpPosition)**2 / 2. / self.ClumpRadius**2)
                         
         return density
         
@@ -96,6 +102,10 @@ class InitializeGrid:
         if self.TemperatureProfile == 2: 
             if cell < self.StartCell: temperature = 1e4
             else: temperature = self.InitialTemperature
+            
+        if self.Clump:
+            if (cell >= (self.ClumpPosition - self.ClumpRadius)) and (cell <= (self.ClumpPosition + self.ClumpRadius)):
+                temperature = self.ClumpTemperature
         
         return temperature
         
@@ -145,14 +155,14 @@ class InitializeGrid:
         to be the same as that of hydrogen.
         """
         
-        return self.Y * tiny_number * self.ionization[cell] * self.density[cell] / m_H
+        return self.Y * self.ionization[cell] * self.density[cell] / m_H
         
     def InitializeHeIIIDensity(self, cell):
         """
         Initialize doubly ionized helium density - assumed to be very small (can't be exactly zero or it will crash the root finder).
         """
         
-        return self.Y * tiny_number * self.ionization[cell] * self.density[cell] / m_H
+        return self.Y * tiny_number * self.density[cell] / m_H
         
     def InitializeElectronDensity(self, cell):
         """

@@ -5,32 +5,17 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on 2011-01-31.
 
-Description: Subset of my homemade odeint routine made special for rt1d.
-    
-Notes: 
-    -The function we supply to the routine 'integrate' must follow the form f(y, x, args),
-     where args are any additional parameters required by it.     
-    
-Coupled ODE Example:
-     >>> from odeint import *
-     >>> ode = odeint(integrator = 4, stepper = 1, pbar = True)
-     >>> def f(y, x, args): return np.array([-y[1], -y[0]])
-     >>>     
-     >>> x, y = ode.integrate(f, (0, 1), 0, 10.)    # y is a tuple now 
-     
-     # Analytic solution:
-     # y1ofx = -0.5 * np.exp(-x) * (np.exp(2. * x) - 1.)
-     # y2ofx = 0.5 * np.exp(-x) * (np.exp(2. * x) - 1.)
+Description: Subset of my homemade odeint routine made special for rt1d.  
          
 """
 
 import numpy as np
 import pylab as pl
 
-np.seterr(invalid = 'ignore')
+tiny_number = 1e-30
 
 class SolveRateEquations:
-    def __init__(self, pf, stepper = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
+    def __init__(self, pf, guesses, stepper = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
         Dfun = None, maxiter = 100):
         """
         This 'odeint' class is the driver for ODE integration via the implicit Euler
@@ -68,6 +53,9 @@ class SolveRateEquations:
         # Set adaptive timestepping method
         if self.stepper == 1: self.adapt = self.StepDoubling     
         
+        # Guesses
+        self.guesses = np.array(guesses)
+                
     def integrate(self, f, y0, x0, xf, Dfun, hpre, *args):
         """
         This routine does all the work.
@@ -92,38 +80,28 @@ class SolveRateEquations:
             xnext = x[i - 1] + h
             ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)
             
+            # Limit densities by primordial values (truncation error could give us more gas than we started with)
+            for j, density in enumerate(ynext[0:3]):
+                if density > self.guesses[j]: ynext[j] = self.guesses[j]
+                                         
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
             finite = np.isfinite(ynext)
             positive = np.greater_equal(ynext, 0.)
             if not np.all(finite) or not np.all(positive): 
                 h = max(self.hmin, h / 2.)
                 continue
-                                
-            # Limit quantities to 10% changes per timestep.
-            #changes = list(abs(ynext - y[i - 1]) / y[i - 1])
-            #if not self.MultiSpecies: 
-            #    changes.pop(1)
-            #    changes.pop(1)
-            #
-            #if not np.all(np.less_equal(changes, 0.1)):
-            #    #print changes, ynext
-            #    h = max(self.hmin, h / 2.)
-            #    continue
-            
-            adapted = False  
-            
-            # If adaptive stepping is turned on
+                            
+            # Adaptive time-stepping
+            adapted = False
             if self.stepper > 0 and (h != self.hmin or i == 1):
                 drel = self.adapt(f, y[i - 1], x[i - 1], ynext, xnext, h, Dfun, args)
-                                                                                                               
+
                 # Limit determined by worst integration in set of equations.
                 for k, err in enumerate(drel):
                     if (err > self.rtol):
                         h = max(self.hmin, h / 2.)
                         adapted = True
                         break
-            else: 
-                adapted = True
             
             # If we've gotten this far without adaptively stepping, increase h for the next timestep
             if adapted is False: h = min(self.hmax, 2. * h)
@@ -150,6 +128,8 @@ class SolveRateEquations:
         manipulation and loop.
         """                
 
+        
+
         yip1 = []
         for i, element in enumerate(yi):
 
@@ -160,22 +140,26 @@ class SolveRateEquations:
             else:
                 newargs = list(args)
                 newargs.append(i)
-            
+                
                 def ynext(y):
+                                                            
                     if i == 0: return y - h * f(np.array([y, yi[1], yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
                     if i == 1: return y - h * f(np.array([yi[0], y, yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
                     if i == 2: return y - h * f(np.array([yi[0], yi[1], y, yi[3]]), xi + h, newargs)[i] - yi[i]
                     if i == 3: return y - h * f(np.array([yi[0], yi[1], yi[2], y]), xi + h, newargs)[i] - yi[i]
+                    
+                if i < 3: guess = max(yi[i], self.guesses[i])
+                else: guess = yi[i]
 
-                yip1.append(self.rootfinder(ynext, yi[i]))
-                
+                yip1.append(self.rootfinder(ynext, guess))
+                                              
         rtn = yi + h * f(np.array(yip1), xi + h, args)
         if self.MultiSpecies == 0:
             rtn[1] = yip1[1]
             rtn[2] = yip1[2]
         if self.Isothermal:
             rtn[3] = yip1[3]
-        
+
         return rtn
 
     def StepDoubling(self, f, yi, xi, yip1, xip1, h, Dfun, args):    
@@ -184,14 +168,14 @@ class SolveRateEquations:
         using two steps spanning h each.  The difference gives an estimate of the 
         truncation error, which we can use to adapt our step size in self.integrate.
         """
-        
-        ynp2_os = self.solve(f, yi, xi, 2. * h, Dfun, args) # y_n+2 using one step
+                
+        ynp2_os = self.solve(f, yi, xi, 2. * h, Dfun, args) # y_n+2 using one step        
         ynp2_ts = self.solve(f, yip1, xip1, h, Dfun, args)  # y_n+2 using two steps
-
-        err_rel = (ynp2_ts - ynp2_os) / ynp2_ts
-        for i, element in enumerate(err_rel):
-            if not np.isfinite(element):
-                err_rel[i] = 0.0
+                
+        err_abs = np.abs(ynp2_ts - ynp2_os)
+        err_rel = np.zeros_like(err_abs)
+        for i, element in enumerate(ynp2_ts):
+            if element > 0: err_rel[i] = err_abs[i] / element
         
         return err_rel
         
@@ -204,28 +188,30 @@ class SolveRateEquations:
         
         """    
 
-        ynow = y_guess
-                                                
+        ynow = y_guess    
+                                       
         i = 0
         err = 1
-        while err > self.atol:
-            fp = (f(ynow + 1e-3 * ynow) - f(ynow - 1e-3 * ynow)) / (2e-3 * ynow)   # Is this OK?
-            
+        while err > self.rtol:
+            y1 = ynow
+            y2 = max(ynow - 1e-3 * ynow, 0)
+            fp = (f(y1) - f(y2)) / (y1 - y2)
+                                                
             # Calculate new estimate of the root
             dy = f(ynow) / fp
             ypre = ynow
             ynow -= dy   
-                                             
+                                                                     
             # Calculate deviation between this estimate and last            
-            err = abs(ypre - ynow)
-
+            err = abs(ypre - ynow) / ypre
+            
             # If we've reached the maximum number of iterations, break
             if i >= self.maxiter: 
                 print "Maximum number of iterations reached."
                 break
-            else: i += 1
-                                                
-        return ynow
+            else: i += 1               
+                                                                                                                                                 
+        return max(ynow, tiny_number)
 
     def Bisection(self, f, y_guess):
         """
@@ -312,7 +298,7 @@ class SolveRateEquations:
         if not np.all([np.sign(fpre), np.sign(fnow)]): 
             y1 -= self.atol
             y2 += self.atol
-                
+                                
         return y1, y2
     
         

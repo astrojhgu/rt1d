@@ -46,7 +46,7 @@ class Interpolate:
         Use this technique for hydrogen-only calculations.  For consistency with MultiSpecies > 0 methods, value 
         should still be a 3-element list.  
         """    
-                                
+                                        
         return np.interp(np.log10(value[0]), self.HIColumn, self.itabs[integral])
         
     def InterpolateTriLinear(self, value, integral):
@@ -94,7 +94,7 @@ class Interpolate:
         
         w1 = i1 * (1 - y_d) + i2 * y_d
         w2 = j1 * (1 - y_d) + j2 * y_d
-        
+                        
         return w1 * (1 - x_d) + w2 * x_d
                 
     def InterpolateNN(self, value, integral):
@@ -113,7 +113,7 @@ class Interpolate:
         i = min(self.HINbins - 1, max(0, i))
         j = min(self.HeINbins - 1, max(0, j))
         k = min(self.HeIINbins - 1, max(0, k))
-                                                
+                                                        
         return self.itabs[integral][i][j][k]
                   
         

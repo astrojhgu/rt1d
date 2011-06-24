@@ -29,11 +29,11 @@ def SetDefaultParameterValues():
         
         # ODE Solver
         "ODEAdaptiveStep": 1, \
-        "ODEMinStep": 0.001, \
-        "ODEMaxStep": 0.1, \
+        "ODEMinStep": 1e-8, \
+        "ODEMaxStep": 1e-1, \
         "ODErtol": 1e-6, \
         "ODEatol": 1e-6, \
-        "ODEmaxiter": 100, \
+        "ODEmaxiter": 10000, \
         "RootFinder": 0, \
           
         # Integral tabulation
@@ -58,8 +58,6 @@ def SetDefaultParameterValues():
         # Control parameters
         "CurrentTime": 0.0, \
         "StopTime": 50.0, \
-        "GlobalTimestep": 0.05, \
-        "AdaptiveTimestep": 0, \
         "StartRadius": 0.001, \
         "dtDataDump": 0.1, \
         "DataDumpName": 'dd', \
@@ -83,8 +81,10 @@ def SetDefaultParameterValues():
         "InitialHIIFraction": 1e-4, \
         "Clump": 0, \
         "ClumpPosition": 0.1, \
-        "ClumpWidth": 0.05, \
+        "ClumpRadius": 0.05, \
+        "ClumpDensityProfile": 0, \
         "ClumpOverdensity": 100, \
+        "ClumpTemperature": 100, \
           
         # Source parameters
         "SourceType": 0, \
