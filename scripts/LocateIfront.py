@@ -69,20 +69,17 @@ func = lambda t: rs * (1. - np.exp(-t / trec))**(1. / 3.) + StartRadius
 t_anl = np.linspace(0, max(t), 500)
 r_anl = map(func, t_anl)
 r_anl_bin = map(func, t)
-    
-error = 100. * np.divide(r - r_anl_bin, r_anl_bin)    
-    
+        
 pl.subplot(211)    
 pl.scatter(t / trec, r, marker = '+', color = 'blue', label = 'Numerical Solution')
 pl.plot(t_anl / trec, r_anl, linestyle = '-', color = 'black', label = 'Analytic Solution')
 pl.xlim(0, 1.1 * max(t/trec))
 pl.ylim(0, 1.1 * max(max(r), max(r_anl)))
 pl.ylabel(r'$r \ (\mathrm{kpc})$')  
-#pl.legend(loc = 'lower right') 
 
 pl.subplot(212)
-pl.plot(t / trec, error)
+pl.plot(t / trec, r / r_anl_bin)
 pl.ylim(-10, 10)
 pl.xlabel(r'$t / t_{rec}$')
-pl.ylabel(r'$\% \ \mathrm{Error}$') 
+pl.ylabel(r'$r/r_{\mathrm{anl}}$') 
 pl.show()
