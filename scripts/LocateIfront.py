@@ -79,7 +79,7 @@ pl.ylabel(r'$r \ (\mathrm{kpc})$')
 
 pl.subplot(212)
 pl.plot(t / trec, r / r_anl_bin)
-pl.ylim(-10, 10)
+pl.ylim(0.9, 1.1)
 pl.xlabel(r'$t / t_{rec}$')
 pl.ylabel(r'$r/r_{\mathrm{anl}}$') 
 pl.show()
