@@ -62,6 +62,7 @@ def SetDefaultParameterValues():
         "dtDataDump": 0.1, \
         "DataDumpName": 'dd', \
         "OutputDirectory": './', \
+        "ProgressBar": 1, \
         
         # Physics
         "Isothermal": 0, \

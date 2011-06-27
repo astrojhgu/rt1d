@@ -53,6 +53,7 @@ class Radiate:
         self.cosmo = Cosmology(pf)
         self.pf = pf
         self.itabs = itabs
+        self.pbar = pf["ProgressBar"]
         
         self.MultiSpecies = pf["MultiSpecies"]
         self.Isothermal = pf["Isothermal"]
@@ -210,7 +211,9 @@ class Radiate:
         ncol_HeI = np.cumsum(data["HeIDensity"]) * self.dx
         ncol_HeII = np.cumsum(data["HeIIDensity"]) * self.dx
         
+        # Print status, and initilize progress bar
         if rank == 0: print "rt1d: {0} < t < {1}".format(t / self.TimeUnits, (t + dt) / self.TimeUnits)            
+        if rank == 0 and self.pbar: pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
 
         # Loop over cells radially, solve rate equations, update values in data -> newdata
         for cell in self.grid:
@@ -221,9 +224,7 @@ class Radiate:
             if cell < self.StartCell: continue
                                                 
             # Progress bar
-            if rank == 0:
-                pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
-                pbar.update(cell)
+            if self.pbar: pbar.update(cell)
             
             # Read in densities for this cell
             n_e = data["ElectronDensity"][cell]
@@ -293,7 +294,7 @@ class Radiate:
 
         for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
 
-        if rank == 0: pbar.finish()
+        if rank == 0 and self.pbar: pbar.finish()
         
         return newdata, h
         
