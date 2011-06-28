@@ -92,7 +92,7 @@ def SetDefaultParameterValues():
         "SourceTemperature": 1e5, \
         "SourceRadius": 1.0, \
         "SourceMass": 1e3, \
-        "SourceLifetime": 50.0, \
+        "SourceLifetime": 1e10, \
         "SourceRadiativeEfficiency": 0.1, \
           
         # Spectral parameters

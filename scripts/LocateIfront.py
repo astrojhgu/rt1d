@@ -12,6 +12,7 @@ Notes: Supply parameter file as commmand line argument.
      
 """
 
+from multiplot import *
 import os, re, h5py, sys
 import numpy as np
 import pylab as pl
@@ -22,7 +23,6 @@ s_per_myr = 365.25 * 24 * 3600 * 10**6
 
 # First, read in conversion factors from parameter file
 ds = rta.Dataset(sys.argv[1])
-dtDataDump = ds.pf["dtDataDump"]
 LengthUnits = ds.pf["LengthUnits"]
 GridDims = ds.pf["GridDimensions"]
 TimeUnits = ds.pf["TimeUnits"]
@@ -45,7 +45,6 @@ r = []
 t = []
 
 for dd in ds.data.keys():
-    
     x_H = ds.data[dd].n_HI / (ds.data[dd].n_HI + ds.data[dd].n_HII)
     
     # Find position of I-front - interpolate over small range about min(x_H - 0.5)
@@ -57,7 +56,7 @@ for dd in ds.data.keys():
     newpos = np.interp(0.0, tmp, [pos - 1, pos, pos + 1])
     
     # Compute time (should be in code units)
-    time = dd * dtDataDump
+    time = ds.data[dd].t / TimeUnits
                         
     r.append(newpos * LengthUnits / GridDims / cm_per_kpc)
     t.append(time * TimeUnits / s_per_myr)
@@ -70,16 +69,22 @@ t_anl = np.linspace(0, max(t), 500)
 r_anl = map(func, t_anl)
 r_anl_bin = map(func, t)
         
-pl.subplot(211)    
-pl.scatter(t / trec, r, marker = '+', color = 'blue', label = 'Numerical Solution')
-pl.plot(t_anl / trec, r_anl, linestyle = '-', color = 'black', label = 'Analytic Solution')
-pl.xlim(0, 1.1 * max(t/trec))
-pl.ylim(0, 1.1 * max(max(r), max(r_anl)))
-pl.ylabel(r'$r \ (\mathrm{kpc})$')  
+        
+mp = multiplot(dims = (2, 1), panel_size = (0.5, 1))
 
-pl.subplot(212)
-pl.plot(t / trec, r / r_anl_bin)
-pl.ylim(0.9, 1.1)
-pl.xlabel(r'$t / t_{rec}$')
-pl.ylabel(r'$r/r_{\mathrm{anl}}$') 
-pl.show()
+mp.axes[0].plot(t / trec, r, ls = '--', color = 'k')
+mp.axes[0].plot(t_anl / trec, r_anl, linestyle = '-', color = 'k')
+mp.axes[0].set_xlim(0, 1 * max(t/trec))
+mp.axes[0].set_ylim(0, 1.1 * max(max(r), max(r_anl)))
+mp.axes[0].set_ylabel(r'$r \ (\mathrm{kpc})$')  
+
+mp.axes[1].plot(t / trec, r / r_anl_bin, ls = '-', color = 'k')
+mp.axes[1].set_xlim(0, 1 * max(t/trec))
+mp.axes[1].set_ylim(0.9, 1.1)
+mp.axes[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
+mp.axes[1].set_ylabel(r'$r/r_{\mathrm{anl}}$') 
+
+mp.fix_ticks()
+
+pl.savefig('IfrontPosition_vs_time.ps')
+        
