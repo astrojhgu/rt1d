@@ -146,8 +146,8 @@ class Radiate:
         if self.MultiSpecies > 0: 
             Gamma_HeI = self.IonizationRateCoefficientHeI(ncol, n_HI, n_HeI, x_HII, T, r, Lbol)
             Gamma_HeII = self.IonizationRateCoefficientHeII(ncol, x_HII, r, Lbol)
-            Beta_HeI = 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T)
-            Beta_HeII = 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)
+            Beta_HeI = 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T) * self.CollisionalIonization
+            Beta_HeII = 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T) * self.CollisionalIonization
             alpha_HeII = 9.94e-11 * T**-0.48                                                            ## WHICH ALPHA_HEIII IS RIGHT FOR US?
             alpha_HeIII = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1.
             if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))
@@ -161,7 +161,7 @@ class Radiate:
         # Only solve helium rate equations if self.MultiSpeces = 1  (Eqs. 2 & 3 in TZ08)
         if self.MultiSpecies:
             newHeII = Gamma_HeI * n_HeI - Beta_HeI * n_e * n_HeI + Beta_HeII * n_e * q[1] - \
-                      alpha_HeII * n_e * q[1] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * q[1]
+                      alpha_HeII * n_e * q[1] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * q[1]    
             newHeIII = Gamma_HeII * n_HeII - Beta_HeII * n_e * n_HeII + alpha_HeIII * n_e * q[2]
         else:
             newHeII = q[1]
@@ -312,7 +312,8 @@ class Radiate:
                          / 4. / np.pi / r**2      
         
         # Collisional Ionization
-        IonizationRate += n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)
+        if self.CollisionalIonization:
+            IonizationRate += n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)
         
         if self.SecondaryIonization:
             IonizationRate += Lbol * \
