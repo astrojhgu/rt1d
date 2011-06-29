@@ -79,10 +79,6 @@ class SolveRateEquations:
         while x[i - 1] < xf: 
             xnext = x[i - 1] + h
             ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)
-            
-            # Limit densities by primordial values (truncation error could give us more gas than we started with)
-            for j, density in enumerate(ynext[0:3]):
-                if density > self.guesses[j]: ynext[j] = self.guesses[j]
                                          
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
             finite = np.isfinite(ynext)

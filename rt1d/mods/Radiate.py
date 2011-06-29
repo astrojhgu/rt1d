@@ -272,10 +272,6 @@ class Radiate:
             # Convert from internal energy back to temperature
             newT = newE[-1] * 2. * mu / 3. / k_B / n_B
 
-            # Determine new values for neutral species
-            #newHI = max(n_H - newHII[-1], tiny_number)
-            #newHeI = max(n_He - (newHeII[-1] + newHeIII[-1]), tiny_number)
-
             newHI = n_H - newHII[-1]
             newHeI = n_He - newHeII[-1]
 
