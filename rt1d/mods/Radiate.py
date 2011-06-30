@@ -112,6 +112,9 @@ class Radiate:
         for q[3]: units: erg / cm^3 / s
 
         args = ([r, z, mu, n_H, n_He, ncol],)       
+        
+        Should probably calculate most of this stuff once, so it needn't be on each iteration of the solver.
+        
         """
 
         # Extra arguments
