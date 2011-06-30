@@ -21,7 +21,7 @@ import rt1d.mods as rtm
 from rt1d.analysis.DataDump import DataDump
         
 class Dataset:
-    def __init__(self, pf, gd = os.getcwd()):
+    def __init__(self, pf):
         """
         Initialize our analysis environment.  The variable 'dataset' can be either the master
         parameter file for a series of runs, or an individual parameter file for a single run.
@@ -37,12 +37,15 @@ class Dataset:
         Note: When supplying parameter file, if it is in the current directory, type './Filename' 
             so we get the path.
         
-        """
+        """   
         
         # Global directory
-        self.gd = gd       
+        self.gd = os.getcwd()
                 
-        # Name of our parameter file (including path to it)
+        # Run directory
+        self.rd = pf.rpartition('/')[0]        
+                
+        # Read in parameter file
         self.pf = rtm.ReadParameterFile(pf)
                         
         # Also need path to parameter file (not including the parameter file itself)
@@ -57,13 +60,13 @@ class Dataset:
         
         # List all data*dumps* in this data*set*.
         alldds = []
-        for f in os.listdir("{0}/{1}".format(self.gd, self.od)):
+        for f in os.listdir("{0}/{1}/{2}".format(self.gd, self.rd, self.od)):
             if not re.search('.h5', f): continue
             alldds.append(f)
             
         ds = {}
         for ddf in alldds:
-            f = h5py.File("{0}/{1}/{2}".format(self.gd, self.od, ddf))
+            f = h5py.File("{0}/{1}/{2}/{3}".format(self.gd, self.rd, self.od, ddf))
             ID = ddf.partition('.')[0].strip('dd')
             ds[int(ID)] = DataDump(f["Data"], f["ParameterFile"])
             f.close()

@@ -72,25 +72,24 @@ def ReadRestartFile(rf):
     
 def ProblemType(pt):
     """
-    Storage bin for predefined problem types, 'pt's, like those used in the radiative transfer comparison project ('RT'),
-    or John and Tom's 2010 ENZO-MORAY ('EM') paper.
+    Storage bin for predefined problem types, 'pt's, like those used in the radiative transfer comparison project ('RT06').
     """
     
-    # RT06-1, RT1: Pure hydrogen, isothermal HII region expansion
-    if pt == 1.0:
+    # RT06-1, RT1: Pure hydrogen, isothermal HII region expansion, monochromatic spectrum at 13.6 eV
+    if pt == 1:
         pf = {"ProblemType": 1, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
               "StartRadius": 0.01, "dtDataDump": 5.0, "DataDumpName": 'dd', \
-              "SavePrefix": 'rt', "Isothermal": 1, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
+              "Isothermal": 1, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
               "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e4, \
               "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 0, "SourceLifetime": 1e10, \
               "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [13.6], \
-              "SpectrumMinEnergy": 0.1, "SpectrumMaxEnergy": 100, "CollisionalIonization": 0
+              "SpectrumMinEnergy": 0.1, "SpectrumMaxEnergy": 100, "CollisionalIonization": 0, "DiscreteSpectrumRelLum": [1.0]
              }        
 
-    # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, continuous BB spectrum
-    if pt == 2.0:
+    # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum of Wise & Abel (2011)
+    if pt == 2:
        pf = {"ProblemType": 2, "InterpolationMethod": 0, \
              "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
@@ -98,23 +97,22 @@ def ProblemType(pt):
              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
              "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
              "IonizationProfile": 1, "InitialHIIFraction": 0, "SourceType": 0, "SourceLifetime": 1e10, \
-             "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrumMethod": 0, \
+             "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrumMethod": 1, \
              "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188]
             }                  
     
-    # EM-3: I-front trapping in a dense clump
+    # RT06-3: I-front trapping in a dense clump and the formation of a shadow
     if pt == 3:
         pf = {"ProblemType": 3, "InterpolationMethod": 0, \
-              "ColumnDensityBinsHI": 500, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
-              "TimeUnits": s_per_myr, "StopTime": 15.0, 
-              "StartRadius": 0.001, "MaxHIIFraction": 0.9999, "dtDataDump": 1.0, "DataDumpName": 'dd', \
+              "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
+              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 15.0, 
+              "StartRadius": 0.01, "dtDataDump": 1.0, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
               "DensityProfile": 0, "InitialDensity": 2e-4, "TemperatureProfile": 0, "InitialTemperature": 8e3, \
-              "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 500.0, \
+              "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 1e10, \
               "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
-              "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], "SpectrumMinEnergy": 0.1, "SpectrumMaxEnergy": 100,
+              "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], "SpectrumPhotonLuminosity": 3e51, \
               "Clump": 1, "ClumpPosition": 0.76, "ClumpOverdensity": 200, "ClumpRadius": 0.8 / 6.6, "ClumpTemperature": 40.,
-              "SpectrumPhotonLuminosity": 3e51
              }               
              
             
