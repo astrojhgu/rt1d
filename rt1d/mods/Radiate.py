@@ -124,6 +124,7 @@ class Radiate:
         n_H = args[0][3]
         n_He = args[0][4]
         ncol = args[0][5]
+        Lbol = args[0][6]
                 
         # Derived quantities
         n_HI = n_H - q[0]
@@ -141,9 +142,6 @@ class Radiate:
         if self.Isothermal: T = self.InitialTemperature
         else: T = E * 2. * mu / 3. / k_B / n_B
         
-        # If accreting black hole, luminosity will change with time.
-        Lbol = self.rs.BolometricLuminosity(t)
-
         # First, solve for rate coefficients
         alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85    
         Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol)        
@@ -160,10 +158,10 @@ class Radiate:
             xi_HeII = 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
         else: Gamma_HeI = Gamma_HeII = Beta_HeI = Beta_HeII = alpha_HeII = alpha_HeIII = alpha_HeIII = xi_HeII = tiny_number
                                                                 
-        # Always solve hydrogen rate equation (Eq. 1 in TZ08)
+        # Always solve hydrogen rate equation
         newHII = Gamma_HI * n_HI - alpha_HII * n_e * q[0]
        
-        # Only solve helium rate equations if self.MultiSpeces = 1  (Eqs. 2 & 3 in TZ08)
+        # Only solve helium rate equations if self.MultiSpeces = 1
         if self.MultiSpecies:
             newHeII = Gamma_HeI * n_HeI - Beta_HeI * n_e * n_HeI + Beta_HeII * n_e * q[1] - \
                       alpha_HeII * n_e * q[1] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * q[1]    
@@ -172,7 +170,7 @@ class Radiate:
             newHeII = q[1]
             newHeIII = q[2]
 
-        # Only solve internal energy equation if we're not doing an isothermal calculation  (Eq. 12 in TZ08)
+        # Only solve internal energy equation if we're not doing an isothermal calculation
         if self.Isothermal: 
             newE = q[3]
         else:
@@ -266,12 +264,15 @@ class Radiate:
             # Compute radius
             r = self.LengthUnits * cell / self.GridDimensions  
 
+            # If accreting black hole, luminosity will change with time.
+            Lbol = self.rs.BolometricLuminosity(t)
+
             ######################################
             ######## Solve Rate Equations ########
             ######################################
-                        
+                                    
             tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
-                r, z, mu, n_H, n_He, ncol)
+                r, z, mu, n_H, n_He, ncol, Lbol)
             
             # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
             newHII, newHeII, newHeIII, newE = qnew
