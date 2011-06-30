@@ -39,10 +39,12 @@ def ReadParameterFile(pf):
             pf_new = ProblemType(float(parval))
             for param in pf_new: pf_dict[param] = pf_new[param]
             
+        print parname, parval    
+            
         # Else, actually read in the parameter                                     
         try: parval = float(parval)
         except ValueError:
-            if parval.replace('_', '').replace('.', '').isalnum(): 
+            if parval.replace('_', '').replace('.', '').strip().isalnum(): 
                 parval = str(parval.strip())
             else:
                 parval = parval.strip().split(",")
