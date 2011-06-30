@@ -90,12 +90,16 @@ pl.clf()
 # Ionized and neutral fractions vs. R and t (assumes dtDataDump = 5)
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HI, ls = '-', color = 'k', label = r'$1 - x_i$')
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[6].x_HI, ls = '-', color = 'k')
-pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[20].x_HI, ls = '-', color = 'k')
-pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[100].x_HI, ls = '-', color = 'k')
+try: pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[20].x_HI, ls = '-', color = 'k')
+except KeyError: pass
+try: pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[100].x_HI, ls = '-', color = 'k')
+except KeyError: pass
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HII, ls = '--', color = 'k', label = r'$x_i$')
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[6].x_HII, ls = '--', color = 'k')
-pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[20].x_HII, ls = '--', color = 'k')
-pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[100].x_HII, ls = '--', color = 'k')
+try: pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[20].x_HII, ls = '--', color = 'k')
+except KeyError: pass
+try: pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[100].x_HII, ls = '--', color = 'k')
+except KeyError: pass
 pl.xlabel(r'$r / L_{\mathrm{box}}$')
 pl.ylabel(r'$x_i$, $1-x_i$')
 pl.xlim(0, 1.05)

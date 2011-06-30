@@ -31,7 +31,7 @@ def SetDefaultParameterValues():
         "ODEAdaptiveStep": 1, \
         "ODEMinStep": 1e-8, \
         "ODEMaxStep": 1e-1, \
-        "ODErtol": 1e-6, \
+        "ODErtol": 1e-3, \
         "ODEatol": 1e-6, \
         "ODEmaxiter": 10000, \
         "RootFinder": 0, \
@@ -49,7 +49,7 @@ def SetDefaultParameterValues():
         "ExitAfterIntegralTabulation": 0, \
           
         # Grid parameters
-        "GridDimensions": 1000, \
+        "GridDimensions": 100, \
           
         # Units
         "LengthUnits": cm_per_kpc, \
@@ -58,8 +58,8 @@ def SetDefaultParameterValues():
         # Control parameters
         "CurrentTime": 0.0, \
         "StopTime": 50.0, \
-        "StartRadius": 0.001, \
-        "dtDataDump": 0.1, \
+        "StartRadius": 0.01, \
+        "dtDataDump": 1.0, \
         "DataDumpName": 'dd', \
         "OutputDirectory": './', \
         "ProgressBar": 1, \
