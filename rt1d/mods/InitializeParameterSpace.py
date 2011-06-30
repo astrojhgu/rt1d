@@ -138,7 +138,7 @@ class InitializeParameterSpace:
     def ProblemType(self, pt):
         """
         Storage bin for predefined problem types, 'pt's, like those used in the radiative transfer comparison project ('RT'),
-        or John and Tom's 2010 ENZO-MORAY ('EM') paper.
+        or John and Tom's 2011 ENZO-MORAY paper.
         """
         
         # EM-1, RT1: Pure hydrogen, isothermal HII region expansion (Wise & Abel 2011 Test 1)
@@ -150,7 +150,7 @@ class InitializeParameterSpace:
                   "SavePrefix": 'rt', "Isothermal": 1, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
                   "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e4, \
                   "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 0, "SourceLifetime": 1e10, \
-                  "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [13.600001], \
+                  "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [13.6], \
                   "SpectrumMinEnergy": 0.1, "SpectrumMaxEnergy": 100, "CollisionalIonization": 0
                  }    
                  
@@ -169,14 +169,14 @@ class InitializeParameterSpace:
         
         # EM-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum (supposedly samples 1e5 K BB)
         if pt == 2:
-            pf = {"ProblemType": 2, "UseScipy": 1, "InterpolationMethod": 0, "MonitorSimulation": 0, \
+            pf = {"ProblemType": 2, "InterpolationMethod": 0, "MonitorSimulation": 0, \
                   "ColumnDensityBinsHI": 500, "ExitAfterIntegralTabulation": 0, "GridDimensions": 1000, "LengthUnits": 6.6 * cm_per_kpc, \
                   "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, "InitialTimestep": 0.1, \
-                  "StartRadius": 0.001, "dtDataDump": 10., "DataDumpName": 'dd', \
+                  "StartRadius": 0.001, "dtDataDump": 5.0, "DataDumpName": 'dd', \
                   "SavePrefix": 'rt', "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
                   "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
-                  "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 500.0, \
-                  "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
+                  "IonizationProfile": 1, "InitialHIIFraction": 0, "SourceType": 1, "SourceLifetime": 1e10, \
+                  "SpectrumPhotonLuminosity": 1e54, "DiscreteSpectrumMethod": 0, "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
                   "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], "SpectrumMinEnergy": 0.1, "SpectrumMaxEnergy": 100
                  }      
                 

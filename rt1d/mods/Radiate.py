@@ -262,7 +262,7 @@ class Radiate:
             ######################################
             ######## Solve Rate Equations ########
             ######################################
-            
+                        
             tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                 r, z, mu, n_H, n_He, ncol)
             
