@@ -35,6 +35,7 @@ elif sys.argv[1].strip('-') == 'b':
     IsRestart = False
     f = open(sys.argv[2], 'r')
     for line in f: 
+        if not line.strip(): continue
         pf = rtm.ReadParameterFile(line.strip())
         all_pfs.append(pf)
         del pf

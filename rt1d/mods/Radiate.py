@@ -55,6 +55,8 @@ class Radiate:
         self.itabs = itabs
         self.pbar = pf["ProgressBar"]
         
+        self.MaxHIIChange = pf["MaxHIIChange"]
+        
         self.MultiSpecies = pf["MultiSpecies"]
         self.Isothermal = pf["Isothermal"]
         self.ComptonCooling = pf["ComptonCooling"]
@@ -214,6 +216,8 @@ class Radiate:
         # Print status, and initilize progress bar
         if rank == 0: print "rt1d: {0} < t < {1}".format(t / self.TimeUnits, (t + dt) / self.TimeUnits)            
         if rank == 0 and self.pbar: pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
+
+        dtphot = np.zeros_like(self.grid)
 
         # Loop over cells radially, solve rate equations, update values in data -> newdata
         for cell in self.grid:
@@ -477,6 +481,15 @@ class Radiate:
             units: erg cm^3 / s
         """
         return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
+        
+    def ComputeGlobalTimestep(self, nHI, GammaHI):
+        """
+        Compute our global timestep based on maximum change in the neutral fraction.
+        """
+        
+        dt = np.zeros_like(data['HIDensity'])
+        for i, n in enumerate(data['HIDensity']):
+            dt[i] = self.MaxHIIChange / np.abs(n * GammaHI)
         
     
         

@@ -38,9 +38,7 @@ def ReadParameterFile(pf):
         if parname.strip() == 'ProblemType' and float(parval) > 0:
             pf_new = ProblemType(float(parval))
             for param in pf_new: pf_dict[param] = pf_new[param]
-            
-        print parname, parval    
-            
+                        
         # Else, actually read in the parameter                                     
         try: parval = float(parval)
         except ValueError:
