@@ -42,7 +42,7 @@ def ReadParameterFile(pf):
         # Else, actually read in the parameter                                     
         try: parval = float(parval)
         except ValueError:
-            if parval.strip().isalnum(): 
+            if parval.replace('_', '').replace('.', '')isalnum(): 
                 parval = str(parval.strip())
             else:
                 parval = parval.strip().split(",")
