@@ -35,8 +35,7 @@ def SetDefaultParameterValues():
         "ODEatol": 1e-6, \
         "ODEmaxiter": 10000, \
         "RootFinder": 0, \
-        "HIIRestrictedTimestep": 0, \
-        "MaxHIIChange": 0.1, \
+        
           
         # Integral tabulation
         "HIColumnMin": 1e15, \
@@ -65,6 +64,9 @@ def SetDefaultParameterValues():
         "DataDumpName": 'dd', \
         "OutputDirectory": './', \
         "ProgressBar": 1, \
+        "InitialTimestep": 1e-8, \
+        "HIIRestrictedTimestep": 1, \
+        "MaxHIIChange": 0.05, \
         
         # Physics
         "Isothermal": 0, \

@@ -56,10 +56,11 @@ if rank == 0:
 start = time.time()
 
 # Loop over parameter sets. 
+timestep = open('dtPhoton.dat', 'w')
 for i, pf in enumerate(all_pfs):    
     TimeUnits = pf["TimeUnits"]
     StopTime = pf["StopTime"] * TimeUnits
-    dt = pf["ODEMaxStep"] * TimeUnits
+    dt = pf["InitialTimestep"] * TimeUnits
     dtDataDump = pf["dtDataDump"] * TimeUnits
             
     # Initialize grid and file system
@@ -67,7 +68,7 @@ for i, pf in enumerate(all_pfs):
     else:
         g = rtm.InitializeGrid(pf)   
         data = g.InitializeFields()
-        
+                
         if rank == 0:
             if pf["OutputDirectory"] != './':
                 try: os.mkdir("{0}".format(pf["OutputDirectory"]))
@@ -84,41 +85,51 @@ for i, pf in enumerate(all_pfs):
     itabs = iits.TabulateRateIntegrals()        
     if pf["ExitAfterIntegralTabulation"]: continue
                 
-    # Initialize radiation, write data, and monitor classes
+    # Initialize radiation and write data classes
     r = rtm.Radiate(pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
     w = rtm.WriteData(pf)
         
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
     t = pf["CurrentTime"] * TimeUnits
-    h = pf["ODEMaxStep"] * TimeUnits
+    h = dt
     wct = int(t / dtDataDump) + 1
     if not IsRestart: w.WriteAllData(data, 0, t)
                     
     while t < StopTime:
+                
+        print >> timestep, t, dt        
+                
+        # Ensure we land on our data dump times exactly
+        if (t + dt) > ddt[wct]: 
+            dt = ddt[wct] - t
+            tnow = t + dt
+            write_now = True
+        elif (t + dt) == ddt[wct]:
+            write_now = True
+        else:
+            write_now = False
 
         # Evolve photons
-        data, h = r.EvolvePhotons(data, t, dt, h)
+        data, h, newdt = r.EvolvePhotons(data, t, dt, min(h, dt))
         t += dt
-                
+        dt = newdt
+                       
         # Write-out data, or don't                                        
-        if t == ddt[wct]:
+        if write_now:
             wrote = False
             if rank == 0: 
-                w.WriteAllData(data, wct, t)
+                w.WriteAllData(data, wct, tnow)
                 wrote = True
             wct += 1
-        elif (t + dt) > ddt[wct]:
-            dt = ddt[wct] - t
-        else:
-            dt = dt
-            
+           
+        # Don't move on until root processor has written out data    
         if size > 1: MPI.COMM_WORLD.bcast(wrote, root = 0)    
-        
+                
     elapsed = time.time() - start    
     print "Calculation {0} complete (output to {1}).  Elapsed time = {2} seconds.".format(i + 1, pf["OutputDirectory"], int(elapsed))
 
-
+timestep.close()
 
 
 

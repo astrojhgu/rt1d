@@ -44,8 +44,11 @@ grid = np.arange(GridDims)
 
 r = []
 t = []
+mean_xH = []
 for dd in ds.data.keys():
-    x_H = ds.data[dd].n_HI / (ds.data[dd].n_HI + ds.data[dd].n_HII)
+    x_H = ds.data[dd].x_HI
+    
+    mean_xH.append(np.mean(x_H))
     
     # Find position of I-front - interpolate over small range about min(x_H - 0.5)
     pd = abs(x_H - 0.5)
@@ -111,4 +114,11 @@ pl.annotate('100', (0.655, 0.5))
 pl.annotate('500', (0.78, 0.5))
 pl.savefig('RT_Test1_RadialProfiles.ps')
 pl.savefig('RT_Test1_RadialProfiles.png')
-        
+pl.clf()
+
+# Mean neutral fraction vs. time
+pl.plot(t / trec, mean_xH, ls = '-', color = 'k')
+pl.xlabel(r'$t / t_{\mathrm{rec}}$')
+pl.ylabel(r'$1 - x_i$')
+pl.savefig('RT_Test1_MeanNeutralFraction.ps')
+pl.savefig('RT_Test1_MeanNeutralFraction.png')        

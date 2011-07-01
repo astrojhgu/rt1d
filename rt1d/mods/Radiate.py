@@ -53,9 +53,9 @@ class Radiate:
         self.cosmo = Cosmology(pf)
         self.pf = pf
         self.itabs = itabs
-        self.pbar = pf["ProgressBar"]
         
         self.MaxHIIChange = pf["MaxHIIChange"]
+        self.HIIRestrictedTimestep = pf["HIIRestrictedTimestep"]
         
         self.MultiSpecies = pf["MultiSpecies"]
         self.Isothermal = pf["Isothermal"]
@@ -73,6 +73,7 @@ class Radiate:
         self.InitialRedshift = pf["InitialRedshift"]
         self.LengthUnits = pf["LengthUnits"]
         self.TimeUnits = pf["TimeUnits"]
+        self.StopTime = pf["StopTime"] * self.TimeUnits
         self.StartRadius = pf["StartRadius"]
         self.StartCell = int(self.StartRadius * self.GridDimensions)
         self.InitialHydrogenDensity = (data["HIDensity"][0] + data["HIIDensity"][0]) / (1. + self.InitialRedshift)**3
@@ -88,6 +89,8 @@ class Radiate:
         self.MinStep = pf["ODEMinStep"] * self.TimeUnits
         self.atol = pf["ODEatol"]
         self.rtol = pf["ODErtol"]
+        
+        self.ProgressBar = pf["ProgressBar"]                                                                        
         
         guesses = [data["HIDensity"][0] + data["HIIDensity"][0], 
                    data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0], 
@@ -214,11 +217,14 @@ class Radiate:
         ncol_HeI = np.cumsum(data["HeIDensity"]) * self.dx
         ncol_HeII = np.cumsum(data["HeIIDensity"]) * self.dx
         
-        # Print status, and initilize progress bar
+        # Print status, and update progress bar
         if rank == 0: print "rt1d: {0} < t < {1}".format(t / self.TimeUnits, (t + dt) / self.TimeUnits)            
-        if rank == 0 and self.pbar: pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
+        if rank == 0 and self.ProgressBar: pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
 
-        dtphot = np.zeros_like(self.grid)
+        if self.HIIRestrictedTimestep: dtphot = np.ones_like(self.grid) * 1e50
+        
+        # If accreting black hole, luminosity will change with time.
+        Lbol = self.rs.BolometricLuminosity(t)
 
         # Loop over cells radially, solve rate equations, update values in data -> newdata
         for cell in self.grid:
@@ -228,8 +234,7 @@ class Radiate:
             # If within our buffer zone (where we don't solve rate equations), continue
             if cell < self.StartCell: continue
                                                 
-            # Progress bar
-            if self.pbar: pbar.update(cell)
+            if rank == 0 and self.ProgressBar: pbar.update(cell)
             
             # Read in densities for this cell
             n_e = data["ElectronDensity"][cell]
@@ -264,9 +269,6 @@ class Radiate:
             # Compute radius
             r = self.LengthUnits * cell / self.GridDimensions  
 
-            # If accreting black hole, luminosity will change with time.
-            Lbol = self.rs.BolometricLuminosity(t)
-
             ######################################
             ######## Solve Rate Equations ########
             ######################################
@@ -295,12 +297,24 @@ class Radiate:
             ######################################
             ################ DONE ################     
             ######################################
+                        
+            # Calculate global timstep based on change in neutral fraction for next iteration
+            if self.HIIRestrictedTimestep:    
+                newncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
+                           np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
+                newxHII = newHII[-1] / n_H        
+                Gamma = self.IonizationRateCoefficientHI(newncol, newdata["ElectronDensity"][cell], newHI, newHeI, newxHII, newT, r, Lbol)        
+                alpha = 2.6e-13 * (newT / 1.e4)**-0.85  
+                dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]**2 * alpha)
 
         for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
-
-        if rank == 0 and self.pbar: pbar.finish()
         
-        return newdata, h
+        if self.HIIRestrictedTimestep: newdt = min(np.min(dtphot), 2 * dt)
+        else: newdt = dt
+        
+        if rank == 0 and self.ProgressBar: pbar.finish()
+        
+        return newdata, h, newdt
         
     def IonizationRateCoefficientHI(self, ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol):
         """
