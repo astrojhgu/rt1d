@@ -68,6 +68,7 @@ class RadiationSource:
             """
             Blackbody.
             """
+            self.L = pf["SpectrumPhotonLuminosity"]
             self.T = pf["SourceTemperature"]
             self.R = pf["SourceRadius"]
         
@@ -75,6 +76,7 @@ class RadiationSource:
             """
             Population III star (Schaerer 2002, Table 3).
             """
+            self.L = pf["SpectrumPhotonLuminosity"]
             self.T = pf["SourceTemperature"]
             self.M = pf["SourceMass"]
         
@@ -82,6 +84,7 @@ class RadiationSource:
             """
             Power-law source, break energy of 1 keV (Madau 2004).
             """
+            self.L = pf["SpectrumPhotonLuminosity"]
             self.M = pf["SourceMass"]
             self.alpha = -pf["SpectrumPowerLawIndex"] 
             self.epsilon = pf["SourceRadiativeEfficiency"] 

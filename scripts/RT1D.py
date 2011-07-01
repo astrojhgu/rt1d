@@ -56,7 +56,6 @@ if rank == 0:
 start = time.time()
 
 # Loop over parameter sets. 
-timestep = open('dtPhoton.dat', 'w')
 for i, pf in enumerate(all_pfs):    
     TimeUnits = pf["TimeUnits"]
     StopTime = pf["StopTime"] * TimeUnits
@@ -97,9 +96,7 @@ for i, pf in enumerate(all_pfs):
     if not IsRestart: w.WriteAllData(data, 0, t)
                     
     while t < StopTime:
-                
-        print >> timestep, t, dt        
-                
+                                
         # Ensure we land on our data dump times exactly
         if (t + dt) > ddt[wct]: 
             dt = ddt[wct] - t
@@ -128,8 +125,6 @@ for i, pf in enumerate(all_pfs):
                 
     elapsed = time.time() - start    
     print "Calculation {0} complete (output to {1}).  Elapsed time = {2} seconds.".format(i + 1, pf["OutputDirectory"], int(elapsed))
-
-timestep.close()
 
 
 
