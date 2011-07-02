@@ -53,6 +53,8 @@ class InitializeIntegralTables:
         self.rs = RadiationSource(pf)
         self.esec = SecondaryElectrons(pf)
         
+        self.OutputDirectory = pf["OutputDirectory"]
+        
         # Physics, initial conditions, control parameters
         self.MultiSpecies = pf["MultiSpecies"]
         self.InitialRedshift = pf["InitialRedshift"]
@@ -91,9 +93,9 @@ class InitializeIntegralTables:
             self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
                   
         # Make output directory          
-        try: os.mkdir("tabs")
-        except OSError:
-            pass
+        try: 
+            os.mkdir("{0}".format(self.OutputDirectory))
+        except OSError: pass
             
         # Retrive rt1d environment
         self.rt1d = os.environ.get("RT1D")
@@ -113,7 +115,7 @@ class InitializeIntegralTables:
         else: dim = "3D"
         
         if self.SourceType == 0: 
-            src = "mono"
+            src = "discrete"
             mort = "{0:g}phot".format(int(self.SpectrumPhotonLuminosity))
             return "{0}_{1}_{2}.h5".format(src, mort, dim)
         
@@ -151,13 +153,13 @@ class InitializeIntegralTables:
         itab = {}
         
         if os.path.exists("{0}/input/{1}".format(self.rt1d, filename)): tabloc = "{0}/input/{1}".format(self.rt1d, filename)
-        elif os.path.exists("tabs/{0}".format(filename)): tabloc = "tabs/{0}".format(filename)
+        elif os.path.exists("{0}/{1}".format(self.OutputDirectory, filename)): tabloc = "tabs/{0}".format(filename)
         else:
-            print "Did not find a pre-existing integral table.  Generating tabs/{0} now...\n".format(filename)
+            print "Did not find a pre-existing integral table.  Generating tabs/{0}/{1} now...\n".format(self.OutputDirectory, filename)
             return None
         
-        print "Found an integral table for this source.  Reading tabs/{0}\n".format(filename)
-        f = h5py.File("tabs/{0}".format(filename), 'r')
+        print "Found an integral table for this source.  Reading {0}/{1}\n".format(self.OutputDirectory, filename)
+        f = h5py.File("{0}/{1}".format(self.OutputDirectory, filename), 'r')
         
         for item in f["IntegralTable"]: itab[item] = f["IntegralTable"][item].value
         
@@ -175,7 +177,7 @@ class InitializeIntegralTables:
         """
         
         filename = self.DetermineTableName()                    
-        f = h5py.File("tabs/{0}".format(filename), 'w') 
+        f = h5py.File("{0}/{1}".format(self.OutputDirectory, filename), 'w') 
 
         pf_grp = f.create_group("ParameterFile")
         tab_grp = f.create_group("IntegralTable")

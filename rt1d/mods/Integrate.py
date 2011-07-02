@@ -9,7 +9,6 @@ Description: Compute the value of input function (integrand) via numerous method
      
 """
 
-
 def Romberg(function, a, b, eps = 1e-8):
     """
     Approximate the definite integral of 'function' from a to b using Romberg's method.
@@ -28,3 +27,4 @@ def Romberg(function, a, b, eps = 1e-8):
         if abs(R[n][n-1] - R[n][n]) < eps:
             return R[n][n]
         n += 1
+        

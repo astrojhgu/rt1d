@@ -97,7 +97,7 @@ def ProblemType(pt):
              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
              "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
              "IonizationProfile": 1, "InitialHIIFraction": 0, "SourceType": 0, "SourceLifetime": 1e10, \
-             "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrumMethod": 1, \
+             "SpectrumPhotonLuminosity": 5e48, 
              "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188]
             }                  
     
@@ -107,10 +107,10 @@ def ProblemType(pt):
               "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 15.0, 
               "StartRadius": 0.01, "dtDataDump": 1.0, "DataDumpName": 'dd', \
-              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
+              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
               "DensityProfile": 0, "InitialDensity": 2e-4, "TemperatureProfile": 0, "InitialTemperature": 8e3, \
-              "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 1e10, \
-              "SourceTemperature": 1e5, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
+              "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 0, "SourceLifetime": 1e10, \
+              "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
               "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], "SpectrumPhotonLuminosity": 3e51, \
               "Clump": 1, "ClumpPosition": 0.76, "ClumpOverdensity": 200, "ClumpRadius": 0.8 / 6.6, "ClumpTemperature": 40.,
              }               
