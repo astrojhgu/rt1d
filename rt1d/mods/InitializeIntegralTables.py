@@ -112,26 +112,20 @@ class InitializeIntegralTables:
         if self.MultiSpecies == 0: dim = "1D"
         else: dim = "3D"
         
-        if self.rs.DiscreteSpectrumMethod == 0: cont = 'infbin'
-        elif self.rs.DiscreteSpectrumMethod == 1: cont = "{0}bin".format(int(len(self.rs.DiscreteSpectrumSED)))
-        elif self.rs.DiscreteSpectrumMethod == 2: cont = "{0}linbin".format(int(self.rs.DiscreteSpectrumNumberOfBins))
-        elif self.rs.DiscreteSpectrumMethod == 3: cont = "{0}logbin".format(int(self.rs.DiscreteSpectrumNumberOfBins))
-        else: cont = "{0}binBA".format(int(self.rs.DiscreteSpectrumNumberOfBins))
-        
         if self.SourceType == 0: 
             src = "mono"
             mort = "{0:g}phot".format(int(self.SpectrumPhotonLuminosity))
-            return "{0}_{1}_{2}_{3}.h5".format(src, mort, dim, cont)
+            return "{0}_{1}_{2}.h5".format(src, mort, dim)
         
         if self.SourceType == 1: 
             src = "bb"
             mort = "{0}K".format(int(self.SourceTemperature))
-            return "{0}_{1}_{2}_{3}.h5".format(src, mort, dim, cont)
+            return "{0}_{1}_{2}.h5".format(src, mort, dim)
                                                               
         elif self.SourceType == 2:                            
             src = "popIII"                                    
             mort = "{0}M".format(int(self.SourceMass))        
-            return "{0}_{1}_{2}_{3}.h5".format(src, mort, dim, cont)
+            return "{0}_{1}_{2}.h5".format(src, mort, dim)
             
         else: 
             src = "bh"
@@ -141,7 +135,7 @@ class InitializeIntegralTables:
             elif self.SourceType == 4: spec = "mcd"
             else: spec = "unknown"
         
-            return "{0}_{1}_{2}_{3}_{4}.h5".format(src, mort, spec, dim, cont)
+            return "{0}_{1}_{2}_{3}.h5".format(src, mort, spec, dim)
             
     def ReadIntegralTable(self):
         """
@@ -278,7 +272,7 @@ class InitializeIntegralTables:
         and divide by 4*np.pi*r^2. 
         """
         
-        if self.rs.DiscreteSpectrumMethod == 0:
+        if self.rs.SourceType > 0:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
             
@@ -286,18 +280,10 @@ class InitializeIntegralTables:
                         
             return integral
                   
-        elif self.rs.DiscreteSpectrumMethod <= 3:
-            integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, species) * self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * \
-                np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) / (self.rs.DiscreteSpectrumSED * erg_per_ev)     
-                                                                                                                                                                                
-            return np.sum(integral)
-            
         else:
-            integral = 0
-            for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-                integral += PhotoIonizationCrossSection(element, species) * self.rs.Spectrum(element) * \
-                    np.exp(-self.OpticalDepth(element, n)) / (element * erg_per_ev) 
-                
+            integral = PhotoIonizationCrossSection(self.rs.E, species) * self.rs.Spectrum(self.rs.E) * \
+                np.exp(-self.OpticalDepth(self.rs.E, n)) / (self.rs.E * erg_per_ev)     
+                                                                                                                                                                                
             return np.sum(integral)
             
     def ElectronHeatingRate(self, n = [0.0, 0.0, 0.0], species = 0):    
@@ -311,7 +297,7 @@ class InitializeIntegralTables:
                    with a true heating rate in erg / cm^3 / s.
         """    
         
-        if self.rs.DiscreteSpectrumMethod == 0:
+        if self.rs.SourceType > 0:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / E
                                                         
@@ -319,27 +305,19 @@ class InitializeIntegralTables:
             
             return integral
             
-        elif self.rs.DiscreteSpectrumMethod <= 3:
-            integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, species) * (self.rs.DiscreteSpectrumSED - E_th[species]) * \
-                self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) / self.rs.DiscreteSpectrumSED
+        else:
+            integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \
+                self.rs.Spectrum(self.rs.E) * np.exp(-self.OpticalDepth(self.rs.E, n)) / self.rs.E
             
             return np.sum(integral)
             
-        else:
-            integral = 0
-            for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-                integral += PhotoIonizationCrossSection(element, species) * (element - E_th[species]) * \
-                    self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) / element
-                    
-            return np.sum(integral)    
-        
     def SecondaryIonizationRateHI(self, n = [0.0, 0.0, 0.0], species = 0):
         """
         HI ionization rate due to fast secondary electrons from hydrogen or helium ionizations.  This is the second integral
         in Eq. 4 in TZ07.
         """
         
-        if self.rs.DiscreteSpectrumMethod == 0:
+        if self.rs.SourceType > 0:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_th[0]   
                 
@@ -347,21 +325,12 @@ class InitializeIntegralTables:
             
             return integral
             
-        elif self.rs.DiscreteSpectrumMethod <= 3:
-            integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, species) * (self.rs.DiscreteSpectrumSED - E_th[species]) * \
-                self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) \
-                / (self.rs.DiscreteSpectrumSED * erg_per_ev) / E_th[0] 
+        else:
+            integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \
+                self.rs.Spectrum(self.rs.E) * np.exp(-self.OpticalDepth(self.rs.E, n)) \
+                / (self.rs.E * erg_per_ev) / E_th[0] 
             
             return max(np.sum(integral), tiny_number)
-            
-        else:
-            integral = 0
-            for i, element in enumerate(self.rs.DiscreteSpectrumSED):
-                integral += PhotoIonizationCrossSection(element, species) * (element - E_th[species]) * \
-                    self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) \
-                    / (element * erg_per_ev) / E_HI 
-                
-            return np.sum(integral)   
             
     def SecondaryIonizationRateHeI(self, n = [0.0, 0.0, 0.0], species = 0):
         """                                                                                                                           
@@ -369,7 +338,7 @@ class InitializeIntegralTables:
         in Eq. 5 in TZ07.                                                                                                             
         """                                                                                                                           
                                                                                                                                       
-        if self.rs.DiscreteSpectrumMethod == 0:                                                                                       
+        if self.rs.SourceType > 0:                                                                                   
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_th[1]                                                           
                                                                                                                                       
@@ -377,28 +346,9 @@ class InitializeIntegralTables:
                                                                                                                                       
             return integral                                                                                                  
                                                                                                                                       
-        elif self.rs.DiscreteSpectrumMethod <= 3:                                                                                     
-            integral = PhotoIonizationCrossSection(self.rs.DiscreteSpectrumSED, species) * (self.rs.DiscreteSpectrumSED - E_th[species]) * \
-                self.rs.Spectrum(self.rs.DiscreteSpectrumSED) * np.exp(-self.OpticalDepth(self.rs.DiscreteSpectrumSED, n)) \
-                / (self.rs.DiscreteSpectrumSED * erg_per_ev) / E_th[1]                                                                  
+        else:                                                                                     
+            integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \
+                self.rs.Spectrum(self.rs.E) * np.exp(-self.OpticalDepth(self.rs.E, n)) \
+                / (self.rs.E * erg_per_ev) / E_th[1]                                                                  
                                                                                                                                       
             return np.sum(integral)                                                                                                   
-                                                                                                                                      
-        else:                                                                                                                         
-            integral = 0                                                                                                              
-            for i, element in enumerate(self.rs.DiscreteSpectrumSED):                                                                 
-                integral += PhotoIonizationCrossSection(element, species) * (element - E_th[species]) * \
-                    self.rs.Spectrum(element) * np.exp(-self.OpticalDepth(element, n)) \
-                    / (element * erg_per_ev) / E_HeI                                                                                  
-                                                                                                                                      
-            return np.sum(integral)                                                                                                               
-
-        
-        
-        
-        
-        
-        
-    
-        
-    

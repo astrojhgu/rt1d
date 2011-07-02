@@ -299,13 +299,16 @@ class Radiate:
             ######################################
                         
             # Calculate global timstep based on change in neutral fraction for next iteration
-            if self.HIIRestrictedTimestep:    
-                newncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
-                           np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
-                newxHII = newHII[-1] / n_H        
-                Gamma = self.IonizationRateCoefficientHI(newncol, newdata["ElectronDensity"][cell], newHI, newHeI, newxHII, newT, r, Lbol)        
-                alpha = 2.6e-13 * (newT / 1.e4)**-0.85  
-                dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]**2 * alpha)
+            if self.HIIRestrictedTimestep:  
+                newxHII = newHII[-1] / n_H                
+                
+                if newxHII > 0.5: pass
+                else:
+                    newncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
+                               np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
+                    Gamma = self.IonizationRateCoefficientHI(newncol, newdata["ElectronDensity"][cell], newHI, newHeI, newxHII, newT, r, Lbol)        
+                    alpha = 2.6e-13 * (newT / 1.e4)**-0.85  
+                    dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]**2 * alpha)
 
         for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
         
@@ -499,18 +502,4 @@ class Radiate:
             units: erg cm^3 / s
         """
         return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
-        
-    def ComputeGlobalTimestep(self, nHI, GammaHI):
-        """
-        Compute our global timestep based on maximum change in the neutral fraction.
-        """
-        
-        dt = np.zeros_like(data['HIDensity'])
-        for i, n in enumerate(data['HIDensity']):
-            dt[i] = self.MaxHIIChange / np.abs(n * GammaHI)
-        
-    
-        
-        
-        
         

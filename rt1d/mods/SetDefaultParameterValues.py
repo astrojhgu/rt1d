@@ -105,13 +105,8 @@ def SetDefaultParameterValues():
         "SpectrumMaxEnergy": 1e4, \
         "SpectrumMinNormEnergy": 100, \
         "SpectrumMaxNormEnergy": 1e4, \
-        "SpectrumPhotonLuminosity": 1e54, \
+        "SpectrumPhotonLuminosity": 5e48, \
           
-        # Discretization parameters
-        "DiscreteSpectrumMethod": 0, \
-        "DiscreteSpectrumMinEnergy": 100., \
-        "DiscreteSpectrumMaxEnergy": 1e4, \
-        "DiscreteSpectrumNumberOfBins": 20, \
         "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
         "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], \
           
