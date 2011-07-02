@@ -54,6 +54,8 @@ class Radiate:
         self.pf = pf
         self.itabs = itabs
         
+        self.ParallelizationMethod = pf["ParallelizationMethod"]
+        
         self.MaxHIIChange = pf["MaxHIIChange"]
         self.HIIRestrictedTimestep = pf["HIIRestrictedTimestep"]
         
@@ -229,7 +231,7 @@ class Radiate:
         # Loop over cells radially, solve rate equations, update values in data -> newdata
         for cell in self.grid:
             
-            if cell % size != rank: continue
+            if (cell % size != rank) and (self.ParallelizationMethod == 1): continue
                         
             # If within our buffer zone (where we don't solve rate equations), continue
             if cell < self.StartCell: continue
@@ -272,10 +274,10 @@ class Radiate:
             ######################################
             ######## Solve Rate Equations ########
             ######################################
-                                    
+                                                
             tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                 r, z, mu, n_H, n_He, ncol, Lbol)
-            
+                        
             # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
             newHII, newHeII, newHeIII, newE = qnew
                         
@@ -310,7 +312,8 @@ class Radiate:
                     alpha = 2.6e-13 * (newT / 1.e4)**-0.85  
                     dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]**2 * alpha)
 
-        for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
+        if (size > 0) and (self.ParallelizationMethod == 1):
+            for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
         
         if self.HIIRestrictedTimestep: newdt = min(np.min(dtphot), 2 * dt)
         else: newdt = dt

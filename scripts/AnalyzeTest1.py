@@ -14,7 +14,7 @@ Notes: Supply parameter file as commmand line argument.
 """
 
 from multiplot import *
-import os, re, h5py, sys
+import os, re, h5py, sys, misc
 import numpy as np
 import pylab as pl
 import rt1d.analysis as rta
@@ -24,6 +24,7 @@ s_per_myr = 365.25 * 24 * 3600 * 10**6
 
 # First, read in conversion factors from parameter file
 ds = rta.Dataset(sys.argv[1])
+OutputDirectory = ds.pf["OutputDirectory"]
 LengthUnits = ds.pf["LengthUnits"]
 GridDims = ds.pf["GridDimensions"]
 TimeUnits = ds.pf["TimeUnits"]
@@ -86,9 +87,12 @@ mp.axes[1].set_ylim(0.9, 1.1)
 mp.axes[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
 mp.axes[1].set_ylabel(r'$r/r_{\mathrm{anl}}$') 
 mp.fix_ticks()
-pl.savefig('RT_Test1_IfrontEvolution.ps')
-pl.savefig('RT_Test1_IfrontEvolution.png')
+pl.savefig('{0}/RT_Test1_IfrontEvolution.ps'.format(OutputDirectory))
+pl.savefig('{0}/RT_Test1_IfrontEvolution.png'.format(OutputDirectory))
 pl.clf()
+
+# Write out data
+misc.writetab((t / trec, r / r_anl_bin), '{0}/RT_Test1_IfrontEvolution.dat'.format(OutputDirectory), ('t/trec', 'r/ranl'))
         
 # Ionized and neutral fractions vs. R and t (assumes dtDataDump = 5)
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HI, ls = '-', color = 'k', label = r'$1 - x_i$')
@@ -112,13 +116,11 @@ pl.annotate('10', (0.29, 0.5))
 pl.annotate('30', (0.45, 0.5))
 pl.annotate('100', (0.655, 0.5))
 pl.annotate('500', (0.78, 0.5))
-pl.savefig('RT_Test1_RadialProfiles.ps')
-pl.savefig('RT_Test1_RadialProfiles.png')
+pl.savefig('{0}/RT_Test1_RadialProfiles.ps'.format(OutputDirectory))
+pl.savefig('{0}/RT_Test1_RadialProfiles.png'.format(OutputDirectory))
 pl.clf()
 
-# Mean neutral fraction vs. time
-pl.plot(t / trec, mean_xH, ls = '-', color = 'k')
-pl.xlabel(r'$t / t_{\mathrm{rec}}$')
-pl.ylabel(r'$1 - x_i$')
-pl.savefig('RT_Test1_MeanNeutralFraction.ps')
-pl.savefig('RT_Test1_MeanNeutralFraction.png')        
+# Write out data
+misc.writetab((ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HI, ds.data[6].x_HI, ds.data[20].x_HI, ds.data[100].x_HI), 
+    '{0}/RT_Test1_RadialProfiles.dat'.format(OutputDirectory), ('r/Lbox', 'x_HI (10 Myr)', 'x_HI (30 Myr)', 'x_HI (100 Myr)', 'x_HI (500 Myr)'))
+     

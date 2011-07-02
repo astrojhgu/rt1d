@@ -36,6 +36,7 @@ def SetDefaultParameterValues():
         "ODEmaxiter": 10000, \
         "RootFinder": 0, \
         
+        "ParallelizationMethod": 0, \
           
         # Integral tabulation
         "HIColumnMin": 1e15, \

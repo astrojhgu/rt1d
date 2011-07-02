@@ -56,7 +56,10 @@ if rank == 0:
 start = time.time()
 
 # Loop over parameter sets. 
-for i, pf in enumerate(all_pfs):    
+for i, pf in enumerate(all_pfs):   
+    
+    if (i % size != rank) and (self.ParallelizationMethod == 2): continue
+     
     TimeUnits = pf["TimeUnits"]
     StopTime = pf["StopTime"] * TimeUnits
     dt = pf["InitialTimestep"] * TimeUnits
@@ -127,4 +130,4 @@ for i, pf in enumerate(all_pfs):
     print "Calculation {0} complete (output to {1}).  Elapsed time = {2} seconds.".format(i + 1, pf["OutputDirectory"], int(elapsed))
 
 
-
+print "Successful run. Exiting."
