@@ -58,7 +58,7 @@ start = time.time()
 # Loop over parameter sets. 
 for i, pf in enumerate(all_pfs):   
     
-    if (i % size != rank) and (self.ParallelizationMethod == 2): continue
+    if (i % size != rank) and (pf["ParallelizationMethod"] == 2): continue
      
     TimeUnits = pf["TimeUnits"]
     StopTime = pf["StopTime"] * TimeUnits
@@ -71,7 +71,7 @@ for i, pf in enumerate(all_pfs):
         g = rtm.InitializeGrid(pf)   
         data = g.InitializeFields()
                 
-        if rank == 0:
+        if i % size == rank:
             if pf["OutputDirectory"] != './':
                 try: os.mkdir("{0}".format(pf["OutputDirectory"]))
                 except OSError: 
@@ -80,7 +80,7 @@ for i, pf in enumerate(all_pfs):
             made = True
         else: made = False
         
-        if size > 1: MPI.COMM_WORLD.bcast(made, root = 0)    
+        if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(made, root = 0)    
 
     # Initialize integral tables
     iits = rtm.InitializeIntegralTables(pf, data)
@@ -118,13 +118,13 @@ for i, pf in enumerate(all_pfs):
         # Write-out data, or don't                                        
         if write_now:
             wrote = False
-            if rank == 0: 
+            if i % size == rank: 
                 w.WriteAllData(data, wct, tnow)
                 wrote = True
             wct += 1
            
         # Don't move on until root processor has written out data    
-        if size > 1: MPI.COMM_WORLD.bcast(wrote, root = 0)    
+        if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(wrote, root = 0)    
                 
     elapsed = time.time() - start    
     print "Calculation {0} complete (output to {1}).  Elapsed time = {2} seconds.".format(i + 1, pf["OutputDirectory"], int(elapsed))
