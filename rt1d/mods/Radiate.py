@@ -41,8 +41,6 @@ m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
-tiny_number = 1e-20
-
 # Widget for progressbar.
 widget = ["Ray Casting: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 
@@ -161,7 +159,7 @@ class Radiate:
             if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))
             else: alpha_HeIII *= (1.43 - 0.076 * np.log(T))
             xi_HeII = 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
-        else: Gamma_HeI = Gamma_HeII = Beta_HeI = Beta_HeII = alpha_HeII = alpha_HeIII = alpha_HeIII = xi_HeII = tiny_number
+        else: Gamma_HeI = Gamma_HeII = Beta_HeI = Beta_HeII = alpha_HeII = alpha_HeIII = alpha_HeIII = xi_HeII = 0
                                                                 
         # Always solve hydrogen rate equation
         newHII = Gamma_HI * n_HI - alpha_HII * n_e * q[0]
@@ -190,20 +188,20 @@ class Radiate:
         """
         
         newdata = {}
-        for key in data.keys(): newdata[key] = np.ones_like(data[key]) * tiny_number
+        for key in data.keys(): newdata[key] = copy.deepcopy(data[key])
         z = self.cosmo.TimeToRedshiftConverter(0., t, self.InitialRedshift)
 
         # Nice names for ionized fractions
         x_HI_arr = data["HIDensity"] / (data["HIDensity"] + data["HIIDensity"])
         x_HII_arr = data["HIIDensity"] / (data["HIDensity"] + data["HIIDensity"])
-
+        
         if self.MultiSpecies:
             x_HeI_arr = data["HeIDensity"] / (data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"])
             x_HeII_arr = data["HeIIDensity"] / (data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"])
             x_HeIII_arr = data["HeIIIDensity"] / (data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"])
         
         # This is not a good idea in general, but in this case they'll never be touched again.
-        else: x_HeI_arr = x_HeII_arr = x_HeIII_arr = np.ones_like(x_HI_arr) * tiny_number
+        else: x_HeI_arr = x_HeII_arr = x_HeIII_arr = np.zeros_like(x_HI_arr)
                                                         
         # If we're in an expanding universe, dilute densities by (1 + z)^3    
         if self.CosmologicalExpansion: 
@@ -218,7 +216,7 @@ class Radiate:
         ncol_HI = np.cumsum(data["HIDensity"]) * self.dx
         ncol_HeI = np.cumsum(data["HeIDensity"]) * self.dx
         ncol_HeII = np.cumsum(data["HeIIDensity"]) * self.dx
-        
+                
         # Print status, and update progress bar
         if rank == 0: print "rt1d: {0} < t < {1}".format(t / self.TimeUnits, (t + dt) / self.TimeUnits)            
         if rank == 0 and self.ProgressBar: pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
@@ -274,10 +272,10 @@ class Radiate:
             ######################################
             ######## Solve Rate Equations ########
             ######################################
-                                                
+                                                            
             tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                 r, z, mu, n_H, n_He, ncol, Lbol)
-                        
+                                                
             # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
             newHII, newHeII, newHeIII, newE = qnew
                         
@@ -319,7 +317,7 @@ class Radiate:
         else: newdt = dt
         
         if rank == 0 and self.ProgressBar: pbar.finish()
-        
+                
         return newdata, h, newdt
         
     def IonizationRateCoefficientHI(self, ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol):

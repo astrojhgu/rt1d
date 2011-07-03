@@ -79,7 +79,7 @@ class SolveRateEquations:
         while x[i - 1] < xf: 
             xnext = x[i - 1] + h
             ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)
-                                         
+                                                                                  
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
             finite = np.isfinite(ynext)
             positive = np.greater_equal(ynext, 0.)
@@ -114,7 +114,7 @@ class SolveRateEquations:
                             
         # If we're dealing with coupled equations, re-organize return list.    
         if type(y0) is tuple: y = zip(*y)
-                            
+                                                        
         return np.array(x), np.array(y), h  
            
     def ImplicitEuler(self, f, yi, xi, h, Dfun, args):
@@ -123,8 +123,6 @@ class SolveRateEquations:
         minimization technique separately for each yi, hence the odd array
         manipulation and loop.
         """                
-
-        
 
         yip1 = []
         for i, element in enumerate(yi):

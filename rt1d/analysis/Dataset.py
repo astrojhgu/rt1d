@@ -62,6 +62,7 @@ class Dataset:
         alldds = []
         for f in os.listdir("{0}/{1}/{2}".format(self.gd, self.rd, self.od)):
             if not re.search('.h5', f): continue
+            if not re.search('dd', f): continue # temporary hack
             alldds.append(f)
             
         ds = {}
