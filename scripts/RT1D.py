@@ -74,9 +74,7 @@ for i, pf in enumerate(all_pfs):
         if i % size == rank:
             if pf["OutputDirectory"] != './':
                 try: os.mkdir("{0}".format(pf["OutputDirectory"]))
-                except OSError: 
-                    os.system("rm -rf {0}".format(pf["OutputDirectory"]))
-                    os.mkdir("{0}".format(pf["OutputDirectory"]))            
+                except OSError: pass        
             made = True
         else: made = False
         

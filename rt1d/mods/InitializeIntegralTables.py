@@ -145,15 +145,14 @@ class InitializeIntegralTables:
         Thomas & Zaroubi 2007) can be tabulated given only properties of the source, it is ideal
         for parameter spaces to be for a given source.  However, it may be nice to compare different
         sources holding all else constant.  This routine will look for a preexisting hdf5 file
-        with the lookup tables for the source we've specified.  Just need to determine a naming 
-        convention for files that can uniquely identify the source properties.
+        with the lookup tables for the source we've specified.  
         """
         
         filename = self.DetermineTableName()
         itab = {}
-        
+                                
         if os.path.exists("{0}/input/{1}".format(self.rt1d, filename)): tabloc = "{0}/input/{1}".format(self.rt1d, filename)
-        elif os.path.exists("{0}/{1}".format(self.OutputDirectory, filename)): tabloc = "tabs/{0}".format(filename)
+        elif os.path.exists("{0}/{1}".format(self.OutputDirectory, filename)): tabloc = "{0}/{1}".format(self.OutputDirectory, filename)
         else:
             print "Did not find a pre-existing integral table.  Generating {0}/{1} now...\n".format(self.OutputDirectory, filename)
             return None
