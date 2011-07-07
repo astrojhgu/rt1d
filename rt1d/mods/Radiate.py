@@ -130,9 +130,7 @@ class Radiate:
         n_He = args[0][4]
         ncol = args[0][5]
         Lbol = args[0][6]
-        
-       
-                
+                        
         # Derived quantities
         n_HI = n_H - q[0]
         n_HII = q[0]
@@ -183,9 +181,6 @@ class Radiate:
         else:
             newE = self.HeatGain(ncol, nabs, x_HII, r, Lbol) - \
                 self.HeatLoss(nabs, nion, n_e, n_B, q[3] * 2. * mu / 3. / k_B / n_B, z, mu)
-                                                                                             
-        #print n_HI, n_HII, q[0], Gamma_HeI, n_HeI, Beta_HeI, n_e, Beta_HeII, q[1], \
-        #      alpha_HeII, alpha_HeIII, n_HeIII, xi_HeII, newE 
                                                                                                 
         return np.array([newHII, newHeII, newHeIII, newE])
 
@@ -329,7 +324,7 @@ class Radiate:
                     alpha = 2.6e-13 * (newT / 1.e4)**-0.85  
                     dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]**2 * alpha)
 
-                    # Calculate global timstep based on change in helium neutral fraction for next iteration
+                # Calculate global timstep based on change in helium neutral fraction for next iteration
                 if self.MultiSpecies:
                     newxHeII = newerHeII / n_He
                     

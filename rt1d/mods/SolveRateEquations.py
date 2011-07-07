@@ -142,7 +142,10 @@ class SolveRateEquations:
                     if i == 2: return y - h * f(np.array([yi[0], yi[1], y, yi[3]]), xi + h, newargs)[i] - yi[i]
                     if i == 3: return y - h * f(np.array([yi[0], yi[1], yi[2], y]), xi + h, newargs)[i] - yi[i]
                 
-                yip1.append(self.rootfinder(ynext, yi[i]))
+                if yi[i] == 0.: guess = self.guesses[i]
+                else: guess = yi[i]
+                
+                yip1.append(self.rootfinder(ynext, guess))
                                               
         rtn = yi + h * f(np.array(yip1), xi + h, args)
         if self.MultiSpecies == 0:
@@ -175,7 +178,7 @@ class SolveRateEquations:
         Find the roots of the function f using the Newton-Raphson method.
         
         Let's remind ourselves what f and y_guess are:
-            y_guess is [nHI, nHeI, nHeII, T], right?
+            y_guess is [nHII, nHeII, nHeIII, T], right?
         
         """    
 
@@ -187,7 +190,7 @@ class SolveRateEquations:
             y1 = ynow
             y2 = max(ynow - 1e-3 * ynow, 0)
             fp = (f(y1) - f(y2)) / (y1 - y2)
-                                                
+                                                                        
             # Calculate new estimate of the root
             dy = f(ynow) / fp
             ypre = ynow
