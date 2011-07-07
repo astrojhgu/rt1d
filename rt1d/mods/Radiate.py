@@ -41,6 +41,8 @@ m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
+min_density = 1e-12
+
 # Widget for progressbar.
 widget = ["Ray Casting: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 
@@ -128,6 +130,8 @@ class Radiate:
         n_He = args[0][4]
         ncol = args[0][5]
         Lbol = args[0][6]
+        
+       
                 
         # Derived quantities
         n_HI = n_H - q[0]
@@ -179,7 +183,10 @@ class Radiate:
         else:
             newE = self.HeatGain(ncol, nabs, x_HII, r, Lbol) - \
                 self.HeatLoss(nabs, nion, n_e, n_B, q[3] * 2. * mu / 3. / k_B / n_B, z, mu)
-                                                
+                                                                                             
+        #print n_HI, n_HII, q[0], Gamma_HeI, n_HeI, Beta_HeI, n_e, Beta_HeII, q[1], \
+        #      alpha_HeII, alpha_HeIII, n_HeIII, xi_HeII, newE 
+                                                                                                
         return np.array([newHII, newHeII, newHeIII, newE])
 
     def EvolvePhotons(self, data, t, dt, h):
@@ -216,7 +223,7 @@ class Radiate:
         ncol_HI = np.cumsum(data["HIDensity"]) * self.dx
         ncol_HeI = np.cumsum(data["HeIDensity"]) * self.dx
         ncol_HeII = np.cumsum(data["HeIIDensity"]) * self.dx
-                
+                        
         # Print status, and update progress bar
         if rank == 0: print "rt1d: {0} < t < {1}".format(t / self.TimeUnits, (t + dt) / self.TimeUnits)            
         if rank == 0 and self.ProgressBar: pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
@@ -272,7 +279,7 @@ class Radiate:
             ######################################
             ######## Solve Rate Equations ########
             ######################################
-                                                            
+                                                                
             tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                 r, z, mu, n_H, n_He, ncol, Lbol)
                                                 
@@ -282,23 +289,35 @@ class Radiate:
             # Convert from internal energy back to temperature
             newT = newE[-1] * 2. * mu / 3. / k_B / n_B
 
-            newHI = n_H - newHII[-1]
-            newHeI = n_He - newHeII[-1]
-
+            # Possible that newHII > n_H and within tolerances, hence the min statements
+            if newHII[-1] > n_H: newHI = min_density
+            else: newHI = n_H - newHII[-1]      
+            
+            # Same problem could arise with helium - favor accuracy of HeII over HeIII
+            newHeI = n_He - newHeII[-1] - newHeIII[-1]
+            if newHeI < 0: 
+                newHeI = min_density
+                newerHeII = n_He - newHeI - newHeIII[-1]
+                newerHeIII = n_He - newHeI - newerHeII
+            else:
+                newHeI = n_He - newHeII[-1] - newHeIII[-1]
+                newerHeII = n_He - newHeI - newHeIII[-1]
+                newerHeIII = n_He - newHeI - newerHeII
+                
             # Update quantities in 'data' -> 'newdata'     
             newdata["HIDensity"][cell] = newHI                                                                                                                        
-            newdata["HIIDensity"][cell] = newHII[-1]
+            newdata["HIIDensity"][cell] = n_H - newHI
             newdata["HeIDensity"][cell] = newHeI
-            newdata["HeIIDensity"][cell] = newHeII[-1]
-            newdata["HeIIIDensity"][cell] = newHeIII[-1]
-            newdata["ElectronDensity"][cell] = newHII[-1] + newHeII[-1] + 2.0 * newHeIII[-1]
+            newdata["HeIIDensity"][cell] = newerHeII
+            newdata["HeIIIDensity"][cell] = newerHeIII
+            newdata["ElectronDensity"][cell] = (n_H - newHI) + newerHeII + 2.0 * newerHeIII
             newdata["Temperature"][cell] = newT
             
             ######################################
             ################ DONE ################     
             ######################################
                         
-            # Calculate global timstep based on change in neutral fraction for next iteration
+            # Calculate global timstep based on change in hydrogen neutral fraction for next iteration
             if self.HIIRestrictedTimestep:  
                 newxHII = newHII[-1] / n_H                
                 
@@ -310,6 +329,18 @@ class Radiate:
                     alpha = 2.6e-13 * (newT / 1.e4)**-0.85  
                     dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]**2 * alpha)
 
+                    # Calculate global timstep based on change in helium neutral fraction for next iteration
+                if self.MultiSpecies:
+                    newxHeII = newerHeII / n_He
+                    
+                    if newxHeII > 0.5: pass
+                    else:
+                        newncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
+                                   np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
+                        Gamma = self.IonizationRateCoefficientHeI(newncol, newHI, newHeI, newxHII, newT, r, Lbol)
+                        alpha = 9.94e-11 * newT**-0.48   
+                        dtphot[cell] = min(dtphot[cell], self.MaxHIIChange * newHeI / np.abs(newHeI * Gamma - newerHeII**2 * alpha))                          
+                          
         if (size > 0) and (self.ParallelizationMethod == 1):
             for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
         

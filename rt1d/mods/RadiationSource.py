@@ -30,6 +30,8 @@ cm_per_rsun = 695500.0 * 1e5                                # Radius of the sun 
 s_per_yr = 365.25 * 24 * 3600                               # Seconds per year
 t_edd = 0.45 * 1e9 * s_per_yr                               # Eddington timescale (see eq. 1 in Volonteri & Rees 2005) 
 
+np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB - will return 0 as it should
+
 SchaererTable = {
                 "Mass": [5, 9, 15, 25, 40, 60, 80, 120, 200, 300, 400, 500, 1000], 
                 "Temperature": [4.44, 4.622, 4.759, 4.85, 4.9, 4.943, 4.97, 4.981, 4.999, 5.007, 5.028, 5.029, 5.026],
@@ -168,7 +170,12 @@ class RadiationSource:
             Mnow = self.M * np.exp( ((1.0 - self.epsilon) / self.epsilon) * t / t_edd)
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
             
-            
+    def SpectrumCDF(self, E):
+        """
+        Returns cumulative energy output contributed by photons at or less than energy E.
+        """    
+        
+        return quad(self.Spectrum, 0, E)[0]        
             
             
             

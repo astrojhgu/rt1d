@@ -81,9 +81,9 @@ class InitializeIntegralTables:
         self.HINBins = pf["ColumnDensityBinsHI"]
         self.HeINBins = pf["ColumnDensityBinsHeI"]
         self.HeIINBins = pf["ColumnDensityBinsHeII"]
-        
+                
         self.HIColumn = np.logspace(np.log10(self.HIColumnMin), np.log10(self.HIColumnMax), self.HINBins)
-        
+                
         # Set up column density vectors for each absorber
         if self.MultiSpecies > 0: 
             self.HeIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
@@ -99,7 +99,7 @@ class InitializeIntegralTables:
             
         # Retrive rt1d environment
         self.rt1d = os.environ.get("RT1D")
-        
+                
     def DetermineTableName(self):    
         """
         Returns the filename following the convention:

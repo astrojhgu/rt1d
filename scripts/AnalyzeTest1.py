@@ -96,26 +96,26 @@ misc.writetab((t / trec, r / r_anl_bin), '{0}/RT_Test1_IfrontEvolution.dat'.form
         
 # Ionized and neutral fractions vs. R and t (assumes dtDataDump = 5)
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HI, ls = '-', color = 'k', label = r'$1 - x_i$')
-pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[6].x_HI, ls = '-', color = 'k')
+#pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[6].x_HI, ls = '-', color = 'k')
 try: pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[20].x_HI, ls = '-', color = 'k')
 except KeyError: pass
 try: pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[100].x_HI, ls = '-', color = 'k')
 except KeyError: pass
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HII, ls = '--', color = 'k', label = r'$x_i$')
-pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[6].x_HII, ls = '--', color = 'k')
+#pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[6].x_HII, ls = '--', color = 'k')
 try: pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[20].x_HII, ls = '--', color = 'k')
 except KeyError: pass
 try: pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[100].x_HII, ls = '--', color = 'k')
 except KeyError: pass
 pl.xlabel(r'$r / L_{\mathrm{box}}$')
 pl.ylabel(r'$x_i$, $1-x_i$')
-pl.xlim(0, 1.05)
+pl.xlim(0, 1.01)
 pl.ylim(1e-5, 1.5)
 pl.legend(loc = 'lower right', frameon = False)
-pl.annotate('10', (0.29, 0.5))
-pl.annotate('30', (0.45, 0.5))
-pl.annotate('100', (0.655, 0.5))
-pl.annotate('500', (0.78, 0.5))
+pl.annotate('10', (0.3, 0.5))
+#pl.annotate('30', (0.45, 0.5))
+pl.annotate('100', (0.61, 0.5))
+pl.annotate('500', (0.77, 0.5))
 pl.savefig('{0}/RT_Test1_RadialProfiles.ps'.format(OutputDirectory))
 pl.savefig('{0}/RT_Test1_RadialProfiles.png'.format(OutputDirectory))
 pl.clf()

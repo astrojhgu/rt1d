@@ -79,14 +79,14 @@ class SolveRateEquations:
         while x[i - 1] < xf: 
             xnext = x[i - 1] + h
             ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)
-                                                                                  
+                                                                                                                                                               
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
             finite = np.isfinite(ynext)
             positive = np.greater_equal(ynext, 0.)
             if not np.all(finite) or not np.all(positive): 
                 h = max(self.hmin, h / 2.)
                 continue
-                            
+                                        
             # Adaptive time-stepping
             adapted = False
             if self.stepper > 0 and (h != self.hmin or i == 1):
@@ -98,7 +98,7 @@ class SolveRateEquations:
                         h = max(self.hmin, h / 2.)
                         adapted = True
                         break
-            
+                        
             # If we've gotten this far without adaptively stepping, increase h for the next timestep
             if adapted is False: h = min(self.hmax, 2. * h)
             
@@ -141,11 +141,8 @@ class SolveRateEquations:
                     if i == 1: return y - h * f(np.array([yi[0], y, yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
                     if i == 2: return y - h * f(np.array([yi[0], yi[1], y, yi[3]]), xi + h, newargs)[i] - yi[i]
                     if i == 3: return y - h * f(np.array([yi[0], yi[1], yi[2], y]), xi + h, newargs)[i] - yi[i]
-                    
-                if i < 3: guess = max(yi[i], self.guesses[i])
-                else: guess = yi[i]
-
-                yip1.append(self.rootfinder(ynext, guess))
+                
+                yip1.append(self.rootfinder(ynext, yi[i]))
                                               
         rtn = yi + h * f(np.array(yip1), xi + h, args)
         if self.MultiSpecies == 0:
@@ -183,7 +180,7 @@ class SolveRateEquations:
         """    
 
         ynow = y_guess    
-                                       
+
         i = 0
         err = 1
         while err > self.rtol:

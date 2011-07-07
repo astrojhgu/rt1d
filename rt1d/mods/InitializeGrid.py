@@ -23,7 +23,7 @@ m_p = 1.67262158*10**-24		# Proton mass - [m_p] = g
 m_n = 1.67492729*10**-24        # Neutron mass - [m_n] = g
 m_H = m_p + m_e        
 
-tiny_number = 1e-8          
+tiny_number = 1e-12          
 
 class InitializeGrid:
     def __init__(self, pf):
@@ -122,7 +122,7 @@ class InitializeGrid:
         
         if self.IonizationProfile == 0: ionization = self.InitialHIIFraction 
         if self.IonizationProfile == 1: 
-            if (float(cell) / self.GridDimensions) < self.StartRadius: ionization = 0.99999999999
+            if (float(cell) / self.GridDimensions) < self.StartRadius: ionization = 1#0.99999999999
             else: ionization = self.InitialHIIFraction
         
         return ionization    
@@ -162,7 +162,7 @@ class InitializeGrid:
         Initialize doubly ionized helium density - assumed to be very small (can't be exactly zero or it will crash the root finder).
         """
         
-        return self.Y * tiny_number * self.density[cell] / m_H
+        return self.Y * self.ionization[cell] * tiny_number * self.density[cell] / m_H
         
     def InitializeElectronDensity(self, cell):
         """
