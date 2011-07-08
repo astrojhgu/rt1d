@@ -101,6 +101,7 @@ def SetDefaultParameterValues():
         "SourceRadiativeEfficiency": 0.1, \
           
         # Spectral parameters
+        "DiscreteSpectrum": 0, \
         "SpectrumPowerLawIndex": 1.0, \
         "SpectrumMinEnergy": 100, \
         "SpectrumMaxEnergy": 1e4, \

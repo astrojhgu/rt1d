@@ -273,7 +273,7 @@ class InitializeIntegralTables:
         and divide by 4*np.pi*r^2. 
         """
         
-        if self.rs.SourceType > 0:
+        if self.rs.DiscreteSpectrum == 0:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
             
@@ -298,7 +298,7 @@ class InitializeIntegralTables:
                    with a true heating rate in erg / cm^3 / s.
         """    
         
-        if self.rs.SourceType > 0:
+        if self.rs.DiscreteSpectrum == 0:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / E
                                                         
@@ -318,7 +318,7 @@ class InitializeIntegralTables:
         in Eq. 4 in TZ07.
         """
         
-        if self.rs.SourceType > 0:
+        if self.rs.DiscreteSpectrum == 0:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_th[0]   
                 
@@ -339,7 +339,7 @@ class InitializeIntegralTables:
         in Eq. 5 in TZ07.                                                                                                             
         """                                                                                                                           
                                                                                                                                       
-        if self.rs.SourceType > 0:                                                                                   
+        if self.rs.DiscreteSpectrum == 0:                                                                                   
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_th[1]                                                           
                                                                                                                                       

@@ -325,16 +325,16 @@ class Radiate:
                     dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]**2 * alpha)
 
                 # Calculate global timstep based on change in helium neutral fraction for next iteration
-                if self.MultiSpecies:
-                    newxHeII = newerHeII / n_He
-                    
-                    if newxHeII > 0.5: pass
-                    else:
-                        newncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
-                                   np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
-                        Gamma = self.IonizationRateCoefficientHeI(newncol, newHI, newHeI, newxHII, newT, r, Lbol)
-                        alpha = 9.94e-11 * newT**-0.48   
-                        dtphot[cell] = min(dtphot[cell], self.MaxHIIChange * newHeI / np.abs(newHeI * Gamma - newerHeII**2 * alpha))                          
+                #if self.MultiSpecies:
+                #    newxHeII = newerHeII / n_He
+                #    
+                #    if newxHeII > 0.5: pass
+                #    else:
+                #        newncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
+                #                   np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
+                #        Gamma = self.IonizationRateCoefficientHeI(newncol, newHI, newHeI, newxHII, newT, r, Lbol)
+                #        alpha = 9.94e-11 * newT**-0.48   
+                #        dtphot[cell] = min(dtphot[cell], self.MaxHIIChange * newHeI / np.abs(newHeI * Gamma - newerHeII**2 * alpha))                          
                           
         if (size > 0) and (self.ParallelizationMethod == 1):
             for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])

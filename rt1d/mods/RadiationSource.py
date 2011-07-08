@@ -42,6 +42,7 @@ class RadiationSource:
     def __init__(self, pf):
         self.pf = pf
         self.SourceType = pf["SourceType"]
+        self.DiscreteSpectrum = pf["DiscreteSpectrum"]
         self.tau = pf["SourceLifetime"]
         self.TimeUnits = pf["TimeUnits"]
         
@@ -52,38 +53,38 @@ class RadiationSource:
         self.EmaxNorm = pf["SpectrumMaxNormEnergy"]
         
         # Set source-specific parameters
-        if self.SourceType == 0:
-            """
-            Source of fixed monochromatic/polychromatic photon flux.
-            """
+        if self.DiscreteSpectrum == 1:
+            
             self.E = np.array(pf["DiscreteSpectrumSED"])
             self.F = np.array(pf["DiscreteSpectrumRelLum"])
             self.Lph = pf["SpectrumPhotonLuminosity"]
-            self.Lbol = self.Lph / (np.sum(self.F / self.E / erg_per_ev))
             
-        if self.SourceType == 1:
-            """
-            Blackbody.
-            """
-            self.T = pf["SourceTemperature"]
-            self.Lph = pf["SpectrumPhotonLuminosity"]
-        
-        if self.SourceType == 2:
-            """
-            Population III star (Schaerer 2002, Table 3).
-            """
-            self.L = pf["SpectrumPhotonLuminosity"]
-            self.T = pf["SourceTemperature"]
-            self.M = pf["SourceMass"]
-        
-        if self.SourceType == 3:
-            """
-            Power-law source, break energy of 1 keV (Madau 2004).
-            """
-            self.L = pf["SpectrumPhotonLuminosity"]
-            self.M = pf["SourceMass"]
-            self.alpha = -pf["SpectrumPowerLawIndex"] 
-            self.epsilon = pf["SourceRadiativeEfficiency"] 
+            if self.SourceType == 0:
+                """
+                Source of fixed monochromatic/polychromatic photon flux.
+                """                
+                pass    
+            
+            if self.SourceType == 1:
+                """
+                Blackbody.
+                """
+                self.T = pf["SourceTemperature"]
+            
+            if self.SourceType == 2:
+                """
+                Population III star (Schaerer 2002, Table 3).
+                """
+                self.T = pf["SourceTemperature"]
+                self.M = pf["SourceMass"]
+            
+            if self.SourceType == 3:
+                """
+                Power-law source, break energy of 1 keV (Madau 2004).
+                """
+                self.M = pf["SourceMass"]
+                self.alpha = -pf["SpectrumPowerLawIndex"] 
+                self.epsilon = pf["SourceRadiativeEfficiency"] 
             
         # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()
@@ -93,7 +94,7 @@ class RadiationSource:
         Return the fraction of the bolometric luminosity emitted at this energy.  This quantity is dimensionless.
         """
                         
-        if self.SourceType == 0: return self.F  
+        if self.DiscreteSpectrum == 1: return self.F  
         else: return self.LuminosityNormalization * self.SpecificIntensity(E) / self.BolometricLuminosity()
                 
     def SpecificIntensity(self, E):    
@@ -129,20 +130,23 @@ class RadiationSource:
         Returns a constant that normalizes a given spectrum to its bolometric luminosity.
         """
             
-        if self.SourceType == 0:
+            
+        if self.DiscreteSpectrum == 1:
             integral = 1.0
         
-        if self.SourceType == 1 or self.SourceType == 2:
-            integral, err = quad(self.SpecificIntensity, 0, np.inf)
-            
-        if self.SourceType == 3:
-            if self.alpha == -1.0: 
-                integral = (1. / 1000.0**self.alpha) * (self.EmaxNorm - self.EminNorm)
-            elif self.alpha == -2.0: 
-                integral = (1. / 1000.0**self.alpha) * np.log(self.EmaxNorm / self.EminNorm)    
-            else: 
-                integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
-                (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))  
+        else:
+        
+            if self.SourceType == 1 or self.SourceType == 2:
+                integral, err = quad(self.SpecificIntensity, 0, np.inf)
+                
+            if self.SourceType == 3:
+                if self.alpha == -1.0: 
+                    integral = (1. / 1000.0**self.alpha) * (self.EmaxNorm - self.EminNorm)
+                elif self.alpha == -2.0: 
+                    integral = (1. / 1000.0**self.alpha) * np.log(self.EmaxNorm / self.EminNorm)    
+                else: 
+                    integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
+                    (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))  
                                
         #integral = np.sum(self.SpecificIntensity(self.DiscreteSpectrumSED))  
                                                                                                                                                         
@@ -157,7 +161,7 @@ class RadiationSource:
         if (t / self.TimeUnits) > self.tau: return 0.0
         
         if self.SourceType == 0: 
-            return self.Lbol
+            return self.Lph / (np.sum(self.F / self.E / erg_per_ev))
             
         if self.SourceType == 1:
             norm = quad(self.SpecificIntensity, 0, np.inf)[0]
