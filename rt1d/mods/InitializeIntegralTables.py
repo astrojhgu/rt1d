@@ -115,7 +115,7 @@ class InitializeIntegralTables:
         else: dim = "3D"
         
         if self.SourceType == 0: 
-            src = "discrete"
+            src = "mp"
             mort = "{0:g}phot".format(int(self.SpectrumPhotonLuminosity))
             return "{0}_{1}_{2}.h5".format(src, mort, dim)
         

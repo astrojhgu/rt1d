@@ -59,32 +59,32 @@ class RadiationSource:
             self.F = np.array(pf["DiscreteSpectrumRelLum"])
             self.Lph = pf["SpectrumPhotonLuminosity"]
             
-            if self.SourceType == 0:
-                """
-                Source of fixed monochromatic/polychromatic photon flux.
-                """                
-                pass    
-            
-            if self.SourceType == 1:
-                """
-                Blackbody.
-                """
-                self.T = pf["SourceTemperature"]
-            
-            if self.SourceType == 2:
-                """
-                Population III star (Schaerer 2002, Table 3).
-                """
-                self.T = pf["SourceTemperature"]
-                self.M = pf["SourceMass"]
-            
-            if self.SourceType == 3:
-                """
-                Power-law source, break energy of 1 keV (Madau 2004).
-                """
-                self.M = pf["SourceMass"]
-                self.alpha = -pf["SpectrumPowerLawIndex"] 
-                self.epsilon = pf["SourceRadiativeEfficiency"] 
+        if self.SourceType == 0:
+            """
+            Source of fixed monochromatic/polychromatic photon flux.
+            """                
+            pass    
+        
+        if self.SourceType == 1:
+            """
+            Blackbody.
+            """
+            self.T = pf["SourceTemperature"]
+        
+        if self.SourceType == 2:
+            """
+            Population III star (Schaerer 2002, Table 3).
+            """
+            self.T = pf["SourceTemperature"]
+            self.M = pf["SourceMass"]
+        
+        if self.SourceType == 3:
+            """
+            Power-law source, break energy of 1 keV (Madau 2004).
+            """
+            self.M = pf["SourceMass"]
+            self.alpha = -pf["SpectrumPowerLawIndex"] 
+            self.epsilon = pf["SourceRadiativeEfficiency"] 
             
         # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()
