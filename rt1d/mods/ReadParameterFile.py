@@ -103,7 +103,7 @@ def ProblemType(pt):
             
     # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, *continuous spectrum*
     if pt == 2.1:
-       pf = {"ProblemType": 2, "InterpolationMethod": 0, \
+       pf = {"ProblemType": 2.1, "InterpolationMethod": 0, \
              "ColumnDensityBinsHI": 100, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
              "StartRadius": 0.01, "dtDataDump": 5.0, "DataDumpName": 'dd', \
@@ -112,7 +112,7 @@ def ProblemType(pt):
              "IonizationProfile": 1, "InitialHIIFraction": 0, "SourceType": 1, "SourceLifetime": 1e10, \
              "SpectrumPhotonLuminosity": 5e48, "SpectrumMinEnergy": 13.6, "SpectrumMaxEnergy": 100., \
              "SpectrumMinNormEnergy": 13.6, "SpectrumMaxNormEnergy": 100., "HIColumnMin": 1e16, \
-             "HIColumnMax": 1e20
+             "HIColumnMax": 1e20, "DiscreteSpectrum": 0
             }
     
     # RT06-3: I-front trapping in a dense clump and the formation of a shadow
@@ -135,7 +135,7 @@ def ProblemType(pt):
               "ColumnDensityBinsHI": 50, "ColumnDensityBinsHeI": 10, "ColumnDensityBinsHeII": 10, 
               "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
-              "StartRadius": 0.01, "dtDataDump": 0.1, "DataDumpName": 'dd', \
+              "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 1, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
               "DensityProfile": 1, "InitialRedshift": 20, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
               "IonizationProfile": 1, "InitialHIIFraction": 1e-4, "SourceType": 3, "SourceLifetime": 1e10, \
@@ -148,7 +148,7 @@ def ProblemType(pt):
               "ColumnDensityBinsHI": 50, "ColumnDensityBinsHeI": 10, "ColumnDensityBinsHeII": 10, 
               "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
-              "StartRadius": 0.01, "dtDataDump": 0.1, "DataDumpName": 'dd', \
+              "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 1, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
               "DensityProfile": 1, "InitialRedshift": 20, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
               "IonizationProfile": 1, "InitialHIIFraction": 1e-4, "SourceType": 0, "SourceLifetime": 1e10, \

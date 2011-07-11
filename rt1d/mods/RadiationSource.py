@@ -51,13 +51,10 @@ class RadiationSource:
         self.Emax = pf["SpectrumMaxEnergy"]
         self.EminNorm = pf["SpectrumMinNormEnergy"]
         self.EmaxNorm = pf["SpectrumMaxNormEnergy"]
-        
-        # Set source-specific parameters
-        if self.DiscreteSpectrum == 1:
-            
-            self.E = np.array(pf["DiscreteSpectrumSED"])
-            self.F = np.array(pf["DiscreteSpectrumRelLum"])
-            self.Lph = pf["SpectrumPhotonLuminosity"]
+                    
+        self.E = np.array(pf["DiscreteSpectrumSED"])
+        self.F = np.array(pf["DiscreteSpectrumRelLum"])
+        self.Lph = pf["SpectrumPhotonLuminosity"]
             
         if self.SourceType == 0:
             """
