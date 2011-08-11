@@ -29,7 +29,7 @@ class WriteData:
         self.TimeUnits = pf["TimeUnits"]
         self.OutputDirectory = pf["OutputDirectory"]
 
-    def WriteAllData(self, data, wct, t):
+    def WriteAllData(self, data, wct, t, dt):
         DataDumpName = "{0}{1:04d}".format(self.pf["DataDumpName"], wct)
                                 
         f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.OutputDirectory, DataDumpName), 'w') 
@@ -39,6 +39,7 @@ class WriteData:
                         
         for par in self.pf: 
             if par == "CurrentTime": pf_grp.create_dataset(par, data = t / self.TimeUnits)
+            elif par == "CurrentTimestep": pf_grp.create_dataset(par, data = t / self.TimeUnits)
             else: pf_grp.create_dataset(par, data = self.pf[par])
         for field in data: data_grp.create_dataset(field, data = data[field])
         

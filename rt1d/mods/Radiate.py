@@ -57,7 +57,9 @@ class Radiate:
         self.ParallelizationMethod = pf["ParallelizationMethod"]
         
         self.MaxHIIChange = pf["MaxHIIChange"]
+        self.MaxHeIIChange = pf["MaxHeIIChange"]
         self.HIIRestrictedTimestep = pf["HIIRestrictedTimestep"]
+        self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
         
         self.MultiSpecies = pf["MultiSpecies"]
         self.Isothermal = pf["Isothermal"]
@@ -316,30 +318,35 @@ class Radiate:
             if self.HIIRestrictedTimestep:  
                 newxHII = newHII[-1] / n_H                
                 
-                if newxHII > 0.5: pass
-                else:
-                    newncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
-                               np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
-                    Gamma = self.IonizationRateCoefficientHI(newncol, newdata["ElectronDensity"][cell], newHI, newHeI, newxHII, newT, r, Lbol)        
-                    alpha = 2.6e-13 * (newT / 1.e4)**-0.85  
-                    dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]**2 * alpha)
+                newncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
+                           np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
+                
+                Gamma = self.IonizationRateCoefficientHI(newncol, newdata["ElectronDensity"][cell], newHI, newHeI, newxHII, newT, r, Lbol)        
+                alpha = 2.6e-13 * (newT / 1.e4)**-0.85  
+                
+                # Shapiro et al. 2004
+                dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]**2 * alpha)  
 
                 # Calculate global timstep based on change in helium neutral fraction for next iteration
-                #if self.MultiSpecies:
-                #    newxHeII = newerHeII / n_He
-                #    
-                #    if newxHeII > 0.5: pass
-                #    else:
-                #        newncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
-                #                   np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
-                #        Gamma = self.IonizationRateCoefficientHeI(newncol, newHI, newHeI, newxHII, newT, r, Lbol)
-                #        alpha = 9.94e-11 * newT**-0.48   
-                #        dtphot[cell] = min(dtphot[cell], self.MaxHIIChange * newHeI / np.abs(newHeI * Gamma - newerHeII**2 * alpha))                          
+                if self.MultiSpecies and self.HeIIRestrictedTimestep:
+                    newxHeII = newerHeII / n_He
+                    
+                    Beta = 2.38e-11 * np.sqrt(newT) * (1. + np.sqrt(newT / 1.e5))**-1. * np.exp(-2.853e5 / newT) * self.CollisionalIonization
+                    Gamma = self.IonizationRateCoefficientHeI(newncol, newHI, newHeI, newxHII, newT, r, Lbol)                    
+                    alpha = 9.94e-11 * newT**-0.48   
+                    
+                    # Analogous to Shapiro et al. 2004 but for helium
+                    dtphot[cell] = min(dtphot[cell], self.MaxHeIIChange * newHeI / \
+                        np.abs(newHeI * (Gamma + newdata["ElectronDensity"][cell] * Beta) - newerHeII* newdata["ElectronDensity"][cell] * alpha)) 
+                    
+                # So timestep can be written out later
+                newdata["dtPhoton"][cell] = dtphot[cell]                      
                           
         if (size > 0) and (self.ParallelizationMethod == 1):
             for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
         
-        if self.HIIRestrictedTimestep: newdt = min(np.min(dtphot), 2 * dt)
+        # Also not allowing huge decreases in dt as of 08.11.2011
+        if self.HIIRestrictedTimestep: newdt = max(min(np.min(dtphot[self.StartCell:]), 2 * dt), dt / 2)
         else: newdt = dt
         
         if rank == 0 and self.ProgressBar: pbar.finish()

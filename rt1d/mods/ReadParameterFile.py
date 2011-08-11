@@ -39,7 +39,7 @@ def ReadParameterFile(pf):
             pf_new = ProblemType(float(parval))
             for param in pf_new: pf_dict[param] = pf_new[param]
                         
-        # Else, actually read in the parameter                                     
+        # Else, actually read in the parameter           
         try: parval = float(parval)
         except ValueError:
             if parval.replace('_', '').replace('.', '').strip().isalnum(): 
@@ -84,7 +84,7 @@ def ProblemType(pt):
               "Isothermal": 1, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
               "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e4, \
               "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 0, "SourceLifetime": 1e10, \
-              "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrumMethod": 1, "DiscreteSpectrumSED": [13.6], \
+              "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrum": 1, "DiscreteSpectrumSED": [13.6], \
               "SpectrumMinEnergy": 0.1, "SpectrumMaxEnergy": 100, "CollisionalIonization": 0, "DiscreteSpectrumRelLum": [1.0]
              }        
 
@@ -139,7 +139,7 @@ def ProblemType(pt):
               "Isothermal": 0, "MultiSpecies": 1, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
               "DensityProfile": 1, "InitialRedshift": 20, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
               "IonizationProfile": 1, "InitialHIIFraction": 1e-4, "SourceType": 3, "SourceLifetime": 1e10, \
-              "SourceMass": 1e4, "SourceRadiativeEfficiency": 0.1
+              "SourceMass": 1e6, "SourceRadiativeEfficiency": 0.1, "SpectrumPowerLawIndex": 1.5
              }      
              
     # X-ray source, helium included, discrete spectrum         
@@ -153,7 +153,7 @@ def ProblemType(pt):
               "DensityProfile": 1, "InitialRedshift": 20, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
               "IonizationProfile": 1, "InitialHIIFraction": 1e-4, "SourceType": 0, "SourceLifetime": 1e10, \
               "DiscreteSpectrumSED": [500.], "DiscreteSpectrumRelLum": [1.], \
-              "SourceMass": 1e4, "SourceRadiativeEfficiency": 0.1
+              "SourceMass": 1e6, "SourceRadiativeEfficiency": 0.1
              }                        
              
         

@@ -64,10 +64,14 @@ def SetDefaultParameterValues():
         "dtDataDump": 1.0, \
         "DataDumpName": 'dd', \
         "OutputDirectory": './', \
+        "OutputTimestep": 1, \
         "ProgressBar": 1, \
         "InitialTimestep": 1e-8, \
+        "CurrentTimestep": 1e-8, \
         "HIIRestrictedTimestep": 1, \
+        "HeIIRestrictedTimestep": 0, \
         "MaxHIIChange": 0.05, \
+        "MaxHeIIChange": 0.05, \
         
         # Physics
         "Isothermal": 0, \
@@ -102,7 +106,7 @@ def SetDefaultParameterValues():
           
         # Spectral parameters
         "DiscreteSpectrum": 0, \
-        "SpectrumPowerLawIndex": 1.0, \
+        "SpectrumPowerLawIndex": 1.5, \
         "SpectrumMinEnergy": 100, \
         "SpectrumMaxEnergy": 1e4, \
         "SpectrumMinNormEnergy": 100, \

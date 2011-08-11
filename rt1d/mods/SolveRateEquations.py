@@ -34,6 +34,7 @@ class SolveRateEquations:
                 
         """
 
+        self.pf = pf
         self.MultiSpecies = pf["MultiSpecies"]
         self.Isothermal = pf["Isothermal"]
         
@@ -78,15 +79,25 @@ class SolveRateEquations:
         i = 1
         while x[i - 1] < xf: 
             xnext = x[i - 1] + h
-            ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)
+            ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)                        
                                                                                                                                                                
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
             finite = np.isfinite(ynext)
             positive = np.greater_equal(ynext, 0.)
             if not np.all(finite) or not np.all(positive): 
-                h = max(self.hmin, h / 2.)
-                continue
-                                        
+                
+                # If we haven't hit our smallest allowed timestep
+                if h > self.hmin:
+                    h = max(self.hmin, h / 2.)
+                    continue
+                else:
+                    c = np.less(ynext, 0)
+                    temp = np.array(ynext)
+                    temp[c] = self.guesses[c] * 1e-8
+                    ynext = list(temp)
+                    
+            #print i, ynext, x[i - 1] / self.pf["TimeUnits"]        
+                                                            
             # Adaptive time-stepping
             adapted = False
             if self.stepper > 0 and (h != self.hmin or i == 1):
@@ -98,7 +109,7 @@ class SolveRateEquations:
                         h = max(self.hmin, h / 2.)
                         adapted = True
                         break
-                        
+                                                
             # If we've gotten this far without adaptively stepping, increase h for the next timestep
             if adapted is False: h = min(self.hmax, 2. * h)
             

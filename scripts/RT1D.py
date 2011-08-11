@@ -62,7 +62,7 @@ for i, pf in enumerate(all_pfs):
      
     TimeUnits = pf["TimeUnits"]
     StopTime = pf["StopTime"] * TimeUnits
-    dt = pf["InitialTimestep"] * TimeUnits
+    dt = pf["CurrentTimestep"] * TimeUnits
     dtDataDump = pf["dtDataDump"] * TimeUnits
             
     # Initialize grid and file system
@@ -78,6 +78,7 @@ for i, pf in enumerate(all_pfs):
             made = True
         else: made = False
         
+        # Wait here if parallelizing over parameter space
         if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(made, root = 0)    
 
     # Initialize integral tables
@@ -94,38 +95,50 @@ for i, pf in enumerate(all_pfs):
     t = pf["CurrentTime"] * TimeUnits
     h = dt
     wct = int(t / dtDataDump) + 1
-    if not IsRestart: w.WriteAllData(data, 0, t)
-                    
+    if not IsRestart: w.WriteAllData(data, 0, t, dt)
+    
+    # If we want to store timestep evolution, setup dump file
+    if pf["OutputTimestep"]: 
+        fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'w')
+        print >> fdt, '# t  dt'
+        fdt.close()
+    
+    # Solve radiative transfer                
     while t < StopTime:
+        
+        if pf["OutputTimestep"]: 
+            fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'a')
+            print >> fdt, t / TimeUnits, dt / TimeUnits
                                 
         # Ensure we land on our data dump times exactly
         if (t + dt) > ddt[wct]: 
             dt = ddt[wct] - t
             tnow = t + dt
             write_now = True
-        elif (t + dt) == ddt[wct]:
-            write_now = True
-        else:
-            write_now = False
+        elif (t + dt) == ddt[wct]: write_now = True
+        else: write_now = False
 
         # Evolve photons
         data, h, newdt = r.EvolvePhotons(data, t, dt, min(h, dt))
         t += dt
         dt = newdt
                        
-        # Write-out data, or don't                                        
+        # Write-out data                                        
         if write_now:
             wrote = False
             if i % size == rank: 
-                w.WriteAllData(data, wct, tnow)
+                w.WriteAllData(data, wct, tnow, dt)
                 wrote = True
             wct += 1
            
         # Don't move on until root processor has written out data    
         if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(wrote, root = 0)    
+    
+    if pf["OutputTimestep"]: 
+        print >> fdt, ""
+        fdt.close()
                 
     elapsed = time.time() - start    
     print "Calculation {0} complete (output to {1}).  Elapsed time = {2} seconds.".format(i + 1, pf["OutputDirectory"], int(elapsed))
-
 
 print "Successful run. Exiting."

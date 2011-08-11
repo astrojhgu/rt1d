@@ -277,8 +277,9 @@ class InitializeIntegralTables:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
             
-            integral = integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-16)[0]
+            integral = integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-16)[0]
                         
+            print n, integral            
             return integral
                   
         else:

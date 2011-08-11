@@ -64,6 +64,9 @@ class InitializeGrid:
         for field in FieldList:
             fields[field] = np.array(eval("map(self.Initialize{0}, self.cells)".format(field)))
         
+        # Additional fields
+        fields['dtPhoton'] = np.ones_like(fields[fields.keys()[0]])
+        
         return fields                
                         
     def InitializeDensity(self, cell):

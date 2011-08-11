@@ -21,9 +21,7 @@ class DataDump:
         Note: I'm not including the first cells because values will be zero and mess
         up log plots!
         
-        """
-        
-        
+        """        
         
         self.GridDimensions = pf["GridDimensions"].value
         self.StartCell = self.GridDimensions * pf["StartRadius"].value
@@ -42,6 +40,7 @@ class DataDump:
         self.x_HI = self.n_HI / self.n_H
         self.x_HII = self.n_HII / self.n_H
         self.ncol_HI = np.cumsum(self.n_HI) * self.dx 
+        self.dtPhoton = dd["dtPhoton"].value[self.StartCell:] / pf["TimeUnits"].value
         
         if pf["MultiSpecies"].value > 0:
             self.n_HeI = dd["HeIDensity"].value[self.StartCell:]

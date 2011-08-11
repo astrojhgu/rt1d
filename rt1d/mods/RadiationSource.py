@@ -56,32 +56,15 @@ class RadiationSource:
         self.F = np.array(pf["DiscreteSpectrumRelLum"])
         self.Lph = pf["SpectrumPhotonLuminosity"]
             
-        if self.SourceType == 0:
-            """
-            Source of fixed monochromatic/polychromatic photon flux.
-            """                
-            pass    
+        # SourceType = 1, 2
+        self.T = pf["SourceTemperature"]
         
-        if self.SourceType == 1:
-            """
-            Blackbody.
-            """
-            self.T = pf["SourceTemperature"]
+        # SourceType = 2, 3
+        self.M = pf["SourceMass"]
         
-        if self.SourceType == 2:
-            """
-            Population III star (Schaerer 2002, Table 3).
-            """
-            self.T = pf["SourceTemperature"]
-            self.M = pf["SourceMass"]
-        
-        if self.SourceType == 3:
-            """
-            Power-law source, break energy of 1 keV (Madau 2004).
-            """
-            self.M = pf["SourceMass"]
-            self.alpha = -pf["SpectrumPowerLawIndex"] 
-            self.epsilon = pf["SourceRadiativeEfficiency"] 
+        # SourceType = 3
+        self.alpha = -pf["SpectrumPowerLawIndex"] 
+        self.epsilon = pf["SourceRadiativeEfficiency"] 
             
         # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()
@@ -125,8 +108,7 @@ class RadiationSource:
     def NormalizeLuminosity(self):
         """
         Returns a constant that normalizes a given spectrum to its bolometric luminosity.
-        """
-            
+        """            
             
         if self.DiscreteSpectrum == 1:
             integral = 1.0
@@ -146,7 +128,7 @@ class RadiationSource:
                     (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))  
                                
         #integral = np.sum(self.SpecificIntensity(self.DiscreteSpectrumSED))  
-                                                                                                                                                        
+                                                                                                                                                                                
         return self.BolometricLuminosity(0.0) / integral  
         
     def BolometricLuminosity(self, t = 0.0):
