@@ -64,6 +64,8 @@ for i, pf in enumerate(all_pfs):
     StopTime = pf["StopTime"] * TimeUnits
     dt = pf["CurrentTimestep"] * TimeUnits
     dtDataDump = pf["dtDataDump"] * TimeUnits
+    StartCell = int(pf["StartRadius"] * pf["GridDimensions"])
+    r_0 = pf["LengthUnits"] * StartCell / pf["GridDimensions"]
             
     # Initialize grid and file system
     if IsRestart: data = ICs
@@ -89,6 +91,15 @@ for i, pf in enumerate(all_pfs):
     # Initialize radiation and write data classes
     r = rtm.Radiate(pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
     w = rtm.WriteData(pf)
+    
+    # Compute initial timestep based on hydrogen/helium ionization rates in first cell
+    Gamma = r.IonizationRateCoefficientHI([0, 0, 0], 0, data['HIDensity'][StartCell], data['HeIDensity'][StartCell], data["ElectronDensity"][StartCell], \
+        data['Temperature'][StartCell], r_0, r.rs.BolometricLuminosity(0))        
+    alpha = 2.6e-13 * (data['Temperature'][StartCell] / 1.e4)**-0.85  
+    
+    # Shapiro et al. 2004 - override initial timestep in parameter file
+    dt = pf["MaxHIIChange"] * data['HIDensity'][StartCell] / \
+        np.abs(data['HIDensity'][StartCell] * Gamma - data["ElectronDensity"][StartCell]**2 * alpha)
         
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
@@ -99,13 +110,14 @@ for i, pf in enumerate(all_pfs):
     
     # If we want to store timestep evolution, setup dump file
     if pf["OutputTimestep"]: 
-        fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'w')
+        if IsRestart: fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'a')
+        else: fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'w')
         print >> fdt, '# t  dt'
         fdt.close()
     
     # Solve radiative transfer                
     while t < StopTime:
-                
+                        
         if pf["OutputTimestep"]: 
             fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'a')
             print >> fdt, t / TimeUnits, dt / TimeUnits
@@ -121,7 +133,7 @@ for i, pf in enumerate(all_pfs):
         # Evolve photons
         data, h, newdt = r.EvolvePhotons(data, t, dt, min(h, dt))
         t += dt
-        dt = newdt
+        dt = newdt # dt for the next timestep
                        
         # Write-out data                                        
         if write_now:
