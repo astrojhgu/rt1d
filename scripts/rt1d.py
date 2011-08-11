@@ -105,7 +105,7 @@ for i, pf in enumerate(all_pfs):
     
     # Solve radiative transfer                
     while t < StopTime:
-        
+                
         if pf["OutputTimestep"]: 
             fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'a')
             print >> fdt, t / TimeUnits, dt / TimeUnits

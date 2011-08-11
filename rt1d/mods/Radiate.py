@@ -325,7 +325,7 @@ class Radiate:
                 alpha = 2.6e-13 * (newT / 1.e4)**-0.85  
                 
                 # Shapiro et al. 2004
-                dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]**2 * alpha)  
+                dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]* newdata["ElectronDensity"][cell] * alpha)  
 
                 # Calculate global timstep based on change in helium neutral fraction for next iteration
                 if self.MultiSpecies and self.HeIIRestrictedTimestep:
@@ -345,8 +345,7 @@ class Radiate:
         if (size > 0) and (self.ParallelizationMethod == 1):
             for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
         
-        # Also not allowing huge decreases in dt as of 08.11.2011
-        if self.HIIRestrictedTimestep: newdt = max(min(np.min(dtphot[self.StartCell:]), 2 * dt), dt / 2)
+        if self.HIIRestrictedTimestep: newdt = min(np.min(dtphot[self.StartCell:]), 2 * dt)
         else: newdt = dt
         
         if rank == 0 and self.ProgressBar: pbar.finish()

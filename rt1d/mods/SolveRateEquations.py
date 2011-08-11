@@ -90,14 +90,12 @@ class SolveRateEquations:
                 if h > self.hmin:
                     h = max(self.hmin, h / 2.)
                     continue
-                else:
+                else: # Or throw an RT1D_FAIL?
                     c = np.less(ynext, 0)
                     temp = np.array(ynext)
                     temp[c] = self.guesses[c] * 1e-8
                     ynext = list(temp)
-                    
-            #print i, ynext, x[i - 1] / self.pf["TimeUnits"]        
-                                                            
+                                                                                
             # Adaptive time-stepping
             adapted = False
             if self.stepper > 0 and (h != self.hmin or i == 1):
@@ -106,6 +104,8 @@ class SolveRateEquations:
                 # Limit determined by worst integration in set of equations.
                 for k, err in enumerate(drel):
                     if (err > self.rtol):
+                        if h == self.hmin: raise ValueError('Minimum ODE step reached.  Exiting.')
+                        
                         h = max(self.hmin, h / 2.)
                         adapted = True
                         break
