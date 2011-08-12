@@ -62,11 +62,10 @@ for i, pf in enumerate(all_pfs):
      
     TimeUnits = pf["TimeUnits"]
     StopTime = pf["StopTime"] * TimeUnits
-    dt = pf["CurrentTimestep"] * TimeUnits
     dtDataDump = pf["dtDataDump"] * TimeUnits
     StartCell = int(pf["StartRadius"] * pf["GridDimensions"])
     r_0 = pf["LengthUnits"] * StartCell / pf["GridDimensions"]
-            
+                        
     # Initialize grid and file system
     if IsRestart: data = ICs
     else:
@@ -92,14 +91,19 @@ for i, pf in enumerate(all_pfs):
     r = rtm.Radiate(pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
     w = rtm.WriteData(pf)
     
-    # Compute initial timestep based on hydrogen/helium ionization rates in first cell
-    Gamma = r.IonizationRateCoefficientHI([0, 0, 0], 0, data['HIDensity'][StartCell], data['HeIDensity'][StartCell], data["ElectronDensity"][StartCell], \
-        data['Temperature'][StartCell], r_0, r.rs.BolometricLuminosity(0))        
-    alpha = 2.6e-13 * (data['Temperature'][StartCell] / 1.e4)**-0.85  
+    # Compute timestep
+    if IsRestart or pf["HIIRestrictedTimestep"] == 0: dt = pf["CurrentTimestep"] * TimeUnits
+    else:
+        Gamma = r.IonizationRateCoefficientHI(3 * [1e-10], 0, data['HIDensity'][StartCell], data['HeIDensity'][StartCell], data["ElectronDensity"][StartCell], \
+            data['Temperature'][StartCell], r_0, r.rs.BolometricLuminosity(0))        
+        alpha = 2.6e-13 * (data['Temperature'][StartCell] / 1.e4)**-0.85  
+        
+        # Shapiro et al. 2004 - override initial timestep in parameter file
+        dt = pf["MaxHIIChange"] * data['HIDensity'][StartCell] / \
+            np.abs(data['HIDensity'][StartCell] * Gamma - data["ElectronDensity"][StartCell]**2 * alpha)
     
-    # Shapiro et al. 2004 - override initial timestep in parameter file
-    dt = pf["MaxHIIChange"] * data['HIDensity'][StartCell] / \
-        np.abs(data['HIDensity'][StartCell] * Gamma - data["ElectronDensity"][StartCell]**2 * alpha)
+        # Make it even smaller just to play it safe if helium is involved
+        if pf["MultiSpecies"]: dt *= 0.1   
         
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)

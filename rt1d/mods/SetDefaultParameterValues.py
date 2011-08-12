@@ -66,7 +66,6 @@ def SetDefaultParameterValues():
         "OutputDirectory": './', \
         "OutputTimestep": 1, \
         "ProgressBar": 1, \
-        "InitialTimestep": 1e-8, \
         "CurrentTimestep": 1e-8, \
         "HIIRestrictedTimestep": 1, \
         "HeIIRestrictedTimestep": 0, \
