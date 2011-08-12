@@ -79,7 +79,7 @@ for i, pf in enumerate(all_pfs):
             made = True
         else: made = False
         
-        # Wait here if parallelizing over parameter space
+        # Wait here if parallelizing over grid
         if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(made, root = 0)    
 
     # Initialize integral tables
