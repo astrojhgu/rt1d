@@ -68,7 +68,7 @@ def SetDefaultParameterValues():
         "ProgressBar": 0, \
         "CurrentTimestep": 1e-8, \
         "HIIRestrictedTimestep": 1, \
-        "HeIIRestrictedTimestep": 0, \
+        "HeIIRestrictedTimestep": 1, \
         "MaxHIIChange": 0.05, \
         "MaxHeIIChange": 0.05, \
         
