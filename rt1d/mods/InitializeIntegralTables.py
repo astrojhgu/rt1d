@@ -279,7 +279,6 @@ class InitializeIntegralTables:
             
             integral = integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-16)[0]
                         
-            print n, integral            
             return integral
                   
         else:

@@ -131,7 +131,9 @@ for i, pf in enumerate(all_pfs):
             dt = ddt[wct] - t
             tnow = t + dt
             write_now = True
-        elif (t + dt) == ddt[wct]: write_now = True
+        elif (t + dt) == ddt[wct]: 
+            tnow = t + dt
+            write_now = True
         else: write_now = False
 
         # Evolve photons
