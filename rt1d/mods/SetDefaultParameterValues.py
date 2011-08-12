@@ -65,7 +65,7 @@ def SetDefaultParameterValues():
         "DataDumpName": 'dd', \
         "OutputDirectory": './', \
         "OutputTimestep": 1, \
-        "ProgressBar": 1, \
+        "ProgressBar": 0, \
         "CurrentTimestep": 1e-8, \
         "HIIRestrictedTimestep": 1, \
         "HeIIRestrictedTimestep": 0, \
@@ -100,6 +100,7 @@ def SetDefaultParameterValues():
         "SourceTemperature": 1e5, \
         "SourceRadius": 1.0, \
         "SourceMass": 1e3, \
+        "FixedSourceMass": 0, \
         "SourceLifetime": 1e10, \
         "SourceRadiativeEfficiency": 0.1, \
           

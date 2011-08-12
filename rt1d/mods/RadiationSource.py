@@ -61,6 +61,7 @@ class RadiationSource:
         
         # SourceType = 2, 3
         self.M = pf["SourceMass"]
+        self.FixedSourceMass = pf["FixedSourceMass"]
         
         # SourceType = 3
         self.alpha = -pf["SpectrumPowerLawIndex"] 
@@ -126,9 +127,7 @@ class RadiationSource:
                 else: 
                     integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
                     (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))  
-                               
-        #integral = np.sum(self.SpecificIntensity(self.DiscreteSpectrumSED))  
-                                                                                                                                                                                
+                                                                                                                                                                                                               
         return self.BolometricLuminosity(0.0) / integral  
         
     def BolometricLuminosity(self, t = 0.0):
@@ -150,7 +149,8 @@ class RadiationSource:
             return 10**SchaererTable["Luminosity"][SchaererTable["Mass"].index(self.M)] * lsun
             
         if self.SourceType > 2:
-            Mnow = self.M * np.exp( ((1.0 - self.epsilon) / self.epsilon) * t / t_edd)
+            if self.FixedSourceMass: Mnow = self.M
+            else: Mnow = self.M * np.exp( ((1.0 - self.epsilon) / self.epsilon) * t / t_edd)
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
             
     def SpectrumCDF(self, E):
