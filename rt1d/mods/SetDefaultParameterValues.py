@@ -69,6 +69,8 @@ def SetDefaultParameterValues():
         "CurrentTimestep": 1e-8, \
         "HIIRestrictedTimestep": 1, \
         "HeIIRestrictedTimestep": 1, \
+        "LightCrossingTimeRestrictedStep": 0, \
+        "RadiativeTransferCourantCondition": 0.5, \
         "MaxHIIChange": 0.05, \
         "MaxHeIIChange": 0.05, \
         
@@ -80,6 +82,7 @@ def SetDefaultParameterValues():
         "SecondaryIonization": 1, \
         "ComptonCooling": 1, \
         "CosmologicalExpansion": 0, \
+        "InfiniteSpeedOfLight": 1, \
         
         # Initial conditions
         "DensityProfile": 0, \

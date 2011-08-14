@@ -61,10 +61,17 @@ for i, pf in enumerate(all_pfs):
     if (i % size != rank) and (pf["ParallelizationMethod"] == 2): continue
      
     TimeUnits = pf["TimeUnits"]
+    LengthUnits = pf["LengthUnits"]
+    GridDimensions = pf["GridDimensions"]
     StopTime = pf["StopTime"] * TimeUnits
     dtDataDump = pf["dtDataDump"] * TimeUnits
-    StartCell = int(pf["StartRadius"] * pf["GridDimensions"])
-    r_0 = pf["LengthUnits"] * StartCell / pf["GridDimensions"]
+    StartCell = int(pf["StartRadius"] * GridDimensions)
+    r_0 = LengthUnits * StartCell / GridDimensions
+    
+    # Print out cell-crossing and box-crossing times for convenience
+    print "Cell-crossing time = {0} (years), {1} (code)".format(LengthUnits / GridDimensions / 29979245800.0 / 31557600.0, \
+        LengthUnits / GridDimensions / 29979245800.0 / TimeUnits)
+    print "Box-crossing time = {0} (years), {1} (code)\n".format(LengthUnits / 29979245800.0, LengthUnits / 29979245800.0 / TimeUnits)
                         
     # Initialize grid and file system
     if IsRestart: data = ICs

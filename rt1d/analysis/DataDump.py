@@ -42,6 +42,10 @@ class DataDump:
         self.ncol_HI = np.cumsum(self.n_HI) * self.dx 
         self.dtPhoton = dd["dtPhoton"].value[self.StartCell:] / pf["TimeUnits"].value
         
+        #try:
+        #    if not pf["InfiniteSpeedOfLight"]: self.PhotonPackages = dd["PhotonPackages"].value
+        #except KeyError: pass
+        
         if pf["MultiSpecies"].value > 0:
             self.n_HeI = dd["HeIDensity"].value[self.StartCell:]
             self.n_HeII = dd["HeIIDensity"].value[self.StartCell:]
