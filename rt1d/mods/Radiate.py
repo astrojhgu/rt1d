@@ -323,7 +323,7 @@ class Radiate:
                     if cell_pack > cell: continue                   
                                         
                     # If this photon package won't reach the current cell in the next dt, none of them will.  Proceed.
-                    if r > r_max: break
+                    if cell > cell_pack_max: break
                                                                         
                     # Column density (and thus tau) between source and where this package was at time t
                     ncol_pack = copy.copy(pack[1:])
@@ -354,6 +354,8 @@ class Radiate:
                                         
                     mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                     newdata["Temperature"][cell] = qnew[3][-1] * 2. * mu / 3. / k_B / n_B
+                    
+                    print newdata['HIDensity'][cell]
                     
                     values = (qnew[0][-1], qnew[1][-1], qnew[2][-1], qnew[3][-1])
 
