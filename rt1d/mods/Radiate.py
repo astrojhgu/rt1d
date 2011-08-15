@@ -90,6 +90,7 @@ class Radiate:
         self.HeIColumn = n_col[1]
         self.HeIIColumn = n_col[2]
         
+        self.OnePhotonPackagePerCell = pf["OnePhotonPackagePerCell"]
         self.RadiativeTransferCourantCondition = pf["RadiativeTransferCourantCondition"]        
         self.LightCrossingTimeRestrictedStep = pf["LightCrossingTimeRestrictedStep"]
         self.AdaptiveStep = pf["ODEAdaptiveStep"]
@@ -237,16 +238,20 @@ class Radiate:
             # Photon packages going from oldest to youngest - will have to create it on first timestep
             try: packs = list(data['PhotonPackages']) 
             except KeyError: packs = []            
-                        
-            t_packs = zip(*packs)[0]    # Birth times for all packages
-            r_packs = (t - t_packs) * c
             
-            if np.any(r_packs[r_packs < self.StartRadius * self.LengthUnits]): pass
-            else:
-        
-                # Launch new photon package - [t_birth, ncol_HI_0, ncol_HeI_0, ncol_HeII_0]
-                packs.append(np.array([t, 0., 0., 0.]))
-                        
+            if packs and self.OnePhotonPackagePerCell:            
+                t_packs = zip(*packs)[0]    # Birth times for all packages
+                r_packs = (t - t_packs) * c
+                
+                # If there are already photon packages in the first cell, don't make another
+                if np.any(r_packs[r_packs < (self.StartRadius * self.LengthUnits)]): pass
+                else:
+                    # Launch new photon package - [t_birth, ncol_HI_0, ncol_HeI_0, ncol_HeII_0]                
+                    packs.append(np.array([t, 0., 0., 0.]))
+            else: packs.append(np.array([t, 0., 0., 0.]))
+                 
+            print len(packs)     
+                                                
         # If accreting black hole, luminosity will change with time.
         Lbol = self.rs.BolometricLuminosity(t)
 
@@ -302,7 +307,6 @@ class Radiate:
                     r, z, mu, n_H, n_He, ncol, Lbol)
                     
             else:
-                
                 values = (n_HII, n_HeII, n_HeIII, E)
                 qnew = [[0, n_HII], [0, n_HeII], [0, n_HeIII], [0, E]]
                                                                                                   
@@ -312,37 +316,44 @@ class Radiate:
                     r_pack = (t - t_birth) * c                      # Position of package before evolving photons
                     r_max = (t + dt - t_birth) * c                  # Furthest this package will get this timestep
                     
-                    # Cell of package before evolving photons
-                    cell_pack = np.argmin(np.abs(r_pack - self.r))
-                    if (r_pack - self.r)[cell_pack] < 0: 
-                        cell_pack = 0
-                        while (r_pack - self.r)[cell_pack] < 0: cell_pack += 1
-                                                                                                                       
+                    cell_pack = int(r_pack * self.GridDimensions / self.LengthUnits)
+                    cell_pack_max = int(r_max * self.GridDimensions / self.LengthUnits)
+                                                                                                                  
                     # If this photon package is already past the current cell, do nothing
                     if cell_pack > cell: continue                   
                                         
                     # If this photon package won't reach the current cell in the next dt, none of them will.  Proceed.
                     if r > r_max: break
-                                        
+                                                                        
                     # Column density (and thus tau) between source and where this package was at time t
-                    ncol_pack = pack[1:]
+                    ncol_pack = copy.copy(pack[1:])
                                         
-                    #print cell_pack, cell                    
                     # Add optical depth of the medium this package has traversed only in the last dt
                     ncol_pack[0] += np.sum(newdata['HIDensity'][cell_pack:cell]) * self.dx
                     ncol_pack[1] += np.sum(newdata['HeIDensity'][cell_pack:cell]) * self.dx
                     ncol_pack[2] += np.sum(newdata['HeIIDensity'][cell_pack:cell]) * self.dx
-                                                                         
+                                                                                                                       
                     # Luminosity of object at time package was launched
                     Lbol_new = self.rs.BolometricLuminosity(t_birth)
-                    # new mu?
                     
                     tarr, qnew, h = self.solver.integrate(self.qdot, values, t, t + dt, None, h, \
                         r, z, mu, n_H, n_He, ncol_pack, Lbol_new)
                     
                     newdata['HIDensity'][cell] = n_H - qnew[0][-1]
+                    newdata['HIIDensity'][cell] = n_H - newdata['HIDensity'][cell]
                     newdata['HeIDensity'][cell] = n_He - qnew[1][-1] - qnew[2][-1]
                     newdata['HeIIDensity'][cell] = n_He - qnew[2][-1] - newdata['HeIDensity'][cell]
+                    newdata['HeIIIDensity'][cell] = n_He - newdata['HeIIDensity'][cell] - newdata['HeIDensity'][cell]
+                    newdata["ElectronDensity"][cell] = (n_H - newdata['HIDensity'][cell]) + newdata['HeIIDensity'][cell] + 2.0 * newdata['HeIIIDensity'][cell]
+                    
+                    x_HII = newdata['HIIDensity'][cell] / n_H
+                    if self.MultiSpecies:
+                        x_HeII = newdata['HeIIDensity'][cell] / n_He
+                        x_HeIII = newdata['HeIIIDensity'][cell] / n_He
+                    else: x_HeII = x_HeIII = 0
+                                        
+                    mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
+                    newdata["Temperature"][cell] = qnew[3][-1] * 2. * mu / 3. / k_B / n_B
                     
                     values = (qnew[0][-1], qnew[1][-1], qnew[2][-1], qnew[3][-1])
 
@@ -393,7 +404,7 @@ class Radiate:
                 alpha = 2.6e-13 * (newT / 1.e4)**-0.85  
                 
                 # Shapiro et al. 2004
-                dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1]* newdata["ElectronDensity"][cell] * alpha)  
+                dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1] * newdata["ElectronDensity"][cell] * alpha)  
 
                 # Calculate global timstep based on change in helium neutral fraction for next iteration
                 if self.MultiSpecies and self.HeIIRestrictedTimestep:
@@ -421,7 +432,7 @@ class Radiate:
         if rank == 0 and self.ProgressBar: pbar.finish()
         
         # Update photon packages        
-        if not self.InfiniteSpeedOfLight: newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t, newdata)  # t + newdt?      
+        if not self.InfiniteSpeedOfLight: newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt, newdata)  # t + newdt?      
                 
         return newdata, h, newdt         
         
@@ -437,7 +448,7 @@ class Radiate:
         for i, pack in enumerate(packs):
             t_birth = pack[0]
             r_pack = (t_next - t_birth) * c               
-            cell_pack = np.argmin(np.abs(self.r - r_pack))
+            cell_pack = int(r_pack * self.GridDimensions / self.LengthUnits)
             
             packs[i][1] = ncol_HI[cell_pack]
             packs[i][2] = ncol_HeI[cell_pack]
@@ -446,6 +457,8 @@ class Radiate:
         to_eliminate = []
         for i, pack in enumerate(packs):
             if (t_next - pack[0]) > (self.LengthUnits / c): to_eliminate.append(i)
+            if pack[0] > self.HIColumn[-1]: 
+                to_eliminate.append(i)
             
         to_eliminate.reverse()    
         for element in to_eliminate: packs.pop(element)

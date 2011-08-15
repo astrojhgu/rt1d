@@ -71,6 +71,7 @@ def SetDefaultParameterValues():
         "HeIIRestrictedTimestep": 1, \
         "LightCrossingTimeRestrictedStep": 0, \
         "RadiativeTransferCourantCondition": 0.5, \
+        "OnePhotonPackagePerCell": 0, \
         "MaxHIIChange": 0.05, \
         "MaxHeIIChange": 0.05, \
         
