@@ -249,7 +249,7 @@ class Radiate:
                 else:
                     # Launch new photon package - [t_birth, ncol_HI_0, ncol_HeI_0, ncol_HeII_0]                
                     packs.append(np.array([t, 0., 0., 0.]))
-            else: packs.append(np.array([t, 0., 0., 0.]))
+            else: packs.append(np.array([t, 0., 0., 0., self.rs.BolometricLuminosity(t) * dt]))
                                                                  
         # If accreting black hole, luminosity will change with time.
         Lbol = self.rs.BolometricLuminosity(t)
@@ -334,9 +334,12 @@ class Radiate:
                     ncol_pack[2] += np.sum(newdata['HeIIDensity'][cell_pack:cell]) * self.dx
                                                                                                                        
                     # Luminosity of object at time package was launched
-                    Lbol_new = self.rs.BolometricLuminosity(t_birth)
+                    #Lbol_new = self.rs.BolometricLuminosity(t_birth)
+                    
 
                     subdt = min((r_max - r) / c, self.dx - (r_pack - r) / c, self.dx / c)
+                           
+                    Lbol_new = pack[-1] / subdt
                                                                             
                     #print subdt, (r_max - r) / c, self.dx - (r_pack - r) / c, self.dx / c         
                                                                                                                 
