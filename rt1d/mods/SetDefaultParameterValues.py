@@ -84,6 +84,7 @@ def SetDefaultParameterValues():
         "ComptonCooling": 1, \
         "CosmologicalExpansion": 0, \
         "InfiniteSpeedOfLight": 1, \
+        "PlaneParallelField": 0, \
         
         # Initial conditions
         "DensityProfile": 0, \

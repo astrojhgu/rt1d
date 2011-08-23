@@ -69,6 +69,7 @@ class Radiate:
         self.CollisionalExcitation = pf["CollisionalExcitation"]
         self.SecondaryIonization = pf["SecondaryIonization"]
         self.InitialTemperature = pf["InitialTemperature"]
+        self.PlaneParallelField = pf["PlaneParallelField"]
         
         self.InterpolationMethod = pf["InterpolationMethod"]
         self.AdaptiveTimestep = pf["ODEAdaptiveStep"]
@@ -249,9 +250,7 @@ class Radiate:
                     # Launch new photon package - [t_birth, ncol_HI_0, ncol_HeI_0, ncol_HeII_0]                
                     packs.append(np.array([t, 0., 0., 0.]))
             else: packs.append(np.array([t, 0., 0., 0.]))
-                 
-            print len(packs)     
-                                                
+                                                                 
         # If accreting black hole, luminosity will change with time.
         Lbol = self.rs.BolometricLuminosity(t)
 
@@ -283,13 +282,13 @@ class Radiate:
             # Compute mean molecular weight for this cell
             mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                                     
-            # For convenience         
+            # For convenience     
             ncol = [ncol_HI[cell], ncol_HeI[cell], ncol_HeII[cell]]
             nabs = [n_HI, n_HeI, n_HeII]
             nion = [n_HII, n_HeII, n_HeIII]
             n_H = n_HI + n_HII
             n_He = n_HeI + n_HeII + n_HeIII
-            n_B = n_H + n_He + n_e
+            n_B = n_H + n_He + n_e              # STILL DONT UNDERSTAND THIS
                                     
             # Compute internal energy for this cell
             T = data["Temperature"][cell]
@@ -305,18 +304,19 @@ class Radiate:
             if self.InfiniteSpeedOfLight:
                 tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                     r, z, mu, n_H, n_He, ncol, Lbol)
-                    
+            
+            # Things are tougher if c != inf        
             else:
                 values = (n_HII, n_HeII, n_HeIII, E)
                 qnew = [[0, n_HII], [0, n_HeII], [0, n_HeIII], [0, E]]
-                                                                                                  
+                                                                                                                                               
                 # Loop over photon packages and solve rate equations
-                for j, pack in enumerate(packs):              
+                for j, pack in enumerate(packs):       
                     t_birth = pack[0]
                     r_pack = (t - t_birth) * c                      # Position of package before evolving photons
                     r_max = (t + dt - t_birth) * c                  # Furthest this package will get this timestep
                     
-                    cell_pack = int(r_pack * self.GridDimensions / self.LengthUnits)
+                    cell_pack = r_pack * self.GridDimensions / self.LengthUnits
                     cell_pack_max = int(r_max * self.GridDimensions / self.LengthUnits)
                                                                                                                   
                     # If this photon package is already past the current cell, do nothing
@@ -324,7 +324,7 @@ class Radiate:
                                         
                     # If this photon package won't reach the current cell in the next dt, none of them will.  Proceed.
                     if cell > cell_pack_max: break
-                                                                        
+                                                                                            
                     # Column density (and thus tau) between source and where this package was at time t
                     ncol_pack = copy.copy(pack[1:])
                                         
@@ -335,8 +335,12 @@ class Radiate:
                                                                                                                        
                     # Luminosity of object at time package was launched
                     Lbol_new = self.rs.BolometricLuminosity(t_birth)
-                    
-                    tarr, qnew, h = self.solver.integrate(self.qdot, values, t, t + dt, None, h, \
+
+                    subdt = min((r_max - r) / c, self.dx - (r_pack - r) / c, self.dx / c)
+                                                                            
+                    #print subdt, (r_max - r) / c, self.dx - (r_pack - r) / c, self.dx / c         
+                                                                                                                
+                    tarr, qnew, h = self.solver.integrate(self.qdot, values, t, t + subdt, None, h, \
                         r, z, mu, n_H, n_He, ncol_pack, Lbol_new)
                     
                     newdata['HIDensity'][cell] = n_H - qnew[0][-1]
@@ -351,16 +355,18 @@ class Radiate:
                         x_HeII = newdata['HeIIDensity'][cell] / n_He
                         x_HeIII = newdata['HeIIIDensity'][cell] / n_He
                     else: x_HeII = x_HeIII = 0
+                           
+                    if not self.Isothermal:                    
+                        mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
+                        n_B = newdata['HIDensity'][cell] + newdata['HIIDensity'][cell] + newdata["ElectronDensity"][cell] # NOT GOOD FOR MULTISPECIES
+                        newdata["Temperature"][cell] = qnew[3][-1] * 2. * mu / 3. / k_B / n_B
+                    else: qnew[3][-1] = E
                                         
-                    mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
-                    newdata["Temperature"][cell] = qnew[3][-1] * 2. * mu / 3. / k_B / n_B
-                    
-                    print newdata['HIDensity'][cell]
-                    
                     values = (qnew[0][-1], qnew[1][-1], qnew[2][-1], qnew[3][-1])
 
                     # Not currently worrying about tolerance error stuff here - see below
-                                                
+            
+                                                                                    
             # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
             newHII, newHeII, newHeIII, newE = qnew
                         
@@ -452,6 +458,8 @@ class Radiate:
             r_pack = (t_next - t_birth) * c               
             cell_pack = int(r_pack * self.GridDimensions / self.LengthUnits)
             
+            if cell_pack > (self.GridDimensions / self.LengthUnits): continue
+            
             packs[i][1] = ncol_HI[cell_pack]
             packs[i][2] = ncol_HeI[cell_pack]
             packs[i][3] = ncol_HeII[cell_pack]                        
@@ -478,7 +486,9 @@ class Radiate:
         # Photo-Ionization       
         IonizationRate = Lbol * \
                          self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(0)) \
-                         / 4. / np.pi / r**2      
+                         / 4. / np.pi / r**2   
+                         
+        if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                      
         
         # Collisional Ionization
         if self.CollisionalIonization:
@@ -488,13 +498,17 @@ class Radiate:
             IonizationRate += Lbol * \
                               self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
                               self.Interpolate.interp(ncol, "SecondaryIonizationRateHI{0}".format(0)) \
-                              / 4. / np.pi / r**2                                                        
+                              / 4. / np.pi / r**2     
+                              
+            if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                                                                     
                         
             if self.MultiSpecies > 0:
                 IonizationRate += Lbol * (n_HeI / n_HI) * \
                                  self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
                                  self.Interpolate.interp(ncol, "SecondaryIonizationRateHI{0}".format(1)) \
                                  / 4. / np.pi / r**2
+                                 
+                if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                                       
                 
         return IonizationRate
         
@@ -510,6 +524,8 @@ class Radiate:
         IonizationRate = Lbol * \
                          self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(1)) \
                          / 4. / np.pi / r**2 
+                         
+        if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                                       
         
         if self.SecondaryIonization:
             IonizationRate += Lbol * \
@@ -521,6 +537,8 @@ class Radiate:
                               self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
                               self.Interpolate.interp(ncol, "SecondaryIonizationRateHeI{0}".format(1)) \
                               / 4. / np.pi / r**2
+                              
+            if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                                        
         
         return IonizationRate
         
@@ -536,9 +554,13 @@ class Radiate:
         
         IonizationRate = Lbol * self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(2)) / 4. / np.pi / r**2 
         
+        if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                      
+        
         if self.SecondaryIonization > 1:
             IonizationRate += Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 3) * \
                 self.Interpolate.interp(ncol, "SecondaryIonizationRate{0}".format(2)) / 4. / np.pi / r**2
+                
+            if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                          
         
         return IonizationRate
         
@@ -557,6 +579,8 @@ class Radiate:
             heat += nabs[2] * self.Interpolate.interp(ncol, "ElectronHeatingRate{0}".format(2))
                               
         heat *= self.esec.DepositionFraction(0.0, x_HII, channel = 0) * Lbol / 4.0 / np.pi / r**2 
+        
+        if self.PlaneParallelField: heat *= 4. * np.pi * r**2                      
                                                                                                                                                                                                                          
         return heat
     

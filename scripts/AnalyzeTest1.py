@@ -46,7 +46,7 @@ grid = np.arange(GridDims)
 r = []
 t = []
 mean_xH = []
-for dd in ds.data.keys():
+for dd in ds.data.keys()[1:]:
     x_H = ds.data[dd].x_HI
     
     mean_xH.append(np.mean(x_H))
