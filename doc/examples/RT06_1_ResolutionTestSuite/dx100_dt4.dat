@@ -1,0 +1,5 @@
+ProblemType = 1
+CurrentTimestep = 1e-4
+GridDimensions = 100
+OutputDirectory = dx100_dt4
+HIIRestrictedTimestep = 0

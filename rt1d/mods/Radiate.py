@@ -311,6 +311,8 @@ class Radiate:
                 qnew = [[0, n_HII], [0, n_HeII], [0, n_HeIII], [0, E]]
                                                                                                                                                
                 # Loop over photon packages and solve rate equations
+                Lbol_new = 0
+                subdt = dt
                 for j, pack in enumerate(packs):       
                     t_birth = pack[0]
                     r_pack = (t - t_birth) * c                      # Position of package before evolving photons
@@ -326,48 +328,44 @@ class Radiate:
                     if cell > cell_pack_max: break
                                                                                             
                     # Column density (and thus tau) between source and where this package was at time t
-                    ncol_pack = copy.copy(pack[1:])
+                    ncol_pack = copy.copy(pack[1:-1])
                                         
                     # Add optical depth of the medium this package has traversed only in the last dt
-                    ncol_pack[0] += np.sum(newdata['HIDensity'][cell_pack:cell]) * self.dx
-                    ncol_pack[1] += np.sum(newdata['HeIDensity'][cell_pack:cell]) * self.dx
-                    ncol_pack[2] += np.sum(newdata['HeIIDensity'][cell_pack:cell]) * self.dx
+                    #ncol_pack[0] += np.sum(newdata['HIDensity'][cell_pack:cell]) * self.dx
+                    #ncol_pack[1] += np.sum(newdata['HeIDensity'][cell_pack:cell]) * self.dx
+                    #ncol_pack[2] += np.sum(newdata['HeIIDensity'][cell_pack:cell]) * self.dx
                                                                                                                        
                     # Luminosity of object at time package was launched
                     #Lbol_new = self.rs.BolometricLuminosity(t_birth)
                     
-
                     subdt = min((r_max - r) / c, self.dx - (r_pack - r) / c, self.dx / c)
                            
-                    Lbol_new = pack[-1] / subdt
-                                                                            
-                    #print subdt, (r_max - r) / c, self.dx - (r_pack - r) / c, self.dx / c         
-                                                                                                                
-                    tarr, qnew, h = self.solver.integrate(self.qdot, values, t, t + subdt, None, h, \
-                        r, z, mu, n_H, n_He, ncol_pack, Lbol_new)
-                    
-                    newdata['HIDensity'][cell] = n_H - qnew[0][-1]
-                    newdata['HIIDensity'][cell] = n_H - newdata['HIDensity'][cell]
-                    newdata['HeIDensity'][cell] = n_He - qnew[1][-1] - qnew[2][-1]
-                    newdata['HeIIDensity'][cell] = n_He - qnew[2][-1] - newdata['HeIDensity'][cell]
-                    newdata['HeIIIDensity'][cell] = n_He - newdata['HeIIDensity'][cell] - newdata['HeIDensity'][cell]
-                    newdata["ElectronDensity"][cell] = (n_H - newdata['HIDensity'][cell]) + newdata['HeIIDensity'][cell] + 2.0 * newdata['HeIIIDensity'][cell]
-                    
-                    x_HII = newdata['HIIDensity'][cell] / n_H
-                    if self.MultiSpecies:
-                        x_HeII = newdata['HeIIDensity'][cell] / n_He
-                        x_HeIII = newdata['HeIIIDensity'][cell] / n_He
-                    else: x_HeII = x_HeIII = 0
-                           
-                    if not self.Isothermal:                    
-                        mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
-                        n_B = newdata['HIDensity'][cell] + newdata['HIIDensity'][cell] + newdata["ElectronDensity"][cell] # NOT GOOD FOR MULTISPECIES
-                        newdata["Temperature"][cell] = qnew[3][-1] * 2. * mu / 3. / k_B / n_B
-                    else: qnew[3][-1] = E
-                                        
-                    values = (qnew[0][-1], qnew[1][-1], qnew[2][-1], qnew[3][-1])
-
-                    # Not currently worrying about tolerance error stuff here - see below
+                    # Add energy from all photon packages that enter this cell       
+                    Lbol_new += pack[-1] / subdt
+                                                                                 
+                tarr, qnew, h = self.solver.integrate(self.qdot, values, t, t + dt, None, h, \
+                    r, z, mu, n_H, n_He, ncol, Lbol_new)
+                
+                #newdata['HIDensity'][cell] = n_H - qnew[0][-1]
+                #newdata['HIIDensity'][cell] = n_H - newdata['HIDensity'][cell]
+                #newdata['HeIDensity'][cell] = n_He - qnew[1][-1] - qnew[2][-1]
+                #newdata['HeIIDensity'][cell] = n_He - qnew[2][-1] - newdata['HeIDensity'][cell]
+                #newdata['HeIIIDensity'][cell] = n_He - newdata['HeIIDensity'][cell] - newdata['HeIDensity'][cell]
+                #newdata["ElectronDensity"][cell] = (n_H - newdata['HIDensity'][cell]) + newdata['HeIIDensity'][cell] + 2.0 * newdata['HeIIIDensity'][cell]
+                
+                #x_HII = newdata['HIIDensity'][cell] / n_H
+                #if self.MultiSpecies:
+                #    x_HeII = newdata['HeIIDensity'][cell] / n_He
+                #    x_HeIII = newdata['HeIIIDensity'][cell] / n_He
+                #else: x_HeII = x_HeIII = 0
+                       
+                #if not self.Isothermal:                    
+                #    mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
+                #    n_B = newdata['HIDensity'][cell] + newdata['HIIDensity'][cell] + newdata["ElectronDensity"][cell] # NOT GOOD FOR MULTISPECIES
+                #    newdata["Temperature"][cell] = qnew[3][-1] * 2. * mu / 3. / k_B / n_B
+                #else: qnew[3][-1] = E
+                #                    
+                #values = (qnew[0][-1], qnew[1][-1], qnew[2][-1], qnew[3][-1])
             
                                                                                     
             # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
