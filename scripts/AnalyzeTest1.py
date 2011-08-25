@@ -92,7 +92,7 @@ pl.savefig('{0}/RT_Test1_IfrontEvolution.png'.format(OutputDirectory))
 pl.clf()
 
 # Write out data
-misc.writetab((t / trec, r / r_anl_bin), '{0}/RT_Test1_IfrontEvolution.dat'.format(OutputDirectory), ('t/trec', 'r/ranl'))
+misc.writetab((t / trec, r, r / r_anl_bin), '{0}/RT_Test1_IfrontEvolution.dat'.format(OutputDirectory), ('t/trec', 'r', 'r/ranl'))
         
 # Ionized and neutral fractions vs. R and t (assumes dtDataDump = 5)
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HI, ls = '-', color = 'k', label = r'$1 - x_i$')

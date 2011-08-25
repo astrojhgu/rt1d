@@ -28,12 +28,15 @@ def ReadParameterFile(pf):
         if not line.split(): continue
         if line.split()[0][0] == "#": continue
         
+        # This will prevent crashes if there is not a blank line at the end of the parameter file
+        if line[-1] != '\n': line += '\n'
+        
         # Cleave off end-of-line comments.
         line = line[:line.rfind("#")].strip()
         
         # Read in the parameter name and the parameter value(s).
         parname, eq, parval = line.partition("=")
-                    
+                                        
         # ProblemType option
         if parname.strip() == 'ProblemType' and float(parval) > 0:
             pf_new = ProblemType(float(parval))
