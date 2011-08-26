@@ -75,7 +75,7 @@ r_anl_bin = map(func, t)
         
 mp = multiplot(dims = (2, 1), panel_size = (0.5, 1))
 
-mp.axes[0].plot(t / trec, r, ls = '--', color = 'k')
+mp.axes[0].plot(t / trec, r, color = 'k', ls = '--')
 mp.axes[0].plot(t_anl / trec, r_anl, linestyle = '-', color = 'k')
 mp.axes[0].set_xlim(0, 1 * max(t/trec))
 mp.axes[0].set_ylim(0, 1.1 * max(max(r), max(r_anl)))

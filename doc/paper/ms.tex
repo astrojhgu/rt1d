@@ -1,0 +1,305 @@
+%
+%  Template for writing APJ style papers
+%
+%  Created by Jordan Mirocha on 2009-09-17.
+%  Copyright (c) 2009 . All rights reserved. (really? ha)
+%
+
+%---------------------------------------- Declarations -----------------------------------------%
+
+%\documentclass{emulateapj}
+%\documentclass[12pt,preprint]{aastex}
+%\usepackage{emulateapj5}
+%\usepackage{apjfonts}
+%
+%% Define General Packages
+%\usepackage{graphicx}
+%\usepackage{pslatex}
+%\usepackage{amsmath, amsthm, amssymb}
+%\usepackage{natbib}
+%\usepackage{epsfig}
+%
+%% Use utf-8 encoding for foreign characters
+%\usepackage[utf8]{inputenc}
+
+%%% Declarations
+\documentclass[preprint2]{aastex}              % double-column, single-spaced document
+%\documentclass[preprint2,longabstract]{aastex}% if abstract too long
+%\documentclass[manuscript]{aastex}            % one-column, double-spaced document:
+
+\usepackage{graphicx}
+\usepackage{pslatex}
+\usepackage{amsmath, amsthm, amssymb}
+\usepackage{natbib}
+\usepackage{epsfig}
+
+
+
+
+
+% Short names
+\shorttitle{Optimized Multi-Frequency Spectra for Computational Radiative Transfer}
+\shortauthors{Mirocha & Darling}
+
+%-------------------------------------- PAPER STARTS HERE --------------------------------------%
+
+\begin{document}
+    
+%%% START custom commands
+\newcommand{\HI}{\text{HI}}
+\newcommand{\HII}{\text{HII}}
+\newcommand{\HeI}{\text{HeI}}
+\newcommand{\HeII}{\text{HeII}}
+\newcommand{\HeIII}{\text{HeIII}}
+\newcommand{\nHI}{n_{\text{HI}}} 
+\newcommand{\nHII}{n_{\text{HII}}}  
+\newcommand{\nHeI}{n_{\text{HeI}}}
+\newcommand{\nHeII}{n_{\text{HeII}}}
+\newcommand{\nHeIII}{n_{\text{HeIII}}}  
+\newcommand{\nel}{n_{\text{e}}}  
+\newcommand{\nb}{n_{\text{b}}}
+\newcommand{\nnu}{$n_{\nu}$ }
+\newcommand{\ncol}{n_i^{\text{col}}}
+\newcommand{\gHI}{\Gamma_{\text{HI}}}  
+\newcommand{\gHeI}{\Gamma_{\text{HeI}}}
+\newcommand{\gHeII}{\Gamma_{\text{HeII}}}
+\newcommand{\aHII}{\alpha_{\text{HII}}}  
+\newcommand{\aHeII}{\alpha_{\text{HeII}}}  
+\newcommand{\aHeIII}{\alpha_{\text{HeIII}}} 
+\newcommand{\bHeI}{\beta_{\text{HeI}}}  
+\newcommand{\bHeII}{\beta_{\text{HeII}}}  
+\newcommand{\xHeII}{\xi_{\text{HeII}}}
+\newcommand{\kB}{k_{\text{B}}}
+\newcommand{\fheat}{f_{\text{heat}}}
+\newcommand{\Lbol}{\mathcal{L}_{\text{bol}}}
+\newcommand{\spec}{\mathcal{N}}
+\newcommand{\Heat}{\mathcal{H}}
+%%% END custom commands
+
+\title {Optimized Multi-Frequency Spectra for Numerical Radiative Transfer}
+\author{Jordan Mirocha, Stephen Skory, Jack Burns}
+\affil{Center for Astrophysics and Space Astronomy, University of Colorado, Campus Box 389, Boulder, CO 80309}
+\affil{NASA Lunar Science Institute, NASA Ames Research Center, Moffett Field, CA 94043, USA}
+
+%%%
+%% Abstract
+%%%
+\begin{abstract}
+The recent emergence and implementation of complex algorithms for radiative transfer in numerous cosmological hydrodynamics codes has led to a dramatic improvement in simulations of radiative feedback in various astrophysical environments.  However, due to computational expense, the spectra of radiation sources are often discretized into a small number of frequency bins.  Using simple 1D radiative transfer calculations around model stars and accreting black holes, we find that even in the idealized case of a static density field the reduction of continuous spectra to only a few discrete emission frequencies has significant consequences for the resulting temperature and ionization profiles.  We quantify the effects of different discretization schemes for objects of different luminosities and spectral models, and propose a new technique to reduce errors while minimizing computational expense.
+\end{abstract} 
+\subjectheadings {computational methods -- radiative transfer -- reionization -- radiative feedback}
+
+%%%
+%% Introduction
+%%%
+\section{Introduction}
+The recent development of advanced numerical methods for radiative transfer has led to a substantial increase in the number of astrophysical problems that are computationally accessible.   Several fully 3D cosmological hydrodynamics codes have implemented adaptive ray-tracing methods (\cite{Abel2002}) for propagating radiation around point sources, including \cite{Wise2011} and others.  Flux-limited diffusion schemes (\cite{Reynolds2009} and others) have begun to surface as well, both in cosmological problems and accretion disk problems.  More recently, hybrid-schemes (VET, Petkova \& Springel, etc.) have begun to make an appearance.  For a review on the state of convergence among these varying numerical methods, see \cite{Iliev2006} and \cite{Iliev2009}.
+
+Unfortunately, the vast majority of radiative transfer simulations run to date have only considered radiation at a single frequency.  While this monochromatic approach is the natural first step computationally-speaking, sampling radiation fields at multiple frequencies is essential for accurately calculating the properties of the medium through which photons propagate.  The mere presence of ionizing photons ensures that gas surrounding a radiation source will become ionized and heated, but the degree to which gas is ionized and heated depends on the total number of ionizing photons and their spectral energy distribution (SED).  As a result, we should expect the properties of gas surrounding a blackbody source of ultraviolet (UV) photons to be quite different from those of a power-law X-ray source such as an accreting black hole.  Even relatively small changes in SED can produce noticeable differences in surrounding gas properties, like changing the power-law index of a black-hole accretion spectrum (\cite{Kuhlen2005}; \cite{Thomas2008}).  But, these expectations are built on the assumption that each source is represented by a continuous SED, not one we have constructed with \nnu discrete frequency bins.  As we'll see in \S2, for a given source, the properties of the surrounding medium can be altered considerably solely due to the manner in which we discretize its spectrum.
+
+The consequences of poor frequency resolution have been explored recently by \cite{Wise2011}, who find that for the expansion of an HII region around a $10^5$ K blackbody source in a hydrogen-only medium, the density, temperature, velocity, and ionization profiles are well converged for $n_{\nu} \ge 4$.  Use of a monochromatic spectrum for this problem introduces significant errors since all photons are absorbed at a characteristic column density, whereas multi-frequency treatments achieve some column density dependent behavior, and can thus mimic the behavior of a truly continuous spectrum.  The convergence for this test problem is reassuring, though the prospects for convergence are less clear if one were interested in the absorption processes of multiple chemical species, ionization and heating due to X-rays and their energetic secondary photo-electrons (\cite{Shull1985}; \cite{Furlanetto2010}), or inhomogeneous media.  Such effects are likely important in studies of radiative feedback from stars and active galactic nuclei (AGN), and most certainly in efforts to simulate cosmological reionization.  As a result, an effort must be made to ensure the SEDs used in numerical simulations to represent these sources produce
+
+Though we will find that multi-frequency radiative transfer is necessary in most cases to accurately calculate the ionization and temperature state of the gas, it can also add significant computational expense.  Because the efficiency with which photons ionize and heat a gas depends on their energy, adding more energy groups will alter the amount of ionization and heating taking place in a given computational grid element.  But, these properties of the gas also dictate the computational time-step.  Generally, it is recommended that radiation time-steps are limited by a maximum fractional change in neutral species abundances so that ionization fronts are propagated at the correct speed (\cite{Shapiro2004}).  As a result, the addition of photons that ionize gas more efficiently will lead to a more expensive calculation since the time-step necessary to restrict changes in the neutral fraction will shrink.  Similarly, radiation-hydrodynamic simulations may be slowed by the inclusion of photons that heat gas efficiently, since higher temperature cells have greater sound speeds, and thus require a smaller time-step.  Expense due to additional energy groups is certainly method-dependent, and may even be implementation-dependent.  For example, including high energy photons with long mean free paths will be very costly for a ray-tracing algorithm, but add no expense to a problem solved by flux-limited diffusion.  In addition, some adaptive ray-tracing implementations require each additional energy group in the source spectrum to be traced independently, in which case the time required by the radiative transfer solver scales roughly as \nnu.  Other implementations are now avoiding this problem by tracing all energy groups at once, though keeping them separate can be advantageous since energy groups with small mean free paths will be completely attenuated at small radii (\cite{Wise2011}).
+
+With all of these factors in mind, we want to determine the following.  How many energy groups are required to adequately sample the true SED of a given radiation source?  Where should they be positioned in frequency?  What fraction of the bolometric luminosity should be allocated to each energy group?  What are the consequences of spectral discretization both physically and computationally?  
+
+The contents of this paper fall into three general areas.  In \S2 we will quantitatively assess the accuracy with which multi-frequency calculations reproduce the ionization and heating profiles of continuous spectral energy distributions.  \S3 is devoted to introducing a technique for optimally selecting discrete SED templates so as to minimize the errors between discrete and continuous spectra, and \S4 will present the results obtained with this method.  In \S5, we conclude.  Details concerning the code developed for this work, as well as a discussion regarding the factors that influence the solution of radiative transfer calculations, whether it be the time-step, grid resolution, frequency resolution, or the interplay of all three, can be found in the Appendix.
+
+
+%Reduce guesswork!  Choose frequency resolution in the same way that one chooses spatial/mass resolution.
+
+%%% 
+%% Methods & Motivation
+%%%
+\section{Methods \& Motivation}
+The key to our subsequent analysis was inspired by this same convenient feature: if $\Gamma_i$ and $\Heat_i$ can be tabulated for a given source \textit{a-priori}, it means that \textit{precision determination of the ionization state and temperature of the gas surrounding that source relies solely on accurate numerical computation of the photoionization and heating rate integrals in Equations \ref{PhotoionizationRate} and \ref{HeatingRate}}.  So, for a given source, we can compute the values of these integrals numerically for the continuous spectrum, and then as discrete sums given $n_{\nu}$ frequency bins with 
+\begin{equation}
+    I(E) = \sum_{j=1}^{n_{\nu}} I(E_j) .
+\end{equation}
+
+% Code Verification
+%\subsection{Code Verification}
+%Our code, \texttt{rt1d}, solves Equations \ref{HIIRateEquation}, \ref{HeIIRateEquation}, \ref{HeIIIRateEquation}, and \ref{TemperatureEvolution} using the implicit Euler method for integration and the Newton-Raphson technique for root finding.  In order to track the propagation of ionization fronts accurately, we limit the time-step based on a maximum neutral fraction change as introduced in \cite{Shapiro2004},
+%\begin{equation}
+%    \Delta t = \epsilon_{\mathrm{ion}} \frac{\nHI}{|d\nHI/dt|} ,
+%\end{equation}
+%and additionally require that the time-step increase by a factor of two at most, as in \cite{Wise2011}.  
+%
+%To demonstrate the functionality of the code, we repeat tests 1 and 2 from the Radiative Transfer Comparison Project (\cite{Iliev2006}; hereafter referred to as RT06).  Test 1 is the expansion of an HII region in a hydrogen-only, isothermal medium surrounding a monochromatic source of 13.6 eV photons.  Test 2 is the same, except for the temperature is allowed to evolve according to Equation \ref{TemperatureEvolution}, and the monochromatic radiation source is replaced by a $10^5$ K blackbody spectrum.  Results for Test 1 are shown in Figures \ref{fig:RT_Test1_IfrontEvolution} and \ref{fig:RT_Test1_RadialProfiles}, and for Test 2 in Figure \ref{fig:RT_Test2_RadialProfiles}.
+%\begin{figure*}
+%\begin{center}
+%\leavevmode
+%\psfig{file=figures/RT_Test1_IfrontEvolution.ps,width=6in}
+%\vspace{-20pt}
+%\caption[]{\textit{Top:} Comparison of the calculated (dashed) and analytic (solid) positions of an expanding ionization front in a hydrogen-only, isothermal medium. \textit{Bottom:} Ratio of the calculated and analytic solutions.}
+%\label{fig:RT_Test1_IfrontEvolution}
+%\end{center}
+%\end{figure*}
+%
+%\begin{figure*}
+%\begin{center}
+%\leavevmode
+%\psfig{file=figures/RT_Test1_RadialProfiles.ps,width=6in}
+%\vspace{-20pt}
+%\caption[]{Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $30$, $100$, and $500$ Myr.}
+%\label{fig:RT_Test1_RadialProfiles}
+%\end{center}
+%\end{figure*}
+%
+%\begin{figure*}
+%\begin{center}
+%\leavevmode
+%\psfig{file=figures/RT_Test2_RadialProfiles.ps,width=6in}
+%\vspace{-20pt}
+%\caption[]{\textit{Top:} Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $100$, and $500$ Myr. \textit{Bottom:} Radial profiles of the kinetic temperature at $t = 10$, $100$, and $500$ Myr (solid, dashed, and dotted lines, respectively).}
+%\label{fig:RT_Test2_RadialProfiles}
+%\end{center}
+%\end{figure*}
+
+
+% Discretization Artifacts
+\subsection{Discretization Artifacts}
+
+
+% Optimization Strategy
+\subsection{Optimization Strategy}
+Our goal is to find the discrete spectrum, $I(E_j)$, that optimally reproduces the values of $\Gamma_i$ and $\Heat_i$ as a function of column density.  Denoting the photoionization and heating rates for a discrete spectrum as $\Gamma_i^d$ and $\Heat_i^d$, we want to minimize the difference between continuous and discrete solutions, i.e. $|\Gamma_i - \Gamma_i^d| = |\Heat_i - \Heat_i^d| = 0$.  As we will see in subsequent sections, these functions span several orders of magnitude in the ordinate over the column density regime of interest.  In order to place equal emphasis on the accuracy of solutions for high column densities (for which $\Gamma_i$ and $\Heat_i$ are small), it is more practical to seek solutions to
+\begin{equation}
+    \mathrm{log_{10}}\left | \frac{\Gamma_i}{\Gamma_i^d}\right | = \mathrm{log_{10}}\left | \frac{\Heat_i}{\Heat_i^d}\right | = 0 .
+\end{equation}    
+To do this, we employ a Monte-Carlo method called Simulated Annealing, in which we run $K$ Monte-Carlo trials, or random walks, each of which consists of $L$ steps.  In order to steer each random walk towards the global minimum, we will evaluate the quantity  
+\begin{equation}
+    P = \mathrm{exp}\left[-(f_{k,l} - f_{k,l-1}) / T \right]  \label{Probability}
+\end{equation}
+where $l=0,1,2,...L$ represents the current step in the current random walk, $k$, where $k = 0,1,2,...K$.  At each step in a given random walk, we generate a random number, $q$, that will determine whether we keep our current guess, $I(E_{k,l})$, or revert to our previous guess, $I(E_{k,l-1})$.  The condition for keeping our current guess is
+\begin{equation}
+    P \ge q .
+\end{equation}
+The key aspect of this analysis is how we vary the control parameter $T$, which is called the temperature in analogy with Boltzmann's equation.  Equation \ref{Probability} tells us that regardless of the value of $T$, if $f_l < f_{l-1}$ (i.e. our guess is better than the last), then
+\begin{equation}
+    P \ge 1
+\end{equation}
+and we have a 100\% chance of keeping our current guess.  It is clear now that how we control the temperature only effects how we deal with bad guesses (decreasing the temperature means we become less tolerant of bad guesses).  There are many ways of doing this, but for simplicity we adopt the following technique.  Every $m$ steps, we take
+\begin{equation}
+    T \rightarrow \gamma T ,
+\end{equation}
+where $\gamma$ is an experimentally determined quantity of order unity.
+
+
+\section{Results}
+
+
+
+
+\section{Why not tabulate? (discussion)}
+
+% Could FLD methods tabulate? OTVET? RSPH?  MC?
+
+
+\section{Conclusions}
+
+
+
+\bibliography{references}
+\bibliographystyle{apj}
+
+%%%
+%% APPENDIX
+%%%
+\appendix
+
+% RT Framework
+\section{A. Radiative Transfer Framework}
+
+Our radiative transfer scheme is modeled closely after the work of \cite{Fukugita1994} and \cite{Thomas2008}, though for completeness we will reiterate the aspects of these methods most pertinent to the problem at hand.  In general, propagating a radiation field relies on solving differential equations governing the rate of change in the number densities of all ions and the temperature of the gas.  Assuming a medium consisting of hydrogen and helium only, we first solve for the relative abundances of each ion via
+\begin{align}
+    \frac{d \nHII}{dt} & = \gHI \nHI - \aHII \nel \nHII   \label{HIIRateEquation} \\
+    \frac{d \nHeII}{dt} & = \gHeI \nHeI - \bHeI \nel \nHeI + \bHeII \nel \nHeII \label{HeIIRateEquation} \\ \nonumber 
+    & - \aHeII \nel \nHeII + \aHeIII \nel \nHeIII - \xHeII \nel \nHeIII  \\
+    \frac{d \nHeIII}{dt} & = \gHeII \nHeII - \bHeII \nel \nHeII + \aHeIII \nel \nHeIII . \label{HeIIIRateEquation}
+\end{align}
+Each of these equations represents the balance of ionizations and recombinations for ion $i = \HII, \HeII, \HeIII$, where $\Gamma_i$ denotes the photoionization rate coefficient, $\alpha_i$ ($\xi_i$) the case-A (dielectric) recombination rate coefficients, and $\beta_i$ the collisional ionization rate coefficients.  In this work, we use the formulae in Appendix B of \cite{Fukugita1994} to compute the values of $\alpha$, $\beta$, and $\xi$.  The photoionization rate coefficients, $\Gamma_i$, are given by
+\begin{equation}
+    \Gamma_i = \int_{E_i}^{\infty} \sigma_i(E) \spec(E) \frac{dE}{E}    \label{PhotoionizationRate}
+\end{equation}
+where $E_i$ and $\sigma_i$ are the ionization threshold and bound-free absorption cross section for species $i$, respectively.  $\spec$ is the spectral intensity, which we write as
+\begin{equation}
+    \spec(E, r) = \frac{\Lbol}{4\pi r^2} I(E) e^{-\tau(E, r)} .
+\end{equation}
+Here, $r$ is the distance from the source, $I(E)$ is the normalized spectral energy distribution (SED), satisfying
+\begin{equation}
+    \int_E I(E) dE = 1 ,
+\end{equation}
+and the optical depth $\tau(E, r)$ is given as a sum over absorbing species,
+\begin{align}
+    \tau(E, r) & = \sum_i \int_r \sigma_i(E) n_i(r) dr \nonumber \\
+               & = \sum_i \sigma_i(E) \ncol(r)
+\end{align}
+where $\ncol(r)$ is the column density of species $i$ at distance $r$ from the source.
+We calculate the bound-free absorption cross-sections, $\sigma_i$, using the fits of \cite{Verner1996}.  At each time-step, we also solve for the temperature evolution, which is given by
+\begin{align}
+    \frac{3}{2}\frac{d}{dt}\left(\frac{\kB T \nb}{\mu}\right) & = \fheat \sum_i n_i \Heat_i \nonumber \\
+    & - \sum_i \zeta_i n_e n_i - \sum_i \eta_i n_e n_i - \sum_i \psi_i n_e n_i \label{TemperatureEvolution} 
+\end{align}
+where $\Heat_i$ is the photo-electric heating rate, given by
+\begin{equation}
+    \Heat_i = \int_{E_i}^{\infty} \sigma_i(E) \spec(E, r)(E - E_i) \frac{dE}{E} \label{HeatingRate} ,
+\end{equation}    
+and $\zeta_i$, $\eta_i$, and $\psi_i$ are the collisional ionization, recombination, and collisional excitation cooling coefficients, respectively.  Additional parameters include $\nb$, the total number density of baryons (check on this), the mean molecular weight $\mu$, Boltzmann's constant $\kB$, the kinetic temperature of the gas $T$, and $\fheat$, the fraction of a photon's original energy deposited as heat (see \cite{Shull1985}, \cite{Furlanetto2010}).  For simplicity, we neglect Hubble cooling due to cosmological expansion, as well as Compton heating/cooling, and cooling by free-free emission.
+
+It is important to note that we can pull radial and time dependencies outside of the integrals in Equations \ref{PhotoionizationRate} and \ref{HeatingRate}, leaving
+\begin{equation}
+    \Gamma_i(\ncol) = A \int_{E_i}^{\infty} \sigma_i(E) I(E) e^{-\tau(E, \ncol)} \frac{dE}{E} \
+\end{equation}
+and
+\begin{equation}
+    \Heat_i(\ncol) = A \int_{E_i}^{\infty} \sigma_i(E) I(E) (E - E_i) e^{-\tau(E, \ncol)} \frac{dE}{E}
+\end{equation}
+where $A \equiv \Lbol / 4 \pi r^2$.
+
+It is now apparent that the values of $\Gamma_i$ and $\Heat_i$ can be tabulated as a function of column density for a given source.  This greatly improves the speed of 1D radiative transfer calculations, like those of \cite{Thomas2008}, since the integrals in these expressions (Equations \ref{PhotoionizationRate} and \ref{HeatingRate}) no longer need to be computed numerically on-the-fly.  However, the lookup tables will only be 1-dimensional for the case of a hydrogen-only universe.
+
+% Code Verification
+\section{B. Code Verification}
+Our code, \texttt{rt1d}, solves Equations \ref{HIIRateEquation}, \ref{HeIIRateEquation}, \ref{HeIIIRateEquation}, and \ref{TemperatureEvolution} using the implicit Euler method for integration and the Newton-Raphson technique for root finding.  In order to track the propagation of ionization fronts accurately, we limit the time-step based on a maximum neutral fraction change as introduced in \cite{Shapiro2004},
+\begin{equation}
+    \Delta t = \epsilon_{\mathrm{ion}} \frac{\nHI}{|d\nHI/dt|} ,
+\end{equation}
+and additionally require that the time-step increase by a factor of two at most, as in \cite{Wise2011}.
+
+At this juncture it is worth mentioning the numerical artifacts that can result due to poor temporal or spatial resolution.  
+
+To demonstrate the functionality of the code, we repeat tests 1 and 2 from the Radiative Transfer Comparison Project (\cite{Iliev2006}; hereafter referred to as RT06).  Test 1 is the expansion of an HII region in a hydrogen-only, isothermal medium surrounding a monochromatic source of 13.6 eV photons.  Test 2 is the same, except for the temperature is allowed to evolve according to Equation \ref{TemperatureEvolution}, and the monochromatic radiation source is replaced by a $10^5$ K blackbody spectrum.  Results for Test 1 are shown in Figures \ref{fig:RT_Test1_IfrontEvolution} and \ref{fig:RT_Test1_RadialProfiles}, and for Test 2 in Figure \ref{fig:RT_Test2_RadialProfiles}.
+\begin{figure*}
+\begin{center}
+\leavevmode
+\psfig{file=figures/RT_Test1_IfrontEvolution.ps,width=6in}
+\vspace{-20pt}
+\caption[]{\textit{Top:} Comparison of the calculated (dashed) and analytic (solid) positions of an expanding ionization front in a hydrogen-only, isothermal medium. \textit{Bottom:} Ratio of the calculated and analytic solutions.}
+\label{fig:RT_Test1_IfrontEvolution}
+\end{center}
+\end{figure*}
+
+\begin{figure*}
+\begin{center}
+\leavevmode
+\psfig{file=figures/RT_Test1_RadialProfiles.ps,width=6in}
+\vspace{-20pt}
+\caption[]{Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $30$, $100$, and $500$ Myr.}
+\label{fig:RT_Test1_RadialProfiles}
+\end{center}
+\end{figure*}
+
+\begin{figure*}
+\begin{center}
+\leavevmode
+\psfig{file=figures/RT_Test2_RadialProfiles.ps,width=6in}
+\vspace{-20pt}
+\caption[]{\textit{Top:} Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $100$, and $500$ Myr. \textit{Bottom:} Radial profiles of the kinetic temperature at $t = 10$, $100$, and $500$ Myr (solid, dashed, and dotted lines, respectively).}
+\label{fig:RT_Test2_RadialProfiles}
+\end{center}
+\end{figure*}
+
+
+
+\end{document}

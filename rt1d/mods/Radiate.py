@@ -11,7 +11,7 @@ driver of rt1d, calling our solvers which call all the various physics modules.
 """
 
 import numpy as np
-import copy, scipy
+import copy, scipy, math
 from rt1d.mods.RadiationSource import RadiationSource
 from rt1d.mods.SecondaryElectrons import SecondaryElectrons
 from rt1d.mods.Interpolate import Interpolate
@@ -200,7 +200,7 @@ class Radiate:
         newdata = {}
         for key in data.keys(): newdata[key] = copy.deepcopy(data[key])
         z = self.cosmo.TimeToRedshiftConverter(0., t, self.InitialRedshift)
-
+        
         # Nice names for ionized fractions
         x_HI_arr = data["HIDensity"] / (data["HIDensity"] + data["HIIDensity"])
         x_HII_arr = data["HIIDensity"] / (data["HIDensity"] + data["HIIDensity"])
@@ -231,7 +231,10 @@ class Radiate:
         if rank == 0: print "rt1d: {0} < t < {1}".format(round(t / self.TimeUnits, 8), round((t + dt) / self.TimeUnits, 8))            
         if rank == 0 and self.ProgressBar: pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
 
-        if self.HIIRestrictedTimestep: dtphot = np.ones_like(self.grid) * 1e50
+        if self.HIIRestrictedTimestep: dtphot = dt * np.ones_like(self.grid)
+        
+        # If accreting black hole, luminosity will change with time.
+        Lbol = self.rs.BolometricLuminosity(t)
         
         # Deal with c < infinity
         if not self.InfiniteSpeedOfLight: 
@@ -240,199 +243,236 @@ class Radiate:
             try: packs = list(data['PhotonPackages']) 
             except KeyError: packs = []            
             
-            if packs and self.OnePhotonPackagePerCell:            
-                t_packs = zip(*packs)[0]    # Birth times for all packages
+            if packs and self.OnePhotonPackagePerCell:
+                t_packs = np.array(zip(*packs)[0])    # Birth times for all packages
                 r_packs = (t - t_packs) * c
                 
-                # If there are already photon packages in the first cell, don't make another
-                if np.any(r_packs[r_packs < (self.StartRadius * self.LengthUnits)]): pass
+                # If there are already photon packages in the first cell, add energy in would-be packet to preexisting one
+                if r_packs[-1] < (self.StartRadius * self.LengthUnits):
+                    packs[-1][-1] += Lbol * dt
                 else:
                     # Launch new photon package - [t_birth, ncol_HI_0, ncol_HeI_0, ncol_HeII_0]                
                     packs.append(np.array([t, 0., 0., 0.]))
-            else: packs.append(np.array([t, 0., 0., 0., self.rs.BolometricLuminosity(t) * dt]))
-                                                                 
-        # If accreting black hole, luminosity will change with time.
-        Lbol = self.rs.BolometricLuminosity(t)
+            else: packs.append(np.array([t, 0., 0., 0., Lbol * dt]))
+        
+        if self.InfiniteSpeedOfLight:
 
-        # Loop over cells radially, solve rate equations, update values in data -> newdata
-        for cell in self.grid:
+            # Loop over cells radially, solve rate equations, update values in data -> newdata
+            for cell in self.grid:
+                
+                if (cell % size != rank) and (self.ParallelizationMethod == 1): continue
+                            
+                # If within our buffer zone (where we don't solve rate equations), continue
+                if cell < self.StartCell: continue
+                                                    
+                if rank == 0 and self.ProgressBar: pbar.update(cell)
+                
+                # Read in densities for this cell
+                n_e = data["ElectronDensity"][cell]
+                n_HI = data["HIDensity"][cell]
+                n_HII = data["HIIDensity"][cell]
+                n_HeI = data["HeIDensity"][cell]
+                n_HeII = data["HeIIDensity"][cell]
+                n_HeIII = data["HeIIIDensity"][cell] 
             
-            if (cell % size != rank) and (self.ParallelizationMethod == 1): continue
-                        
-            # If within our buffer zone (where we don't solve rate equations), continue
-            if cell < self.StartCell: continue
-                                                
-            if rank == 0 and self.ProgressBar: pbar.update(cell)
+                # Read in ionized fractions for this cell
+                x_HI = x_HI_arr[cell]
+                x_HII = x_HII_arr[cell]
+                x_HeI = x_HeI_arr[cell]
+                x_HeII = x_HeII_arr[cell]
+                x_HeIII = x_HeIII_arr[cell]
             
-            # Read in densities for this cell
-            n_e = data["ElectronDensity"][cell]
-            n_HI = data["HIDensity"][cell]
-            n_HII = data["HIIDensity"][cell]
-            n_HeI = data["HeIDensity"][cell]
-            n_HeII = data["HeIIDensity"][cell]
-            n_HeIII = data["HeIIIDensity"][cell] 
-
-            # Read in ionized fractions for this cell
-            x_HI = x_HI_arr[cell]
-            x_HII = x_HII_arr[cell]
-            x_HeI = x_HeI_arr[cell]
-            x_HeII = x_HeII_arr[cell]
-            x_HeIII = x_HeIII_arr[cell]
-
-            # Compute mean molecular weight for this cell
-            mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
-                                    
-            # For convenience     
-            ncol = [ncol_HI[cell], ncol_HeI[cell], ncol_HeII[cell]]
-            nabs = [n_HI, n_HeI, n_HeII]
-            nion = [n_HII, n_HeII, n_HeIII]
-            n_H = n_HI + n_HII
-            n_He = n_HeI + n_HeII + n_HeIII
-            n_B = n_H + n_He + n_e              # STILL DONT UNDERSTAND THIS
-                                    
-            # Compute internal energy for this cell
-            T = data["Temperature"][cell]
-            E = 3. * k_B * T * n_B / mu / 2.
-
-            # Compute radius
-            r = self.r[cell]
-
-            ######################################
-            ######## Solve Rate Equations ########
-            ######################################
+                # Compute mean molecular weight for this cell
+                mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
+                                        
+                # For convenience     
+                ncol = [ncol_HI[cell], ncol_HeI[cell], ncol_HeII[cell]]
+                nabs = [n_HI, n_HeI, n_HeII]
+                nion = [n_HII, n_HeII, n_HeIII]
+                n_H = n_HI + n_HII
+                n_He = n_HeI + n_HeII + n_HeIII
+                n_B = n_H + n_He + n_e              # STILL DONT UNDERSTAND THIS
+                                        
+                # Compute internal energy for this cell
+                T = data["Temperature"][cell]
+                E = 3. * k_B * T * n_B / mu / 2.
             
-            if self.InfiniteSpeedOfLight:
+                # Compute radius
+                r = self.r[cell]
+            
+                ######################################
+                ######## Solve Rate Equations ########
+                ######################################
+                
                 tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                     r, z, mu, n_H, n_He, ncol, Lbol)
             
-            # Things are tougher if c != inf        
-            else:
-                values = (n_HII, n_HeII, n_HeIII, E)
-                qnew = [[0, n_HII], [0, n_HeII], [0, n_HeIII], [0, E]]
-                                                                                                                                               
-                # Loop over photon packages and solve rate equations
-                Lbol_new = 0
-                subdt = dt
-                for j, pack in enumerate(packs):       
-                    t_birth = pack[0]
-                    r_pack = (t - t_birth) * c                      # Position of package before evolving photons
-                    r_max = (t + dt - t_birth) * c                  # Furthest this package will get this timestep
-                    
-                    cell_pack = r_pack * self.GridDimensions / self.LengthUnits
-                    cell_pack_max = int(r_max * self.GridDimensions / self.LengthUnits)
-                                                                                                                  
-                    # If this photon package is already past the current cell, do nothing
-                    if cell_pack > cell: continue                   
+                # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
+                newHII, newHeII, newHeIII, newE = qnew
                                         
-                    # If this photon package won't reach the current cell in the next dt, none of them will.  Proceed.
-                    if cell > cell_pack_max: break
-                                                                                            
-                    # Column density (and thus tau) between source and where this package was at time t
-                    ncol_pack = copy.copy(pack[1:-1])
-                                        
-                    # Add optical depth of the medium this package has traversed only in the last dt
-                    #ncol_pack[0] += np.sum(newdata['HIDensity'][cell_pack:cell]) * self.dx
-                    #ncol_pack[1] += np.sum(newdata['HeIDensity'][cell_pack:cell]) * self.dx
-                    #ncol_pack[2] += np.sum(newdata['HeIIDensity'][cell_pack:cell]) * self.dx
-                                                                                                                       
-                    # Luminosity of object at time package was launched
-                    #Lbol_new = self.rs.BolometricLuminosity(t_birth)
-                    
-                    subdt = min((r_max - r) / c, self.dx - (r_pack - r) / c, self.dx / c)
-                           
-                    # Add energy from all photon packages that enter this cell       
-                    Lbol_new += pack[-1] / subdt
-                                                                                 
-                tarr, qnew, h = self.solver.integrate(self.qdot, values, t, t + dt, None, h, \
-                    r, z, mu, n_H, n_He, ncol, Lbol_new)
+                # Convert from internal energy back to temperature
+                if not self.Isothermal: newT = newE[-1] * 2. * mu / 3. / k_B / n_B
+                else: newT = newdata['Temperature'][cell]
                 
-                #newdata['HIDensity'][cell] = n_H - qnew[0][-1]
-                #newdata['HIIDensity'][cell] = n_H - newdata['HIDensity'][cell]
-                #newdata['HeIDensity'][cell] = n_He - qnew[1][-1] - qnew[2][-1]
-                #newdata['HeIIDensity'][cell] = n_He - qnew[2][-1] - newdata['HeIDensity'][cell]
-                #newdata['HeIIIDensity'][cell] = n_He - newdata['HeIIDensity'][cell] - newdata['HeIDensity'][cell]
-                #newdata["ElectronDensity"][cell] = (n_H - newdata['HIDensity'][cell]) + newdata['HeIIDensity'][cell] + 2.0 * newdata['HeIIIDensity'][cell]
+                # Possible that newHII > n_H and within tolerances, hence the min statements
+                if newHII[-1] > n_H: newHI = min_density
+                else: newHI = n_H - newHII[-1]      
                 
-                #x_HII = newdata['HIIDensity'][cell] / n_H
-                #if self.MultiSpecies:
-                #    x_HeII = newdata['HeIIDensity'][cell] / n_He
-                #    x_HeIII = newdata['HeIIIDensity'][cell] / n_He
-                #else: x_HeII = x_HeIII = 0
-                       
-                #if not self.Isothermal:                    
-                #    mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
-                #    n_B = newdata['HIDensity'][cell] + newdata['HIIDensity'][cell] + newdata["ElectronDensity"][cell] # NOT GOOD FOR MULTISPECIES
-                #    newdata["Temperature"][cell] = qnew[3][-1] * 2. * mu / 3. / k_B / n_B
-                #else: qnew[3][-1] = E
-                #                    
-                #values = (qnew[0][-1], qnew[1][-1], qnew[2][-1], qnew[3][-1])
-            
-                                                                                    
-            # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
-            newHII, newHeII, newHeIII, newE = qnew
-                        
-            # Convert from internal energy back to temperature
-            newT = newE[-1] * 2. * mu / 3. / k_B / n_B
-
-            # Possible that newHII > n_H and within tolerances, hence the min statements
-            if newHII[-1] > n_H: newHI = min_density
-            else: newHI = n_H - newHII[-1]      
-            
-            # Same problem could arise with helium - favor accuracy of HeII over HeIII
-            newHeI = n_He - newHeII[-1] - newHeIII[-1]
-            if newHeI < 0: 
-                newHeI = min_density
-                newerHeII = n_He - newHeI - newHeIII[-1]
-                newerHeIII = n_He - newHeI - newerHeII
-            else:
+                # Same problem could arise with helium - favor accuracy of HeII over HeIII
                 newHeI = n_He - newHeII[-1] - newHeIII[-1]
-                newerHeII = n_He - newHeI - newHeIII[-1]
-                newerHeIII = n_He - newHeI - newerHeII
+                if newHeI < 0: 
+                    newHeI = min_density
+                    newerHeII = n_He - newHeI - newHeIII[-1]
+                    newerHeIII = n_He - newHeI - newerHeII
+                else:
+                    newHeI = n_He - newHeII[-1] - newHeIII[-1]
+                    newerHeII = n_He - newHeI - newHeIII[-1]
+                    newerHeIII = n_He - newHeI - newerHeII
+                    
+                # Update quantities in 'data' -> 'newdata'     
+                newdata["HIDensity"][cell] = newHI                                                                                            
+                newdata["HIIDensity"][cell] = n_H - newHI
+                newdata["HeIDensity"][cell] = newHeI
+                newdata["HeIIDensity"][cell] = newerHeII
+                newdata["HeIIIDensity"][cell] = newerHeIII
+                newdata["ElectronDensity"][cell] = (n_H - newHI) + newerHeII + 2.0 * newerHeIII
+                newdata["Temperature"][cell] = newT    
                 
-            # Update quantities in 'data' -> 'newdata'     
-            newdata["HIDensity"][cell] = newHI                                                                                                                        
-            newdata["HIIDensity"][cell] = n_H - newHI
-            newdata["HeIDensity"][cell] = newHeI
-            newdata["HeIIDensity"][cell] = newerHeII
-            newdata["HeIIIDensity"][cell] = newerHeIII
-            newdata["ElectronDensity"][cell] = (n_H - newHI) + newerHeII + 2.0 * newerHeIII
-            newdata["Temperature"][cell] = newT
+                if self.HIIRestrictedTimestep: 
+                    dtphot[cell] = self.ComputePhotonTimestep(newdata, cell_pack, r, Lbol, n_H, n_He)                            
+                
+                ######################################
+                ################ DONE ################
+                ######################################
+                
+        # If the speed of light = c, things are trickier    
+        else:                
             
-            ######################################
-            ################ DONE ################     
-            ######################################
+            # Loop over photon packages, updating values in cells: data -> newdata
+            for j, pack in enumerate(packs):
+                t_birth = pack[0]
+                r_pack = (t - t_birth) * c                      # Position of package before evolving photons
+                r_max = r_pack + (t + dt - t_birth) * c         # Furthest this package will get this timestep
+                                                
+                # Cells we need to know about - not necessarily integer
+                cell_pack = r_pack * self.GridDimensions / self.LengthUnits
+                cell_pack_max = r_max * self.GridDimensions / self.LengthUnits
+                
+                if cell_pack_max < self.StartCell: continue
+                                    
+                #if rank == 0 and self.ProgressBar: pbar.update(pack)
+                                
+                # Advance this photon package as far as it will go on this global timestep                
+                while cell_pack < cell_pack_max:
+                                                            
+                    # What cell are we in
+                    cell = int(cell_pack)
+                    
+                    # Compute dc (like dx but in fractional cell units)
+                    if cell_pack % 1 == 0: dc = min(cell_pack_max - cell_pack, 1)
+                    else: dc = min(math.ceil(cell_pack) - cell_pack, cell_pack_max - cell_pack)        
+                    
+                    # Amount of time this photon package will spend dissipating energy                 
+                    subdt = dc * self.dx / c
+                                                            
+                    Lbol = pack[-1] / subdt   # Energy passing through cell - not all will be absorbed!
+                                                            
+                    if cell < self.StartCell: 
+                        cell_pack += dc
+                        continue
+                    
+                    if cell >= self.GridDimensions: break
+                    
+                    r = cell_pack * self.LengthUnits / self.GridDimensions
+                    
+                    n_e = newdata["ElectronDensity"][cell]
+                    n_HI = newdata["HIDensity"][cell]
+                    n_HII = newdata["HIIDensity"][cell]
+                    n_HeI = newdata["HeIDensity"][cell]
+                    n_HeII = newdata["HeIIDensity"][cell]
+                    n_HeIII = newdata["HeIIIDensity"][cell] 
+                    
+                    # Read in ionized fractions for this cell
+                    x_HI = x_HI_arr[cell]
+                    x_HII = x_HII_arr[cell]
+                    x_HeI = x_HeI_arr[cell]
+                    x_HeII = x_HeII_arr[cell]
+                    x_HeIII = x_HeIII_arr[cell]
+                    
+                    # Compute mean molecular weight for this cell
+                    mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
+                                            
+                    # For convenience     
+                    ncol_HI = np.cumsum(newdata["HIDensity"]) * self.dx
+                    
+                    nabs = [n_HI, n_HeI, n_HeII]
+                    nion = [n_HII, n_HeII, n_HeIII]
+                    n_H = n_HI + n_HII
+                    n_He = n_HeI + n_HeII + n_HeIII
+                    n_B = n_H + n_He + n_e              # STILL DONT UNDERSTAND THIS
+                                            
+                    # Compute internal energy for this cell
+                    T = newdata["Temperature"][cell]
+                    E = 3. * k_B * T * n_B / mu / 2.
+                    
+                    packs[j][1] += newdata['HIDensity'][cell] * subdt * c  
+                    packs[j][2] += newdata['HeIDensity'][cell] * subdt * c 
+                    packs[j][3] += newdata['HeIIDensity'][cell] * subdt * c
+                    
+                    ######################################
+                    ######## Solve Rate Equations ########
+                    ######################################
+                    
+                    values = (n_HII, n_HeII, n_HeIII, E)
+                    qnew = [[0, n_HII], [0, n_HeII], [0, n_HeIII], [0, E]]
+                    
+                    tarr, qnew, h = self.solver.integrate(self.qdot, values, t, t + subdt, None, h, \
+                        r, z, mu, n_H, n_He, packs[j][1:4], Lbol)
+                    
+                    # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
+                    newHII, newHeII, newHeIII, newE = qnew
+                                            
+                    # Convert from internal energy back to temperature
+                    if not self.Isothermal: newT = newE[-1] * 2. * mu / 3. / k_B / n_B
+                    else: newT = newdata['Temperature'][cell]
                         
-            # Calculate global timstep based on change in hydrogen neutral fraction for next iteration
-            if self.HIIRestrictedTimestep:  
-                newxHII = newHII[-1] / n_H                
-                
-                newncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
-                           np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
-                
-                Gamma = self.IonizationRateCoefficientHI(newncol, newdata["ElectronDensity"][cell], newHI, newHeI, newxHII, newT, r, Lbol)        
-                alpha = 2.6e-13 * (newT / 1.e4)**-0.85  
-                
-                # Shapiro et al. 2004
-                dtphot[cell] = self.MaxHIIChange * newHI / np.abs(newHI * Gamma - newHII[-1] * newdata["ElectronDensity"][cell] * alpha)  
-
-                # Calculate global timstep based on change in helium neutral fraction for next iteration
-                if self.MultiSpecies and self.HeIIRestrictedTimestep:
-                    newxHeII = newerHeII / n_He
+                    # Possible that newHII > n_H and within tolerances, hence the min statements
+                    if newHII[-1] > n_H: newHI = min_density
+                    else: newHI = n_H - newHII[-1]      
                     
-                    Beta = 2.38e-11 * np.sqrt(newT) * (1. + np.sqrt(newT / 1.e5))**-1. * np.exp(-2.853e5 / newT) * self.CollisionalIonization
-                    Gamma = self.IonizationRateCoefficientHeI(newncol, newHI, newHeI, newxHII, newT, r, Lbol)                    
-                    alpha = 9.94e-11 * newT**-0.48   
-                    
-                    # Analogous to Shapiro et al. 2004 but for helium
-                    dtphot[cell] = min(dtphot[cell], self.MaxHeIIChange * newHeI / \
-                        np.abs(newHeI * (Gamma + newdata["ElectronDensity"][cell] * Beta) - newerHeII* newdata["ElectronDensity"][cell] * alpha)) 
-                    
-                # So timestep can be written out later
-                newdata["dtPhoton"][cell] = dtphot[cell]                      
+                    # Same problem could arise with helium - favor accuracy of HeII over HeIII
+                    newHeI = n_He - newHeII[-1] - newHeIII[-1]
+                    if newHeI < 0: 
+                        newHeI = min_density
+                        newerHeII = n_He - newHeI - newHeIII[-1]
+                        newerHeIII = n_He - newHeI - newerHeII
+                    else:
+                        newHeI = n_He - newHeII[-1] - newHeIII[-1]
+                        newerHeII = n_He - newHeI - newHeIII[-1]
+                        newerHeIII = n_He - newHeI - newerHeII
+                        
+                    # Update quantities in 'data' -> 'newdata'     
+                    newdata["HIDensity"][cell] = newHI                                                                   
+                    newdata["HIIDensity"][cell] = n_H - newHI
+                    newdata["HeIDensity"][cell] = newHeI
+                    newdata["HeIIDensity"][cell] = newerHeII
+                    newdata["HeIIIDensity"][cell] = newerHeIII
+                    newdata["ElectronDensity"][cell] = (n_H - newHI) + newerHeII + 2.0 * newerHeIII
+                    newdata["Temperature"][cell] = newT                               
+                                                                                
+                    if self.HIIRestrictedTimestep:            
+                        L = self.rs.BolometricLuminosity(max(t - r / c, 0.))             
+                        dtphot[cell] = self.ComputePhotonTimestep(newdata, cell_pack, r, L, n_H, n_He)
+                        
+                    cell_pack += dc
+            
+                    ######################################
+                    ################ DONE ################     
+                    ######################################                  
                           
         if (size > 0) and (self.ParallelizationMethod == 1):
             for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
-        
+                
         if self.HIIRestrictedTimestep: newdt = min(np.min(dtphot[self.StartCell:]), 2 * dt)
         else: newdt = dt
         
@@ -443,27 +483,44 @@ class Radiate:
         # Update photon packages        
         if not self.InfiniteSpeedOfLight: newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt, newdata)  # t + newdt?      
                 
-        return newdata, h, newdt         
+        return newdata, h, newdt   
+        
+    def ComputePhotonTimestep(self, newdata, cell_pack, r, Lbol, n_H, n_He):
+        """
+        Use Shapiro et al. criteria to set next timestep.
+        """          
+    
+        cell = int(cell_pack)
+        xHII = newdata['HIIDensity'][cell] / n_H                
+        ncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
+                   np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
+        
+        Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
+            xHII, newdata['Temperature'][cell], r, Lbol)        
+        alpha = 2.6e-13 * (newdata['Temperature'][cell] / 1.e4)**-0.85  
+        
+        # Shapiro et al. 2004
+        dtphot = self.MaxHIIChange * newdata["HIDensity"][cell] / \
+            np.abs(newdata["HIDensity"][cell] * Gamma - newdata["HIIDensity"][cell] * newdata["ElectronDensity"][cell] * alpha)  
+        
+        # Calculate global timstep based on change in helium neutral fraction for next iteration
+        if self.MultiSpecies and self.HeIIRestrictedTimestep:
+            xHeII = newdata["HeIIDensity"][cell] / n_He
+            
+            Beta = 2.38e-11 * np.sqrt(newdata['Temperature'][cell]) * (1. + np.sqrt(newdata['Temperature'][cell] / 1.e5))**-1. * np.exp(-2.853e5 /newdata['Temperature'][cell]) * self.CollisionalIonization
+            Gamma = self.IonizationRateCoefficientHeI(ncol, newdata['HIDensity'][cell], newdata['HeIDensity'][cell], xHII, newdata['Temperature'][cell], r, Lbol)                    
+            alpha = 9.94e-11 * newdata['Temperature'][cell]**-0.48   
+            
+            # Analogous to Shapiro et al. 2004 but for helium
+            dtphot = min(dtphot, self.MaxHeIIChange * newdata['HeIDensity'][cell] / \
+                np.abs(newHeI * (Gamma + newdata["ElectronDensity"][cell] * Beta) - newdata['HeIIDensity'][cell] * newdata["ElectronDensity"][cell] * alpha)) 
+            
+        return dtphot                   
         
     def UpdatePhotonPackages(self, packs, t_next, data):
         """
-        Get rid of old photon packages, and update column densities and corresponding time.
+        Get rid of old photon packages.
         """    
-        
-        ncol_HI = np.cumsum(data["HIDensity"]) * self.dx
-        ncol_HeI = np.cumsum(data["HeIDensity"]) * self.dx
-        ncol_HeII = np.cumsum(data["HeIIDensity"]) * self.dx
-        
-        for i, pack in enumerate(packs):
-            t_birth = pack[0]
-            r_pack = (t_next - t_birth) * c               
-            cell_pack = int(r_pack * self.GridDimensions / self.LengthUnits)
-            
-            if cell_pack > (self.GridDimensions / self.LengthUnits): continue
-            
-            packs[i][1] = ncol_HI[cell_pack]
-            packs[i][2] = ncol_HeI[cell_pack]
-            packs[i][3] = ncol_HeII[cell_pack]                        
                 
         to_eliminate = []
         for i, pack in enumerate(packs):
@@ -473,8 +530,8 @@ class Radiate:
             
         to_eliminate.reverse()    
         for element in to_eliminate: packs.pop(element)
-        
-        return np.array(packs)
+                
+        return packs
         
     def IonizationRateCoefficientHI(self, ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol):
         """

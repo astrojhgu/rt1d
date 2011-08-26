@@ -147,7 +147,6 @@ class SolveRateEquations:
                 newargs.append(i)
                 
                 def ynext(y):
-                                                            
                     if i == 0: return y - h * f(np.array([y, yi[1], yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
                     if i == 1: return y - h * f(np.array([yi[0], y, yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
                     if i == 2: return y - h * f(np.array([yi[0], yi[1], y, yi[3]]), xi + h, newargs)[i] - yi[i]
