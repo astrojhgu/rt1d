@@ -87,6 +87,7 @@ class Radiate:
         self.grid = np.arange(self.GridDimensions)
         self.r = self.LengthUnits * self.grid / self.GridDimensions  
         self.dx = self.LengthUnits / self.GridDimensions
+        self.CellCrossingTime = self.dx / c
         self.HIColumn = n_col[0]
         self.HeIColumn = n_col[1]
         self.HeIIColumn = n_col[2]
@@ -239,6 +240,8 @@ class Radiate:
         # Deal with c < infinity
         if not self.InfiniteSpeedOfLight: 
             
+            # PhotonPackage guide: pack = [EmissionTime, EmissionTimeInterval, ncolHI, ncolHeI, ncolHeII, Energy]
+            
             # Photon packages going from oldest to youngest - will have to create it on first timestep
             try: packs = list(data['PhotonPackages']) 
             except KeyError: packs = []            
@@ -252,8 +255,8 @@ class Radiate:
                     packs[-1][-1] += Lbol * dt
                 else:
                     # Launch new photon package - [t_birth, ncol_HI_0, ncol_HeI_0, ncol_HeII_0]                
-                    packs.append(np.array([t, 0., 0., 0.]))
-            else: packs.append(np.array([t, 0., 0., 0., Lbol * dt]))
+                    packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
+            else: packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
         
         if self.InfiniteSpeedOfLight:
 
@@ -339,7 +342,7 @@ class Radiate:
                 newdata["Temperature"][cell] = newT    
                 
                 if self.HIIRestrictedTimestep: 
-                    dtphot[cell] = self.ComputePhotonTimestep(newdata, cell_pack, r, Lbol, n_H, n_He)                            
+                    dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, r, Lbol, n_H, n_He)                            
                 
                 ######################################
                 ################ DONE ################
@@ -347,42 +350,47 @@ class Radiate:
                 
         # If the speed of light = c, things are trickier    
         else:                
-            
+                        
             # Loop over photon packages, updating values in cells: data -> newdata
             for j, pack in enumerate(packs):
                 t_birth = pack[0]
-                r_pack = (t - t_birth) * c                      # Position of package before evolving photons
-                r_max = r_pack + (t + dt - t_birth) * c         # Furthest this package will get this timestep
-                                                
+                r_pack = (t - t_birth) * c        # Position of package before evolving photons
+                r_max = r_pack + dt * c           # Furthest this package will get this timestep
+                                                                                 
                 # Cells we need to know about - not necessarily integer
                 cell_pack = r_pack * self.GridDimensions / self.LengthUnits
                 cell_pack_max = r_max * self.GridDimensions / self.LengthUnits
                 
                 if cell_pack_max < self.StartCell: continue
-                                    
-                #if rank == 0 and self.ProgressBar: pbar.update(pack)
-                                
-                # Advance this photon package as far as it will go on this global timestep                
+                                                                    
+                # Advance this photon package as far as it will go on this global timestep  
                 while cell_pack < cell_pack_max:
                                                             
                     # What cell are we in
                     cell = int(cell_pack)
                     
+                    if cell >= self.GridDimensions: break
+                    
                     # Compute dc (like dx but in fractional cell units)
                     if cell_pack % 1 == 0: dc = min(cell_pack_max - cell_pack, 1)
                     else: dc = min(math.ceil(cell_pack) - cell_pack, cell_pack_max - cell_pack)        
-                    
-                    # Amount of time this photon package will spend dissipating energy                 
-                    subdt = dc * self.dx / c
-                                                            
-                    Lbol = pack[-1] / subdt   # Energy passing through cell - not all will be absorbed!
-                                                            
+                                              
                     if cell < self.StartCell: 
                         cell_pack += dc
                         continue
+                        
+                    # Amount of time this photon package will spend in this cell    
+                    subdt = dc * self.CellCrossingTime
                     
-                    if cell >= self.GridDimensions: break
+                    # We really need to evolve this cell until the next photon package arrives, which
+                    # is probably longer than a cell crossing time unless the global dt is vv small.
+                    if (len(packs) > 1) and ((j + 1) < len(packs)): altdt = min(dt, packs[j + 1][0] - pack[0])
+                    else: altdt = dt
                     
+                    subdt = max(subdt, altdt)                                 
+                                
+                    Lbol = pack[-1] / pack[1]         # Effective luminosity hitting this cell this timestep?
+                                                                                                                        
                     r = cell_pack * self.LengthUnits / self.GridDimensions
                     
                     n_e = newdata["ElectronDensity"][cell]
@@ -415,9 +423,9 @@ class Radiate:
                     T = newdata["Temperature"][cell]
                     E = 3. * k_B * T * n_B / mu / 2.
                     
-                    packs[j][1] += newdata['HIDensity'][cell] * subdt * c  
-                    packs[j][2] += newdata['HeIDensity'][cell] * subdt * c 
-                    packs[j][3] += newdata['HeIIDensity'][cell] * subdt * c
+                    packs[j][2] += newdata['HIDensity'][cell] * subdt * c  
+                    packs[j][3] += newdata['HeIDensity'][cell] * subdt * c 
+                    packs[j][4] += newdata['HeIIDensity'][cell] * subdt * c
                     
                     ######################################
                     ######## Solve Rate Equations ########
@@ -425,10 +433,10 @@ class Radiate:
                     
                     values = (n_HII, n_HeII, n_HeIII, E)
                     qnew = [[0, n_HII], [0, n_HeII], [0, n_HeIII], [0, E]]
-                    
+                                        
                     tarr, qnew, h = self.solver.integrate(self.qdot, values, t, t + subdt, None, h, \
-                        r, z, mu, n_H, n_He, packs[j][1:4], Lbol)
-                    
+                        r, z, mu, n_H, n_He, packs[j][2:5], Lbol)
+                                        
                     # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
                     newHII, newHeII, newHeIII, newE = qnew
                                             
@@ -460,16 +468,17 @@ class Radiate:
                     newdata["ElectronDensity"][cell] = (n_H - newHI) + newerHeII + 2.0 * newerHeIII
                     newdata["Temperature"][cell] = newT                               
                                                                                 
-                    if self.HIIRestrictedTimestep:            
-                        L = self.rs.BolometricLuminosity(max(t - r / c, 0.))             
-                        dtphot[cell] = self.ComputePhotonTimestep(newdata, cell_pack, r, L, n_H, n_He)
-                        
                     cell_pack += dc
             
                     ######################################
                     ################ DONE ################     
                     ######################################                  
-                          
+                                                  
+            if self.HIIRestrictedTimestep:                            
+                for cell in self.grid:          
+                    L = self.rs.BolometricLuminosity(max(t - self.r[cell] / c, 0.)) 
+                    dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, self.r[cell], L, self.InitialHydrogenDensity, self.InitialHeliumDensity)
+                                                                
         if (size > 0) and (self.ParallelizationMethod == 1):
             for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
                 
@@ -485,13 +494,15 @@ class Radiate:
                 
         return newdata, h, newdt   
         
-    def ComputePhotonTimestep(self, newdata, cell_pack, r, Lbol, n_H, n_He):
+    def ComputePhotonTimestep(self, newdata, cell, r, Lbol, n_H, n_He):
         """
         Use Shapiro et al. criteria to set next timestep.
         """          
     
-        cell = int(cell_pack)
-        xHII = newdata['HIIDensity'][cell] / n_H                
+        xHII = newdata['HIIDensity'][cell] / n_H     
+        
+        if xHII < 0.5: return 1e50
+                   
         ncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
                    np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
         
@@ -514,7 +525,7 @@ class Radiate:
             # Analogous to Shapiro et al. 2004 but for helium
             dtphot = min(dtphot, self.MaxHeIIChange * newdata['HeIDensity'][cell] / \
                 np.abs(newHeI * (Gamma + newdata["ElectronDensity"][cell] * Beta) - newdata['HeIIDensity'][cell] * newdata["ElectronDensity"][cell] * alpha)) 
-            
+                        
         return dtphot                   
         
     def UpdatePhotonPackages(self, packs, t_next, data):
@@ -525,8 +536,7 @@ class Radiate:
         to_eliminate = []
         for i, pack in enumerate(packs):
             if (t_next - pack[0]) > (self.LengthUnits / c): to_eliminate.append(i)
-            if pack[0] > self.HIColumn[-1]: 
-                to_eliminate.append(i)
+            if pack[2] > self.HIColumn[-1]: to_eliminate.append(i)
             
         to_eliminate.reverse()    
         for element in to_eliminate: packs.pop(element)
