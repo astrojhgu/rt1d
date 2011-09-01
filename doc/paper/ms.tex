@@ -32,6 +32,7 @@
 \usepackage{amsmath, amsthm, amssymb}
 \usepackage{natbib}
 \usepackage{epsfig}
+\usepackage{appendix}
 
 
 
@@ -39,7 +40,7 @@
 
 % Short names
 \shorttitle{Optimized Multi-Frequency Spectra for Computational Radiative Transfer}
-\shortauthors{Mirocha & Darling}
+\shortauthors{Mirocha et al.}
 
 %-------------------------------------- PAPER STARTS HERE --------------------------------------%
 
@@ -80,6 +81,10 @@
 \author{Jordan Mirocha, Stephen Skory, Jack Burns}
 \affil{Center for Astrophysics and Space Astronomy, University of Colorado, Campus Box 389, Boulder, CO 80309}
 \affil{NASA Lunar Science Institute, NASA Ames Research Center, Moffett Field, CA 94043, USA}
+\author{John Wise}
+\affil{Georgia Institute of Technology}
+\author{Steven Furlanetto}
+\affil{University of California at Los Angeles}
 
 %%%
 %% Abstract
@@ -92,18 +97,18 @@ The recent emergence and implementation of complex algorithms for radiative tran
 %%%
 %% Introduction
 %%%
-\section{Introduction}
+\section{INTRODUCTION}
 The recent development of advanced numerical methods for radiative transfer has led to a substantial increase in the number of astrophysical problems that are computationally accessible.   Several fully 3D cosmological hydrodynamics codes have implemented adaptive ray-tracing methods (\cite{Abel2002}) for propagating radiation around point sources,  or flux-limited diffusion schemes (\cite{Reynolds2009}) for diffuse radiation fields.  More recently, hybrid-schemes have been implemented in smoothed-particle hydrodynamic codes (e.g. \cite{Petkova2011}).  For a review on the state of convergence among several widely used codes, see \cite{Iliev2006} and \cite{Iliev2009}.
 
-Unfortunately, the vast majority of radiative transfer simulations run to date have only considered radiation at a single frequency.  While this monochromatic approach is the natural first step computationally-speaking, sampling radiation fields at multiple frequencies is essential for accurately calculating the properties of the medium through which photons propagate.  The mere presence of ionizing photons ensures that gas surrounding a radiation source will become ionized and heated, but the degree to which gas is ionized and heated depends on the total number of ionizing photons and their spectral energy distribution (SED).  As a result, we should expect the properties of gas surrounding a blackbody source of ultraviolet (UV) photons to be quite different from those of a power-law X-ray source such as an accreting black hole.  Even relatively small changes in SED can produce noticeable differences in surrounding gas properties, like changing the power-law index of a black-hole accretion spectrum (\cite{Kuhlen2005}; \cite{Thomas2008}).  But, these expectations are built on the assumption that each source is represented by a continuous SED, not one we have constructed with \nnu discrete frequency bins.  As we'll see in \S2, for a given source, the properties of the surrounding medium can be altered considerably solely due to the manner in which we discretize its spectrum.
+Unfortunately, the vast majority of radiative transfer simulations run to date have only considered radiation at a single frequency.  While this monochromatic approach is the natural first step computationally-speaking, sampling radiation fields at multiple frequencies is essential for accurately calculating the properties of the medium through which photons propagate.  The mere presence of ionizing photons ensures that gas surrounding a radiation source will become ionized and heated, but the degree to which gas is ionized and heated depends on the total number of ionizing photons and their spectral energy distribution (SED).  As a result, we should expect the properties of gas surrounding a blackbody source of ultraviolet (UV) photons to be quite different from those of a power-law X-ray source such as an accreting black hole, for example.  Even relatively small changes in SED can produce noticeable differences in surrounding gas properties, like changing the power-law index of a black-hole accretion spectrum (\cite{Kuhlen2005}; \cite{Thomas2008}).  But, these expectations are built on the assumption that each source is represented by a continuous SED, not one we have constructed with \nnu discrete frequency bins.  As we'll see in \S2, for a given source, the properties of the surrounding medium can be altered considerably solely due to the manner in which we discretize its spectrum.
 
-The consequences of poor frequency resolution have been explored recently by \cite{Wise2011}, who find that for the expansion of an HII region around a $10^5$ K blackbody source in a hydrogen-only medium, the density, temperature, velocity, and ionization profiles are well converged for $n_{\nu} \ge 4$.  Use of a monochromatic spectrum for this problem introduces significant errors since all photons are absorbed at a characteristic column density, whereas multi-frequency treatments achieve some column density dependent behavior, and can thus mimic the behavior of a truly continuous spectrum.  The convergence for this test problem is reassuring, though the prospects for convergence are less clear if one were interested in the absorption processes of multiple chemical species, ionization and heating due to X-rays and their energetic secondary photo-electrons (\cite{Shull1985}; \cite{Furlanetto2010}), or inhomogeneous media.  Such effects are likely important in studies of radiative feedback from stars and active galactic nuclei (AGN), and most certainly in efforts to simulate cosmological reionization.  As a result, an effort must be made to ensure that the SEDs used to represent stars in black holes in numerical simulations actually reflect the behavior expected for those sources.  Additional motivation for this work comes from the fact that while spatial, temporal, and mass resolution for a simulation are simple to calculate and choose to optimize for a given problem, frequency resolution is not.  We aim to reduce the guesswork involved in discretizing SEDs, and provide a method for optimization on a problem-by-problem basis, just as one does for the other forms of resolution.
+The consequences of poor frequency resolution have been explored recently by \cite{Wise2011}, who find that for the expansion of an HII region around a $10^5$ K blackbody source in a hydrogen-only medium, the density, temperature, velocity, and ionization profiles are well converged for $n_{\nu} \ge 4$.  Use of a monochromatic spectrum for this problem introduces significant errors since all photons are absorbed at a characteristic column density, whereas multi-frequency treatments achieve some column density dependent behavior, and can thus mimic the behavior of a truly continuous spectrum.  The convergence for this test problem is reassuring, though the prospects for convergence are less clear if one were interested in the absorption processes of multiple chemical species, ionization and heating due to X-rays and their energetic secondary photo-electrons (\cite{Shull1985}; \cite{Furlanetto2010}), or inhomogeneous media.  Such effects are likely important in studies of radiative feedback from stars and active galactic nuclei (AGN), and most certainly in efforts to simulate cosmological reionization.  As a result, an effort must be made to ensure that the SEDs used to represent stars and black holes in numerical simulations actually reflect the behavior expected for those sources.  Additional motivation for this work comes from the fact that while spatial, temporal, and mass resolution for simulations are simple to calculate and straightforward to optimize, frequency resolution is not.  We aim to reduce the guesswork involved in discretizing SEDs, and provide a method for optimization on a problem-by-problem basis, just as one does for the other forms of resolution.
 
 Though we will find that multi-frequency radiative transfer is necessary in most cases to accurately calculate the ionization and temperature state of the gas, it can also add significant computational expense.  Because the efficiency with which photons ionize and heat a gas depends on their energy, adding more energy groups will alter the amount of ionization and heating taking place in a given computational grid element.  But, these properties of the gas also dictate the computational time-step.  Generally, it is recommended that radiation time-steps are limited by a maximum fractional change in neutral species abundances so that ionization fronts are propagated at the correct speed (\cite{Shapiro2004}).  As a result, the addition of photons that ionize gas more efficiently will lead to a more expensive calculation since the time-step necessary to restrict changes in the neutral fraction will shrink.  Similarly, radiation-hydrodynamic simulations may be slowed by the inclusion of photons that heat gas efficiently, since higher temperature cells have greater sound speeds, and thus require a smaller time-step.  Expense due to additional energy groups is certainly method-dependent, and may even be implementation-dependent.  For example, including high energy photons with long mean free paths will be very costly for a ray-tracing algorithm, but add no expense to a problem solved by flux-limited diffusion.  In addition, some adaptive ray-tracing implementations require each additional energy group in the source spectrum to be traced independently, in which case the time required by the radiative transfer solver scales roughly as \nnu.  Other implementations are now avoiding this problem by tracing all energy groups at once, though keeping them separate can be advantageous since energy groups with small mean free paths will be completely attenuated at small radii (\cite{Wise2011}).
 
 With all of these factors in mind, we want to determine the following.  How many energy groups are required to adequately sample the true SED of a given radiation source?  Where should they be positioned in frequency?  What fraction of the bolometric luminosity should be allocated to each energy group?  What are the consequences of spectral discretization both physically and computationally?  
 
-The contents of this paper fall into three general areas.  In \S2 we will quantitatively assess the accuracy with which multi-frequency calculations reproduce the ionization and heating profiles of continuous spectral energy distributions.  \S3 is devoted to introducing a technique for optimally selecting discrete SED templates so as to minimize the errors between discrete and continuous spectra, and \S4 will present the results obtained with this method.  In \S5, we conclude.  Details concerning the code developed for this work, as well as a discussion regarding the factors that influence the solution of radiative transfer calculations, whether it be the time-step, grid resolution, frequency resolution, or the interplay of all three, can be found in the Appendix.
+The contents of this paper fall into three general areas.  In \S2 we will quantitatively assess the accuracy with which multi-frequency calculations reproduce the ionization and heating profiles of continuous spectral energy distributions.  \S3 is devoted to introducing a technique for optimally selecting discrete SED templates so as to minimize the errors between discrete and continuous solutions, and \S4 will present the results obtained with this method.  In \S5, we conclude.  Details concerning the code used for this work, as well as a discussion regarding the factors that influence the solution of radiative transfer calculations, whether it be the temporal resolution, spatial resolution, frequency resolution, or the interplay of all three, can be found in the Appendix.
 
 
 %Reduce guesswork!  Choose frequency resolution in the same way that one chooses spatial/mass resolution.
@@ -111,8 +116,26 @@ The contents of this paper fall into three general areas.  In \S2 we will quanti
 %%% 
 %% Multi-Frequency vs. Continuous
 %%%
-\section{Consequences of Discrete Radiation Fields}
-Before we compute the optimal multi-frequency spectra for SEDs commonly used in numerical simulations, we will first demonstrate the difference in results brought about by varying frequency resolution.  To do this, we use \texttt{rt1d}, a 1D radiative transfer code developed for this work that is described in more detail in the appendices.  We choose to use 1D 
+\section{ASSESSING THE CONSEQUENCES OF DISCRETE RADIATION FIELDS}
+Before computing the optimal multi-frequency spectra for SEDs most commonly used in numerical simulations (\S3), we will first demonstrate the difference in results brought about by varying degrees of frequency resolution.  To do this, we use \texttt{rt1d}, a 1D radiative transfer code developed for this work that is described and validated in the appendices.  
+
+1D calculations were the natural choice for the problem at hand for a variety of reasons.  Since our sole focus is on the resolution dependence of radiative effects, it would be unnecessary to perform calculations in a more complex setting with additional unrelated physics.  In fact, doing so would likely make our results more opaque (ha).  Additionally, the algorithm of choice allows one to pre-tabulate the relevant ionization and heating quantities for a given radiation source, effectively allowing us to simulate sources with continuous SEDs.  Given our motives, this is clearly a necessary requirement.  Pre-tabulating key quantities also grants a significant speed-up for calculations that are already cheap, but most importantly, provides the basis for our optimization strategy that will be introduced in the next section.
+
+In the remainder of this section, we will focus on two simple test problems.  First, the standard case of ionization and heating surrounding a $10^5$ K blackbody (test problem 2 in RT06), and second, the identical scenario for a power-law emitting X-ray source.  Initially, we will consider each case in a hydrogen-only medium, and include the effects of helium shortly thereafter.
+
+\subsection{$10^5$ K Blackbody}
+
+
+
+\subsection{Power-Law X-ray Source}
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[scale=0.4]{figures/RT_Test1_RadialProfiles.ps}
+\caption{this is a test.}
+\label{fig:test}
+\end{center}
+\end{figure}
 
 
 
@@ -121,53 +144,11 @@ Before we compute the optimal multi-frequency spectra for SEDs commonly used in 
 
 
 
-
-
-
-\section{Methods}
-The key to our subsequent analysis was inspired by this same convenient feature: if $\Gamma_i$ and $\Heat_i$ can be tabulated for a given source \textit{a-priori}, it means that \textit{precision determination of the ionization state and temperature of the gas surrounding that source relies solely on accurate numerical computation of the photoionization and heating rate integrals in Equations \ref{PhotoionizationRate} and \ref{HeatingRate}}.  So, for a given source, we can compute the values of these integrals numerically for the continuous spectrum, and then as discrete sums given $n_{\nu}$ frequency bins with 
+\section{METHODS}
+Upon careful inspection of the coupled rate equations which govern the balance of ionizations/recombinations and heating/cooling, one realizes that the integral values, i.e. equations \ref{HIIRateEquation}, \ref{HeIIRateEquation}, \ref{HeIIIRateEquation}, and \ref{TemperatureEvolution} can be tabulated as a function of column density (i.e. optical depth), allowing for a significant speed-up in run time.  The key to our subsequent analysis was inspired by this same convenient feature: if $\Gamma_i$ and $\Heat_i$ can be tabulated for a given source \textit{a-priori}, it means that \textit{precision determination of the ionization state and temperature of the gas surrounding that source relies solely on accurate numerical computation of the photoionization and heating rate integrals in Equations \ref{PhotoionizationRate} and \ref{HeatingRate}}.  So, for a given source, we can compute the values of these integrals numerically for the continuous spectrum, and then as discrete sums given $n_{\nu}$ frequency bins with 
 \begin{equation}
     I(E) = \sum_{j=1}^{n_{\nu}} I(E_j) .
 \end{equation}
-
-% Code Verification
-%\subsection{Code Verification}
-%Our code, \texttt{rt1d}, solves Equations \ref{HIIRateEquation}, \ref{HeIIRateEquation}, \ref{HeIIIRateEquation}, and \ref{TemperatureEvolution} using the implicit Euler method for integration and the Newton-Raphson technique for root finding.  In order to track the propagation of ionization fronts accurately, we limit the time-step based on a maximum neutral fraction change as introduced in \cite{Shapiro2004},
-%\begin{equation}
-%    \Delta t = \epsilon_{\mathrm{ion}} \frac{\nHI}{|d\nHI/dt|} ,
-%\end{equation}
-%and additionally require that the time-step increase by a factor of two at most, as in \cite{Wise2011}.  
-%
-%To demonstrate the functionality of the code, we repeat tests 1 and 2 from the Radiative Transfer Comparison Project (\cite{Iliev2006}; hereafter referred to as RT06).  Test 1 is the expansion of an HII region in a hydrogen-only, isothermal medium surrounding a monochromatic source of 13.6 eV photons.  Test 2 is the same, except for the temperature is allowed to evolve according to Equation \ref{TemperatureEvolution}, and the monochromatic radiation source is replaced by a $10^5$ K blackbody spectrum.  Results for Test 1 are shown in Figures \ref{fig:RT_Test1_IfrontEvolution} and \ref{fig:RT_Test1_RadialProfiles}, and for Test 2 in Figure \ref{fig:RT_Test2_RadialProfiles}.
-%\begin{figure*}
-%\begin{center}
-%\leavevmode
-%\psfig{file=figures/RT_Test1_IfrontEvolution.ps,width=6in}
-%\vspace{-20pt}
-%\caption[]{\textit{Top:} Comparison of the calculated (dashed) and analytic (solid) positions of an expanding ionization front in a hydrogen-only, isothermal medium. \textit{Bottom:} Ratio of the calculated and analytic solutions.}
-%\label{fig:RT_Test1_IfrontEvolution}
-%\end{center}
-%\end{figure*}
-%
-%\begin{figure*}
-%\begin{center}
-%\leavevmode
-%\psfig{file=figures/RT_Test1_RadialProfiles.ps,width=6in}
-%\vspace{-20pt}
-%\caption[]{Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $30$, $100$, and $500$ Myr.}
-%\label{fig:RT_Test1_RadialProfiles}
-%\end{center}
-%\end{figure*}
-%
-%\begin{figure*}
-%\begin{center}
-%\leavevmode
-%\psfig{file=figures/RT_Test2_RadialProfiles.ps,width=6in}
-%\vspace{-20pt}
-%\caption[]{\textit{Top:} Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $100$, and $500$ Myr. \textit{Bottom:} Radial profiles of the kinetic temperature at $t = 10$, $100$, and $500$ Myr (solid, dashed, and dotted lines, respectively).}
-%\label{fig:RT_Test2_RadialProfiles}
-%\end{center}
-%\end{figure*}
 
 
 % Discretization Artifacts
@@ -199,30 +180,32 @@ and we have a 100\% chance of keeping our current guess.  It is clear now that h
 where $\gamma$ is an experimentally determined quantity of order unity.
 
 
-\section{Results}
+\section{RESULTS}
 
 
 
 
-\section{Why not tabulate? (discussion)}
+\section{DISCUSSION}
 
 % Could FLD methods tabulate? OTVET? RSPH?  MC?
 
 
-\section{Conclusions}
+\section{CONCLUSIONS}
 
 
 
 \bibliography{references}
 \bibliographystyle{apj}
 
-%%%
-%% APPENDIX
-%%%
+%%% BEGIN APPENDIX
 \appendix
+\twocolumn
+\appendixpage
 
-% RT Framework
-\section{A. Radiative Transfer Framework}
+%%% 
+%% RT Framework
+%%%
+\section{RADIATIVE TRANSFER FRAMEWORK}
 
 Our radiative transfer scheme is modeled closely after the work of \cite{Fukugita1994} and \cite{Thomas2008}, though for completeness we will reiterate the aspects of these methods most pertinent to the problem at hand.  In general, propagating a radiation field relies on solving differential equations governing the rate of change in the number densities of all ions and the temperature of the gas.  Assuming a medium consisting of hydrogen and helium only, we first solve for the relative abundances of each ion via
 \begin{align}
@@ -272,8 +255,10 @@ where $A \equiv \Lbol / 4 \pi r^2$.
 
 It is now apparent that the values of $\Gamma_i$ and $\Heat_i$ can be tabulated as a function of column density for a given source.  This greatly improves the speed of 1D radiative transfer calculations, like those of \cite{Thomas2008}, since the integrals in these expressions (Equations \ref{PhotoionizationRate} and \ref{HeatingRate}) no longer need to be computed numerically on-the-fly.  However, the lookup tables will only be 1-dimensional for the case of a hydrogen-only universe.
 
-% Code Verification
-\section{B. Code Verification}
+%%% 
+%% Code Verification
+%%%
+\section{CODE VERIFICATION}
 Our code, \texttt{rt1d}, solves Equations \ref{HIIRateEquation}, \ref{HeIIRateEquation}, \ref{HeIIIRateEquation}, and \ref{TemperatureEvolution} using the implicit Euler method for integration and the Newton-Raphson technique for root finding.  In order to track the propagation of ionization fronts accurately, we limit the time-step based on a maximum neutral fraction change as introduced in \cite{Shapiro2004},
 \begin{equation}
     \Delta t = \epsilon_{\mathrm{ion}} \frac{\nHI}{|d\nHI/dt|} ,
@@ -282,37 +267,36 @@ and additionally require that the time-step increase by a factor of two at most,
 
 At this juncture it is worth mentioning the numerical artifacts that can result due to poor temporal or spatial resolution.  
 
-To demonstrate the functionality of the code, we repeat tests 1 and 2 from the Radiative Transfer Comparison Project (\cite{Iliev2006}; hereafter referred to as RT06).  Test 1 is the expansion of an HII region in a hydrogen-only, isothermal medium surrounding a monochromatic source of 13.6 eV photons.  Test 2 is the same, except for the temperature is allowed to evolve according to Equation \ref{TemperatureEvolution}, and the monochromatic radiation source is replaced by a $10^5$ K blackbody spectrum.  Results for Test 1 are shown in Figures \ref{fig:RT_Test1_IfrontEvolution} and \ref{fig:RT_Test1_RadialProfiles}, and for Test 2 in Figure \ref{fig:RT_Test2_RadialProfiles}.
-\begin{figure*}
+To demonstrate the functionality of the code, we repeat tests 1 and 2 from the Radiative Transfer Comparison Project (\cite{Iliev2006}; hereafter referred to as RT06).  Test 1 is the expansion of an HII region in a hydrogen-only, isothermal medium surrounding a monochromatic source of 13.6 eV photons.  
+
+\begin{figure}[htbp]
 \begin{center}
-\leavevmode
-\psfig{file=figures/RT_Test1_IfrontEvolution.ps,width=6in}
+\includegraphics[scale=0.4]{figures/RT_Test1_IfrontEvolution.ps}
 \vspace{-20pt}
-\caption[]{\textit{Top:} Comparison of the calculated (dashed) and analytic (solid) positions of an expanding ionization front in a hydrogen-only, isothermal medium. \textit{Bottom:} Ratio of the calculated and analytic solutions.}
+\caption{\textit{Top:} Comparison of the calculated (dashed) and analytic (solid) positions of an expanding ionization front in a hydrogen-only, isothermal medium. \textit{Bottom:} Ratio of the calculated and analytic solutions.}
 \label{fig:RT_Test1_IfrontEvolution}
 \end{center}
-\end{figure*}
+\end{figure}
 
-\begin{figure*}
+
+\begin{figure}[htbp]
 \begin{center}
-\leavevmode
-\psfig{file=figures/RT_Test1_RadialProfiles.ps,width=6in}
+\includegraphics[scale=0.4]{figures/RT_Test1_RadialProfiles.ps}
 \vspace{-20pt}
 \caption[]{Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $30$, $100$, and $500$ Myr.}
 \label{fig:RT_Test1_RadialProfiles}
 \end{center}
-\end{figure*}
+\end{figure}
 
-\begin{figure*}
+Test 2 is the same, except for the temperature is allowed to evolve according to Equation \ref{TemperatureEvolution}, and the monochromatic radiation source is replaced by a $10^5$ K blackbody spectrum.  Results for Test 1 are shown in Figures \ref{fig:RT_Test1_IfrontEvolution} and \ref{fig:RT_Test1_RadialProfiles}, and for Test 2 in Figure \ref{fig:RT_Test2_RadialProfiles}.
+
+\begin{figure}[htbp]
 \begin{center}
-\leavevmode
-\psfig{file=figures/RT_Test2_RadialProfiles.ps,width=6in}
+\includegraphics[scale=0.4]{figures/RT_Test2_RadialProfiles.ps}
 \vspace{-20pt}
-\caption[]{\textit{Top:} Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $100$, and $500$ Myr. \textit{Bottom:} Radial profiles of the kinetic temperature at $t = 10$, $100$, and $500$ Myr (solid, dashed, and dotted lines, respectively).}
+\caption{\textit{Top:} Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $100$, and $500$ Myr. \textit{Bottom:} Radial profiles of the kinetic temperature at $t = 10$, $100$, and $500$ Myr (solid, dashed, and dotted lines, respectively).}
 \label{fig:RT_Test2_RadialProfiles}
 \end{center}
-\end{figure*}
-
-
+\end{figure}
 
 \end{document}

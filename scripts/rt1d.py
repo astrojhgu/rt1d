@@ -164,6 +164,6 @@ for i, pf in enumerate(all_pfs):
         fdt.close()
                 
     elapsed = time.time() - start    
-    print "Calculation {0} complete (output to {1}).  Elapsed time = {2} seconds.".format(i + 1, pf["OutputDirectory"], int(elapsed))
+    print "Calculation {0} complete (output to {1}).  Elapsed time = {2} hours.".format(i + 1, pf["OutputDirectory"], round(elapsed / 3600., 2))
 
 print "Successful run. Exiting."

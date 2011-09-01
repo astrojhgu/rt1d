@@ -68,7 +68,7 @@ def SetDefaultParameterValues():
         "ProgressBar": 0, \
         "CurrentTimestep": 1e-8, \
         "HIIRestrictedTimestep": 1, \
-        "HeIIRestrictedTimestep": 1, \
+        "HeIIRestrictedTimestep": 0, \
         "LightCrossingTimeRestrictedStep": 0, \
         "RadiativeTransferCourantCondition": 0.5, \
         "OnePhotonPackagePerCell": 0, \

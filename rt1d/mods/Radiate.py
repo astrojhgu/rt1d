@@ -12,12 +12,14 @@ driver of rt1d, calling our solvers which call all the various physics modules.
 
 import numpy as np
 import copy, scipy, math
+from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
 from rt1d.mods.RadiationSource import RadiationSource
 from rt1d.mods.SecondaryElectrons import SecondaryElectrons
 from rt1d.mods.Interpolate import Interpolate
 from rt1d.mods.Cosmology import Cosmology
 from rt1d.mods.SolveRateEquations import SolveRateEquations
 from progressbar import *
+from scipy.integrate import quad
 
 try:
     from mpi4py import MPI
@@ -40,6 +42,8 @@ c = 29979245800.0 			    # Speed of light - [c] = cm/s
 m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
+
+E_th = [13.6, 24.6, 54.4]
 
 min_density = 1e-12
 
@@ -203,16 +207,18 @@ class Radiate:
         z = self.cosmo.TimeToRedshiftConverter(0., t, self.InitialRedshift)
         
         # Nice names for ionized fractions
-        x_HI_arr = data["HIDensity"] / (data["HIDensity"] + data["HIIDensity"])
-        x_HII_arr = data["HIIDensity"] / (data["HIDensity"] + data["HIIDensity"])
+        n_H_arr = data["HIDensity"] + data["HIIDensity"]
+        x_HI_arr = data["HIDensity"] / n_H_arr
+        x_HII_arr = data["HIIDensity"] / n_H_arr
         
         if self.MultiSpecies:
-            x_HeI_arr = data["HeIDensity"] / (data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"])
-            x_HeII_arr = data["HeIIDensity"] / (data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"])
-            x_HeIII_arr = data["HeIIIDensity"] / (data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"])
+            n_He_arr = data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"]
+            x_HeI_arr = data["HeIDensity"] / n_He_arr
+            x_HeII_arr = data["HeIIDensity"] / n_He_arr
+            x_HeIII_arr = data["HeIIIDensity"] / n_He_arr
         
         # This is not a good idea in general, but in this case they'll never be touched again.
-        else: x_HeI_arr = x_HeII_arr = x_HeIII_arr = np.zeros_like(x_HI_arr)
+        else: n_He_arr = x_HeI_arr = x_HeII_arr = x_HeIII_arr = np.zeros_like(x_HI_arr)
                                                         
         # If we're in an expanding universe, dilute densities by (1 + z)^3    
         if self.CosmologicalExpansion: 
@@ -227,12 +233,10 @@ class Radiate:
         ncol_HI = np.cumsum(data["HIDensity"]) * self.dx
         ncol_HeI = np.cumsum(data["HeIDensity"]) * self.dx
         ncol_HeII = np.cumsum(data["HeIIDensity"]) * self.dx
-                        
+                                
         # Print status, and update progress bar
         if rank == 0: print "rt1d: {0} < t < {1}".format(round(t / self.TimeUnits, 8), round((t + dt) / self.TimeUnits, 8))            
         if rank == 0 and self.ProgressBar: pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
-
-        if self.HIIRestrictedTimestep: dtphot = dt * np.ones_like(self.grid)
         
         # If accreting black hole, luminosity will change with time.
         Lbol = self.rs.BolometricLuminosity(t)
@@ -258,8 +262,10 @@ class Radiate:
                     packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
             else: packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
         
+        if self.HIIRestrictedTimestep: dtphot = 1e50 * np.ones_like(self.grid)
+        
         if self.InfiniteSpeedOfLight:
-
+            
             # Loop over cells radially, solve rate equations, update values in data -> newdata
             for cell in self.grid:
                 
@@ -342,7 +348,7 @@ class Radiate:
                 newdata["Temperature"][cell] = newT    
                 
                 if self.HIIRestrictedTimestep: 
-                    dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, r, Lbol, n_H, n_He)                            
+                    dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, Lbol, n_H, n_He)                            
                 
                 ######################################
                 ################ DONE ################
@@ -350,7 +356,9 @@ class Radiate:
                 
         # If the speed of light = c, things are trickier    
         else:                
-                        
+                     
+            if self.HIIRestrictedTimestep: dtphot = 1e50 * np.ones(len(packs))         
+                                    
             # Loop over photon packages, updating values in cells: data -> newdata
             for j, pack in enumerate(packs):
                 t_birth = pack[0]
@@ -362,12 +370,15 @@ class Radiate:
                 cell_pack_max = r_max * self.GridDimensions / self.LengthUnits
                 
                 if cell_pack_max < self.StartCell: continue
-                                                                    
+                              
+                Lbol = pack[-1] / pack[1]          
+                                                
                 # Advance this photon package as far as it will go on this global timestep  
                 while cell_pack < cell_pack_max:
                                                             
                     # What cell are we in
-                    cell = int(cell_pack)
+                    #cell = int(cell_pack)
+                    cell = int(round(cell_pack))
                     
                     if cell >= self.GridDimensions: break
                     
@@ -378,19 +389,12 @@ class Radiate:
                     if cell < self.StartCell: 
                         cell_pack += dc
                         continue
-                        
-                    # Amount of time this photon package will spend in this cell    
-                    subdt = dc * self.CellCrossingTime
-                    
+                                                
                     # We really need to evolve this cell until the next photon package arrives, which
                     # is probably longer than a cell crossing time unless the global dt is vv small.
-                    if (len(packs) > 1) and ((j + 1) < len(packs)): altdt = min(dt, packs[j + 1][0] - pack[0])
-                    else: altdt = dt
-                    
-                    subdt = max(subdt, altdt)                                 
-                                
-                    Lbol = pack[-1] / pack[1]         # Effective luminosity hitting this cell this timestep?
-                                                                                                                        
+                    if (len(packs) > 1) and ((j + 1) < len(packs)): subdt = min(dt, packs[j + 1][0] - pack[0])
+                    else: subdt = dt
+                                                                                                                                                                                                                                                                                                                                              
                     r = cell_pack * self.LengthUnits / self.GridDimensions
                     
                     n_e = newdata["ElectronDensity"][cell]
@@ -411,8 +415,6 @@ class Radiate:
                     mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                                             
                     # For convenience     
-                    ncol_HI = np.cumsum(newdata["HIDensity"]) * self.dx
-                    
                     nabs = [n_HI, n_HeI, n_HeII]
                     nion = [n_HII, n_HeII, n_HeIII]
                     n_H = n_HI + n_HII
@@ -423,9 +425,9 @@ class Radiate:
                     T = newdata["Temperature"][cell]
                     E = 3. * k_B * T * n_B / mu / 2.
                     
-                    packs[j][2] += newdata['HIDensity'][cell] * subdt * c  
-                    packs[j][3] += newdata['HeIDensity'][cell] * subdt * c 
-                    packs[j][4] += newdata['HeIIDensity'][cell] * subdt * c
+                    packs[j][2] += newdata['HIDensity'][cell] * dc * self.CellCrossingTime * c  
+                    packs[j][3] += newdata['HeIDensity'][cell] * dc * self.CellCrossingTime * c 
+                    packs[j][4] += newdata['HeIIDensity'][cell] * dc * self.CellCrossingTime * c
                     
                     ######################################
                     ######## Solve Rate Equations ########
@@ -433,7 +435,7 @@ class Radiate:
                     
                     values = (n_HII, n_HeII, n_HeIII, E)
                     qnew = [[0, n_HII], [0, n_HeII], [0, n_HeIII], [0, E]]
-                                        
+                                                                                
                     tarr, qnew, h = self.solver.integrate(self.qdot, values, t, t + subdt, None, h, \
                         r, z, mu, n_H, n_He, packs[j][2:5], Lbol)
                                         
@@ -469,20 +471,26 @@ class Radiate:
                     newdata["Temperature"][cell] = newT                               
                                                                                 
                     cell_pack += dc
-            
+                
+                if self.HIIRestrictedTimestep:       
+                    for k in xrange(int(cell_pack_max), self.GridDimensions - 1):                        
+                        dtphot[j] = min(self.ComputePhotonTimestep(newdata, k, Lbol, n_H_arr[0], n_He_arr[0]), dtphot[j])
+                                     
                     ######################################
                     ################ DONE ################     
                     ######################################                  
                                                   
-            if self.HIIRestrictedTimestep:                            
-                for cell in self.grid:          
-                    L = self.rs.BolometricLuminosity(max(t - self.r[cell] / c, 0.)) 
-                    dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, self.r[cell], L, self.InitialHydrogenDensity, self.InitialHeliumDensity)
-                                                                
+            #if self.HIIRestrictedTimestep:                            
+            #    for cell in self.grid[1:]:  
+            #        L = self.rs.BolometricLuminosity(max(t - self.r[cell] / c, 0.)) 
+            #        dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, L, n_H_arr[0], n_He_arr[0])
+                               
+        #print dtphot, np.min(dtphot), dt                       
+                                                                                          
         if (size > 0) and (self.ParallelizationMethod == 1):
             for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
-                
-        if self.HIIRestrictedTimestep: newdt = min(np.min(dtphot[self.StartCell:]), 2 * dt)
+                                
+        if self.HIIRestrictedTimestep: newdt = min(np.min(dtphot), 2 * dt)
         else: newdt = dt
         
         if self.LightCrossingTimeRestrictedStep: newdt = min(newdt, self.RadiativeTransferCourantCondition * self.LengthUnits / self.GridDimensions / 29979245800.0)
@@ -494,20 +502,20 @@ class Radiate:
                 
         return newdata, h, newdt   
         
-    def ComputePhotonTimestep(self, newdata, cell, r, Lbol, n_H, n_He):
+    def ComputePhotonTimestep(self, newdata, cell, Lbol, n_H, n_He):
         """
         Use Shapiro et al. criteria to set next timestep.
         """          
     
         xHII = newdata['HIIDensity'][cell] / n_H     
-        
-        if xHII < 0.5: return 1e50
                    
         ncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
                    np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
-        
+                   
+        if self.OpticalDepth(ncol) < 0.5: return 1e50           
+                                
         Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
-            xHII, newdata['Temperature'][cell], r, Lbol)        
+            xHII, newdata['Temperature'][cell], self.r[cell], Lbol)        
         alpha = 2.6e-13 * (newdata['Temperature'][cell] / 1.e4)**-0.85  
         
         # Shapiro et al. 2004
@@ -519,12 +527,12 @@ class Radiate:
             xHeII = newdata["HeIIDensity"][cell] / n_He
             
             Beta = 2.38e-11 * np.sqrt(newdata['Temperature'][cell]) * (1. + np.sqrt(newdata['Temperature'][cell] / 1.e5))**-1. * np.exp(-2.853e5 /newdata['Temperature'][cell]) * self.CollisionalIonization
-            Gamma = self.IonizationRateCoefficientHeI(ncol, newdata['HIDensity'][cell], newdata['HeIDensity'][cell], xHII, newdata['Temperature'][cell], r, Lbol)                    
+            Gamma = self.IonizationRateCoefficientHeI(ncol, newdata['HIDensity'][cell], newdata['HeIDensity'][cell], xHII, newdata['Temperature'][cell], self.r[cell], Lbol)                    
             alpha = 9.94e-11 * newdata['Temperature'][cell]**-0.48   
             
             # Analogous to Shapiro et al. 2004 but for helium
             dtphot = min(dtphot, self.MaxHeIIChange * newdata['HeIDensity'][cell] / \
-                np.abs(newHeI * (Gamma + newdata["ElectronDensity"][cell] * Beta) - newdata['HeIIDensity'][cell] * newdata["ElectronDensity"][cell] * alpha)) 
+                np.abs(newdata["HeIDensity"][cell] * (Gamma + newdata["ElectronDensity"][cell] * Beta) - newdata['HeIIDensity'][cell] * newdata["ElectronDensity"][cell] * alpha)) 
                         
         return dtphot                   
         
@@ -536,7 +544,6 @@ class Radiate:
         to_eliminate = []
         for i, pack in enumerate(packs):
             if (t_next - pack[0]) > (self.LengthUnits / c): to_eliminate.append(i)
-            if pack[2] > self.HIColumn[-1]: to_eliminate.append(i)
             
         to_eliminate.reverse()    
         for element in to_eliminate: packs.pop(element)
@@ -742,4 +749,15 @@ class Radiate:
             units: erg cm^3 / s
         """
         return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
+        
+    def OpticalDepth(self, n):
+        """
+        Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which
+        are stored in the variable 'n' as a three element array.
+        """
+        
+        func = lambda E: PhotoIonizationCrossSection(E, 0) * n[0] + PhotoIonizationCrossSection(E, 1) * n[1] \
+            + PhotoIonizationCrossSection(E, 2) * n[2]
+            
+        return quad(func, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0]   
         
