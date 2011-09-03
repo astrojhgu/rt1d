@@ -121,7 +121,7 @@ Before computing the optimal multi-frequency spectra for SEDs most commonly used
 
 1D calculations were the natural choice for the problem at hand for a variety of reasons.  Since our sole focus is on the resolution dependence of radiative effects, it would be unnecessary to perform calculations in a more complex setting with additional unrelated physics.  In fact, doing so would likely make our results more opaque (ha).  Additionally, the algorithm of choice allows one to pre-tabulate the relevant ionization and heating quantities for a given radiation source, effectively allowing us to simulate sources with continuous SEDs.  Given our motives, this is clearly a necessary requirement.  Pre-tabulating key quantities also grants a significant speed-up for calculations that are already cheap, but most importantly, provides the basis for our optimization strategy that will be introduced in the next section.
 
-In the remainder of this section, we will focus on two simple test problems.  First, the standard case of ionization and heating surrounding a $10^5$ K blackbody (test problem 2 in RT06), and second, the identical scenario for a power-law emitting X-ray source.  Initially, we will consider each case in a hydrogen-only medium, and include the effects of helium shortly thereafter.
+In the remainder of this section, we will focus on two simple test problems.  First, the standard case of ionization and heating surrounding a $10^5$ K blackbody (problem \#2 in RT06), and second, the identical scenario for a power-law emitting X-ray source.  Initially, we will consider each case in a hydrogen-only medium, and later include the effects of helium.
 
 \subsection{$10^5$ K Blackbody}
 
@@ -270,18 +270,18 @@ At this juncture it is worth mentioning the numerical artifacts that can result 
 To demonstrate the functionality of the code, we repeat tests 1 and 2 from the Radiative Transfer Comparison Project (\cite{Iliev2006}; hereafter referred to as RT06).  Test 1 is the expansion of an HII region in a hydrogen-only, isothermal medium surrounding a monochromatic source of 13.6 eV photons.  
 
 \begin{figure}[htbp]
-\begin{center}
+\centering
 \includegraphics[scale=0.4]{figures/RT_Test1_IfrontEvolution.ps}
 \vspace{-20pt}
 \caption{\textit{Top:} Comparison of the calculated (dashed) and analytic (solid) positions of an expanding ionization front in a hydrogen-only, isothermal medium. \textit{Bottom:} Ratio of the calculated and analytic solutions.}
 \label{fig:RT_Test1_IfrontEvolution}
-\end{center}
+%\end{center}
 \end{figure}
 
 
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[scale=0.4]{figures/RT_Test1_RadialProfiles.ps}
+\includegraphics[scale=0.4]{figures/RT_Test1_RadialProfiles.ps} 
 \vspace{-20pt}
 \caption[]{Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $30$, $100$, and $500$ Myr.}
 \label{fig:RT_Test1_RadialProfiles}

@@ -79,7 +79,7 @@ class Radiate:
         self.AdaptiveTimestep = pf["ODEAdaptiveStep"]
         self.CosmologicalExpansion = pf["CosmologicalExpansion"]
         self.InitialHIIFraction = pf["InitialHIIFraction"]
-        self.GridDimensions = pf["GridDimensions"]
+        self.GridDimensions = int(pf["GridDimensions"])
         self.InitialRedshift = pf["InitialRedshift"]
         self.LengthUnits = pf["LengthUnits"]
         self.TimeUnits = pf["TimeUnits"]
@@ -97,7 +97,6 @@ class Radiate:
         self.HeIIColumn = n_col[2]
         
         self.OnePhotonPackagePerCell = pf["OnePhotonPackagePerCell"]
-        self.RadiativeTransferCourantCondition = pf["RadiativeTransferCourantCondition"]        
         self.LightCrossingTimeRestrictedStep = pf["LightCrossingTimeRestrictedStep"]
         self.AdaptiveStep = pf["ODEAdaptiveStep"]
         self.MaxStep = pf["ODEMaxStep"] * self.TimeUnits
@@ -263,7 +262,7 @@ class Radiate:
             else: packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
         
         if self.HIIRestrictedTimestep: dtphot = 1e50 * np.ones_like(self.grid)
-        
+                
         if self.InfiniteSpeedOfLight:
             
             # Loop over cells radially, solve rate equations, update values in data -> newdata
@@ -318,14 +317,20 @@ class Radiate:
             
                 # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
                 newHII, newHeII, newHeIII, newE = qnew
-                                        
+                
+                # Ensure monotonicity in ionized species
+                #if cell > self.StartCell:
+                #    newHII[-1] = self.MonotonicityFudge(newdata['HIIDensity'][cell - 1], newHII[-1])  
+                #    newHeII[-1] = self.MonotonicityFudge(newdata['HeIIDensity'][cell - 1], newHeII[-1])
+                #    newHeIII[-1] = self.MonotonicityFudge(newdata['HeIIIDensity'][cell - 1], newHeIII[-1])
+                
                 # Convert from internal energy back to temperature
                 if not self.Isothermal: newT = newE[-1] * 2. * mu / 3. / k_B / n_B
                 else: newT = newdata['Temperature'][cell]
                 
                 # Possible that newHII > n_H and within tolerances, hence the min statements
                 if newHII[-1] > n_H: newHI = min_density
-                else: newHI = n_H - newHII[-1]      
+                else: newHI = n_H - newHII[-1]
                 
                 # Same problem could arise with helium - favor accuracy of HeII over HeIII
                 newHeI = n_He - newHeII[-1] - newHeIII[-1]
@@ -337,15 +342,15 @@ class Radiate:
                     newHeI = n_He - newHeII[-1] - newHeIII[-1]
                     newerHeII = n_He - newHeI - newHeIII[-1]
                     newerHeIII = n_He - newHeI - newerHeII
-                    
-                # Update quantities in 'data' -> 'newdata'     
+
+                # Update quantities in 'data' -> 'newdata'
                 newdata["HIDensity"][cell] = newHI                                                                                            
                 newdata["HIIDensity"][cell] = n_H - newHI
                 newdata["HeIDensity"][cell] = newHeI
                 newdata["HeIIDensity"][cell] = newerHeII
                 newdata["HeIIIDensity"][cell] = newerHeIII
                 newdata["ElectronDensity"][cell] = (n_H - newHI) + newerHeII + 2.0 * newerHeIII
-                newdata["Temperature"][cell] = newT    
+                newdata["Temperature"][cell] = newT                    
                 
                 if self.HIIRestrictedTimestep: 
                     dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, Lbol, n_H, n_He)                            
@@ -356,8 +361,8 @@ class Radiate:
                 
         # If the speed of light = c, things are trickier    
         else:                
-                     
-            if self.HIIRestrictedTimestep: dtphot = 1e50 * np.ones(len(packs))         
+                                          
+            if self.HIIRestrictedTimestep: dtphot = 1e50 * np.ones_like(self.grid) #dtphot = 1e50 * np.ones(len(packs))         
                                     
             # Loop over photon packages, updating values in cells: data -> newdata
             for j, pack in enumerate(packs):
@@ -441,7 +446,13 @@ class Radiate:
                                         
                     # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
                     newHII, newHeII, newHeIII, newE = qnew
-                                            
+                    
+                    # Ensure monotonicity in ionized species
+                   #if cell > self.StartCell:
+                   #    newHII[-1] = self.MonotonicityFudge(newdata['HIIDensity'][cell - 1], newHII[-1])  
+                   #    newHeII[-1] = self.MonotonicityFudge(newdata['HeIIDensity'][cell - 1], newHeII[-1])
+                   #    newHeIII[-1] = self.MonotonicityFudge(newdata['HeIIIDensity'][cell - 1], newHeIII[-1])
+                    
                     # Convert from internal energy back to temperature
                     if not self.Isothermal: newT = newE[-1] * 2. * mu / 3. / k_B / n_B
                     else: newT = newdata['Temperature'][cell]
@@ -471,21 +482,18 @@ class Radiate:
                     newdata["Temperature"][cell] = newT                               
                                                                                 
                     cell_pack += dc
-                
-                if self.HIIRestrictedTimestep:       
-                    for k in xrange(int(cell_pack_max), self.GridDimensions - 1):                        
-                        dtphot[j] = min(self.ComputePhotonTimestep(newdata, k, Lbol, n_H_arr[0], n_He_arr[0]), dtphot[j])
-                                     
+                                                    
                     ######################################
                     ################ DONE ################     
-                    ######################################                  
-                                                  
-            #if self.HIIRestrictedTimestep:                            
-            #    for cell in self.grid[1:]:  
-            #        L = self.rs.BolometricLuminosity(max(t - self.r[cell] / c, 0.)) 
-            #        dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, L, n_H_arr[0], n_He_arr[0])
-                               
-        #print dtphot, np.min(dtphot), dt                       
+                    ######################################                                   
+                
+                #if self.HIIRestrictedTimestep:       
+                #    for k in xrange(int(cell_pack_max), self.GridDimensions - 1):                        
+                #        dtphot[j] = min(self.ComputePhotonTimestep(newdata, k, Lbol, n_H_arr[0], n_He_arr[0]), dtphot[j])                  
+                       
+            if self.HIIRestrictedTimestep:
+                for cell in self.grid[1:]:
+                    dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, self.rs.BolometricLuminosity(t), n_H_arr[0], n_He_arr[0])            
                                                                                           
         if (size > 0) and (self.ParallelizationMethod == 1):
             for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
@@ -493,14 +501,45 @@ class Radiate:
         if self.HIIRestrictedTimestep: newdt = min(np.min(dtphot), 2 * dt)
         else: newdt = dt
         
-        if self.LightCrossingTimeRestrictedStep: newdt = min(newdt, self.RadiativeTransferCourantCondition * self.LengthUnits / self.GridDimensions / 29979245800.0)
+        if self.LightCrossingTimeRestrictedStep: newdt = min(newdt, self.LightCrossingTimeRestrictedStep * self.LengthUnits / self.GridDimensions / 29979245800.0)
         
         if rank == 0 and self.ProgressBar: pbar.finish()
         
         # Update photon packages        
         if not self.InfiniteSpeedOfLight: newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt, newdata)  # t + newdt?      
                 
+        # Enforce neutral fraction monotonicity
+        newdata = self.MonotonicityFudge(newdata)        
+                
         return newdata, h, newdt   
+        
+    def MonotonicityFudge(self, newdata):
+        
+        n_H = (newdata['HIDensity'] + newdata['HIIDensity'])[0]
+        
+        for i, n in enumerate(newdata['HIIDensity']):
+            if i == 0 or (i == self.GridDimensions - 1): continue
+                        
+            if n > newdata['HIIDensity'][i - 1]:
+                newdata['HIIDensity'][i] = np.interp(self.r[i], [self.r[i - 1], self.r[i + 1]],
+                    [newdata['HIIDensity'][i - 1], newdata['HIIDensity'][i + 1]])
+                
+                newdata['HIDensity'][i] = n_H - newdata['HIIDensity'][i]
+        
+        return newdata
+        
+        
+    #def MonotonicityFudge(self, cell1, cell2):
+    #    """
+    #    Neutral fraction should be a monotonic function! However, neighboring cells may violate
+    #    this periodically within our tolerances.  This is a fudge to ensure that it doesn't happen.
+    #    
+    #    cell1 should contain the value of n_HII in the cell closer to the radiation source, and cell2
+    #    should contain the value of n_HII in the next cell (r2 > r1)
+    #    """    
+    #            
+    #    if cell2 > cell1: return cell1    
+    #    else: return cell2
         
     def ComputePhotonTimestep(self, newdata, cell, Lbol, n_H, n_He):
         """
@@ -511,8 +550,9 @@ class Radiate:
                    
         ncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
                    np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
-                   
-        if self.OpticalDepth(ncol) < 0.5: return 1e50           
+                
+        tau = self.Interpolate.interp(ncol, "TotalOpticalDepth0")      
+        if tau < 0.5: return 1e50           
                                 
         Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
             xHII, newdata['Temperature'][cell], self.r[cell], Lbol)        

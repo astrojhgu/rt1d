@@ -46,7 +46,12 @@ grid = np.arange(GridDims)
 r = []
 t = []
 mean_xH = []
-for dd in ds.data.keys()[1:]:
+for dd in ds.data.keys():
+    
+    if ds.data[dd].t == 0:
+        r.append(0)
+        t.append(0)
+    
     x_H = ds.data[dd].x_HI
     
     mean_xH.append(np.mean(x_H))
@@ -69,7 +74,7 @@ r = np.array(r)
 t = np.array(t)
 
 func = lambda t: rs * (1. - np.exp(-t / trec))**(1. / 3.) + StartRadius
-t_anl = np.linspace(0, max(t), 500)
+t_anl = np.linspace(0, 500, 500)
 r_anl = map(func, t_anl)
 r_anl_bin = map(func, t)
         
@@ -77,15 +82,19 @@ mp = multiplot(dims = (2, 1), panel_size = (0.5, 1))
 
 mp.axes[0].plot(t / trec, r, color = 'k', ls = '--')
 mp.axes[0].plot(t_anl / trec, r_anl, linestyle = '-', color = 'k')
-mp.axes[0].set_xlim(0, 1 * max(t/trec))
+mp.axes[0].set_xlim(0, max(t / trec))
 mp.axes[0].set_ylim(0, 1.1 * max(max(r), max(r_anl)))
 mp.axes[0].set_ylabel(r'$r \ (\mathrm{kpc})$')  
 
 mp.axes[1].plot(t / trec, r / r_anl_bin, ls = '-', color = 'k')
-mp.axes[1].set_xlim(0, 1 * max(t/trec))
+mp.axes[1].set_xlim(0, max(t / trec))
 mp.axes[1].set_ylim(0.9, 1.1)
 mp.axes[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
 mp.axes[1].set_ylabel(r'$r/r_{\mathrm{anl}}$') 
+
+mp.axes[0].xaxis.set_ticks(np.linspace(0, 4, 5))
+mp.axes[1].xaxis.set_ticks(np.linspace(0, 4, 5))
+
 mp.fix_ticks()
 pl.savefig('{0}/RT_Test1_IfrontEvolution.ps'.format(OutputDirectory))
 pl.savefig('{0}/RT_Test1_IfrontEvolution.png'.format(OutputDirectory))
@@ -93,7 +102,7 @@ pl.clf()
 
 # Write out data
 misc.writetab((t / trec, r, r / r_anl_bin), '{0}/RT_Test1_IfrontEvolution.dat'.format(OutputDirectory), ('t/trec', 'r', 'r/ranl'))
-        
+
 # Ionized and neutral fractions vs. R and t (assumes dtDataDump = 5)
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HI, ls = '-', color = 'k', label = r'$1 - x_i$')
 #pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[6].x_HI, ls = '-', color = 'k')
@@ -113,9 +122,8 @@ pl.xlim(0, 1.01)
 pl.ylim(1e-5, 1.5)
 pl.legend(loc = 'lower right', frameon = False)
 pl.annotate('10', (0.3, 0.5))
-#pl.annotate('30', (0.45, 0.5))
 pl.annotate('100', (0.61, 0.5))
-pl.annotate('500', (0.77, 0.5))
+pl.annotate('500', (0.76, 0.5))
 pl.savefig('{0}/RT_Test1_RadialProfiles.ps'.format(OutputDirectory))
 pl.savefig('{0}/RT_Test1_RadialProfiles.png'.format(OutputDirectory))
 pl.clf()

@@ -45,7 +45,7 @@ m_HeII = 2.0 * (m_p + m_n) + m_e
 
 tiny_number = 1e-30
 
-IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', 'SecondaryIonizationRateHI', 'SecondaryIonizationRateHeI']#, 'ComptonHeatingRate']
+IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', 'SecondaryIonizationRateHI', 'SecondaryIonizationRateHeI', 'TotalOpticalDepth']#, 'ComptonHeatingRate']
 
 class InitializeIntegralTables: 
     def __init__(self, pf, data):
@@ -255,7 +255,24 @@ class InitializeIntegralTables:
             self.WriteIntegralTable(itabs)
                 
             return itabs
-    
+            
+    def TotalOpticalDepth(self, n = [0.0, 0.0, 0.0], species = 0):
+        """
+        Optical depth integrated over entire spectrum.
+        """        
+        
+        if self.rs.DiscreteSpectrum == 0:
+            
+            integrand = lambda E: self.OpticalDepth(E, n)    
+            integral = integrate(integrand, self.rs.Emin, self.rs.Emax, epsrel = 1e-16)[0]
+                        
+            return integral
+                  
+        else:
+            integral = self.OpticalDepth(self.rs.E, n)  
+                                                                                                                                                                                
+            return np.sum(integral)
+            
     def OpticalDepth(self, E, n):
         """
         Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which

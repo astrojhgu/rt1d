@@ -147,7 +147,7 @@ for i, pf in enumerate(all_pfs):
         data, h, newdt = r.EvolvePhotons(data, t, dt, min(h, dt))
         t += dt
         dt = newdt # dt for the next timestep
-                       
+                               
         # Write-out data                                        
         if write_now:
             wrote = False
@@ -165,5 +165,11 @@ for i, pf in enumerate(all_pfs):
                 
     elapsed = time.time() - start    
     print "Calculation {0} complete (output to {1}).  Elapsed time = {2} hours.".format(i + 1, pf["OutputDirectory"], round(elapsed / 3600., 2))
+
+    f = open('{0}/RunComplete'.format(pf["OutputDirectory"]), 'w')
+    print >> f, '# walltime (s)'
+    print >> f, elapsed
+    print >> f, ''
+    f.close()
 
 print "Successful run. Exiting."

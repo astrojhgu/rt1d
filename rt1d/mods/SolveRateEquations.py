@@ -90,11 +90,12 @@ class SolveRateEquations:
                 if h > self.hmin:
                     h = max(self.hmin, h / 2.)
                     continue
-                else: # Or throw an RT1D_FAIL?
+                else: 
                     c = np.less(ynext, 0)
                     temp = np.array(ynext)
                     temp[c] = self.guesses[c] * 1e-8
                     ynext = list(temp)
+                    print 'WARNING: Negative/NAN encountered in rate integral quantity.  Setting to zero, since already at minimum ODE step.'
                                                                                 
             # Adaptive time-stepping
             adapted = False
@@ -117,8 +118,8 @@ class SolveRateEquations:
             if xnext > xf: h = (xf - x[i - 1])  
             
             # If we didn't meet our error requirement, repeat loop with different h
-            if adapted and h != self.hmin: continue             
-            
+            if adapted: continue             
+                        
             x.append(xnext)        
             y.append(ynext)            
             i += 1
@@ -179,7 +180,8 @@ class SolveRateEquations:
         err_abs = np.abs(ynp2_ts - ynp2_os)
         err_rel = np.zeros_like(err_abs)
         for i, element in enumerate(ynp2_ts):
-            if element > 0: err_rel[i] = err_abs[i] / element
+            # If MultiSpecies or Isothermal = 1, some entries will be 0 (and should contribute no error)
+            if element > 0: err_rel[i] = err_abs[i] / element   
         
         return err_rel
         

@@ -29,7 +29,7 @@ def SetDefaultParameterValues():
         
         # ODE Solver
         "ODEAdaptiveStep": 1, \
-        "ODEMinStep": 1e-8, \
+        "ODEMinStep": 1e-12, \
         "ODEMaxStep": 1e-1, \
         "ODErtol": 1e-3, \
         "ODEatol": 1e-6, \
@@ -70,7 +70,6 @@ def SetDefaultParameterValues():
         "HIIRestrictedTimestep": 1, \
         "HeIIRestrictedTimestep": 0, \
         "LightCrossingTimeRestrictedStep": 0, \
-        "RadiativeTransferCourantCondition": 0.5, \
         "OnePhotonPackagePerCell": 0, \
         "MaxHIIChange": 0.05, \
         "MaxHeIIChange": 0.05, \

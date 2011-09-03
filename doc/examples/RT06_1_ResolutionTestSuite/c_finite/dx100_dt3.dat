@@ -1,5 +1,5 @@
 ProblemType = 1
-CurrentTimestep = 1e-3
 GridDimensions = 100
 OutputDirectory = dx100_dt3
-HIIRestrictedTimestep = 0
+HIIRestrictedTimestep = 1
+InfiniteSpeedOfLight = 0
