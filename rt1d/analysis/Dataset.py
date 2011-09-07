@@ -60,14 +60,14 @@ class Dataset:
         
         # List all data*dumps* in this data*set*.
         alldds = []
-        for f in os.listdir("{0}/{1}/{2}".format(self.gd, self.rd, self.od)):
+        for f in os.listdir("{0}/{1}".format(self.rd, self.od)):
             if not re.search('.h5', f): continue
             if not re.search('dd', f): continue # temporary hack
             alldds.append(f)
             
         ds = {}
         for ddf in alldds:
-            f = h5py.File("{0}/{1}/{2}/{3}".format(self.gd, self.rd, self.od, ddf))
+            f = h5py.File("{0}/{1}/{2}".format(self.rd, self.od, ddf))
             ID = ddf.partition('.')[0].strip('dd')
             ds[int(ID)] = DataDump(f["Data"], f["ParameterFile"])
             f.close()
