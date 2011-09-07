@@ -17,7 +17,7 @@ Notes:
 
 import numpy as np
 import pylab as pl
-from scipy.integrate import romberg
+from Integrate import simpson
 
 c = 29979245800.0
 G = 6.673*10**-8
@@ -38,11 +38,11 @@ class Cosmology:
     def LookbackTime(self, z_i, z_f):
         AgeIntegrand = lambda z: (1.0 / (z + 1.0) / self.EvolutionFunction(z))
         
-        return (romberg(AgeIntegrand, z_i, z_f) / self.HubbleParameterNow)    
+        return (simpson(AgeIntegrand, z_i, z_f) / self.HubbleParameterNow)    
         
     def TimeToRedshiftConverter(self, t_i, t_f, z_i):
         """
-        High redshift approximation.
+        High redshift approximation under effect.
         """
         return ((1. + z_i)**(-3. / 2.) + (3. * self.HubbleParameterNow * np.sqrt(self.OmegaMatterNow) * (t_f - t_i) / 2.))**(-2. / 3.) - 1.
         

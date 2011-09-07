@@ -13,8 +13,7 @@ Notes:
 """
 
 import numpy as np
-from scipy.integrate import quad
-from scipy.optimize import fsolve
+from Integrate import simpson as integrate
 
 h = 6.626068 * 10**-27 			                            # Planck's constant - [h] = erg*s
 k_B = 1.3806503 * 10**-16			                        # Boltzmann's constant - [k_B] = erg/K
@@ -117,7 +116,7 @@ class RadiationSource:
         else:
         
             if self.SourceType == 1 or self.SourceType == 2:
-                integral, err = quad(self.SpecificIntensity, 0, np.inf)
+                integral, err = integrate(self.SpecificIntensity, 0, np.inf)
                 
             if self.SourceType == 3:
                 if self.alpha == -1.0: 
@@ -142,8 +141,8 @@ class RadiationSource:
             return self.Lph / (np.sum(self.F / self.E / erg_per_ev))
             
         if self.SourceType == 1:
-            norm = quad(self.SpecificIntensity, 0, np.inf)[0]
-            return self.Lph / quad(lambda E: self.SpecificIntensity(E) / norm / E / erg_per_ev, 0, np.inf)[0]
+            norm = integrate(self.SpecificIntensity, 0, np.inf)[0]
+            return self.Lph / integrate(lambda E: self.SpecificIntensity(E) / norm / E / erg_per_ev, 0, np.inf)[0]
         
         if self.SourceType == 2:
             return 10**SchaererTable["Luminosity"][SchaererTable["Mass"].index(self.M)] * lsun
@@ -158,7 +157,7 @@ class RadiationSource:
         Returns cumulative energy output contributed by photons at or less than energy E.
         """    
         
-        return quad(self.Spectrum, 0, E)[0]        
+        return integrate(self.Spectrum, 0, E)[0]        
             
             
             

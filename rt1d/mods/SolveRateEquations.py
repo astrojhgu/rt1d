@@ -61,10 +61,8 @@ class SolveRateEquations:
         """
         This routine does all the work.
         
-            f: function(y, x, *args) to be solved.  Order of y and x is to be consistent with scipy convention.
-            
+            f: function(y, x, *args) to be solved.
             x0, y0: Initial conditions on x and y.  y0 may be a tuple if equations are coupled.
-            
             xf: Endpoint of integration in independent variable x.
             
         """

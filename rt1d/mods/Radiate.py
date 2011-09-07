@@ -10,16 +10,16 @@ driver of rt1d, calling our solvers which call all the various physics modules.
      
 """
 
+import copy
 import numpy as np
-import copy, scipy, math
 from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
 from rt1d.mods.RadiationSource import RadiationSource
 from rt1d.mods.SecondaryElectrons import SecondaryElectrons
 from rt1d.mods.Interpolate import Interpolate
 from rt1d.mods.Cosmology import Cosmology
 from rt1d.mods.SolveRateEquations import SolveRateEquations
+from Integrate import simpson as integrate
 from progressbar import *
-from scipy.integrate import quad
 
 try:
     from mpi4py import MPI
@@ -792,7 +792,7 @@ class Radiate:
         
     def OpticalDepth(self, n):
         """
-        Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which
+        Returns the total optical depth at energy E due to column densities of HI, HeI, and HeII, which
         are stored in the variable 'n' as a three element array.
         """
         

@@ -1,0 +1,5 @@
+ProblemType = 2.1
+GridDimensions = 200
+OutputDirectory = op_4bin
+DiscreteSpectrumSED = dunno yet 
+DiscreteSpectrumRelLum = [0.5]

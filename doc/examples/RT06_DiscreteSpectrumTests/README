@@ -1,0 +1,9 @@
+In this directory are the runs corresponding to the "ASSESSING THE CONSEQUENCES OF DISCRETE RADIATION FIELDS" section
+of the paper.  As you might expect, the runs for a 10^5 K blackbody are in the 'uv' directory, while those for a 
+power-law X-ray source are in the 'xray' directory.
+
+Details:
+-We are using c -> infinity for all of these runs.
+-We will use a 200 cell grid and adaptive global time-step for all runs as well.
+-Hydrogen only medium.
+

@@ -3,28 +3,30 @@ Integrate.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
-Created on 2010-08-25.
+Created on 2011-09-07.
 
-Description: Compute the value of input function (integrand) via numerous methods.
+Description: Compute the integral of input function (integrand) via an adaptive Simpson's rule technique.
      
 """
 
-def Romberg(function, a, b, eps = 1e-8):
+def simpson(f, xmin, xmax, tol = 1e-8):
     """
-    Approximate the definite integral of 'function' from a to b using Romberg's method.
-    eps is the desired accuracy.
+    Integrate function f from xmin to xmax using Simpson's rule adaptively.
     """
     
-    R = [[0.5 * (b - a) * (function(a) + function(b))]]  # R[0][0]
-    n = 1
-    while True:
-        h = float(b - a) / 2**n
-        R.append([None] * (n + 1))  # Add an empty row.
-        # for proper limits
-        R[n][0] = 0.5*R[n-1][0] + h*sum(function(a+(2*k-1)*h) for k in xrange(1, 2**(n-1)+1))
-        for m in xrange(1, n+1):
-            R[n][m] = R[n][m-1] + (R[n][m-1] - R[n-1][m-1]) / (4 ** m - 1)
-        if abs(R[n][n-1] - R[n][n]) < eps:
-            return R[n][n]
-        n += 1
+    def simpsons_rule(f, xmin, xmax):
+        return (xmax - xmin) * (f(xmin) + 4. * f((xmin + xmax) / 2.) + f(xmax)) / 6. 
         
+    def simpson_recursion(f, xmin, xmax, total, tol = 1e-8):
+        midpt = (xmin + xmax) / 2.
+        left = simpsons_rule(f, xmin, midpt)
+        right = simpsons_rule(f, midpt, xmax)
+        
+        if abs(left + right - total) <= 15. * tol:
+            return left + right + (left + right - total) / 15.
+        
+        return simpson_recursion(f, xmin, midpt, left, tol / 2.) + simpson_recursion(f, midpt, xmax, right, tol / 2.)
+        
+    return simpson_recursion(f, xmin, xmax, simpsons_rule(f, xmin, xmax), tol)
+       
+       
