@@ -36,7 +36,7 @@ SchaererTable = {
                 "Temperature": [4.44, 4.622, 4.759, 4.85, 4.9, 4.943, 4.97, 4.981, 4.999, 5.007, 5.028, 5.029, 5.026],
                 "Luminosity": [2.87, 3.709, 4.324, 4.89, 5.42, 5.715, 5.947, 6.243, 6.574, 6.819, 6.984, 7.106, 7.444]
                 }
-                
+                                
 class RadiationSource:
     def __init__(self, pf):
         self.pf = pf
@@ -116,7 +116,7 @@ class RadiationSource:
         else:
         
             if self.SourceType == 1 or self.SourceType == 2:
-                integral, err = integrate(self.SpecificIntensity, 0, np.inf)
+                integral = integrate(self.SpecificIntensity, 0, 1e5)
                 
             if self.SourceType == 3:
                 if self.alpha == -1.0: 

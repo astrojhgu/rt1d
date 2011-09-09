@@ -77,6 +77,13 @@ class SolveRateEquations:
         i = 1
         while x[i - 1] < xf: 
             xnext = x[i - 1] + h
+            
+            # Ensure we end exactly at xf.        
+            if xnext > xf: 
+                h = (xf - x[i - 1])
+                xnext = xf 
+            
+            # Solve away
             ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)                        
                                                                                                                                                                
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
@@ -111,10 +118,7 @@ class SolveRateEquations:
                                                 
             # If we've gotten this far without adaptively stepping, increase h for the next timestep
             if adapted is False: h = min(self.hmax, 2. * h)
-            
-            # Ensure we end exactly at xf.        
-            if xnext > xf: h = (xf - x[i - 1])  
-            
+                        
             # If we didn't meet our error requirement, repeat loop with different h
             if adapted: continue             
                         
