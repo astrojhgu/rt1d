@@ -10,7 +10,7 @@ driver of rt1d, calling our solvers which call all the various physics modules.
      
 """
 
-import copy
+import copy, math
 import numpy as np
 from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
 from rt1d.mods.RadiationSource import RadiationSource
@@ -527,19 +527,6 @@ class Radiate:
                 newdata['HIDensity'][i] = n_H - newdata['HIIDensity'][i]
         
         return newdata
-        
-        
-    #def MonotonicityFudge(self, cell1, cell2):
-    #    """
-    #    Neutral fraction should be a monotonic function! However, neighboring cells may violate
-    #    this periodically within our tolerances.  This is a fudge to ensure that it doesn't happen.
-    #    
-    #    cell1 should contain the value of n_HII in the cell closer to the radiation source, and cell2
-    #    should contain the value of n_HII in the next cell (r2 > r1)
-    #    """    
-    #            
-    #    if cell2 > cell1: return cell1    
-    #    else: return cell2
         
     def ComputePhotonTimestep(self, newdata, cell, Lbol, n_H, n_He):
         """

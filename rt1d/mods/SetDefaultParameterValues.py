@@ -26,6 +26,7 @@ def SetDefaultParameterValues():
           
         # Integration
         "InterpolationMethod": 0, \
+        "IntegrationMethod": 0, \
         
         # ODE Solver
         "ODEAdaptiveStep": 1, \
