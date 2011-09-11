@@ -16,7 +16,7 @@ tiny_number = 1e-30
 
 class SolveRateEquations:
     def __init__(self, pf, guesses, stepper = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
-        Dfun = None, maxiter = 100):
+        Dfun = None, maxiter = 1000):
         """
         This 'odeint' class is the driver for ODE integration via the implicit Euler
         method, which is done below by the 'integrate' routine.  
@@ -35,6 +35,7 @@ class SolveRateEquations:
         """
 
         self.pf = pf
+        self.debug = self.pf["Debug"]
         self.MultiSpecies = pf["MultiSpecies"]
         self.Isothermal = pf["Isothermal"]
         
@@ -84,8 +85,8 @@ class SolveRateEquations:
                 xnext = xf 
             
             # Solve away
-            ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)                        
-                                                                                                                                                               
+            ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)           
+                                                                                                                                                                           
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
             finite = np.isfinite(ynext)
             positive = np.greater_equal(ynext, 0.)
@@ -96,11 +97,17 @@ class SolveRateEquations:
                     h = max(self.hmin, h / 2.)
                     continue
                 else: 
+                    # Correct for negatives
                     c = np.less(ynext, 0)
                     temp = np.array(ynext)
                     temp[c] = self.guesses[c] * 1e-8
+                    
+                    # Correct for NAN
+                    c = np.isnan(ynext)
+                    temp[c] = np.array(y[i - 1])[c]
+                    
                     ynext = list(temp)
-                    print 'WARNING: Negative/NAN encountered in rate integral quantity.  Setting to zero, since already at minimum ODE step.'
+                    if self.debug: print 'WARNING: Negative/NAN encountered in rate integral quantity.  Setting to zero, since already at minimum ODE step.'
                                                                                 
             # Adaptive time-stepping
             adapted = False
@@ -153,13 +160,16 @@ class SolveRateEquations:
                     if i == 0: return y - h * f(np.array([y, yi[1], yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
                     if i == 1: return y - h * f(np.array([yi[0], y, yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
                     if i == 2: return y - h * f(np.array([yi[0], yi[1], y, yi[3]]), xi + h, newargs)[i] - yi[i]
-                    if i == 3: return y - h * f(np.array([yi[0], yi[1], yi[2], y]), xi + h, newargs)[i] - yi[i]
+                    if i == 3: 
+                        #print 'implicit euler:', y, f(np.array([yi[0], yi[1], yi[2], y]), xi + h, newargs)[i], np.array([yi[0], yi[1], yi[2], y]), xi + h, newargs, yi[i]
+                        return y - h * f(np.array([yi[0], yi[1], yi[2], y]), xi + h, newargs)[i] - yi[i]
                 
-                if yi[i] == 0.: guess = self.guesses[i]
+                # Guesses = 0 or for example a guess for n_HI > n_H will mess things up
+                if yi[i] == 0. or (yi[i] > self.guesses[i] and i < 3): guess = self.guesses[i]
                 else: guess = yi[i]
                 
                 yip1.append(self.rootfinder(ynext, guess))
-                                              
+                                                              
         rtn = yi + h * f(np.array(yip1), xi + h, args)
         if self.MultiSpecies == 0:
             rtn[1] = yip1[1]
@@ -204,7 +214,7 @@ class SolveRateEquations:
             y1 = ynow
             y2 = max(ynow - 1e-3 * ynow, 0)
             fp = (f(y1) - f(y2)) / (y1 - y2)
-                                                                        
+                                                                                                                  
             # Calculate new estimate of the root
             dy = f(ynow) / fp
             ypre = ynow
@@ -218,7 +228,7 @@ class SolveRateEquations:
                 print "Maximum number of iterations reached."
                 break
             else: i += 1               
-                                                                                                                                                 
+                                                                                                                                                                      
         return max(ynow, tiny_number)
 
     def Bisection(self, f, y_guess):

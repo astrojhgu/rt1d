@@ -26,11 +26,10 @@ def SetDefaultParameterValues():
           
         # Integration
         "InterpolationMethod": 0, \
-        "IntegrationMethod": 0, \
         
         # ODE Solver
         "ODEAdaptiveStep": 1, \
-        "ODEMinStep": 1e-12, \
+        "ODEMinStep": 1e-8, \
         "ODEMaxStep": 1e-1, \
         "ODErtol": 1e-3, \
         "ODEatol": 1e-6, \
@@ -38,6 +37,7 @@ def SetDefaultParameterValues():
         "RootFinder": 0, \
         
         "ParallelizationMethod": 2, \
+        "Debug": 0, \
           
         # Integral tabulation
         "HIColumnMin": 1e15, \
@@ -65,6 +65,7 @@ def SetDefaultParameterValues():
         "dtDataDump": 1.0, \
         "DataDumpName": 'dd', \
         "OutputDirectory": './', \
+        "OutputFormat": 0, \
         "OutputTimestep": 1, \
         "ProgressBar": 0, \
         "CurrentTimestep": 1e-8, \

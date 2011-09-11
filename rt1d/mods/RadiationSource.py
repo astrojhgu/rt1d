@@ -14,6 +14,7 @@ Notes:
 
 import numpy as np
 from Integrate import simpson as integrate
+from scipy.integrate import quad
 
 h = 6.626068e-27     			                            # Planck's constant - [h] = erg*s
 k_B = 1.3806503e-16     			                        # Boltzmann's constant - [k_B] = erg/K
@@ -61,8 +62,9 @@ class RadiationSource:
         # SourceType = 1, 2
         self.T = pf["SourceTemperature"]
         
-        # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  Use to solve for stellar radius (which we need to get Lbol).
-        self.LphNormIon = 2. * (k_B * self.T)**3 * integrate(lambda x: x**2 / (np.exp(x) - 1.), 13.6 * erg_per_ev / k_B / self.T, big_number, tol = 1e-12) / h**3 / c**2 
+        # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
+        # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
+        self.LphNormIon = np.pi * 2. * (k_B * self.T)**3 * integrate(lambda x: x**2 / (np.exp(x) - 1.), 13.6 * erg_per_ev / k_B / self.T, big_number, tol = 1e-12) / h**3 / c**2 
         
         self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNormIon)        
         self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
@@ -149,6 +151,14 @@ class RadiationSource:
             return self.Lph / (np.sum(self.F / self.E / erg_per_ev))
         
         if self.SourceType == 1:
+            #norm = quad(self.SpecificIntensity, 0, np.inf)[0]
+            #print self.Lph / quad(lambda E: self.SpecificIntensity(E) / norm / E / erg_per_ev, 0, np.inf)[0]
+            #print quad(lambda E: self.SpecificIntensity(E) / norm / E / erg_per_ev, 0, np.inf)[0], self.LphNormIon
+            #
+            #print self.Lph / quad(lambda E: self.SpecificIntensity(E) / norm / E / erg_per_ev, 0, np.inf)[0], self.Lbol
+            #return self.Lph / quad(lambda E: self.SpecificIntensity(E) / norm / E / erg_per_ev, 0, np.inf)[0]
+            #
+            
             return self.Lbol
         
         if self.SourceType == 2:
@@ -166,8 +176,3 @@ class RadiationSource:
         
         return integrate(self.Spectrum, small_number, E)      
             
-            
-            
-            
-    
-    

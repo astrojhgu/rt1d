@@ -15,6 +15,7 @@ import pylab as pl
 from constants import *
 from multiplot import *
 from rt1d.analysis.Dataset import Dataset
+from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
 
 fields = ['T', 'n_HI', 'n_HII', 'x_HI', 'x_HII']
 
@@ -77,7 +78,7 @@ class Analyze:
         
         return np.interp(0.5, self.data[dd].x_HI, self.data[dd].r)
         
-    def PlotIonizationFrontEvolution(self, mp = None, anl = True, color = 'k', ls = '--'):
+    def PlotIonizationFrontEvolution(self, mp = None, anl = True, T0 = None, color = 'k', ls = '--'):
         """
         Compute analytic and numerical I-front radii vs. time and plot.
         """    
@@ -89,7 +90,7 @@ class Analyze:
         for i, dd in enumerate(self.data.keys()[1:]): 
             self.t[i] = self.data[dd].t
             self.rIF[i] = self.LocateIonizationFront(dd) / cm_per_kpc
-            self.ranl[i] = self.StromgrenSphere(self.data[dd].t) / cm_per_kpc
+            self.ranl[i] = self.StromgrenSphere(self.data[dd].t, T0 = T0) / cm_per_kpc
             
         if mp is not None: self.mp = mp    
         else: self.mp = multiplot(dims = (2, 1), panel_size = (0.5, 1))
@@ -102,7 +103,7 @@ class Analyze:
         self.mp.axes[0].set_ylabel(r'$r \ (\mathrm{kpc})$')  
         self.mp.axes[1].plot(self.t / self.trec, self.rIF / self.ranl, color = color, ls = ls)
         self.mp.axes[1].set_xlim(0, max(self.t / self.trec))
-        self.mp.axes[1].set_ylim(0.9, 1.1)
+        self.mp.axes[1].set_ylim(0.95, 1.05)
         self.mp.axes[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
         self.mp.axes[1].set_ylabel(r'$r/r_{\mathrm{anl}}$') 
         self.mp.axes[0].xaxis.set_ticks(np.linspace(0, 4, 5))

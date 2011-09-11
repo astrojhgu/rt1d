@@ -59,6 +59,7 @@ class Radiate:
         self.itabs = itabs
         
         self.ParallelizationMethod = pf["ParallelizationMethod"]
+        self.debug = pf["Debug"]
         
         self.MaxHIIChange = pf["MaxHIIChange"]
         self.MaxHeIIChange = pf["MaxHeIIChange"]
@@ -144,12 +145,14 @@ class Radiate:
         Lbol = args[0][6]
                         
         # Derived quantities
-        n_HI = n_H - q[0]
-        n_HII = q[0]
-        x_HII = n_HII / n_H
-        n_HeI = n_He - (q[1] + q[2]) 
+        n_HII = min(q[0], n_H)          # This could be > n_H within machine precision and really screw things up
+        n_HI = n_H - n_HII
+        x_HII = n_HII / n_H   
+              
         n_HeII = q[1]
         n_HeIII = q[2]
+        n_HeI = n_He - (n_HeII + n_HeIII) 
+        
         n_e = n_HII + n_HeII + 2.0 * n_HeIII
         nion = [n_HII, n_HeII, n_HeIII]
         nabs = [n_H, n_HeI, n_HeII]
@@ -189,11 +192,11 @@ class Radiate:
 
         # Only solve internal energy equation if we're not doing an isothermal calculation
         if self.Isothermal: 
-            newE = q[3]
+            newE = E
         else:
             newE = self.HeatGain(ncol, nabs, x_HII, r, Lbol) - \
-                self.HeatLoss(nabs, nion, n_e, n_B, q[3] * 2. * mu / 3. / k_B / n_B, z, mu)
-                                                                                                
+                self.HeatLoss(nabs, nion, n_e, n_B, E * 2. * mu / 3. / k_B / n_B, z, mu)
+                                
         return np.array([newHII, newHeII, newHeIII, newE])
 
     def EvolvePhotons(self, data, t, dt, h):
@@ -317,13 +320,7 @@ class Radiate:
             
                 # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
                 newHII, newHeII, newHeIII, newE = qnew
-                
-                # Ensure monotonicity in ionized species
-                #if cell > self.StartCell:
-                #    newHII[-1] = self.MonotonicityFudge(newdata['HIIDensity'][cell - 1], newHII[-1])  
-                #    newHeII[-1] = self.MonotonicityFudge(newdata['HeIIDensity'][cell - 1], newHeII[-1])
-                #    newHeIII[-1] = self.MonotonicityFudge(newdata['HeIIIDensity'][cell - 1], newHeIII[-1])
-                
+
                 # Convert from internal energy back to temperature
                 if not self.Isothermal: newT = newE[-1] * 2. * mu / 3. / k_B / n_B
                 else: newT = newdata['Temperature'][cell]
@@ -446,13 +443,7 @@ class Radiate:
                                         
                     # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
                     newHII, newHeII, newHeIII, newE = qnew
-                    
-                    # Ensure monotonicity in ionized species
-                   #if cell > self.StartCell:
-                   #    newHII[-1] = self.MonotonicityFudge(newdata['HIIDensity'][cell - 1], newHII[-1])  
-                   #    newHeII[-1] = self.MonotonicityFudge(newdata['HeIIDensity'][cell - 1], newHeII[-1])
-                   #    newHeIII[-1] = self.MonotonicityFudge(newdata['HeIIIDensity'][cell - 1], newHeIII[-1])
-                    
+
                     # Convert from internal energy back to temperature
                     if not self.Isothermal: newT = newE[-1] * 2. * mu / 3. / k_B / n_B
                     else: newT = newdata['Temperature'][cell]
@@ -487,10 +478,6 @@ class Radiate:
                     ################ DONE ################     
                     ######################################                                   
                 
-                #if self.HIIRestrictedTimestep:       
-                #    for k in xrange(int(cell_pack_max), self.GridDimensions - 1):                        
-                #        dtphot[j] = min(self.ComputePhotonTimestep(newdata, k, Lbol, n_H_arr[0], n_He_arr[0]), dtphot[j])                  
-                       
             if self.HIIRestrictedTimestep:
                 for cell in self.grid[1:]:
                     dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, self.rs.BolometricLuminosity(t), n_H_arr[0], n_He_arr[0])            
@@ -514,6 +501,9 @@ class Radiate:
         return newdata, h, newdt   
         
     def MonotonicityFudge(self, newdata):
+        """
+        Could have non-monotonic behavior within tolerances - make sure this doesn't happen.
+        """
         
         n_H = (newdata['HIDensity'] + newdata['HIIDensity'])[0]
         
@@ -525,6 +515,8 @@ class Radiate:
                     [newdata['HIIDensity'][i - 1], newdata['HIIDensity'][i + 1]])
                 
                 newdata['HIDensity'][i] = n_H - newdata['HIIDensity'][i]
+                
+                if self.debug: print "MonotonicityFudge applied."
         
         return newdata
         
