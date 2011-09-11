@@ -151,14 +151,6 @@ class RadiationSource:
             return self.Lph / (np.sum(self.F / self.E / erg_per_ev))
         
         if self.SourceType == 1:
-            #norm = quad(self.SpecificIntensity, 0, np.inf)[0]
-            #print self.Lph / quad(lambda E: self.SpecificIntensity(E) / norm / E / erg_per_ev, 0, np.inf)[0]
-            #print quad(lambda E: self.SpecificIntensity(E) / norm / E / erg_per_ev, 0, np.inf)[0], self.LphNormIon
-            #
-            #print self.Lph / quad(lambda E: self.SpecificIntensity(E) / norm / E / erg_per_ev, 0, np.inf)[0], self.Lbol
-            #return self.Lph / quad(lambda E: self.SpecificIntensity(E) / norm / E / erg_per_ev, 0, np.inf)[0]
-            #
-            
             return self.Lbol
         
         if self.SourceType == 2:

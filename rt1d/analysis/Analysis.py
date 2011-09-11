@@ -78,9 +78,9 @@ class Analyze:
         
         return np.interp(0.5, self.data[dd].x_HI, self.data[dd].r)
         
-    def PlotIonizationFrontEvolution(self, mp = None, anl = True, T0 = None, color = 'k', ls = '--'):
+    def ComputeIonizationFrontEvolution(self, T0 = None):
         """
-        Compute analytic and numerical I-front radii vs. time and plot.
+        Find the position of the I-front at all times, and compute value of analytic solution.
         """    
         
         # First locate I-front for all data dumps and compute analytic solution
@@ -91,7 +91,14 @@ class Analyze:
             self.t[i] = self.data[dd].t
             self.rIF[i] = self.LocateIonizationFront(dd) / cm_per_kpc
             self.ranl[i] = self.StromgrenSphere(self.data[dd].t, T0 = T0) / cm_per_kpc
-            
+                
+    def PlotIonizationFrontEvolution(self, mp = None, anl = True, T0 = None, color = 'k', ls = '--'):
+        """
+        Compute analytic and numerical I-front radii vs. time and plot.
+        """    
+
+        self.ComputeIonizationFrontEvolution(T0 = T0)
+
         if mp is not None: self.mp = mp    
         else: self.mp = multiplot(dims = (2, 1), panel_size = (0.5, 1))
 

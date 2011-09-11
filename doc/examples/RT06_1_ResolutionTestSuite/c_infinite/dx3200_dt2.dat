@@ -1,0 +1,5 @@
+ProblemType = 1
+CurrentTimestep = 1e-2
+GridDimensions = 3200
+OutputDirectory = dx3200_dt2
+HIIRestrictedTimestep = 0

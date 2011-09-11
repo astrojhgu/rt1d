@@ -1,0 +1,4 @@
+ProblemType = 2.1
+GridDimensions = 800
+OutputDirectory = dx800_dt3
+HIIRestrictedTimestep = 1
