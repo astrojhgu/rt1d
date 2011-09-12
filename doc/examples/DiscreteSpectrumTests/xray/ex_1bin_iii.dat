@@ -1,0 +1,4 @@
+ProblemType = 4.1
+MultiSpecies = 0
+OutputDirectory = ex_1bin_iii
+DiscreteSpectrumSED = [300.]
