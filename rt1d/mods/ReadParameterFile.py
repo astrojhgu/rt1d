@@ -99,7 +99,7 @@ def ProblemType(pt):
              "StartRadius": 0.01, "dtDataDump": 5.0, "DataDumpName": 'dd', \
              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
              "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
-             "IonizationProfile": 1, "InitialHIIFraction": 0, "SourceType": 0, "SourceLifetime": 1e10, \
+             "IonizationProfile": 1, "InitialHIIFraction": 0, "SourceType": 1, "SourceLifetime": 1e10, \
              "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrum": 1, \
              "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188]
             } 
@@ -132,9 +132,36 @@ def ProblemType(pt):
               "Clump": 1, "ClumpPosition": 0.76, "ClumpOverdensity": 200, "ClumpRadius": 0.8 / 6.6, "ClumpTemperature": 40.,
              }   
     
-    # X-ray source, helium included         
+    # X-ray source, hydrogen only       
     if pt == 4:
         pf = {"ProblemType": 4, "InterpolationMethod": 0, \
+              "ColumnDensityBinsHI": 100, "ColumnDensityBinsHeI": 0, "ColumnDensityBinsHeII": 0, 
+              "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
+              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
+              "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
+              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
+              "DensityProfile": 1, "InitialRedshift": 20, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
+              "IonizationProfile": 1, "InitialHIIFraction": 1e-4, "SourceType": 3, "SourceLifetime": 1e10, \
+              "SourceMass": 1e6, "SourceRadiativeEfficiency": 0.1, "SpectrumPowerLawIndex": 1.5
+             }      
+             
+    # X-ray source, hydrogen only, discrete spectrum         
+    if pt == 4.1:
+        pf = {"ProblemType": 4.1, "InterpolationMethod": 0, \
+              "ColumnDensityBinsHI": 50, "ColumnDensityBinsHeI": 0, "ColumnDensityBinsHeII": 0, 
+              "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
+              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
+              "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
+              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
+              "DensityProfile": 1, "InitialRedshift": 20, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
+              "IonizationProfile": 1, "InitialHIIFraction": 1e-4, "SourceType": 3, "SourceLifetime": 1e10, \
+              "DiscreteSpectrumSED": [500.], "DiscreteSpectrumRelLum": [1.], "DiscreteSpectrum": 1,\
+              "SourceMass": 1e6, "SourceRadiativeEfficiency": 0.1
+             }                    
+    
+    # X-ray source, helium included         
+    if pt == 5:
+        pf = {"ProblemType": 5, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 50, "ColumnDensityBinsHeI": 10, "ColumnDensityBinsHeII": 10, 
               "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
@@ -146,18 +173,18 @@ def ProblemType(pt):
              }      
              
     # X-ray source, helium included, discrete spectrum         
-    if pt == 4.1:
-        pf = {"ProblemType": 4, "InterpolationMethod": 0, \
+    if pt == 5.1:
+        pf = {"ProblemType": 5.1, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 50, "ColumnDensityBinsHeI": 10, "ColumnDensityBinsHeII": 10, 
               "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
               "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 1, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
               "DensityProfile": 1, "InitialRedshift": 20, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
-              "IonizationProfile": 1, "InitialHIIFraction": 1e-4, "SourceType": 0, "SourceLifetime": 1e10, \
-              "DiscreteSpectrumSED": [500.], "DiscreteSpectrumRelLum": [1.], \
+              "IonizationProfile": 1, "InitialHIIFraction": 1e-4, "SourceType": 3, "SourceLifetime": 1e10, \
+              "DiscreteSpectrumSED": [500.], "DiscreteSpectrumRelLum": [1.], "DiscreteSpectrum": 1,\
               "SourceMass": 1e6, "SourceRadiativeEfficiency": 0.1
-             }                        
+             }                                 
              
         
     return pf    

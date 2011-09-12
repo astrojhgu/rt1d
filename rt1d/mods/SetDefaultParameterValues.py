@@ -46,7 +46,7 @@ def SetDefaultParameterValues():
         "HeIColumnMax": 1e22, \
         "HeIIColumnMin": 1e18, \
         "HeIIColumnMax": 1e23, \
-        "ColumnDensityBinsHI": 50, \
+        "ColumnDensityBinsHI": 100, \
         "ColumnDensityBinsHeI": 10, \
         "ColumnDensityBinsHeII": 10, \
         "ExitAfterIntegralTabulation": 0, \

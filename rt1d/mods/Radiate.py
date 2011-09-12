@@ -530,8 +530,9 @@ class Radiate:
         ncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
                    np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
                 
-        tau = self.Interpolate.interp(ncol, "TotalOpticalDepth0")      
-        if tau < 0.5: return 1e50           
+        if self.rs.SourceType < 3:        
+            tau = self.Interpolate.interp(ncol, "TotalOpticalDepth0")      
+            if tau < 0.5: return 1e50           
                                 
         Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
             xHII, newdata['Temperature'][cell], self.r[cell], Lbol)        
