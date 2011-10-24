@@ -25,6 +25,7 @@ s_per_myr = 365.25 * 24 * 3600 * 10**6
 ds = rta.Analyze(sys.argv[1])
 ds.ComputeIonizationFrontEvolution()
 
+# Plot I-front evolution (2-panels)
 mp = rta.multiplot(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
 
 mp.grid[0].plot(ds.t / ds.trec, ds.rIF, color = 'k', ls = '--')
@@ -49,7 +50,7 @@ pl.clf()
 # Write out data
 misc.writetab((ds.t / ds.trec, ds.r, ds.rIF / ds.ranl), '{0}/RT_Test1_IfrontEvolution.dat'.format(ds.pf['OutputDirectory']), ('t/trec', 'r', 'r/ranl'))
 
-# Ionized and neutral fractions vs. R and t (assumes dtDataDump = 5)
+# Plot ionized and neutral fractions vs. R and t (assumes dtDataDump = 5)
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HI, ls = '-', color = 'k', label = r'$1 - x_i$')
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[20].x_HI, ls = '-', color = 'k')
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[100].x_HI, ls = '-', color = 'k')
@@ -57,7 +58,7 @@ pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HII, ls = '--', color 
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[20].x_HII, ls = '--', color = 'k')
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[100].x_HII, ls = '--', color = 'k')
 
-# Annotations for t = 10, 100, 500 Myr
+# Annotation locations for t = 10, 100, 500 Myr
 a1 = ds.data[2].r[np.argmin(np.abs(ds.data[2].x_HI - 0.5))] / ds.pf['LengthUnits']
 a2 = ds.data[20].r[np.argmin(np.abs(ds.data[20].x_HI - 0.5))] / ds.pf['LengthUnits']
 a3 = ds.data[100].r[np.argmin(np.abs(ds.data[100].x_HI - 0.5))] / ds.pf['LengthUnits']
