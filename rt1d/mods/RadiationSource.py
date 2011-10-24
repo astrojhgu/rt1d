@@ -10,7 +10,9 @@ radiation source.  Mainly used for calculating and normalizing it's luminosity w
 
 Notes: 
 
-SourceType = 0: Monochromatic emission of SpectrumPhotonLuminosity photons per second     
+SourceType = 0: Monochromatic/Polychromatic emission of SpectrumPhotonLuminosity photons per second.
+  -The difference between this and SourceType > 0 is that the bolometric luminosity may change depending
+   on your choice of bins.
      
      
 """
@@ -66,9 +68,9 @@ class RadiationSource:
         
         # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
         # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
-        self.LphNormIon = np.pi * 2. * (k_B * self.T)**3 * integrate(lambda x: x**2 / (np.exp(x) - 1.), 13.6 * erg_per_ev / k_B / self.T, big_number, tol = 1e-12) / h**3 / c**2 
+        self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * integrate(lambda x: x**2 / (np.exp(x) - 1.), 13.6 * erg_per_ev / k_B / self.T, big_number, tol = 1e-12) / h**3 / c**2 
         
-        self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNormIon)        
+        self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
         self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
                         
         # SourceType = 2, 3

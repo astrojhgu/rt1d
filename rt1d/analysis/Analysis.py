@@ -13,7 +13,7 @@ import misc
 import numpy as np
 import pylab as pl
 from constants import *
-from multiplot import *
+from Multiplot import *
 from rt1d.analysis.Dataset import Dataset
 from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
 
@@ -30,27 +30,8 @@ class Analyze:
         self.r = self.pf['LengthUnits'] * self.grid / self.pf['GridDimensions']
         self.StartRadius = self.pf["StartRadius"] * self.pf['LengthUnits'] / cm_per_kpc
         
-        # Auto-run a few things
-        self.SetupBins()
-        self.ComputeDistributionFunctions()
-        
-    def SetupBins(self, N = 20, scale = 'log', xmin = -5, xmax = 0, Tmin = 0, Tmax = 5):
-        """
-        Create bins to use for our PDF/CDF analysis.
-        """    
-        
+        # Store bins used for PDFs/CDFs
         self.bins = {}
-        
-        # Bins for neutral/ionized fractions, etc.
-        if scale == 'log':
-            self.bins['x_HI'] = self.bins['x_HII'] = self.bins['n_HI'] = self.bins['n_HII'] = np.logspace(xmin, xmax, N)
-            self.bins['T'] = np.logspace(Tmin, Tmax, N)
-        else:
-            self.bins['x_HI'] = self.bins['x_HII'] = self.bins['n_HI'] = self.bins['n_HII'] = np.linspace(xmin, xmax, N)
-            self.bins['T'] = np.linspace(Tmin, Tmax, N)
-        
-        self.mbins = {}
-        for element in fields: self.mbins[element] = misc.binmid(self.bins[element])
         
     def StromgrenSphere(self, t, sol = 0, T0 = None):
         """
@@ -100,25 +81,48 @@ class Analyze:
         self.ComputeIonizationFrontEvolution(T0 = T0)
 
         if mp is not None: self.mp = mp    
-        else: self.mp = multiplot(dims = (2, 1), panel_size = (0.5, 1))
+        else: self.mp = multiplot(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
 
-        if anl: self.mp.axes[0].plot(self.t / self.trec, self.ranl, linestyle = '-', color = 'k')
+        if anl: self.mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle = '-', color = 'k')
         
-        self.mp.axes[0].plot(self.t / self.trec, self.rIF, color = color, ls = ls)
-        self.mp.axes[0].set_xlim(0, max(self.t / self.trec))
-        self.mp.axes[0].set_ylim(0, 1.1 * max(max(self.rIF), max(self.ranl)))
-        self.mp.axes[0].set_ylabel(r'$r \ (\mathrm{kpc})$')  
-        self.mp.axes[1].plot(self.t / self.trec, self.rIF / self.ranl, color = color, ls = ls)
-        self.mp.axes[1].set_xlim(0, max(self.t / self.trec))
-        self.mp.axes[1].set_ylim(0.95, 1.05)
-        self.mp.axes[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
-        self.mp.axes[1].set_ylabel(r'$r/r_{\mathrm{anl}}$') 
-        self.mp.axes[0].xaxis.set_ticks(np.linspace(0, 4, 5))
-        self.mp.axes[1].xaxis.set_ticks(np.linspace(0, 4, 5))
+        self.mp.grid[0].plot(self.t / self.trec, self.rIF, color = color, ls = ls)
+        self.mp.grid[0].set_xlim(0, max(self.t / self.trec))
+        self.mp.grid[0].set_ylim(0, 1.1 * max(max(self.rIF), max(self.ranl)))
+        self.mp.grid[0].set_ylabel(r'$r \ (\mathrm{kpc})$')  
+        self.mp.grid[1].plot(self.t / self.trec, self.rIF / self.ranl, color = color, ls = ls)
+        self.mp.grid[1].set_xlim(0, max(self.t / self.trec))
+        self.mp.grid[1].set_ylim(0.95, 1.05)
+        self.mp.grid[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
+        self.mp.grid[1].set_ylabel(r'$r/r_{\mathrm{anl}}$') 
+        self.mp.grid[0].xaxis.set_ticks(np.linspace(0, 4, 5))
+        self.mp.grid[1].xaxis.set_ticks(np.linspace(0, 4, 5))
         
-        if mp is None: self.mp.fix_ticks()    
+        if mp is None: self.mp.fix_ticks()  
+        
+    def PlotRadialProfiles(self, field = ['x_HI', 'x_HII'], t = [10, 100, 500], 
+        ls = ['-', '--'], color = ['k', 'k']):
+        """
+        Plot radial profiles of fields at times t.
+        """      
+        
+        ax = pl.subplot(111)
+        
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        
+        for dd in self.data.keys():
+            if self.data[dd].t / self.pf['TimeUnits'] not in t: continue
+            
+            for i, f in enumerate(field):
+                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, f, ls[i], color[i]))
+            
+        ax.set_xlabel(r'$r / L_{\mathrm{box}}$')  
+        pl.draw()
+        
+        return ax
                      
-    def ComputeDistributionFunctions(self, normalize = True, Nbins = 20):
+    def ComputeDistributionFunctions(self, normalize = True, bins = 20):
         """
         Histogram all fields.
         """            
@@ -126,19 +130,21 @@ class Analyze:
         self.pdf = {}
         self.cdf = {}
         self.icdf = {}  # 1 - CDF
-        
+                
         for element in fields:
             self.pdf[element] = []
             self.cdf[element] = []
             self.icdf[element] = []
             for dd in self.data.keys():
-                exec('hist, bin_edges = np.histogram(self.data[{0}].{1}, bins = self.bins[\'{1}\'])'.format(dd, element))
-                
+                exec('hist, bin_edges = np.histogram(self.data[{0}].{1}, bins = bins)'.format(dd, element))                
+                                
                 if normalize: norm = float(np.sum(hist))
                 else: norm = 1.
                 
                 self.pdf[element].append(hist / norm)
                 self.cdf[element].append(np.cumsum(hist) / float(np.sum(hist)))
+            
+            self.bins[element] = self.rebin(bin_edges)
             
             self.icdf[element].append(1. - np.array(self.cdf[element]))
                 
@@ -152,11 +158,27 @@ class Analyze:
         if df == 'pdf': hist = self.pdf
         else: hist = self.cdf
         
-        self.ax.plot(self.mbins[field], hist[field][dd], color = color, drawstyle = 'steps-mid')
+        self.ax.plot(self.bins[field], hist[field][dd], color = color, drawstyle = 'steps-mid')
         self.ax.set_xscale('log')
         pl.draw()
         
-    
+    def rebin(self, bins, center = False):
+        """
+        Take in an array of bin edges (centers) and convert them to bin centers (edges).
+        
+            center: Input bin values refer to bin centers?
+            
+        """
+        
+        bins = np.array(bins)
+        
+        if center:
+            result = 0
+        else:
+            result = np.zeros(bins.size - 1)
+            for i, element in enumerate(result): result[i] = (bins[i] + bins[i + 1]) / 2.
+                
+        return result
         
         
 

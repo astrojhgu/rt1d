@@ -290,7 +290,7 @@ class InitializeIntegralTables:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
                         
-            return integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, tol = 1e-16)
+            return integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, tol = 1e-24)
                   
         else:
             integral = PhotoIonizationCrossSection(self.rs.E, species) * self.rs.Spectrum(self.rs.E) * \
@@ -313,7 +313,7 @@ class InitializeIntegralTables:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / E
             
-            return integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, tol = 1e-24)
+            return integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, tol = 1e-30)
             
         else:
             integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \

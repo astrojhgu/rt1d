@@ -33,10 +33,17 @@
 \tableofcontents
 \newpage
 
+%%%
+%% Introduction
+%%%
+\section{Introduction}
+
+
 %%% 
 %% Methods
 %%%
 \section{Methods}
+
 
 %%% 
 %% Classes
@@ -48,11 +55,6 @@ In order of appearance in \texttt{rt1d.py}.
 \subsection{\texttt{InitializeIntegralTables}}
 \subsection{\texttt{RadiationSource}}
 \subsection{\texttt{Radiate}}
-
-%%% 
-%% Start to Finish
-%%%
-\section{Start to Finish}
 
 %%% 
 %% Parameters
@@ -88,7 +90,29 @@ These were added for convenience in January, 2011.  If you want to make changes 
 \subsection{Source Parameters}
 
 
+\section{Analysis}
+Since our datasets are small, we can read in the entire time evolution all at once.  To do this, type the following in a Python terminal:
+\begin{verbatim}
+import rt1d.analysis as rta
+import pylab as pl
 
+ds = rta.Analyze('./pf.dat')                # load parameter file and data
+pl.loglog(ds.data[10].r, ds.data[10].x_HI)  # radius vs. neutral fraction
+\end{verbatim}
+
+%%% 
+%% Start to Finish
+%%%
+\section{Start to Finish}
+
+
+\section{Convergence}
+In \texttt{rt1d/doc/examples} you will find directories containing convergence test suites for RT06 test problems 1 \& 2 (\texttt{RT06\_1\_ResolutionTestSuite} and \texttt{RT06\_2\_ResolutionTestSuite}).  Each of these directories contains the parameter files necessary to run these problems on grids containing $100 \times 2^n$ cells, where $n = 0,1,...6$.  If you want, you can run them all at once, though keep in mind the simulations with 100 cells will finish much much faster than those containing 6400 cells, so it might not be good to check out a node for this as most of the computation will be spent on 1 or 2 simulations.  For instance, you could do:
+\begin{verbatim}
+    cd rt1d/doc/examples/RT06_1_ResolutionTestSuite/c_infinite
+    mpirun -np 4 python RT1D.py -b batch_list.dat
+\end{verbatim}
+I've included the same setup for $c \neq \infty$ in \texttt{rt1d/doc/examples/RT06\_1\_ResolutionTestSuite/c\_finite}, so you can see the differences (if any) caused by making the $c \rightarrow \infty$ approximation.
 
 
 

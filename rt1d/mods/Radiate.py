@@ -495,8 +495,8 @@ class Radiate:
         # Update photon packages        
         if not self.InfiniteSpeedOfLight: newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt, newdata)  # t + newdt?      
                 
-        # Enforce neutral fraction monotonicity
-        newdata = self.MonotonicityFudge(newdata)        
+        # Enforce neutral fraction monotonicity - do we need this? I'd rather toss it...
+        #newdata = self.MonotonicityFudge(newdata)        
                 
         return newdata, h, newdt   
         

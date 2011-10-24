@@ -33,7 +33,7 @@ def SetDefaultParameterValues():
         "ODEMaxStep": 1e-1, \
         "ODErtol": 1e-3, \
         "ODEatol": 1e-6, \
-        "ODEmaxiter": 10000, \
+        "ODEmaxiter": 1e4, \
         "RootFinder": 0, \
         
         "ParallelizationMethod": 2, \

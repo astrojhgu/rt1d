@@ -17,7 +17,7 @@ import rt1d.analysis as rta
 from multiplot import *
 from constants import *
 
-ds = rta.Dataset(sys.argv[1])
+ds = rta.Analyze(sys.argv[1])
 
 mp = multiplot(dims = (2, 1), panel_size = (0.5, 1))
 
