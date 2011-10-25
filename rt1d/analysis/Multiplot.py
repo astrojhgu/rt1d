@@ -20,7 +20,11 @@ hspace = pl.rcParams['figure.subplot.hspace']
 left = pl.rcParams['figure.subplot.left']
 right = pl.rcParams['figure.subplot.right']
 bottom = pl.rcParams['figure.subplot.bottom']
-top = pl.rcParams['figure.subplot.top']    
+top = pl.rcParams['figure.subplot.top']
+dtop = 1 - top
+dbottom = bottom
+dright = 1 - right
+dleft = left
 
 def AxisConstructor(nr, nc, panel): 
     return pl.subplot(nr, nc, panel)
@@ -38,9 +42,23 @@ class multiplot:
         self.dims = dims
         self.padding = padding
         
-        if panel_size is None: self.panel_size = np.array([figsize[0], figsize[1]])
-        else: self.panel_size = np.array([panel_size[0] * figsize[0], panel_size[1] * figsize[1]])
-        
+        if panel_size is None: 
+            self.panel_size = np.array([figsize[0], figsize[1]])
+        else: 
+            
+            xsize = figsize[0]
+            if panel_size[0] > 1:
+                
+                for i in xrange(panel_size[0] - 1):
+                    xsize += (right - left) * figsize[0]
+            
+            ysize = figsize[1]    
+            if panel_size[1] > 1:
+                for i in xrange(panel_size[1] - 1):
+                    ysize += (top - bottom) * figsize[1]
+            
+            self.panel_size = np.array([xsize, ysize])
+                    
         if share_all and not useAxesGrid:
             pl.rcParams['figure.subplot.wspace'] = self.padding
             pl.rcParams['figure.subplot.hspace'] = self.padding        

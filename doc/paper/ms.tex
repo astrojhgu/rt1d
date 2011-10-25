@@ -45,7 +45,8 @@
 \newcommand{\gHeII}{\Gamma_{\text{HeII}}}
 \newcommand{\aHII}{\alpha_{\text{HII}}}  
 \newcommand{\aHeII}{\alpha_{\text{HeII}}}  
-\newcommand{\aHeIII}{\alpha_{\text{HeIII}}} 
+\newcommand{\aHeIII}{\alpha_{\text{HeIII}}}
+\newcommand{\bHI}{\beta_{\text{HI}}} 
 \newcommand{\bHeI}{\beta_{\text{HeI}}}  
 \newcommand{\bHeII}{\beta_{\text{HeII}}}  
 \newcommand{\xHeII}{\xi_{\text{HeII}}}
@@ -54,6 +55,7 @@
 \newcommand{\Lbol}{\mathcal{L}_{\text{bol}}}
 \newcommand{\spec}{\mathcal{N}}
 \newcommand{\Heat}{\mathcal{H}}
+\newcommand{\trec}{$t_{\text{rec}}$}
 %%% END custom commands
 
 \title {Optimized Multi-Frequency Spectra for Numerical Radiative Transfer}
@@ -124,7 +126,21 @@ In the remainder of this section, we will focus on two simple test problems.  Fi
 
 
 \section{METHODS}
-Upon careful inspection of the coupled rate equations which govern the balance of ionizations/recombinations and heating/cooling, one realizes that the integral values, i.e. equations \ref{HIIRateEquation}, \ref{HeIIRateEquation}, \ref{HeIIIRateEquation}, and \ref{TemperatureEvolution} can be tabulated as a function of column density (i.e. optical depth), allowing for a significant speed-up in run time.  The key to our subsequent analysis was inspired by this same convenient feature: if $\Gamma_i$ and $\Heat_i$ can be tabulated for a given source \textit{a-priori}, it means that \textit{precision determination of the ionization state and temperature of the gas surrounding that source relies solely on accurate numerical computation of the photoionization and heating rate integrals in Equations \ref{PhotoionizationRate} and \ref{HeatingRate}}.  So, for a given source, we can compute the values of these integrals numerically for the continuous spectrum, and then as discrete sums given $n_{\nu}$ frequency bins with 
+Upon careful inspection of the coupled rate equations which govern the balance
+of ionizations, recombinations, heating, and cooling, one realizes that the
+integral values, i.e. equations \ref{eq:HIIRateEquation},
+\ref{eq:HeIIRateEquation}, \ref{eq:HeIIIRateEquation}, and
+\ref{eq:TemperatureEvolution} can be tabulated as a function of column density
+(i.e. optical depth), allowing for a significant speed-up in run time. The key
+to our subsequent analysis was inspired by this same convenient feature: if
+$\Gamma_i$ and $\Heat_i$ can be tabulated for a given source
+\textit{a-priori}, it means that \textit{precision determination of the
+ionization state and temperature of the gas surrounding that source relies
+solely on accurate numerical computation of the photoionization and heating
+rate integrals in Equations \ref{eq:PhotoionizationRate} and
+\ref{eq:HeatingRate}}. So, for a given source, we can compute the values of
+these integrals numerically for the continuous spectrum, and then as discrete
+sums given $n_{\nu}$ frequency bins with
 \begin{equation}
     I(E) = \sum_{j=1}^{n_{\nu}} I(E_j) .
 \end{equation}
@@ -185,21 +201,20 @@ where $\gamma$ is an experimentally determined quantity of order unity.
 %% RT Framework
 %%%
 \section{RADIATIVE TRANSFER FRAMEWORK}
-
-Our radiative transfer scheme is modeled closely after the work of \cite{Fukugita1994} and \cite{Thomas2008}, though for completeness we will reiterate the aspects of these methods most pertinent to the problem at hand.  In general, propagating a radiation field relies on solving differential equations governing the rate of change in the number densities of all ions and the temperature of the gas.  Assuming a medium consisting of hydrogen and helium only, we first solve for the relative abundances of each ion via
+Our radiative transfer scheme is modeled closely after the work of \cite{Fukugita1994} and \cite{Thomas2008}, though for completeness we will reiterate here the aspects of these methods most pertinent to the problem at hand.  In general, propagating a radiation field relies on solving differential equations governing the rate of change in the number densities of all ions and the temperature of the gas.  Assuming a medium consisting of hydrogen and helium only, we first solve for the relative abundances of each ion via
 \begin{align}
-    \frac{d \nHII}{dt} & = \gHI \nHI - \aHII \nel \nHII   \label{HIIRateEquation} \\
-    \frac{d \nHeII}{dt} & = \gHeI \nHeI - \bHeI \nel \nHeI + \bHeII \nel \nHeII \label{HeIIRateEquation} \\ \nonumber 
-    & - \aHeII \nel \nHeII + \aHeIII \nel \nHeIII - \xHeII \nel \nHeIII  \\
-    \frac{d \nHeIII}{dt} & = \gHeII \nHeII - \bHeII \nel \nHeII + \aHeIII \nel \nHeIII . \label{HeIIIRateEquation}
+    \frac{d \nHII}{dt} & = \gHI \nHI + \bHI \nHI \nel - \aHII \nel \nHII   \label{eq:HIIRateEquation} \\
+    \frac{d \nHeII}{dt} & = \gHeI \nHeI + \bHeI \nel \nHeI - \bHeII \nel \nHeII \nonumber \\ 
+    & - \aHeII \nel \nHeII + \aHeIII \nel \nHeIII - \xHeII \nel \nHeIII  \label{eq:HeIIRateEquation} \\
+    \frac{d \nHeIII}{dt} & = \gHeII \nHeII + \bHeII \nel \nHeII - \aHeIII \nel \nHeIII . \label{eq:HeIIIRateEquation}
 \end{align}
-Each of these equations represents the balance of ionizations and recombinations for ion $i = \HII, \HeII, \HeIII$, where $\Gamma_i$ denotes the ionization rate coefficient, $\alpha_i$ ($\xi_i$) the case-A (dielectric) recombination rate coefficients, and $\beta_i$ the collisional ionization rate coefficients.  In this work, we use the formulae in Appendix B of \cite{Fukugita1994} to compute the values of $\alpha$, $\beta$, and $\xi$.  The ionization rate coefficients are composed of terms taking into account photo-ionization, collisional ionization, and secondary ionizations due to energetic photo-electrons.  The photoionization rate coefficients, $\Gamma_i^P$, are given by
+Each of these equations represents the balance of ionizations and recombinations for ion $i = \HII, \HeII, \HeIII$, where $\Gamma_i$ denotes the photo-ionization rate coefficient, $\alpha_i$ ($\xi_i$) the case-A (dielectric) recombination rate coefficients, and $\beta_i$ the collisional ionization rate coefficients.  In this work, we use the formulae in Appendix B of \citet{Fukugita1994} to compute the values of $\alpha$, $\beta$, and $\xi$.    We absorb ionizations due to to energetic photo-electrons into the  photoionization rate coefficients, $\Gamma_i$, which are given by
+\begin{align}
+    \Gamma_i = & \int_{E_i}^{\infty} \sigma_i(E) \spec(E) \frac{dE}{E} \nonumber \\  + & \sum_j f_i \left(\frac{n_j}{n_i}\right) \int_{E_i}^{\infty} \sigma_i(E)\left(\frac{E - E_j}{E_i}\right) \spec(E) \frac{dE}{E} \label{eq:PhotoionizationRate}
+\end{align}
+where $E_i$, $\sigma_i$, $n_i$, and $f_i$ are the ionization threshold energy, bound-free absorption cross section, number density, and fraction of photo-electron energy that goes into ionization of species $i$, respectively, and the sum over $j = \HI, \HeII, \HeII$ term represents ionizations due to fast secondary electrons from photoionizations of species $j$, which has number density $n_j$.  $\spec$ is the spectral intensity, which we write as
 \begin{equation}
-    \Gamma_i = \int_{E_i}^{\infty} \sigma_i(E) \spec(E) \frac{dE}{E}    \label{PhotoionizationRate}
-\end{equation}
-where $E_i$ and $\sigma_i$ are the ionization threshold and bound-free absorption cross section for species $i$, respectively.  $\spec$ is the spectral intensity, which we write as
-\begin{equation}
-    \spec(E, r) = \frac{\Lbol}{4\pi r^2} I(E) e^{-\tau(E, r)} .
+    \spec(E, r) = \frac{\Lbol}{4\pi r^2} I(E) e^{-\tau(E, r)} . \label{eq:Spectrum}
 \end{equation}
 Here, $r$ is the distance from the source, $I(E)$ is the normalized spectral energy distribution (SED), satisfying
 \begin{equation}
@@ -208,21 +223,21 @@ Here, $r$ is the distance from the source, $I(E)$ is the normalized spectral ene
 and the optical depth $\tau(E, r)$ is given as a sum over absorbing species,
 \begin{align}
     \tau(E, r) & = \sum_i \int_r \sigma_i(E) n_i(r) dr \nonumber \\
-               & = \sum_i \sigma_i(E) \ncol(r)
+               & = \sum_i \sigma_i(E) \ncol(r) \label{eq:OpticalDepth}
 \end{align}
 where $\ncol(r)$ is the column density of species $i$ at distance $r$ from the source.
-We calculate the bound-free absorption cross-sections, $\sigma_i$, using the fits of \cite{Verner1996}.  At each time-step, we also solve for the temperature evolution, which is given by
+We calculate the bound-free absorption cross-sections, $\sigma_i$, using the fits of \citet{Verner1996}.  At each time-step, we also solve for the temperature evolution, which is given by
 \begin{align}
     \frac{3}{2}\frac{d}{dt}\left(\frac{\kB T \nb}{\mu}\right) & = \fheat \sum_i n_i \Heat_i \nonumber \\
-    & - \sum_i \zeta_i n_e n_i - \sum_i \eta_i n_e n_i - \sum_i \psi_i n_e n_i \label{TemperatureEvolution} 
+    & - \sum_i \zeta_i n_e n_i - \sum_i \eta_i n_e n_i - \sum_i \psi_i n_e n_i \label{eq:TemperatureEvolution} 
 \end{align}
 where $\Heat_i$ is the photo-electric heating rate, given by
 \begin{equation}
-    \Heat_i = \int_{E_i}^{\infty} \sigma_i(E) \spec(E, r)(E - E_i) \frac{dE}{E} \label{HeatingRate} ,
+    \Heat_i = \int_{E_i}^{\infty} \sigma_i(E) \spec(E, r)(E - E_i) \frac{dE}{E} \label{eq:HeatingRate} ,
 \end{equation}    
-and $\zeta_i$, $\eta_i$, and $\psi_i$ are the collisional ionization, recombination, and collisional excitation cooling coefficients, respectively.  Additional parameters include $\nb$, the total number density of baryons (check on this), the mean molecular weight $\mu$, Boltzmann's constant $\kB$, the kinetic temperature of the gas $T$, and $\fheat$, the fraction of a photon's original energy deposited as heat (see \cite{Shull1985}, \cite{Furlanetto2010}).  For simplicity, we neglect Hubble cooling due to cosmological expansion, as well as Compton heating/cooling, and cooling by free-free emission.
+and $\zeta_i$, $\eta_i$, and $\psi_i$ are the collisional ionization, recombination, and collisional excitation cooling coefficients, respectively.  Additional parameters include $\nb$, the total number density of baryons (check on this), the mean molecular weight $\mu$, Boltzmann's constant $\kB$, the kinetic temperature of the gas $T$, and $\fheat$, the fraction of a photon's original energy deposited as heat (see \citet{Shull1985}, \citet{Furlanetto2010}).  For simplicity, we neglect cosmological effects, including Hubble cooling due to cosmological expansion, Compton heating/cooling off CMB photons, and photo-ionization by CMB photons. Currently neglecting cooling by free-free emission too.
 
-It is important to note that we can pull radial and time dependencies outside of the integrals in Equations \ref{PhotoionizationRate} and \ref{HeatingRate}, leaving
+It is important to note that we can pull radial and time dependencies outside of the integrals in Equations \ref{eq:PhotoionizationRate} and \ref{eq:HeatingRate}, leaving
 \begin{equation}
     \Gamma_i(\ncol) = A \int_{E_i}^{\infty} \sigma_i(E) I(E) e^{-\tau(E, \ncol)} \frac{dE}{E} \
 \end{equation}
@@ -232,48 +247,69 @@ and
 \end{equation}
 where $A \equiv \Lbol / 4 \pi r^2$.
 
-It is now apparent that the values of $\Gamma_i$ and $\Heat_i$ can be tabulated as a function of column density for a given source.  This greatly improves the speed of 1D radiative transfer calculations, like those of \cite{Thomas2008}, since the integrals in these expressions (Equations \ref{PhotoionizationRate} and \ref{HeatingRate}) no longer need to be computed numerically on-the-fly.  However, the lookup tables will only be 1-dimensional for the case of a hydrogen-only universe.
+It is now apparent that the values of $\Gamma_i$ and $\Heat_i$ can be tabulated as a function of column density for a given source.  This greatly improves the speed of 1D radiative transfer calculations, like those of \cite{Thomas2008}, since the integrals in these expressions (Equations \ref{eq:PhotoionizationRate} and \ref{eq:HeatingRate}) no longer need to be computed numerically on-the-fly.  However, the lookup tables will only be 1-dimensional for the case of a hydrogen-only medium.
 
 %%% 
 %% Code Verification
 %%%
 \section{CODE VERIFICATION}
-Our code, \texttt{rt1d}, solves Equations \ref{HIIRateEquation}, \ref{HeIIRateEquation}, \ref{HeIIIRateEquation}, and \ref{TemperatureEvolution} using the implicit Euler method for integration and the Newton-Raphson technique for root finding.  In order to track the propagation of ionization fronts accurately, we limit the time-step based on a maximum neutral fraction change as introduced in \cite{Shapiro2004},
+Our code, \texttt{rt1d}, solves Equations \ref{eq:HIIRateEquation}, \ref{eq:HeIIRateEquation}, \ref{eq:HeIIIRateEquation}, and \ref{eq:TemperatureEvolution} using the implicit Euler method for integration and the Newton-Raphson technique for root finding.  In order to track the propagation of ionization fronts accurately, we limit the time-step based on a maximum neutral fraction change as introduced in \citet{Shapiro2004},
 \begin{equation}
     \Delta t = \epsilon_{\mathrm{ion}} \frac{\nHI}{|d\nHI/dt|} ,
 \end{equation}
-and additionally require that the time-step increase by a factor of two at most, as in \cite{Wise2011}.
+and additionally require that the time-step increase by a factor of two at most, as in \citet{Wise2011}.
 
 At this juncture it is worth mentioning the numerical artifacts that can result due to poor temporal or spatial resolution.  
 
-To demonstrate the functionality of the code, we repeat tests 1 and 2 from the Radiative Transfer Comparison Project (\cite{Iliev2006}; hereafter referred to as RT06).  Test 1 is the expansion of an HII region in a hydrogen-only, isothermal medium surrounding a monochromatic source of 13.6 eV photons. We adopt the parameters used in \citet{Wise2011}: constant temperature $T = 10^4 \ \mathrm{K}$, hydrogen number density $n_H = 10^{-3} \ \mathrm{cm^{-3}}$, ionized fraction $x = 1.2 \times 10^-3$, in a box $L_{\mathrm{box}} = 6.6 \ \mathrm{kpc}$ in size, and with photon luminosity $\dot{Q} = 5\times10^{48} \ \mathrm{s^{-1}}$.
-
+% I-front evolution, RT06 #1
 \begin{figure*}[htbp]
 \centering
 \includegraphics[scale=0.8]{figures/RT06_1_IfrontEvolution.eps}
-\caption{\textit{Top:} Comparison of the numerical (dashed) and analytic (solid) solutions for the position of an expanding ionization front as a function of time in a hydrogen-only, isothermal medium (RT06 problem \# 1).  The numerical solution displayed here is from the highest resolution simulation (6400 grid cells, i.e. $\Delta x = L_{\mathrm{box}}/6400$). \textit{Bottom:} Ratio of the calculated and analytic solutions as a function of time and grid resolution.  Simulations with > 200 grid cells converge on the highest resolution solution to an accuracy of $\lesssim 5 \%$.}
+\caption{\textit{Top:} Comparison of the numerical (dashed) and analytic (solid) solutions for the position of an expanding ionization front as a function of time in a hydrogen-only, isothermal medium (RT06 problem \#1).  The numerical solution displayed here is from the highest resolution simulation (6400 grid cells, i.e. $\Delta x = L_{\mathrm{box}}/6400$). \textit{Bottom:} Ratio of the calculated and analytic solutions as a function of time and grid resolution.  Simulations with > 200 grid cells converge on the highest resolution solution to an accuracy of $\lesssim 5 \%$.}
 \label{fig:RT_Test1_IfrontEvolution}
 \end{figure*}
 
+To demonstrate the functionality of the code, we repeat tests 1 and 2 from the Radiative Transfer Comparison Project (\cite{Iliev2006}; hereafter referred to as RT06).  Test 1 is the expansion of an HII region in a hydrogen-only, isothermal medium surrounding a monochromatic source of 13.6 eV photons. We adopt the parameters used in \citet{Wise2011}: constant temperature $T = 10^4 \ \mathrm{K}$, uniform hydrogen number density $n_H = 10^{-3} \ \mathrm{cm^{-3}}$, ionized fraction $x = 1.2 \times 10^-3$, in a box $L_{\mathrm{box}} = 6.6 \ \mathrm{kpc}$ in size, and with photon luminosity $\dot{Q} = 5\times10^{48} \ \mathrm{s^{-1}}$.  The classical analytic solution for the radius of an ionization front is 
+\begin{equation}
+    r_{\mathrm{IF}}(t) = r_s (1 - e^{-t/t_{\mathrm{rec}}})^{1/3}
+\end{equation}    
+where $r_s$ is the Str\"{o}mgren radius, 
+\begin{equation}
+    r_s = \left(\frac{3 \dot{Q}}{4\pi \alpha_{\mathrm{HII}}(T) n_{\mathrm{HI}}^2}\right)^{1/3} ,
+\end{equation}
+and the recombination time, \trec, is defined as
+\begin{equation}
+    t_{\mathrm{rec}} = \frac{1}{\alpha_{\mathrm{HII}}(T) n_{\mathrm{HI}}} .
+\end{equation}
+This solution is approximate even in isothermal media, given that it
+assumes a constant neutral hydrogen density, $\nHI$. More accurate analytic
+solutions exist (citations), and predict a departure from the classical
+solution at $t/t_{\mathrm{rec}} \simeq 1$, which grows to a $\sim 5 \%$
+difference by $t/t_{\mathrm{rec}} \simeq 4$. Our numerical solution (see
+Figure \ref{fig:RT_Test1_IfrontEvolution}) captures this behavior very well.  In Figure \ref{fig:RT_Test1_RadialProfiles}, we show radial profiles of the ionized and neutral fractions at three stages of the I-front expansion, again in very good agreement with the calculations in \citet{Iliev2006}.
 
 \begin{figure}[htbp]
-\begin{center}
-\includegraphics[scale=0.4]{figures/RT_Test1_RadialProfiles.ps} 
-\vspace{-20pt}
-\caption[]{Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $30$, $100$, and $500$ Myr.}
+\centering
+\includegraphics[scale=0.4]{figures/RT_Test1_RadialProfiles.eps} 
+\caption[]{Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $30$, $100$, and $500$ Myr for Test 1.}
 \label{fig:RT_Test1_RadialProfiles}
-\end{center}
 \end{figure}
 
-Test 2 is the same, except for the temperature is allowed to evolve according to Equation \ref{TemperatureEvolution}, and the monochromatic radiation source is replaced by a $10^5$ K blackbody spectrum.  Results for Test 1 are shown in Figures \ref{fig:RT_Test1_IfrontEvolution} and \ref{fig:RT_Test1_RadialProfiles}, and for Test 2 in Figure \ref{fig:RT_Test2_RadialProfiles}.
+Test 2 is the same as Test 1, except now the temperature is allowed to evolve according to Equation \ref{eq:TemperatureEvolution}, and the monochromatic radiation source is replaced by a $10^5$ K blackbody spectrum.  Radial profiles of the neutral and ionized fractions and temperature can be seen in the top and bottom panels of Figure \ref{fig:RT_Test2_RadialProfiles}, respectively.  Again, our numerical solutions are in very good agreement with previous work.
 
 \begin{figure}[htbp]
-\begin{center}
-\includegraphics[scale=0.4]{figures/RT_Test2_RadialProfiles.ps}
-\vspace{-20pt}
-\caption{\textit{Top:} Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $100$, and $500$ Myr. \textit{Bottom:} Radial profiles of the kinetic temperature at $t = 10$, $100$, and $500$ Myr (solid, dashed, and dotted lines, respectively).}
+\centering
+\includegraphics[scale=0.4]{figures/RT_Test2_RadialProfiles.eps}
+\caption{\textit{Top:} Radial profiles of the neutral (solid) and ionized (dashed) fractions at $t = 10$, $100$, and $500$ Myr. \textit{Bottom:} Radial profiles of the kinetic temperature at $t = 10$, $100$, and $500$ Myr (solid, dashed, and dotted lines, respectively).  Results in both panels from Test 2.}
 \label{fig:RT_Test2_RadialProfiles}
-\end{center}
 \end{figure}
+
+
+
+
+
+
+
+
 
 \end{document}

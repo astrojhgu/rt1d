@@ -28,6 +28,7 @@ import os, re, sys
 import pylab as pl
 import numpy as np
 import rt1d.analysis as rta
+from jmpy.stats import *
 
 pl.rcParams['figure.subplot.left'] = 0.12
 pl.rcParams['figure.subplot.right'] = 0.88
@@ -41,6 +42,15 @@ if sys.argv[2] == 'cinf': path = cinf
 else: path = cfin
 
 pfs = ['dx100_dt3', 'dx200_dt3', 'dx400_dt3', 'dx800_dt3', 'dx1600_dt3', 'dx3200_dt3', 'dx6400_dt3']
+
+resolution = []
+meanerror = []
+maxerror = []
+minerror = []
+
+ds = rta.Analyze("{0}/{1}.dat".format(path, 'dx6400_dt3'))
+ds.ComputeIonizationFrontEvolution()
+ref_error = ds.rIF / ds.ranl
 
 # First, the c -> infinite tests
 mp = rta.multiplot(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
@@ -71,6 +81,11 @@ for pf in pfs:
     else:
         mp.grid[1].plot(ds.t / ds.trec, ds.rIF / ds.ranl, color = color, ls = '-', label = r'$\Delta x = 1/{0}$'.format(int(ds.pf['GridDimensions'])))
 
+        resolution.append(ds.pf['GridDimensions'])
+        meanerror.append(np.abs(np.mean(ref_error - np.resize(ds.rIF / ds.ranl, len(ref_error)))))
+        maxerror.append(np.abs(np.max(ref_error - np.resize(ds.rIF / ds.ranl, len(ref_error)))))
+        minerror.append(np.abs(np.min(ref_error - np.resize(ds.rIF / ds.ranl, len(ref_error)))))
+
 mp.grid[1].set_ylim(0.9, 1.05) 
 mp.fix_ticks()     
 mp.grid[0].set_xlim(0, max(ds.t / ds.trec))
@@ -87,5 +102,30 @@ mp.grid[0].legend(loc = 'lower right', frameon = False, ncol = 2)
 
 pl.draw()
 pl.savefig('RT06_{0}_IfrontEvolution.png'.format(int(sys.argv[1])))
+
+pl.close()
+
+# Errors
+#f = fit(np.array(np.log10(resolution)), np.array(np.log10(meanerror)))
+#ax = pl.subplot(111)
+#ax.scatter(resolution, meanerror, color = 'k', label = 'Mean')
+#ax.scatter(resolution, maxerror, color = 'blue', label = 'Max')
+#ax.scatter(resolution, minerror, color = 'red', label = 'Min')
+#
+#ax.set_xlabel('Number of Grid Cells')
+#ax.set_ylabel('Error')
+#
+#ax.set_xscale('log')
+#ax.set_yscale('log')
+#
+#ax.loglog(resolution, 10**(f.pars[0] * np.log10(resolution) + f.pars[1]), color = 'k')
+#
+#ax.legend()
+#
+#pl.draw()
+#
+#raw_input('done')
+#
+#pl.savefig('RT06_{0}_Error_vs_Resolution.png'.format(int(sys.argv[1])))
 
 

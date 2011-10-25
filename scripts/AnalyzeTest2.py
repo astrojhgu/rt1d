@@ -47,12 +47,12 @@ a1 = ds.data[2].r[np.argmin(np.abs(ds.data[2].x_HI - 0.5))] / ds.pf['LengthUnits
 a2 = ds.data[20].r[np.argmin(np.abs(ds.data[20].x_HI - 0.5))] / ds.pf['LengthUnits']
 a3 = ds.data[100].r[np.argmin(np.abs(ds.data[100].x_HI - 0.5))] / ds.pf['LengthUnits']
 
-mp.grid[0].annotate('10', (a1 - 0.05, 0.5))
-mp.grid[0].annotate('100', (a2 - 0.07, 0.5))
-mp.grid[0].annotate('500', (a3 - 0.07, 0.5))
-mp.grid[1].annotate('10', (a1 - 0.05, 10**4.3))
-mp.grid[1].annotate('100', (a2 - 0.07, 10**4.2))
-mp.grid[1].annotate('500', (a3 - 0.07, 10**4.1))
+mp.grid[0].annotate('10', (a1 - 0.07, 0.5))
+mp.grid[0].annotate('100', (a2 - 0.1, 0.5))
+mp.grid[0].annotate('500', (a3 + 0.12, 0.5))
+mp.grid[1].annotate('10', (a1 - 0.07, 10**4.2))
+mp.grid[1].annotate('100', (a2 - 0.1, 10**4.12))
+mp.grid[1].annotate('500', (a3 + 0.12, 10**4.04))
 
 mp.fix_ticks()
 mp.grid[0].set_ylim(1e-5, 1.5)

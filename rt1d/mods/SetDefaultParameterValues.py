@@ -82,7 +82,7 @@ def SetDefaultParameterValues():
         "CollisionalIonization": 1, \
         "CollisionalExcitation": 1, \
         "SecondaryIonization": 1, \
-        "ComptonCooling": 1, \
+        "ComptonCooling": 0, \
         "CosmologicalExpansion": 0, \
         "InfiniteSpeedOfLight": 1, \
         "PlaneParallelField": 0, \

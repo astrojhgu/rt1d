@@ -183,9 +183,9 @@ class Radiate:
        
         # Only solve helium rate equations if self.MultiSpeces = 1
         if self.MultiSpecies:
-            newHeII = Gamma_HeI * n_HeI - Beta_HeI * n_e * n_HeI + Beta_HeII * n_e * q[1] - \
+            newHeII = Gamma_HeI * n_HeI + Beta_HeI * n_e * n_HeI - Beta_HeII * n_e * q[1] - \
                       alpha_HeII * n_e * q[1] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * q[1]    
-            newHeIII = Gamma_HeII * n_HeII - Beta_HeII * n_e * n_HeII + alpha_HeIII * n_e * q[2]
+            newHeIII = Gamma_HeII * n_HeII + Beta_HeII * n_e * n_HeII - alpha_HeIII * n_e * q[2]
         else:
             newHeII = q[1]
             newHeIII = q[2]
@@ -695,23 +695,24 @@ class Radiate:
         for i, n in enumerate(nabs):
             cool += n * self.CollisionalIonizationCoolingCoefficient(T, i)
                 
+        # Cooling by recombinations
+        for i, n in enumerate(nion):
+            cool += n * self.RecombinationCoolingCoefficient(T, i)
+            
+        # Cooling by dielectronic recombination
+        cool += nion[2] * self.DielectricRecombinationCoolingCoefficient(T)
+                
+                
         # Cooling by collisional excitation
         if self.CollisionalExcitation:
             for i, n in enumerate(nabs):
                 cool += n * self.CollisionalExcitationCoolingCoefficient(T, nabs, nion, i)
         
-        # Cooling by recombinations
-        for i, n in enumerate(nion):
-            cool += n * self.RecombinationCoolingCoefficient(T, i)
-                        
-        # Cooling by dielectronic recombination
-        cool += nion[2] * self.DielectricRecombinationCoolingCoefficient(T)
-        
         # Compton cooling - from FK96
         if self.ComptonCooling:
             cool += 4. * k_B * (T - T_cmb) * (np.pi**2 / 15.) * (k_B * T_cmb / hbar / c)**3 * (k_B * T_cmb / m_e / c**2) * sigma_T * c
         
-        ## Cooling by free-free emission
+        # Cooling by free-free emission
         #cool += (nion[0] + nion[1] + 4. * nion[2]) * 1.42e-27 * 1.1 * np.sqrt(T) # Check on Gaunt factor        
                 
         cool *= n_e
