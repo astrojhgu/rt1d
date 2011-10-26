@@ -107,7 +107,7 @@ def ProblemType(pt):
     # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, *continuous spectrum*
     if pt == 2.1:
        pf = {"ProblemType": 2.1, "InterpolationMethod": 0, \
-             "ColumnDensityBinsHI": 100, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
+             "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
              "StartRadius": 0.01, "dtDataDump": 5.0, "DataDumpName": 'dd', \
              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
@@ -126,10 +126,12 @@ def ProblemType(pt):
               "StartRadius": 0.01, "dtDataDump": 1.0, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
               "DensityProfile": 0, "InitialDensity": 2e-4, "TemperatureProfile": 0, "InitialTemperature": 8e3, \
-              "IonizationProfile": 1, "InitialHIIFraction": 1.2e-3, "SourceType": 0, "SourceLifetime": 1e10, \
+              "IonizationProfile": 1, "InitialHIIFraction": 0, "SourceType": 1, "SourceLifetime": 1e10, \
               "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
-              "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], "SpectrumPhotonLuminosity": 3e51, \
-              "Clump": 1, "ClumpPosition": 0.76, "ClumpOverdensity": 200, "ClumpRadius": 0.8 / 6.6, "ClumpTemperature": 40.,
+              "DiscreteSpectrum": 1, "SpectrumPhotonLuminosity": 1e6, \
+              "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], \
+              "Clump": 1, "ClumpPosition": 0.76, "ClumpOverdensity": 200, "ClumpRadius": 0.8 / 6.6, \
+              "ClumpTemperature": 40, "PlaneParallelField": 1
              }   
     
     # X-ray source, hydrogen only       

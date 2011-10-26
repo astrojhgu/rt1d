@@ -97,7 +97,7 @@ The contents of this paper fall into three general areas.  In \S2 we will quanti
 %%% 
 %% Multi-Frequency vs. Continuous
 %%%
-\section{ASSESSING THE CONSEQUENCES OF DISCRETE RADIATION FIELDS}
+\section{ASSESSING THE CONSEQUENCES OF DISCRETE RADIATION FIELDS} \label{sec:Consequences}
 Before computing the optimal multi-frequency spectra for SEDs most commonly used in numerical simulations (\S3), we will first demonstrate the difference in results brought about by varying degrees of frequency resolution.  To do this, we use \texttt{rt1d}, a 1D radiative transfer code developed for this work that is described and validated in the appendices.  
 
 1D calculations were the natural choice for the problem at hand for a variety of reasons.  Since our sole focus is on the resolution dependence of radiative effects, it would be unnecessary to perform calculations in a more complex setting with additional unrelated physics.  In fact, doing so would likely make our results more opaque (ha).  Additionally, the algorithm of choice allows one to pre-tabulate the relevant ionization and heating quantities for a given radiation source, effectively allowing us to simulate sources with continuous SEDs.  Given our motives, this is clearly a necessary requirement.  Pre-tabulating key quantities also grants a significant speed-up for calculations that are already cheap, but most importantly, provides the basis for our optimization strategy that will be introduced in the next section.
@@ -125,7 +125,7 @@ In the remainder of this section, we will focus on two simple test problems.  Fi
 
 
 
-\section{METHODS}
+\section{METHODS} \label{sec:Methods}
 Upon careful inspection of the coupled rate equations which govern the balance
 of ionizations, recombinations, heating, and cooling, one realizes that the
 integral values, i.e. equations \ref{eq:HIIRateEquation},
@@ -144,11 +144,6 @@ sums given $n_{\nu}$ frequency bins with
 \begin{equation}
     I(E) = \sum_{j=1}^{n_{\nu}} I(E_j) .
 \end{equation}
-
-
-% Discretization Artifacts
-\subsection{Discretization Artifacts}
-
 
 % Optimization Strategy
 \subsection{Optimization Strategy}
@@ -175,7 +170,7 @@ and we have a 100\% chance of keeping our current guess.  It is clear now that h
 where $\gamma$ is an experimentally determined quantity of order unity.
 
 
-\section{RESULTS}
+\section{RESULTS} \label{sec:Results}
 
 
 
@@ -203,16 +198,25 @@ where $\gamma$ is an experimentally determined quantity of order unity.
 \section{RADIATIVE TRANSFER FRAMEWORK}
 Our radiative transfer scheme is modeled closely after the work of \cite{Fukugita1994} and \cite{Thomas2008}, though for completeness we will reiterate here the aspects of these methods most pertinent to the problem at hand.  In general, propagating a radiation field relies on solving differential equations governing the rate of change in the number densities of all ions and the temperature of the gas.  Assuming a medium consisting of hydrogen and helium only, we first solve for the relative abundances of each ion via
 \begin{align}
-    \frac{d \nHII}{dt} & = \gHI \nHI + \bHI \nHI \nel - \aHII \nel \nHII   \label{eq:HIIRateEquation} \\
+    \frac{d \nHII}{dt} & = \gHI \nHI + \bHI \nHI \nel - \aHII \nel \nHII   \label{eq:HIIRateEquation} \\ 
     \frac{d \nHeII}{dt} & = \gHeI \nHeI + \bHeI \nel \nHeI - \bHeII \nel \nHeII \nonumber \\ 
-    & - \aHeII \nel \nHeII + \aHeIII \nel \nHeIII - \xHeII \nel \nHeIII  \label{eq:HeIIRateEquation} \\
+    & - \aHeII \nel \nHeII + \aHeIII \nel \nHeIII - \xHeII \nel \nHeIII  \label{eq:HeIIRateEquation} \\ 
     \frac{d \nHeIII}{dt} & = \gHeII \nHeII + \bHeII \nel \nHeII - \aHeIII \nel \nHeIII . \label{eq:HeIIIRateEquation}
 \end{align}
-Each of these equations represents the balance of ionizations and recombinations for ion $i = \HII, \HeII, \HeIII$, where $\Gamma_i$ denotes the photo-ionization rate coefficient, $\alpha_i$ ($\xi_i$) the case-A (dielectric) recombination rate coefficients, and $\beta_i$ the collisional ionization rate coefficients.  In this work, we use the formulae in Appendix B of \citet{Fukugita1994} to compute the values of $\alpha$, $\beta$, and $\xi$.    We absorb ionizations due to to energetic photo-electrons into the  photoionization rate coefficients, $\Gamma_i$, which are given by
+Each of these equations represents the balance of ionizations and
+recombinations for ions $\HII$, $\HeII$, $\HeIII$. We associate the index $i$
+with neutral species, $i = \HI, \HeI, \HeII$, and define $\Gamma_i$ as the
+photo-ionization rate coefficient, $\alpha_i$ ($\xi_i$) the case-A
+(dielectric) recombination rate coefficients, $\beta_i$ the collisional
+ionization rate coefficients, and $\nel$ the number density of electrons,
+\begin{equation}
+    \nel = \nHII + \nHeII + 2\nHeIII .
+\end{equation}
+In this work, we use the formulae in Appendix B of \citet{Fukugita1994} to compute the values of $\alpha$, $\beta$, and $\xi$.    We absorb ionizations due to to energetic photo-electrons into the  photoionization rate coefficients, $\Gamma_i$, which are given by
 \begin{align}
     \Gamma_i = & \int_{E_i}^{\infty} \sigma_i(E) \spec(E) \frac{dE}{E} \nonumber \\  + & \sum_j f_i \left(\frac{n_j}{n_i}\right) \int_{E_i}^{\infty} \sigma_i(E)\left(\frac{E - E_j}{E_i}\right) \spec(E) \frac{dE}{E} \label{eq:PhotoionizationRate}
 \end{align}
-where $E_i$, $\sigma_i$, $n_i$, and $f_i$ are the ionization threshold energy, bound-free absorption cross section, number density, and fraction of photo-electron energy that goes into ionization of species $i$, respectively, and the sum over $j = \HI, \HeII, \HeII$ term represents ionizations due to fast secondary electrons from photoionizations of species $j$, which has number density $n_j$.  $\spec$ is the spectral intensity, which we write as
+where $E_i$, $\sigma_i$, $n_i$, and $f_i$ are the ionization threshold energy, bound-free absorption cross section, number density, and fraction of photo-electron energy that goes into ionization of species $i$, respectively. The term summing over $j$, where $j = \HI, \HeI, \HeII$, represents ionizations of species $i$ due to fast secondary electrons from photoionizations of species $j$, which has number density $n_j$.  $\spec$ is the spectral intensity, which we write as
 \begin{equation}
     \spec(E, r) = \frac{\Lbol}{4\pi r^2} I(E) e^{-\tau(E, r)} . \label{eq:Spectrum}
 \end{equation}
@@ -235,7 +239,7 @@ where $\Heat_i$ is the photo-electric heating rate, given by
 \begin{equation}
     \Heat_i = \int_{E_i}^{\infty} \sigma_i(E) \spec(E, r)(E - E_i) \frac{dE}{E} \label{eq:HeatingRate} ,
 \end{equation}    
-and $\zeta_i$, $\eta_i$, and $\psi_i$ are the collisional ionization, recombination, and collisional excitation cooling coefficients, respectively.  Additional parameters include $\nb$, the total number density of baryons (check on this), the mean molecular weight $\mu$, Boltzmann's constant $\kB$, the kinetic temperature of the gas $T$, and $\fheat$, the fraction of a photon's original energy deposited as heat (see \citet{Shull1985}, \citet{Furlanetto2010}).  For simplicity, we neglect cosmological effects, including Hubble cooling due to cosmological expansion, Compton heating/cooling off CMB photons, and photo-ionization by CMB photons. Currently neglecting cooling by free-free emission too.
+and $\zeta_i$, $\eta_i$, and $\psi_i$ are the collisional ionization, recombination, and collisional excitation cooling coefficients, respectively. The total number density of baryons is given by $\nb$, the mean molecular weight, $\mu$, Boltzmann's constant, $\kB$, the kinetic temperature of the gas, $T$, and the fraction of a photon's original energy deposited as heat, $\fheat$ (see \citet{Shull1985}, \citet{Furlanetto2010}).  For simplicity, our current treatment neglects cooling via free-free emission, as well as cosmological effects, including Hubble cooling due to cosmological expansion, Compton heating/cooling off cosmic microwave background (CMB) photons, and photo-ionization by Wien-tail CMB photons. 
 
 It is important to note that we can pull radial and time dependencies outside of the integrals in Equations \ref{eq:PhotoionizationRate} and \ref{eq:HeatingRate}, leaving
 \begin{equation}
@@ -247,7 +251,7 @@ and
 \end{equation}
 where $A \equiv \Lbol / 4 \pi r^2$.
 
-It is now apparent that the values of $\Gamma_i$ and $\Heat_i$ can be tabulated as a function of column density for a given source.  This greatly improves the speed of 1D radiative transfer calculations, like those of \cite{Thomas2008}, since the integrals in these expressions (Equations \ref{eq:PhotoionizationRate} and \ref{eq:HeatingRate}) no longer need to be computed numerically on-the-fly.  However, the lookup tables will only be 1-dimensional for the case of a hydrogen-only medium.
+It is now apparent that the values of $\Gamma_i$ and $\Heat_i$ can be tabulated as a function of column density for a given source.  This greatly improves the speed of 1D radiative transfer calculations, like those of \cite{Thomas2008}, since the integrals in these expressions (Equations \ref{eq:PhotoionizationRate} and \ref{eq:HeatingRate}) no longer need to be computed numerically on-the-fly.  It also provides the basis for our frequency resolution optimization strategy, as presented in \S\ref{sec:Methods}. Note, however, that the dimensionality of these lookup tables is equal to the number of absorbing species, so the tables for simulations including only hydrogen are 1D, and those including helium are 3D.
 
 %%% 
 %% Code Verification
@@ -259,13 +263,13 @@ Our code, \texttt{rt1d}, solves Equations \ref{eq:HIIRateEquation}, \ref{eq:HeII
 \end{equation}
 and additionally require that the time-step increase by a factor of two at most, as in \citet{Wise2011}.
 
-At this juncture it is worth mentioning the numerical artifacts that can result due to poor temporal or spatial resolution.  
+%At this juncture it is worth mentioning the numerical artifacts that can result due to poor temporal or spatial resolution.  
 
 % I-front evolution, RT06 #1
 \begin{figure*}[htbp]
 \centering
 \includegraphics[scale=0.8]{figures/RT06_1_IfrontEvolution.eps}
-\caption{\textit{Top:} Comparison of the numerical (dashed) and analytic (solid) solutions for the position of an expanding ionization front as a function of time in a hydrogen-only, isothermal medium (RT06 problem \#1).  The numerical solution displayed here is from the highest resolution simulation (6400 grid cells, i.e. $\Delta x = L_{\mathrm{box}}/6400$). \textit{Bottom:} Ratio of the calculated and analytic solutions as a function of time and grid resolution.  Simulations with > 200 grid cells converge on the highest resolution solution to an accuracy of $\lesssim 5 \%$.}
+\caption{\textit{Top:} Comparison of the numerical (dashed) and analytic (solid) solutions for the position of an expanding ionization front as a function of time in a hydrogen-only, isothermal medium (RT06 problem \#1).  The numerical solution displayed here is from the highest resolution simulation (6400 grid cells, i.e. $\Delta x = L_{\mathrm{box}}/6400$). \textit{Bottom:} Ratio of the calculated and analytic solutions as a function of time and grid resolution.  Simulations with $>$ 200 grid cells converge on the highest resolution solution to an accuracy of $\lesssim 5 \%$.}
 \label{fig:RT_Test1_IfrontEvolution}
 \end{figure*}
 
@@ -286,7 +290,7 @@ assumes a constant neutral hydrogen density, $\nHI$. More accurate analytic
 solutions exist (citations), and predict a departure from the classical
 solution at $t/t_{\mathrm{rec}} \simeq 1$, which grows to a $\sim 5 \%$
 difference by $t/t_{\mathrm{rec}} \simeq 4$. Our numerical solution (see
-Figure \ref{fig:RT_Test1_IfrontEvolution}) captures this behavior very well.  In Figure \ref{fig:RT_Test1_RadialProfiles}, we show radial profiles of the ionized and neutral fractions at three stages of the I-front expansion, again in very good agreement with the calculations in \citet{Iliev2006}.
+Figure \ref{fig:RT_Test1_IfrontEvolution}) captures this behavior very well.  In Figure \ref{fig:RT_Test1_RadialProfiles}, we show radial profiles of the ionized and neutral fractions at three stages of the I-front expansion, which are again in very good agreement with the calculations presented in \citet{Iliev2006}.
 
 \begin{figure}[htbp]
 \centering

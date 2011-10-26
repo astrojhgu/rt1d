@@ -29,7 +29,7 @@ def SetDefaultParameterValues():
         
         # ODE Solver
         "ODEAdaptiveStep": 1, \
-        "ODEMinStep": 1e-8, \
+        "ODEMinStep": 1e-10, \
         "ODEMaxStep": 1e-1, \
         "ODErtol": 1e-3, \
         "ODEatol": 1e-6, \

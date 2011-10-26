@@ -359,7 +359,7 @@ class Radiate:
         # If the speed of light = c, things are trickier    
         else:                
                                           
-            if self.HIIRestrictedTimestep: dtphot = 1e50 * np.ones_like(self.grid) #dtphot = 1e50 * np.ones(len(packs))         
+            if self.HIIRestrictedTimestep: dtphot = 1e50 * np.ones_like(self.grid)    
                                     
             # Loop over photon packages, updating values in cells: data -> newdata
             for j, pack in enumerate(packs):
