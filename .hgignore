@@ -6,3 +6,11 @@ syntax: glob
 *.hdf5
 *.h5
 build/*
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.log
+*.pdf
+*.ps
+*.synctex.gz

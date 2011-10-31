@@ -1,5 +1,0 @@
-ProblemType = 2.1
-GridDimensions = 400
-OutputDirectory = dx400_dt3
-HIIRestrictedTimestep = 1
-InfiniteSpeedOfLight = 0
