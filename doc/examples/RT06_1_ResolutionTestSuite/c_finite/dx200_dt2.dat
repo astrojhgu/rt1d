@@ -1,6 +1,0 @@
-ProblemType = 1
-CurrentTimestep = 1e-2
-GridDimensions = 200
-OutputDirectory = dx200_dt2
-HIIRestrictedTimestep = 0
-InfiniteSpeedOfLight = 0

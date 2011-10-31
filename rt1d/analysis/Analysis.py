@@ -9,11 +9,10 @@ Description: Functions to calculate various quantities from our rt1d datasets.
      
 """
 
-import misc
 import numpy as np
 import pylab as pl
-from constants import *
 from Multiplot import *
+from rt1d.mods.Constants import *
 from rt1d.analysis.Dataset import Dataset
 from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
 

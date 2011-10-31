@@ -1,5 +1,0 @@
-ProblemType = 1
-CurrentTimestep = 1e-2
-GridDimensions = 800
-OutputDirectory = dx800_dt2
-HIIRestrictedTimestep = 0

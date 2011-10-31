@@ -1,5 +1,0 @@
-ProblemType = 1
-GridDimensions = 1600
-OutputDirectory = dx1600_dt3
-HIIRestrictedTimestep = 1
-InfiniteSpeedOfLight = 0
