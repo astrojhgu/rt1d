@@ -37,7 +37,7 @@ def SetDefaultParameterValues():
         "RootFinder": 0, \
         
         "ParallelizationMethod": 2, \
-        "Debug": 0, \
+        "Debug": 1, \
           
         # Integral tabulation
         "HIColumnMin": 1e15, \

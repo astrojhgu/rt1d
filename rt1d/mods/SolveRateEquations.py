@@ -125,10 +125,10 @@ class SolveRateEquations:
                                                 
             # If we've gotten this far without adaptively stepping, increase h for the next timestep
             if adapted is False: h = min(self.hmax, 2. * h)
-                        
+            
             # If we didn't meet our error requirement, repeat loop with different h
-            if adapted: continue             
-                        
+            else: continue            
+                                    
             x.append(xnext)        
             y.append(ynext)            
             i += 1

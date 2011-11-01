@@ -535,13 +535,13 @@ class Radiate:
         ncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
                    np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
                 
+        if self.MultiSpecies: indices = self.Interpolate.GetIndices3D(ncol) 
+        else: indices = None        
+                
         if self.rs.SourceType < 3:        
-            tau = self.Interpolate.interp(ncol, "TotalOpticalDepth0")      
+            tau = self.Interpolate.interp(indices, "TotalOpticalDepth0", ncol)
             if tau < 0.5: return 1e50           
         
-        if self.MultiSpecies: indices = self.Interpolate.GetIndices3D(ncol) 
-        else: indices = None
-                               
         Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
             xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)        
         alpha = 2.6e-13 * (newdata['Temperature'][cell] / 1.e4)**-0.85  
