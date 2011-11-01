@@ -63,6 +63,8 @@ class Analyze:
         Find the position of the I-front at all times, and compute value of analytic solution.
         """    
         
+        print len(self.data)
+        
         # First locate I-front for all data dumps and compute analytic solution
         self.t = np.zeros(len(self.data) - 1) # Exclude dd0000
         self.rIF = np.zeros_like(self.t)

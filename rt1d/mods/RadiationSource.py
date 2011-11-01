@@ -18,12 +18,7 @@ SourceType = 0: Monochromatic/Polychromatic emission of SpectrumPhotonLuminosity
 """
 
 import numpy as np
-
-try:
-    from scipy.integrate import quad as integrate
-except ImportError:
-    print 'Module scipy not found.  Replacement integration routines are much slower :('
-    from Integrate import simpson as integrate  
+from Integrate import simpson as integrate                  # why did scipy.integrate.quad mess up LphotNorm? 
 
 h = 6.626068e-27     			                            # Planck's constant - [h] = erg*s
 k_B = 1.3806503e-16     			                        # Boltzmann's constant - [k_B] = erg/K
@@ -74,10 +69,10 @@ class RadiationSource:
         # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
         # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
         self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * integrate(lambda x: x**2 / (np.exp(x) - 1.), 13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
-        
+                
         self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
         self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
-                        
+                                                                
         # SourceType = 2, 3
         self.M = pf["SourceMass"]
         self.FixedSourceMass = pf["FixedSourceMass"]

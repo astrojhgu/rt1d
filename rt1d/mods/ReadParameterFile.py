@@ -165,7 +165,7 @@ def ProblemType(pt):
     if pt == 5:
         pf = {"ProblemType": 5, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 50, "ColumnDensityBinsHeI": 10, "ColumnDensityBinsHeII": 10, 
-              "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
+              "GridDimensions": 100, "LengthUnits": 1000 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
               "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 1, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \

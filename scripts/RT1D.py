@@ -104,7 +104,7 @@ for i, pf in enumerate(all_pfs):
         Gamma = r.IonizationRateCoefficientHI(3 * [1e-10], 0, data['HIDensity'][StartCell], data['HeIDensity'][StartCell], data["ElectronDensity"][StartCell], \
             data['Temperature'][StartCell], r_0, r.rs.BolometricLuminosity(0))        
         alpha = 2.6e-13 * (data['Temperature'][StartCell] / 1.e4)**-0.85  
-        
+                
         # Shapiro et al. 2004 - override initial timestep in parameter file
         dt = pf["MaxHIIChange"] * data['HIDensity'][StartCell] / \
             np.abs(data['HIDensity'][StartCell] * Gamma - data["ElectronDensity"][StartCell]**2 * alpha)

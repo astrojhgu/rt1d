@@ -197,6 +197,8 @@ class Radiate:
             newE = self.HeatGain(ncol, nabs, x_HII, r, Lbol) - \
                 self.HeatLoss(nabs, nion, n_e, n_B, E * 2. * mu / 3. / k_B / n_B, z, mu)
                                 
+        #print newHII, newHeII, newHeIII, newE
+                                
         return np.array([newHII, newHeII, newHeIII, newE])
 
     def EvolvePhotons(self, data, t, dt, h):
@@ -310,14 +312,14 @@ class Radiate:
             
                 # Compute radius
                 r = self.r[cell]
-            
+                            
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################
                 
                 tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                     r, z, mu, n_H, n_He, ncol, Lbol)
-            
+                                
                 # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
                 newHII, newHeII, newHeIII, newE = qnew
 
@@ -591,9 +593,9 @@ class Radiate:
                 IonizationRate += Lbol * (n_HeI / n_HI) * \
                                  self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
                                  self.Interpolate.interp(ncol, "SecondaryIonizationRateHI{0}".format(1))
-                                         
-        if not self.PlaneParallelField: IonizationRate /= 4. * np.pi * r**2                                       
-                        
+        
+        if not self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
+                                                
         # Collisional Ionization
         if self.CollisionalIonization:
             IonizationRate += n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)
@@ -621,7 +623,7 @@ class Radiate:
                               self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
                               self.Interpolate.interp(ncol, "SecondaryIonizationRateHeI{0}".format(1)) 
         
-        if not self.PlaneParallelField: IonizationRate /= 4. * np.pi * r**2                                       
+        if not self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
         
         return IonizationRate
         
@@ -642,7 +644,7 @@ class Radiate:
             IonizationRate += Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 3) * \
                 self.Interpolate.interp(ncol, "SecondaryIonizationRate{0}".format(2))
                         
-        if self.PlaneParallelField: IonizationRate /= 4. * np.pi * r**2                      
+        if self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
         
         return IonizationRate
         
@@ -662,7 +664,7 @@ class Radiate:
                               
         heat *= self.esec.DepositionFraction(0.0, x_HII, channel = 0) * Lbol
         
-        if self.PlaneParallelField: heat /= 4. * np.pi * r**2                      
+        if self.PlaneParallelField: heat /= (4. * np.pi * r**2)
                                                                                                                                                                                                                          
         return heat
     

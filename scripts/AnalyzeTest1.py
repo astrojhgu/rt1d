@@ -13,7 +13,7 @@ Notes: Supply parameter file as commmand line argument.
      
 """
 
-import os, re, h5py, sys, misc
+import os, re, h5py, sys
 import numpy as np
 import pylab as pl
 import rt1d.analysis as rta
@@ -47,9 +47,6 @@ mp.fix_ticks()
 pl.savefig('{0}/RT_Test1_IfrontEvolution.png'.format(ds.pf['OutputDirectory']))
 pl.clf()
 
-# Write out data
-misc.writetab((ds.t / ds.trec, ds.r, ds.rIF / ds.ranl), '{0}/RT_Test1_IfrontEvolution.dat'.format(ds.pf['OutputDirectory']), ('t/trec', 'r', 'r/ranl'))
-
 # Plot ionized and neutral fractions vs. R and t (assumes dtDataDump = 5)
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HI, ls = '-', color = 'k', label = r'$1 - x_i$')
 pl.semilogy(ds.data[0].r / cm_per_kpc / 6.6, ds.data[20].x_HI, ls = '-', color = 'k')
@@ -74,7 +71,4 @@ pl.annotate('500', (a3 - 0.07, 0.5))
 pl.savefig('{0}/RT_Test1_RadialProfiles.png'.format(ds.pf['OutputDirectory']))
 pl.clf()
 
-# Write out data
-misc.writetab((ds.data[0].r / cm_per_kpc / 6.6, ds.data[2].x_HI, ds.data[6].x_HI, ds.data[20].x_HI, ds.data[100].x_HI), 
-    '{0}/RT_Test1_RadialProfiles.dat'.format(ds.pf['OutputDirectory']), ('r/Lbox', 'x_HI (10 Myr)', 'x_HI (30 Myr)', 'x_HI (100 Myr)', 'x_HI (500 Myr)'))
      
