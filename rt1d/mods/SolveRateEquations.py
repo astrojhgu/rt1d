@@ -157,10 +157,10 @@ class SolveRateEquations:
                 newargs.append(i)
                 
                 def ynext(y):
-                    if i == 0: return y - h * f(np.array([y, yi[1], yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
-                    if i == 1: return y - h * f(np.array([yi[0], y, yi[2], yi[3]]), xi + h, newargs)[i] - yi[i]
-                    if i == 2: return y - h * f(np.array([yi[0], yi[1], y, yi[3]]), xi + h, newargs)[i] - yi[i]
-                    if i == 3: return y - h * f(np.array([yi[0], yi[1], yi[2], y]), xi + h, newargs)[i] - yi[i]
+                    if i == 0: return y - h * f([y, yi[1], yi[2], yi[3]], xi + h, newargs)[i] - yi[i]
+                    if i == 1: return y - h * f([yi[0], y, yi[2], yi[3]], xi + h, newargs)[i] - yi[i]
+                    if i == 2: return y - h * f([yi[0], yi[1], y, yi[3]], xi + h, newargs)[i] - yi[i]
+                    if i == 3: return y - h * f([yi[0], yi[1], yi[2], y], xi + h, newargs)[i] - yi[i]
                 
                 # Guesses = 0 or for example a guess for n_HI > n_H will mess things up
                 if yi[i] == 0. or (yi[i] > self.guesses[i] and i < 3): guess = self.guesses[i]
