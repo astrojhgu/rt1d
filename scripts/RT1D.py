@@ -71,7 +71,7 @@ for i, pf in enumerate(all_pfs):
     # Print out cell-crossing and box-crossing times for convenience
     print "Cell-crossing time = {0} (years), {1} (code)".format(LengthUnits / GridDimensions / 29979245800.0 / 31557600.0, \
         LengthUnits / GridDimensions / 29979245800.0 / TimeUnits)
-    print "Box-crossing time = {0} (years), {1} (code)\n".format(LengthUnits / 29979245800.0, LengthUnits / 29979245800.0 / TimeUnits)
+    print "Box-crossing time = {0} (years), {1} (code)\n".format(LengthUnits / 29979245800.0 / 31557600.0, LengthUnits / 29979245800.0 / TimeUnits)
                         
     # Initialize grid and file system
     if IsRestart: data = ICs
@@ -111,7 +111,9 @@ for i, pf in enumerate(all_pfs):
     
         # Make it even smaller just to play it safe if helium is involved
         if pf["MultiSpecies"]: dt *= 0.1   
-        
+            
+    dt = min(dt, StopTime)
+            
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
     t = pf["CurrentTime"] * TimeUnits
@@ -128,7 +130,7 @@ for i, pf in enumerate(all_pfs):
     
     # Solve radiative transfer                
     while t < StopTime:
-                        
+                                
         if pf["OutputTimestep"]: 
             fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'a')
             print >> fdt, t / TimeUnits, dt / TimeUnits

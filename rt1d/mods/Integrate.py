@@ -25,9 +25,9 @@ def simpson_recursion(f, xmin, xmax, total, tol = 1e-8):
     
     return simpson_recursion(f, xmin, midpt, left, tol / 2.) + simpson_recursion(f, midpt, xmax, right, tol / 2.)
     
-def simpson(f, xmin, xmax, tol = 1e-8):
+def simpson(f, xmin, xmax, epsrel = 1e-8):
     """
     Integrate function f from xmin to xmax using Simpson's rule adaptively.
     """
-    return simpson_recursion(f, xmin, xmax, simpsons_rule(f, xmin, xmax), tol)   
+    return (simpson_recursion(f, xmin, xmax, simpsons_rule(f, xmin, xmax), tol = epsrel), None)
 

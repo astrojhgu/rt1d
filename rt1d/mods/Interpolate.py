@@ -53,7 +53,7 @@ class Interpolate:
         Return the average of the 8 points surrounding the value of interest.
         """    
         
-        value = np.log10(np.array(value))
+        value = np.log10(value)
                 
         # Smaller indices
         i_s = int((value[0] / self.dHIColumn) - self.offsetHIColumn)

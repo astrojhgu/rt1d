@@ -16,7 +16,6 @@ Notes:
 """
 
 import numpy as np
-import pylab as pl
 from Integrate import simpson
 
 c = 29979245800.0

@@ -297,9 +297,9 @@ class Radiate:
                 mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                                         
                 # For convenience     
-                ncol = [ncol_HI[cell], ncol_HeI[cell], ncol_HeII[cell]]
-                nabs = [n_HI, n_HeI, n_HeII]
-                nion = [n_HII, n_HeII, n_HeIII]
+                ncol = np.array([ncol_HI[cell], ncol_HeI[cell], ncol_HeII[cell]])
+                nabs = np.array([n_HI, n_HeI, n_HeII])
+                nion = np.array([n_HII, n_HeII, n_HeIII])
                 n_H = n_HI + n_HII
                 n_He = n_HeI + n_HeII + n_HeIII
                 n_B = n_H + n_He + n_e              # STILL DONT UNDERSTAND THIS
@@ -580,30 +580,23 @@ class Radiate:
            
         # Photo-Ionization       
         IonizationRate = Lbol * \
-                         self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(0)) \
-                         / 4. / np.pi / r**2   
-                         
-        if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                      
-        
-        # Collisional Ionization
-        if self.CollisionalIonization:
-            IonizationRate += n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)
-        
+                         self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(0))
+                                 
         if self.SecondaryIonization:
             IonizationRate += Lbol * \
                               self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
-                              self.Interpolate.interp(ncol, "SecondaryIonizationRateHI{0}".format(0)) \
-                              / 4. / np.pi / r**2     
-                              
-            if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                                                                     
-                        
+                              self.Interpolate.interp(ncol, "SecondaryIonizationRateHI{0}".format(0))    
+                                                      
             if self.MultiSpecies > 0:
                 IonizationRate += Lbol * (n_HeI / n_HI) * \
                                  self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
-                                 self.Interpolate.interp(ncol, "SecondaryIonizationRateHI{0}".format(1)) \
-                                 / 4. / np.pi / r**2
-                                 
-                if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                                       
+                                 self.Interpolate.interp(ncol, "SecondaryIonizationRateHI{0}".format(1))
+                                         
+        if not self.PlaneParallelField: IonizationRate /= 4. * np.pi * r**2                                       
+                        
+        # Collisional Ionization
+        if self.CollisionalIonization:
+            IonizationRate += n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)
                 
         return IonizationRate
         
@@ -617,23 +610,18 @@ class Radiate:
         """                
         
         IonizationRate = Lbol * \
-                         self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(1)) \
-                         / 4. / np.pi / r**2 
-                         
-        if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                                       
+                         self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(1))
         
         if self.SecondaryIonization:
             IonizationRate += Lbol * \
                               self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
-                              self.Interpolate.interp(ncol, "SecondaryIonizationRateHeI{0}".format(1)) \
-                              / 4. / np.pi / r**2
+                              self.Interpolate.interp(ncol, "SecondaryIonizationRateHeI{0}".format(1))
             
             IonizationRate += (n_HI / n_HeI) * Lbol * \
                               self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
-                              self.Interpolate.interp(ncol, "SecondaryIonizationRateHeI{0}".format(1)) \
-                              / 4. / np.pi / r**2
-                              
-            if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                                        
+                              self.Interpolate.interp(ncol, "SecondaryIonizationRateHeI{0}".format(1)) 
+        
+        if not self.PlaneParallelField: IonizationRate /= 4. * np.pi * r**2                                       
         
         return IonizationRate
         
@@ -647,15 +635,14 @@ class Radiate:
             units: 1 / s
         """       
         
-        IonizationRate = Lbol * self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(2)) / 4. / np.pi / r**2 
-        
-        if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                      
+        IonizationRate = Lbol * \
+                         self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(2)) \
         
         if self.SecondaryIonization > 1:
             IonizationRate += Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 3) * \
-                self.Interpolate.interp(ncol, "SecondaryIonizationRate{0}".format(2)) / 4. / np.pi / r**2
-                
-            if self.PlaneParallelField: IonizationRate *= 4. * np.pi * r**2                          
+                self.Interpolate.interp(ncol, "SecondaryIonizationRate{0}".format(2))
+                        
+        if self.PlaneParallelField: IonizationRate /= 4. * np.pi * r**2                      
         
         return IonizationRate
         
@@ -673,9 +660,9 @@ class Radiate:
             heat += nabs[1] * self.Interpolate.interp(ncol, "ElectronHeatingRate{0}".format(1))
             heat += nabs[2] * self.Interpolate.interp(ncol, "ElectronHeatingRate{0}".format(2))
                               
-        heat *= self.esec.DepositionFraction(0.0, x_HII, channel = 0) * Lbol / 4.0 / np.pi / r**2 
+        heat *= self.esec.DepositionFraction(0.0, x_HII, channel = 0) * Lbol
         
-        if self.PlaneParallelField: heat *= 4. * np.pi * r**2                      
+        if self.PlaneParallelField: heat /= 4. * np.pi * r**2                      
                                                                                                                                                                                                                          
         return heat
     

@@ -16,7 +16,6 @@ from rt1d.mods.Constants import *
 from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
 from rt1d.mods.RadiationSource import RadiationSource
 from rt1d.mods.SecondaryElectrons import SecondaryElectrons
-from Integrate import simpson as integrate
 from progressbar import *
 import numpy as np
 import h5py, os, re
@@ -29,6 +28,12 @@ except ImportError:
     print "Module mpi4py not found.  No worries, we'll just run in serial."
     rank = 0
     size = 1
+
+try:
+    from scipy.integrate import quad as integrate
+except ImportError:
+    print 'Module scipy not found.  Replacement integration routines are much slower :('
+    from Integrate import simpson as integrate    
 
 # Widget for progressbar.
 widget = ["rt1d: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
@@ -264,7 +269,7 @@ class InitializeIntegralTables:
         
         if self.rs.DiscreteSpectrum == 0:
             integrand = lambda E: self.OpticalDepth(E, n)                            
-            return integrate(integrand, self.rs.Emin, self.rs.Emax, tol = 1e-8)
+            return integrate(integrand, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0]
                   
         else:                                                                                                                                                                                
             return np.sum(self.OpticalDepth(self.rs.E, n)  )
@@ -290,7 +295,7 @@ class InitializeIntegralTables:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
                         
-            return integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, tol = 1e-24)
+            return integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-24)[0]
                   
         else:
             integral = PhotoIonizationCrossSection(self.rs.E, species) * self.rs.Spectrum(self.rs.E) * \
@@ -313,7 +318,7 @@ class InitializeIntegralTables:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / E
             
-            return integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, tol = 1e-30)
+            return integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-30)[0]
             
         else:
             integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \
@@ -331,7 +336,7 @@ class InitializeIntegralTables:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_th[0]   
             
-            return integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, tol = 1e-16)
+            return integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-16)[0]
             
         else:
             integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \
@@ -350,7 +355,7 @@ class InitializeIntegralTables:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_th[1]                                                           
                                                                                                                                                                                                                                                                             
-            return integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, tol = 1e-16)                                                     
+            return integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-16)[0]                                                 
                                                                                                                                       
         else:                                                                                     
             integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \
