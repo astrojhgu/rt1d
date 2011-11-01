@@ -109,10 +109,7 @@ class InitializeIntegralTables:
         """
         Returns the filename following the convention:
                 
-            filename = SourceType_Source(Mass/Temperature)_{SourceType}_InitialRedshift.h5
-                
-            SourceType:     mono, bb, popIII, or bh
-            SourceType: pl-alpha, agn, mcd (only applicable for bh sources)
+            filename = SourceType_<SourceTemperature>_{SourceType}.h5
         
         """
                         
@@ -142,7 +139,7 @@ class InitializeIntegralTables:
             elif self.SourceType == 4: spec = "mcd"
             else: spec = "unknown"
         
-            return "{0}_{1}_{2}_{3}.h5".format(src, mort, spec, dim)
+            return "{0}_{1}{2}_{3}.h5".format(src, spec, self.SpectrumPowerLawIndex, dim)
             
     def ReadIntegralTable(self):
         """

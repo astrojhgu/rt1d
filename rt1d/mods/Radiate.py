@@ -143,6 +143,7 @@ class Radiate:
         n_He = args[0][4]
         ncol = args[0][5]
         Lbol = args[0][6]
+        indices = args[0][7]
                         
         # Derived quantities
         n_HII = min(q[0], n_H)          # This could be > n_H within machine precision and really screw things up
@@ -164,11 +165,11 @@ class Radiate:
         
         # First, solve for rate coefficients
         alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85    
-        Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol)        
+        Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol, indices)        
                                                                                              
         if self.MultiSpecies > 0: 
-            Gamma_HeI = self.IonizationRateCoefficientHeI(ncol, n_HI, n_HeI, x_HII, T, r, Lbol)
-            Gamma_HeII = self.IonizationRateCoefficientHeII(ncol, x_HII, r, Lbol)
+            Gamma_HeI = self.IonizationRateCoefficientHeI(ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices)
+            Gamma_HeII = self.IonizationRateCoefficientHeII(ncol, x_HII, r, Lbol, indices)
             Beta_HeI = 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T) * self.CollisionalIonization
             Beta_HeII = 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T) * self.CollisionalIonization
             alpha_HeII = 9.94e-11 * T**-0.48                                                            ## WHICH ALPHA_HEIII IS RIGHT FOR US?
@@ -194,7 +195,7 @@ class Radiate:
         if self.Isothermal: 
             newE = E
         else:
-            newE = self.HeatGain(ncol, nabs, x_HII, r, Lbol) - \
+            newE = self.HeatGain(ncol, nabs, x_HII, r, Lbol, indices) - \
                 self.HeatLoss(nabs, nion, n_e, n_B, E * 2. * mu / 3. / k_B / n_B, z, mu)                                
                                                                 
         return np.array([newHII, newHeII, newHeIII, newE])
@@ -222,7 +223,7 @@ class Radiate:
         # This is not a good idea in general, but in this case they'll never be touched again.
         else: n_He_arr = x_HeI_arr = x_HeII_arr = x_HeIII_arr = np.zeros_like(x_HI_arr)
                                                         
-        # If we're in an expanding universe, dilute densities by (1 + z)^3    
+        # If we're in an expanding universe, dilute densities by (1 + z)**3    
         if self.CosmologicalExpansion: 
             data["HIDensity"] = x_HI * self.InitialHydrogenDensity * (1. + z)**3
             data["HIIDensity"] = x_HII * self.InitialHydrogenDensity * (1. + z)**3
@@ -314,9 +315,13 @@ class Radiate:
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################
+                
+                # Retrieve indices used for 3D interpolation
+                indices = None
+                if self.MultiSpecies > 0: indices = self.Interpolate.GetIndices3D(ncol)
                                 
                 tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
-                    r, z, mu, n_H, n_He, ncol, Lbol)
+                    r, z, mu, n_H, n_He, ncol, Lbol, indices)
                                 
                 # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
                 newHII, newHeII, newHeIII, newE = qnew
@@ -533,9 +538,12 @@ class Radiate:
         if self.rs.SourceType < 3:        
             tau = self.Interpolate.interp(ncol, "TotalOpticalDepth0")      
             if tau < 0.5: return 1e50           
-                                
+        
+        if self.MultiSpecies: indices = self.Interpolate.GetIndices3D(ncol) 
+        else: indices = None
+                               
         Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
-            xHII, newdata['Temperature'][cell], self.r[cell], Lbol)        
+            xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)        
         alpha = 2.6e-13 * (newdata['Temperature'][cell] / 1.e4)**-0.85  
         
         # Shapiro et al. 2004
@@ -547,7 +555,7 @@ class Radiate:
             xHeII = newdata["HeIIDensity"][cell] / n_He
             
             Beta = 2.38e-11 * np.sqrt(newdata['Temperature'][cell]) * (1. + np.sqrt(newdata['Temperature'][cell] / 1.e5))**-1. * np.exp(-2.853e5 /newdata['Temperature'][cell]) * self.CollisionalIonization
-            Gamma = self.IonizationRateCoefficientHeI(ncol, newdata['HIDensity'][cell], newdata['HeIDensity'][cell], xHII, newdata['Temperature'][cell], self.r[cell], Lbol)                    
+            Gamma = self.IonizationRateCoefficientHeI(ncol, newdata['HIDensity'][cell], newdata['HeIDensity'][cell], xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)                    
             alpha = 9.94e-11 * newdata['Temperature'][cell]**-0.48   
             
             # Analogous to Shapiro et al. 2004 but for helium
@@ -570,7 +578,7 @@ class Radiate:
                 
         return packs
         
-    def IonizationRateCoefficientHI(self, ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol):
+    def IonizationRateCoefficientHI(self, ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol, indices):
         """
         Returns ionization rate coefficient for HI, which we denote elsewhere as Gamma_HI.  Includes photo, collisional, 
         and secondary ionizations from fast electrons.
@@ -580,17 +588,17 @@ class Radiate:
            
         # Photo-Ionization       
         IonizationRate = Lbol * \
-                         self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(0))
+                         self.Interpolate.interp(indices, "PhotoIonizationRate{0}".format(0), ncol)
                                  
         if self.SecondaryIonization:
             IonizationRate += Lbol * \
                               self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
-                              self.Interpolate.interp(ncol, "SecondaryIonizationRateHI{0}".format(0))    
+                              self.Interpolate.interp(indices, "SecondaryIonizationRateHI{0}".format(0), ncol)    
                                                       
             if self.MultiSpecies > 0:
                 IonizationRate += Lbol * (n_HeI / n_HI) * \
                                  self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
-                                 self.Interpolate.interp(ncol, "SecondaryIonizationRateHI{0}".format(1))
+                                 self.Interpolate.interp(indices, "SecondaryIonizationRateHI{0}".format(1), ncol)
         
         if not self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
                                                 
@@ -600,7 +608,7 @@ class Radiate:
                 
         return IonizationRate
         
-    def IonizationRateCoefficientHeI(self, ncol, n_HI, n_HeI, x_HII, T, r, Lbol):
+    def IonizationRateCoefficientHeI(self, ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices):
         """
         Returns ionization rate coefficient for HeI, which we denote elsewhere as Gamma_HeI.  Includes photo 
         and secondary ionizations from fast electrons.  Unlike the hydrogen case, the collisional ionizations
@@ -610,22 +618,22 @@ class Radiate:
         """                
         
         IonizationRate = Lbol * \
-                         self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(1))
+                         self.Interpolate.interp(indices, "PhotoIonizationRate{0}".format(1), ncol)
         
         if self.SecondaryIonization:
             IonizationRate += Lbol * \
                               self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
-                              self.Interpolate.interp(ncol, "SecondaryIonizationRateHeI{0}".format(1))
+                              self.Interpolate.interp(indices, "SecondaryIonizationRateHeI{0}".format(1), ncol)
             
             IonizationRate += (n_HI / n_HeI) * Lbol * \
                               self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
-                              self.Interpolate.interp(ncol, "SecondaryIonizationRateHeI{0}".format(1)) 
+                              self.Interpolate.interp(indices, "SecondaryIonizationRateHeI{0}".format(1), ncol) 
         
         if not self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
         
         return IonizationRate
         
-    def IonizationRateCoefficientHeII(self, ncol, x_HII, r, Lbol):
+    def IonizationRateCoefficientHeII(self, ncol, x_HII, r, Lbol, indices):
         """
         Returns ionization rate coefficient for HeII, which we denote elsewhere as Gamma_HeII.  Includes photo 
         and secondary ionizations from fast electrons.  Unlike the hydrogen case, the collisional ionizations
@@ -636,17 +644,17 @@ class Radiate:
         """       
         
         IonizationRate = Lbol * \
-                         self.Interpolate.interp(ncol, "PhotoIonizationRate{0}".format(2)) \
+                         self.Interpolate.interp(indices, "PhotoIonizationRate{0}".format(2), ncol) \
         
         if self.SecondaryIonization > 1:
             IonizationRate += Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 3) * \
-                self.Interpolate.interp(ncol, "SecondaryIonizationRate{0}".format(2))
+                self.Interpolate.interp(indices, "SecondaryIonizationRate{0}".format(2), ncol)
                         
         if not self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
         
         return IonizationRate
         
-    def HeatGain(self, ncol, nabs, x_HII, r, Lbol):
+    def HeatGain(self, ncol, nabs, x_HII, r, Lbol, indices):
         """
         Returns the total heating rate at radius r and time t.  These are all the terms in Eq. 12 of TZ07 on
         the RHS that are positive.
@@ -654,11 +662,11 @@ class Radiate:
             units: erg / s / cm^3
         """
                                  
-        heat = nabs[0] * self.Interpolate.interp(ncol, "ElectronHeatingRate{0}".format(0))
+        heat = nabs[0] * self.Interpolate.interp(indices, "ElectronHeatingRate{0}".format(0), ncol)
 
         if self.MultiSpecies > 0:
-            heat += nabs[1] * self.Interpolate.interp(ncol, "ElectronHeatingRate{0}".format(1))
-            heat += nabs[2] * self.Interpolate.interp(ncol, "ElectronHeatingRate{0}".format(2))
+            heat += nabs[1] * self.Interpolate.interp(indices, "ElectronHeatingRate{0}".format(1), ncol)
+            heat += nabs[2] * self.Interpolate.interp(indices, "ElectronHeatingRate{0}".format(2), ncol)
                                                            
         heat *= Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 0)
         
@@ -767,4 +775,4 @@ class Radiate:
             + PhotoIonizationCrossSection(E, 2) * n[2]
             
         return quad(func, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0]   
-        
+            

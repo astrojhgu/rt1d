@@ -101,8 +101,14 @@ for i, pf in enumerate(all_pfs):
     # Compute timestep
     if IsRestart or pf["HIIRestrictedTimestep"] == 0: dt = pf["CurrentTimestep"] * TimeUnits
     else:
+        
+        if pf["MultiSpecies"]:
+            indices = r.Interpolate.GetIndices3D(3 * [1e-10])
+        else:
+            indices = None    
+            
         Gamma = r.IonizationRateCoefficientHI(3 * [1e-10], 0, data['HIDensity'][StartCell], data['HeIDensity'][StartCell], data["ElectronDensity"][StartCell], \
-            data['Temperature'][StartCell], r_0, r.rs.BolometricLuminosity(0))        
+            data['Temperature'][StartCell], r_0, r.rs.BolometricLuminosity(0), indices)        
         alpha = 2.6e-13 * (data['Temperature'][StartCell] / 1.e4)**-0.85  
                 
         # Shapiro et al. 2004 - override initial timestep in parameter file

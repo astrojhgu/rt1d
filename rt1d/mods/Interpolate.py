@@ -39,17 +39,41 @@ class Interpolate:
             if self.pf["InterpolationMethod"] == 0: self.interp = self.InterpolateTriLinear
             if self.pf["InterpolationMethod"] == 1: self.interp = self.InterpolateNN
                 
-    def InterpolateLinear(self, value, integral):
+    def InterpolateLinear(self, indices, integral, value = None):
         """
         Use this technique for hydrogen-only calculations.  For consistency with MultiSpecies > 0 methods, value 
         should still be a 3-element list.  
         """    
         return np.interp(np.log10(value[0]), self.HIColumn, self.itabs[integral])
         
-    def InterpolateTriLinear(self, value, integral):
+    def InterpolateTriLinear(self, indices, integral, value = None):
         """
         Return the average of the 8 points surrounding the value of interest.
-        """    
+        """       
+        
+        ijk_s, ijk_b, xyz_d = indices  
+        
+        i_s, j_s, k_s = ijk_s 
+        i_b, j_b, k_b = ijk_b
+        x_d, y_d, z_d = xyz_d 
+                
+        i1 = self.itabs[integral][i_s][j_s][k_s] * (1 - z_d) + self.itabs[integral][i_s][j_s][k_b] * z_d
+        i2 = self.itabs[integral][i_s][j_b][k_s] * (1 - z_d) + self.itabs[integral][i_s][j_b][k_b] * z_d
+                                                                                              
+        j1 = self.itabs[integral][i_b][j_s][k_s] * (1 - z_d) + self.itabs[integral][i_b][j_s][k_b] * z_d
+        j2 = self.itabs[integral][i_b][j_b][k_s] * (1 - z_d) + self.itabs[integral][i_b][j_b][k_b] * z_d
+        
+        w1 = i1 * (1 - y_d) + i2 * y_d
+        w2 = j1 * (1 - y_d) + j2 * y_d
+                        
+        return w1 * (1 - x_d) + w2 * x_d
+    
+    def GetIndices3D(self, value):
+        """
+        Retrieve set of 9 indices locating the interpolation points.
+        
+        value = 3-element array: [ncol_HI, ncol_HeI, ncol_HeII]
+        """
         
         value = np.log10(value)
                 
@@ -82,19 +106,10 @@ class Interpolate:
         x_d = value[0] - x_s
         y_d = value[1] - y_s
         z_d = value[2] - z_s
-                
-        i1 = self.itabs[integral][i_s][j_s][k_s] * (1 - z_d) + self.itabs[integral][i_s][j_s][k_b] * z_d
-        i2 = self.itabs[integral][i_s][j_b][k_s] * (1 - z_d) + self.itabs[integral][i_s][j_b][k_b] * z_d
-                                                                                              
-        j1 = self.itabs[integral][i_b][j_s][k_s] * (1 - z_d) + self.itabs[integral][i_b][j_s][k_b] * z_d
-        j2 = self.itabs[integral][i_b][j_b][k_s] * (1 - z_d) + self.itabs[integral][i_b][j_b][k_b] * z_d
         
-        w1 = i1 * (1 - y_d) + i2 * y_d
-        w2 = j1 * (1 - y_d) + j2 * y_d
-                        
-        return w1 * (1 - x_d) + w2 * x_d
-                
-    def InterpolateNN(self, value, integral):
+        return [i_s, j_s, k_s], [i_b, j_b, k_b], [x_d, y_d, z_d]
+        
+    def InterpolateNN(self, indices, integral, value = None):
         """
         3D nearest neighbor interpolation.
         """  
