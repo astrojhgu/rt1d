@@ -195,9 +195,7 @@ class Radiate:
             newE = E
         else:
             newE = self.HeatGain(ncol, nabs, x_HII, r, Lbol) - \
-                self.HeatLoss(nabs, nion, n_e, n_B, E * 2. * mu / 3. / k_B / n_B, z, mu)
-                                
-        #print newHII, newHeII, newHeIII, newE
+                self.HeatLoss(nabs, nion, n_e, n_B, E * 2. * mu / 3. / k_B / n_B, z, mu)                                
                                 
         return np.array([newHII, newHeII, newHeIII, newE])
 
@@ -316,7 +314,7 @@ class Radiate:
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################
-                
+                                
                 tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                     r, z, mu, n_H, n_He, ncol, Lbol)
                                 
@@ -661,10 +659,10 @@ class Radiate:
         if self.MultiSpecies > 0:
             heat += nabs[1] * self.Interpolate.interp(ncol, "ElectronHeatingRate{0}".format(1))
             heat += nabs[2] * self.Interpolate.interp(ncol, "ElectronHeatingRate{0}".format(2))
-                              
-        heat *= self.esec.DepositionFraction(0.0, x_HII, channel = 0) * Lbol
+                                                           
+        heat *= Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 0)
         
-        if self.PlaneParallelField: heat /= (4. * np.pi * r**2)
+        if not self.PlaneParallelField: heat /= (4. * np.pi * r**2)
                                                                                                                                                                                                                          
         return heat
     
@@ -690,7 +688,6 @@ class Radiate:
             
         # Cooling by dielectronic recombination
         cool += nion[2] * self.DielectricRecombinationCoolingCoefficient(T)
-                
                 
         # Cooling by collisional excitation
         if self.CollisionalExcitation:

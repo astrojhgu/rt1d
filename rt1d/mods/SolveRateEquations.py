@@ -85,8 +85,8 @@ class SolveRateEquations:
                 xnext = xf 
             
             # Solve away
-            ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)           
-                                                                                                                                                                                         
+            ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)  
+                                                                                                                                                                                                     
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
             finite = np.isfinite(ynext)
             positive = np.greater_equal(ynext, 0.)
@@ -214,13 +214,7 @@ class SolveRateEquations:
             fy1 = f(y1)
             fy2 = f(y2)
             fp = (fy1 - fy2) / (y1 - y2)
-
-            #print ynow, fp, y1, y2, fy1, fy2, (fy1 - fy2), (y1 - y2)
-
-            # If slope is zero, return with ynow unchanged
-            if fp == 0 and np.allclose(fy1, fy2, self.atol):
-                break
-                                                                                                                              
+                                                                                                                    
             # Calculate new estimate of the root - fy1 = f(ynow)
             dy = fy1 / fp
             ypre = ynow
