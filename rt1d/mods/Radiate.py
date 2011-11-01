@@ -185,7 +185,7 @@ class Radiate:
         if self.MultiSpecies:
             newHeII = Gamma_HeI * n_HeI + Beta_HeI * n_e * n_HeI - Beta_HeII * n_e * q[1] - \
                       alpha_HeII * n_e * q[1] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * q[1]    
-            newHeIII = Gamma_HeII * n_HeII + Beta_HeII * n_e * n_HeII - alpha_HeIII * n_e * q[2]
+            newHeIII = Gamma_HeII * n_HeII + Beta_HeII * n_e * n_HeII - alpha_HeIII * n_e * q[2]            
         else:
             newHeII = q[1]
             newHeIII = q[2]
@@ -196,7 +196,7 @@ class Radiate:
         else:
             newE = self.HeatGain(ncol, nabs, x_HII, r, Lbol) - \
                 self.HeatLoss(nabs, nion, n_e, n_B, E * 2. * mu / 3. / k_B / n_B, z, mu)                                
-                                
+                                                                
         return np.array([newHII, newHeII, newHeIII, newE])
 
     def EvolvePhotons(self, data, t, dt, h):
@@ -642,7 +642,7 @@ class Radiate:
             IonizationRate += Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 3) * \
                 self.Interpolate.interp(ncol, "SecondaryIonizationRate{0}".format(2))
                         
-        if self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
+        if not self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
         
         return IonizationRate
         

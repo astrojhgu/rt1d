@@ -86,7 +86,7 @@ class SolveRateEquations:
             
             # Solve away
             ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)  
-                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                 
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
             finite = np.isfinite(ynext)
             positive = np.greater_equal(ynext, 0.)
@@ -214,7 +214,7 @@ class SolveRateEquations:
             fy1 = f(y1)
             fy2 = f(y2)
             fp = (fy1 - fy2) / (y1 - y2)
-                                                                                                                    
+                                                                                                                                
             # Calculate new estimate of the root - fy1 = f(ynow)
             dy = fy1 / fp
             ypre = ynow
@@ -227,8 +227,8 @@ class SolveRateEquations:
             if i >= self.maxiter: 
                 print "Maximum number of iterations reached."
                 break
-            else: i += 1                                                    
-                                                                                                                                                                              
+            else: i += 1                       
+                                                                                                                                                                                                                       
         return max(ynow, tiny_number)
 
     def Bisection(self, f, y_guess):
@@ -243,9 +243,9 @@ class SolveRateEquations:
         while abs(y2 - y1) > self.atol:
             midpt = np.mean([y1, y2])
             fmid = f(midpt)
-    
+        
             if np.sign(fmid) < 0: y1 = midpt
-            else: y2 = midpt
+            else: y2 = midpt            
             
             if fmid == 0.0: break
             
