@@ -588,17 +588,17 @@ class Radiate:
            
         # Photo-Ionization       
         IonizationRate = Lbol * \
-                         self.Interpolate.interp(indices, "PhotoIonizationRate{0}".format(0), ncol)
+                         self.Interpolate.interp(indices, "PhotoIonizationRate0", ncol)
                                  
         if self.SecondaryIonization:
             IonizationRate += Lbol * \
                               self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
-                              self.Interpolate.interp(indices, "SecondaryIonizationRateHI{0}".format(0), ncol)    
+                              self.Interpolate.interp(indices, "SecondaryIonizationRateHI0", ncol)    
                                                       
             if self.MultiSpecies > 0:
                 IonizationRate += Lbol * (n_HeI / n_HI) * \
                                  self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
-                                 self.Interpolate.interp(indices, "SecondaryIonizationRateHI{0}".format(1), ncol)
+                                 self.Interpolate.interp(indices, "SecondaryIonizationRateHI1", ncol)
         
         if not self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
                                                 
@@ -623,11 +623,11 @@ class Radiate:
         if self.SecondaryIonization:
             IonizationRate += Lbol * \
                               self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
-                              self.Interpolate.interp(indices, "SecondaryIonizationRateHeI{0}".format(1), ncol)
+                              self.Interpolate.interp(indices, "SecondaryIonizationRateHeI1", ncol)
             
             IonizationRate += (n_HI / n_HeI) * Lbol * \
                               self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
-                              self.Interpolate.interp(indices, "SecondaryIonizationRateHeI{0}".format(1), ncol) 
+                              self.Interpolate.interp(indices, "SecondaryIonizationRateHeI1", ncol) 
         
         if not self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
         
@@ -644,11 +644,11 @@ class Radiate:
         """       
         
         IonizationRate = Lbol * \
-                         self.Interpolate.interp(indices, "PhotoIonizationRate{0}".format(2), ncol) \
+                         self.Interpolate.interp(indices, "PhotoIonizationRate2", ncol) \
         
         if self.SecondaryIonization > 1:
             IonizationRate += Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 3) * \
-                self.Interpolate.interp(indices, "SecondaryIonizationRate{0}".format(2), ncol)
+                self.Interpolate.interp(indices, "SecondaryIonizationRate2", ncol)
                         
         if not self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
         
@@ -662,11 +662,11 @@ class Radiate:
             units: erg / s / cm^3
         """
                                  
-        heat = nabs[0] * self.Interpolate.interp(indices, "ElectronHeatingRate{0}".format(0), ncol)
+        heat = nabs[0] * self.Interpolate.interp(indices, "ElectronHeatingRate0", ncol)
 
         if self.MultiSpecies > 0:
-            heat += nabs[1] * self.Interpolate.interp(indices, "ElectronHeatingRate{0}".format(1), ncol)
-            heat += nabs[2] * self.Interpolate.interp(indices, "ElectronHeatingRate{0}".format(2), ncol)
+            heat += nabs[1] * self.Interpolate.interp(indices, "ElectronHeatingRate1", ncol)
+            heat += nabs[2] * self.Interpolate.interp(indices, "ElectronHeatingRate2", ncol)
                                                            
         heat *= Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 0)
         
