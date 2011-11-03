@@ -137,7 +137,7 @@ def ProblemType(pt):
     # X-ray source, hydrogen only       
     if pt == 4:
         pf = {"ProblemType": 4, "InterpolationMethod": 0, \
-              "ColumnDensityBinsHI": 100, "ColumnDensityBinsHeI": 0, "ColumnDensityBinsHeII": 0, 
+              "ColumnDensityBinsHI": 500, "ColumnDensityBinsHeI": 0, "ColumnDensityBinsHeII": 0, 
               "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
               "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
@@ -150,7 +150,7 @@ def ProblemType(pt):
     # X-ray source, hydrogen only, discrete spectrum         
     if pt == 4.1:
         pf = {"ProblemType": 4.1, "InterpolationMethod": 0, \
-              "ColumnDensityBinsHI": 50, "ColumnDensityBinsHeI": 0, "ColumnDensityBinsHeII": 0, 
+              "ColumnDensityBinsHI": 500, "ColumnDensityBinsHeI": 0, "ColumnDensityBinsHeII": 0, 
               "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
               "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
