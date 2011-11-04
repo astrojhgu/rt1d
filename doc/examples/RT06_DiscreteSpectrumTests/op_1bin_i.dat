@@ -1,0 +1,5 @@
+ProblemType = 2
+GridDimensions = 400
+OutputDirectory = op_1bin_i
+DiscreteSpectrumSED = dunno yet         # Optimized for optically thin media
+DiscreteSpectrumRelLum = [0.5]
