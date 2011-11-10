@@ -66,7 +66,7 @@ def SetDefaultParameterValues():
         "DataDumpName": 'dd', \
         "OutputDirectory": './', \
         "OutputFormat": 0, \
-        "OutputTimestep": 1, \
+        "OutputTimestep": 0, \
         "ProgressBar": 0, \
         "CurrentTimestep": 1e-8, \
         "HIIRestrictedTimestep": 1, \

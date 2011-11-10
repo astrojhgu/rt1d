@@ -59,6 +59,7 @@ class InitializeIntegralTables:
         self.esec = SecondaryElectrons(pf)
         
         self.OutputDirectory = pf["OutputDirectory"]
+        self.ProgressBar = pf["ProgressBar"]
         
         # Physics, initial conditions, control parameters
         self.MultiSpecies = pf["MultiSpecies"]
@@ -240,8 +241,10 @@ class InitializeIntegralTables:
                     for species in np.arange(3):
                         
                         # This could take a while
-                        if rank == 0: print "\nComputing value of {0}{1}...".format(integral, species)
-                        if rank == 0: pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start()
+                        if rank == 0: 
+                            print "\nComputing value of {0}{1}...".format(integral, species)
+                        if rank == 0 and self.ProgressBar: 
+                            pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start()
                         
                         tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
                         for i, ncol_HI in enumerate(self.HIColumn):  
@@ -249,7 +252,7 @@ class InitializeIntegralTables:
                                 for k, ncol_HeII in enumerate(self.HeIIColumn):
                                     tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
                            
-                            if rank == 0:
+                            if rank == 0 and self.ProgressBar:
                                 try: pbar.update(i + 1)
                                 except AssertionError: pass
                        
@@ -257,6 +260,8 @@ class InitializeIntegralTables:
                         
                         itabs["{0}{1}".format(integral, species)] = tab
                         del tab
+                        
+            if rank == 0 and self.ProgressBar: pbar.finish()            
                                                      
             self.WriteIntegralTable(itabs)
                 
