@@ -69,9 +69,10 @@ for i, pf in enumerate(all_pfs):
     r_0 = LengthUnits * StartCell / GridDimensions
     
     # Print out cell-crossing and box-crossing times for convenience
-    print "Cell-crossing time = {0} (years), {1} (code)".format(LengthUnits / GridDimensions / 29979245800.0 / 31557600.0, \
-        LengthUnits / GridDimensions / 29979245800.0 / TimeUnits)
-    print "Box-crossing time = {0} (years), {1} (code)\n".format(LengthUnits / 29979245800.0 / 31557600.0, LengthUnits / 29979245800.0 / TimeUnits)
+    if rank == 0:
+        print "Cell-crossing time = {0} (years), {1} (code)".format(LengthUnits / GridDimensions / 29979245800.0 / 31557600.0, \
+            LengthUnits / GridDimensions / 29979245800.0 / TimeUnits)
+        print "Box-crossing time = {0} (years), {1} (code)\n".format(LengthUnits / 29979245800.0 / 31557600.0, LengthUnits / 29979245800.0 / TimeUnits)
                         
     # Initialize grid and file system
     if IsRestart: data = ICs
@@ -125,7 +126,11 @@ for i, pf in enumerate(all_pfs):
     t = pf["CurrentTime"] * TimeUnits
     h = dt
     wct = int(t / dtDataDump) + 1
-    if not IsRestart: w.WriteAllData(data, 0, t, dt)
+    if not IsRestart: 
+        if rank == 0: 
+            w.WriteAllData(data, 0, t, dt)
+            
+    if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(wct, root = 0)         
     
     # If we want to store timestep evolution, setup dump file
     if pf["OutputTimestep"]: 
@@ -133,6 +138,12 @@ for i, pf in enumerate(all_pfs):
         else: fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'w')
         print >> fdt, '# t  dt'
         fdt.close()
+    
+    if size > 1: 
+        lb = list(np.linspace(pf["GridDimensions"] / size, pf["GridDimensions"], size))
+        lb.insert(0, StartCell)
+    else: 
+        lb = None
     
     # Solve radiative transfer                
     while t < StopTime:
@@ -152,20 +163,20 @@ for i, pf in enumerate(all_pfs):
         else: write_now = False
 
         # Evolve photons
-        data, h, newdt = r.EvolvePhotons(data, t, dt, min(h, dt))
+        data, h, newdt, lb = r.EvolvePhotons(data, t, dt, min(h, dt), lb)
         t += dt
         dt = newdt # dt for the next timestep
                                
         # Write-out data                                        
         if write_now:
             wrote = False
-            if i % size == rank: 
+            if i == rank: 
                 w.WriteAllData(data, wct, tnow, dt)
                 wrote = True
             wct += 1
            
         # Don't move on until root processor has written out data    
-        if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(wrote, root = 0)    
+        if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(write_now, root = 0)    
     
     if pf["OutputTimestep"]: 
         print >> fdt, ""

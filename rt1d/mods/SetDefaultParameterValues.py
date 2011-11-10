@@ -36,7 +36,7 @@ def SetDefaultParameterValues():
         "ODEmaxiter": 1e4, \
         "RootFinder": 0, \
         
-        "ParallelizationMethod": 2, \
+        "ParallelizationMethod": 1, \
         "Debug": 1, \
           
         # Integral tabulation

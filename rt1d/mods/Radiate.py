@@ -200,13 +200,27 @@ class Radiate:
                                                                 
         return np.array([newHII, newHeII, newHeIII, newE])
 
-    def EvolvePhotons(self, data, t, dt, h):
+    def EvolvePhotons(self, data, t, dt, h, lb):
         """
         This routine calls our solvers and updates 'data'.
         """
         
+        # Do this so an MPI all-reduce doesn't add stuff together
+        if self.ParallelizationMethod == 1 and size > 1:
+            solve_arr = np.arange(len(self.grid))
+            proc_mask = np.zeros_like(solve_arr)
+            
+            condition = (solve_arr >= lb[rank]) & (solve_arr < lb[rank + 1])
+            proc_mask[condition] = 1
+            solve_arr = solve_arr[proc_mask == 1]   
+                            
         newdata = {}
-        for key in data.keys(): newdata[key] = copy.deepcopy(data[key])
+        for key in data.keys(): 
+            newdata[key] = copy.deepcopy(data[key])
+            
+            if self.ParallelizationMethod == 1 and size > 1:
+                newdata[key][proc_mask == 0] = 0        
+             
         z = self.cosmo.TimeToRedshiftConverter(0., t, self.InitialRedshift)
         
         # Nice names for ionized fractions
@@ -265,20 +279,23 @@ class Radiate:
                     packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
             else: packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
         
-        if self.HIIRestrictedTimestep: dtphot = 1e50 * np.ones_like(self.grid)
+        if self.HIIRestrictedTimestep: 
+            dtphot = np.zeros(len(self.grid))
+            dtphot[0:self.StartCell] = 1e50
                 
         if self.InfiniteSpeedOfLight:
             
             # Loop over cells radially, solve rate equations, update values in data -> newdata
             for cell in self.grid:
-                
-                if (cell % size != rank) and (self.ParallelizationMethod == 1): continue
                             
                 # If within our buffer zone (where we don't solve rate equations), continue
                 if cell < self.StartCell: continue
-                                                    
-                if rank == 0 and self.ProgressBar: pbar.update(cell)
                 
+                if self.ParallelizationMethod == 1 and size > 1:
+                    if cell not in solve_arr: continue
+                        
+                if rank == 0 and self.ProgressBar: pbar.update(cell)
+                                                                
                 # Read in densities for this cell
                 n_e = data["ElectronDensity"][cell]
                 n_HI = data["HIDensity"][cell]
@@ -311,20 +328,21 @@ class Radiate:
             
                 # Compute radius
                 r = self.r[cell]
-                            
+                                            
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################
                 
                 # Retrieve indices used for 3D interpolation
                 indices = None
-                if self.MultiSpecies > 0: indices = self.Interpolate.GetIndices3D(ncol)
+                if self.MultiSpecies > 0: 
+                    indices = self.Interpolate.GetIndices3D(ncol)
                                 
                 tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                     r, z, mu, n_H, n_He, ncol, Lbol, indices)
                                 
                 # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
-                newHII, newHeII, newHeIII, newE = qnew
+                newHII, newHeII, newHeIII, newE = qnew    
 
                 # Convert from internal energy back to temperature
                 if not self.Isothermal: newT = newE[-1] * 2. * mu / 3. / k_B / n_B
@@ -352,8 +370,8 @@ class Radiate:
                 newdata["HeIIDensity"][cell] = newerHeII
                 newdata["HeIIIDensity"][cell] = newerHeIII
                 newdata["ElectronDensity"][cell] = (n_H - newHI) + newerHeII + 2.0 * newerHeIII
-                newdata["Temperature"][cell] = newT                    
-                
+                newdata["Temperature"][cell] = newT        
+                                                
                 if self.HIIRestrictedTimestep: 
                     dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, Lbol, n_H, n_He)                            
                 
@@ -490,9 +508,12 @@ class Radiate:
             if self.HIIRestrictedTimestep:
                 for cell in self.grid[self.StartCell:]:
                     dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, self.rs.BolometricLuminosity(t), n_H_arr[0], n_He_arr[0])            
-                                                                                          
-        if (size > 0) and (self.ParallelizationMethod == 1):
-            for key in newdata.keys(): newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
+                                                                                                  
+        if (size > 1) and (self.ParallelizationMethod == 1):
+            for key in newdata.keys(): 
+                newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
+                
+            dtphot = MPI.COMM_WORLD.allreduce(dtphot, dtphot) 
                                 
         if self.HIIRestrictedTimestep: newdt = min(np.min(dtphot), 2 * dt)
         else: newdt = dt
@@ -504,9 +525,12 @@ class Radiate:
         # Update photon packages        
         if not self.InfiniteSpeedOfLight: newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt, newdata)  # t + newdt?            
                 
-        #lb = self.LoadBalance(dtphot)        
+        #if rank == 0: print dtphot        
                 
-        return newdata, h, newdt   
+        if size > 1: lb = self.LoadBalance(dtphot)   
+        else: lb = None     
+                                                             
+        return newdata, h, newdt, lb  
         
     def ComputePhotonTimestep(self, newdata, cell, Lbol, n_H, n_He):
         """
@@ -521,7 +545,7 @@ class Radiate:
         if self.MultiSpecies: indices = self.Interpolate.GetIndices3D(ncol) 
         else: indices = None        
                 
-        if self.rs.SourceType < 3:        
+        if size == 1 and self.rs.SourceType < 3:        
             tau = self.Interpolate.interp(indices, "TotalOpticalDepth0", ncol)
             if tau < 0.5: return 1e50           
         
@@ -544,7 +568,7 @@ class Radiate:
             # Analogous to Shapiro et al. 2004 but for helium
             dtphot = min(dtphot, self.MaxHeIIChange * newdata['HeIDensity'][cell] / \
                 np.abs(newdata["HeIDensity"][cell] * (Gamma + newdata["ElectronDensity"][cell] * Beta) - newdata['HeIIDensity'][cell] * newdata["ElectronDensity"][cell] * alpha)) 
-                        
+        
         return dtphot                   
         
     def UpdatePhotonPackages(self, packs, t_next, data):
@@ -566,15 +590,30 @@ class Radiate:
         Return cells that should be solved by each processor.
         """    
         
-        nsubsteps = 1. / dtphot
-        
+        nsubsteps = 1. / dtphot[self.StartCell:]
+                
         # Compute CDF for timesteps
         cdf = np.cumsum(nsubsteps) / np.sum(nsubsteps)
         intervals = np.linspace(1. / size, 1, size)
+                
+        lb = list(np.interp(intervals, cdf, self.grid[self.StartCell:], left = self.StartCell))
+        lb.insert(0, self.StartCell)
+                
+        lb[-1] = self.GridDimensions
         
-        i = np.interp(self.grid[self.StartCell:], cdf, intervals)
+        for i, entry in enumerate(lb):
+            lb[i] = int(entry)
         
-        print i
+        # Make sure no two elements are the same - this may not always work
+        while np.any(np.diff(lb) == 0):
+            for i, entry in enumerate(lb[1:-1]):
+                                
+                if entry == self.StartCell: 
+                    lb[i + 1] = entry + 1
+                if entry == lb[i]:
+                    lb[i + 1] = entry + 1
+                                                                        
+        return lb
         
     def IonizationRateCoefficientHI(self, ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol, indices):
         """

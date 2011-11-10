@@ -156,10 +156,13 @@ class InitializeIntegralTables:
         if os.path.exists("{0}/input/{1}".format(self.rt1d, filename)): tabloc = "{0}/input/{1}".format(self.rt1d, filename)
         elif os.path.exists("{0}/{1}".format(self.OutputDirectory, filename)): tabloc = "{0}/{1}".format(self.OutputDirectory, filename)
         else:
-            print "Did not find a pre-existing integral table.  Generating {0}/{1} now...\n".format(self.OutputDirectory, filename)
+            if rank == 0:
+                print "Did not find a pre-existing integral table.  Generating {0}/{1} now...\n".format(self.OutputDirectory, filename)
             return None
         
-        print "Found an integral table for this source.  Reading {0}/{1}\n".format(self.OutputDirectory, filename)
+        if rank == 0:
+            print "Found an integral table for this source.  Reading {0}/{1}\n".format(self.OutputDirectory, filename)
+        
         f = h5py.File("{0}/{1}".format(self.OutputDirectory, filename), 'r')
         
         for item in f["IntegralTable"]: itab[item] = f["IntegralTable"][item].value
