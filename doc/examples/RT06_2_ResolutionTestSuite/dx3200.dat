@@ -1,0 +1,4 @@
+ProblemType = 2.1
+GridDimensions = 3200
+OutputDirectory = dx3200_dt3
+HIIRestrictedTimestep = 1

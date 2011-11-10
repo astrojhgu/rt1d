@@ -1,0 +1,99 @@
+###
+## Every rt1d parameter EVER
+###
+
+ProblemType                     = 0
+
+# Grid parameters
+GridDimensions                  = 1000 
+  
+# Units
+LengthUnits                     = 3.08568e21    # kpc
+TimeUnits                       = 3.15576e13    # Myr
+
+# Control parameters
+CurrentTime                     = 0.0 
+StopTime                        = 50.0 
+AdaptiveTimestep                = 1 
+StartRadius                     = 0.001 
+dtDataDump                      = 0.1 
+DataDumpName                    = dd 
+OutputDirectory                 = ./
+
+# ODE Solver
+ODEMinStep                      = 1e-3 
+ODEMaxStep                      = 0.1
+ODEAdaptiveStep                 = 1     
+ODErtol                         = 1e-6          # Used for adaptive step
+ODEatol                         = 1e-6          # Used for root finder
+ODEmaxiter                      = 100 
+RootFinder                      = 0             # Newton's method
+  
+# Integral tabulation / calculation
+InterpolationMethod             = 0             # Linear
+HIColumnMin                     = 1e15 
+HIColumnMax                     = 1e22 
+HeIColumnMin                    = 1e17 
+HeIColumnMax                    = 1e22 
+HeIIColumnMin                   = 1e18 
+HeIIColumnMax                   = 1e23 
+ColumnDensityBinsHI             = 50 
+ColumnDensityBinsHeI            = 10 
+ColumnDensityBinsHeII           = 10 
+ExitAfterIntegralTabulation     = 0 
+
+# Physics
+MultiSpecies                    = 0
+CosmologicalExpansion           = 0 
+Isothermal                      = 0  
+CollisionalIonization           = 1 
+CollisionalExcitation           = 1 
+SecondaryIonization             = 1             # Shull & vanSteenberg
+ComptonCooling                  = 1 
+
+# Initial conditions
+InitialRedshift                 = 20.0 
+DensityProfile                  = 1             # Mean baryon density at z = z_i
+InitialDensity                  = 0
+TemperatureProfile              = 0             # Uniform 
+InitialTemperature              = 100 
+IonizationProfile               = 0             # Neutral everywhere except within r_i
+InitialHIIFraction              = 1e-4
+Clump                           = 0 
+ClumpPosition                   = 0.1
+ClumpWidth                      = 0.02
+ClumpOverdensity                = 100
+
+  
+# Source parameters
+SourceType                      = 0             # Blackbody
+SourceTemperature               = 1e5 
+SourceRadius                    = 1.0           # Do we need this?
+SourceMass                      = 1e3           
+SourceLifetime                  = 50.0 
+SourceRadiativeEfficiency       = 0.1 
+  
+# Spectral parameters
+SpectrumPowerLawIndex           = 1.0 
+SpectrumMinEnergy               = 100 
+SpectrumMaxEnergy               = 1e4 
+SpectrumMinNormEnergy           = 100 
+SpectrumMaxNormEnergy           = 1e4 
+SpectrumPhotonLuminosity        = 1e54 
+  
+# Discretization parameters
+DiscreteSpectrumMethod          = 0 
+DiscreteSpectrumMinEnergy       = 100. 
+DiscreteSpectrumMaxEnergy       = 1e4 
+DiscreteSpectrumNumberOfBins    = 20 
+DiscreteSpectrumBinEdges        = [13.6 20 30 40] 
+DiscreteSpectrumSED             = [16.74 24.65 34.49 52.06] 
+DiscreteSpectrumRelLum          = [0.277 0.335 0.2 0.188] 
+  
+# Cosmological Parameters (WMAP 7)
+OmegaMatterNow                  = 0.272 
+OmegaBaryonNow                  = 0.044 
+OmegaLambdaNow                  = 0.728 
+HubbleParameterNow              = 0.702
+
+
