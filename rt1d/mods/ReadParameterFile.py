@@ -36,7 +36,7 @@ def ReadParameterFile(pf):
         
         # Read in the parameter name and the parameter value(s).
         parname, eq, parval = line.partition("=")
-                                        
+        
         # ProblemType option
         if parname.strip() == 'ProblemType' and float(parval) > 0:
             pf_new = ProblemType(float(parval))
