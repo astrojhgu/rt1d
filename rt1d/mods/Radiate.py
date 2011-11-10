@@ -524,9 +524,7 @@ class Radiate:
         
         # Update photon packages        
         if not self.InfiniteSpeedOfLight: newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt, newdata)  # t + newdt?            
-                
-        #if rank == 0: print dtphot        
-                
+                                
         if size > 1: lb = self.LoadBalance(dtphot)   
         else: lb = None     
                                                              
@@ -545,7 +543,7 @@ class Radiate:
         if self.MultiSpecies: indices = self.Interpolate.GetIndices3D(ncol) 
         else: indices = None        
                 
-        if size == 1 and self.rs.SourceType < 3:        
+        if self.rs.SourceType < 3:        
             tau = self.Interpolate.interp(indices, "TotalOpticalDepth0", ncol)
             if tau < 0.5: return 1e50           
         
