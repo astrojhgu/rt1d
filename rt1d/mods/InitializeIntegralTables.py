@@ -248,6 +248,9 @@ class InitializeIntegralTables:
                         
                         tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
                         for i, ncol_HI in enumerate(self.HIColumn):  
+                            
+                            if i % size != rank: continue
+                            
                             for j, ncol_HeI in enumerate(self.HeIColumn):
                                 for k, ncol_HeII in enumerate(self.HeIIColumn):
                                     tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
@@ -263,7 +266,7 @@ class InitializeIntegralTables:
                         
             if rank == 0 and self.ProgressBar: pbar.finish()            
                                                      
-            self.WriteIntegralTable(itabs)
+            if rank == 0: self.WriteIntegralTable(itabs)
                 
             return itabs
             
