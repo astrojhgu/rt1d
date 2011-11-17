@@ -107,7 +107,8 @@ class SolveRateEquations:
                     temp[c] = np.array(y[i - 1])[c]
                     
                     ynext = list(temp)
-                    if self.debug: print 'WARNING: Negative/NAN encountered in rate integral quantity.  Setting to zero, since already at minimum ODE step.'
+                    if self.debug: 
+                        print 'WARNING: Negative/NAN encountered in rate integral quantity.  Setting to zero, since already at minimum ODE step.'
                                                                                 
             # Adaptive time-stepping
             adapted = False
@@ -117,7 +118,8 @@ class SolveRateEquations:
                 # Limit determined by worst integration in set of equations.
                 for k, err in enumerate(drel):
                     if (err > self.rtol):
-                        if h == self.hmin: raise ValueError('Minimum ODE step reached.  Exiting.')
+                        if h == self.hmin: 
+                            raise ValueError('Minimum ODE step reached.  Exiting.')
                         
                         h = max(self.hmin, h / 2.)
                         adapted = True

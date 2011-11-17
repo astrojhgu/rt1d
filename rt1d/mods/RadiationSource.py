@@ -19,6 +19,7 @@ SourceType = 0: Monochromatic/Polychromatic emission of SpectrumPhotonLuminosity
 
 import numpy as np
 from Integrate import simpson as integrate                  # why did scipy.integrate.quad mess up LphotNorm? 
+from scipy.integrate import quad
 
 h = 6.626068e-27     			                            # Planck's constant - [h] = erg*s
 k_B = 1.3806503e-16     			                        # Boltzmann's constant - [k_B] = erg/K
@@ -83,7 +84,10 @@ class RadiationSource:
                         
         # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()
-                        
+        
+        # Calculate mean emission energy
+        self.MeanEmissionEnergy = quad(lambda E: E * self.Spectrum(E), 13.6, np.inf, epsrel = 1e-15)
+                                                                
     def Spectrum(self, E):
         """
         Return the fraction of the bolometric luminosity emitted at this energy.  This quantity is dimensionless, and its integral should be 1.

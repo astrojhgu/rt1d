@@ -5,7 +5,13 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on 2010-10-14.
 
-Description: 
+Description: Read rt1d parameter file, convert to python dictionary.
+
+Note on problem types: 
+Integer problem types are reserved for continuous spectra, while non-integer
+problem types will refer to the same problem with DiscreteSpectrum = 1.  The
+only exception to this rule is ProblemType = 1 (I-front propagation around
+monochromatic source of photons).
      
 """
 
@@ -90,22 +96,9 @@ def ProblemType(pt):
               "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrum": 1, "DiscreteSpectrumSED": [13.6], \
               "SpectrumMinEnergy": 0.1, "SpectrumMaxEnergy": 100, "CollisionalIonization": 0, "DiscreteSpectrumRelLum": [1.0]
              }        
-
-    # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum of Wise & Abel (2011)
-    if pt == 2:
-       pf = {"ProblemType": 2, "InterpolationMethod": 0, \
-             "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
-             "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
-             "StartRadius": 0.01, "dtDataDump": 5.0, "DataDumpName": 'dd', \
-             "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
-             "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
-             "IonizationProfile": 1, "InitialHIIFraction": 0, "SourceType": 1, "SourceLifetime": 1e10, \
-             "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrum": 1, \
-             "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188]
-            } 
             
     # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, *continuous spectrum*
-    if pt == 2.1:
+    if pt == 2:
        pf = {"ProblemType": 2.1, "InterpolationMethod": 0, \
              "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
@@ -117,9 +110,22 @@ def ProblemType(pt):
              "SpectrumMinNormEnergy": 13.6, "SpectrumMaxNormEnergy": 100., "HIColumnMin": 1e16, \
              "HIColumnMax": 1e20, "DiscreteSpectrum": 0
             }
+            
+    # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum of Wise & Abel (2011)
+    if pt == 2.1:
+       pf = {"ProblemType": 2, "InterpolationMethod": 0, \
+             "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
+             "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
+             "StartRadius": 0.01, "dtDataDump": 5.0, "DataDumpName": 'dd', \
+             "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
+             "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
+             "IonizationProfile": 1, "InitialHIIFraction": 0, "SourceType": 1, "SourceLifetime": 1e10, \
+             "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrum": 1, \
+             "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188]
+            }         
     
     # RT06-3: I-front trapping in a dense clump and the formation of a shadow
-    if pt == 3:
+    if pt == 3.1:
         pf = {"ProblemType": 3, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 15.0, 
@@ -164,6 +170,7 @@ def ProblemType(pt):
     if pt == 5:
         pf = {"ProblemType": 5, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 50, "ColumnDensityBinsHeI": 10, "ColumnDensityBinsHeII": 10, 
+              "HIColumnMin": 1e18, "HIColumnMax": 1e22, \
               "GridDimensions": 100, "LengthUnits": 1000 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
               "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \

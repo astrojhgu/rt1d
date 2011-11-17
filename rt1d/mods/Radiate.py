@@ -294,7 +294,7 @@ class Radiate:
                 if self.ParallelizationMethod == 1 and size > 1:
                     if cell not in solve_arr: continue
                         
-                if rank == 0 and self.ProgressBar: pbar.update(cell)
+                if rank == 0 and self.ProgressBar: pbar.update(cell * size)
                                                                 
                 # Read in densities for this cell
                 n_e = data["ElectronDensity"][cell]

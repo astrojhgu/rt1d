@@ -40,12 +40,12 @@ def SetDefaultParameterValues():
         "Debug": 1, \
           
         # Integral tabulation
-        "HIColumnMin": 1e15, \
+        "HIColumnMin": 1e16, \
         "HIColumnMax": 1e22, \
-        "HeIColumnMin": 1e17, \
+        "HeIColumnMin": 1e18, \
         "HeIColumnMax": 1e22, \
-        "HeIIColumnMin": 1e18, \
-        "HeIIColumnMax": 1e23, \
+        "HeIIColumnMin": 1e16, \
+        "HeIIColumnMax": 1e20, \
         "ColumnDensityBinsHI": 100, \
         "ColumnDensityBinsHeI": 10, \
         "ColumnDensityBinsHeII": 10, \
@@ -112,6 +112,7 @@ def SetDefaultParameterValues():
           
         # Spectral parameters
         "DiscreteSpectrum": 0, \
+        "EnergyAveragedCrossSection": 0, \
         "SpectrumPowerLawIndex": 1.5, \
         "SpectrumMinEnergy": 100, \
         "SpectrumMaxEnergy": 1e4, \
