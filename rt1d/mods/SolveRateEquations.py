@@ -88,6 +88,7 @@ class SolveRateEquations:
             ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)  
                                                                                                                                                                                                                                                  
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
+            # OR, we're ionizing everything in a cell, which leads to NANs.
             finite = np.isfinite(ynext)
             positive = np.greater_equal(ynext, 0.)
             if not np.all(finite) or not np.all(positive): 
@@ -216,7 +217,7 @@ class SolveRateEquations:
             fy1 = f(y1)
             fy2 = f(y2)
             fp = (fy1 - fy2) / (y1 - y2)
-                                                                                                                                
+                                                                                                                                            
             # Calculate new estimate of the root - fy1 = f(ynow)
             dy = fy1 / fp
             ypre = ynow
@@ -230,8 +231,8 @@ class SolveRateEquations:
                 print "Maximum number of iterations reached."
                 break
             else: i += 1                       
-                                                                                                                                                                                                                       
-        return max(ynow, tiny_number)
+        
+        return ynow # max(ynow, tiny_number)
 
     def Bisection(self, f, y_guess):
         """
