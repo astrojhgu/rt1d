@@ -203,7 +203,7 @@ class SolveRateEquations:
         Find the roots of the function f using the Newton-Raphson method.
         
         Let's remind ourselves what f and y_guess are:
-            y_guess is [nHII, nHeII, nHeIII, T], right?
+            y_guess is [nHII, nHeII, nHeIII, T]
         
         """    
 

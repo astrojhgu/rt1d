@@ -545,7 +545,7 @@ class Radiate:
                 
         if self.rs.SourceType < 3:        
             tau = self.Interpolate.interp(indices, "TotalOpticalDepth0", ncol)
-            if tau < 0.5: return 1e50           
+            if tau < 0.5: return 1e50
         
         Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
             xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)        

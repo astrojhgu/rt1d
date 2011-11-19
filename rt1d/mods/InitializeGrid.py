@@ -78,7 +78,6 @@ class InitializeGrid:
                 1: Density profile given by NFW model.  Requires r_s and c in this case too.
         """        
         
-        if self.DensityProfile == -1: density = 1.87e-4 * m_H
         if self.DensityProfile == 0: density = self.InitialDensity * m_H
         if self.DensityProfile == 1: density = self.Cosmology.MeanBaryonDensity(self.InitialRedshift)
         
@@ -150,7 +149,7 @@ class InitializeGrid:
         to be the same as that of hydrogen.
         """
         
-        return self.Y * (1. - self.ionization[cell]) * self.density[cell] / m_H
+        return self.Y * (1. - self.ionization[cell]) * self.density[cell] / 4. / m_H
         
     def InitializeHeIIDensity(self, cell):
         """
@@ -158,14 +157,14 @@ class InitializeGrid:
         to be the same as that of hydrogen.
         """
         
-        return self.Y * self.ionization[cell] * self.density[cell] / m_H
+        return self.Y * self.ionization[cell] * self.density[cell] / 4. / m_H
         
     def InitializeHeIIIDensity(self, cell):
         """
         Initialize doubly ionized helium density - assumed to be very small (can't be exactly zero or it will crash the root finder).
         """
         
-        return self.Y * self.ionization[cell] * tiny_number * self.density[cell] / m_H
+        return self.Y * self.ionization[cell] * tiny_number * self.density[cell] / 4. / m_H
         
     def InitializeElectronDensity(self, cell):
         """
