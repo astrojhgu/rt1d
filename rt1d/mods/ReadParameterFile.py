@@ -15,7 +15,7 @@ monochromatic source of photons).
      
 """
 
-import copy, h5py
+import re, copy, h5py
 import numpy as np
 from rt1d.mods.SetDefaultParameterValues import SetDefaultParameterValues
 
@@ -42,7 +42,7 @@ def ReadParameterFile(pf):
         
         # Read in the parameter name and the parameter value(s).
         parname, eq, parval = line.partition("=")
-        
+                
         # ProblemType option
         if parname.strip() == 'ProblemType' and float(parval) > 0:
             pf_new = ProblemType(float(parval))
@@ -53,6 +53,8 @@ def ReadParameterFile(pf):
         except ValueError:
             if parval.replace('_', '').replace('.', '').strip().isalnum(): 
                 parval = str(parval.strip())
+            elif re.search('/', parval):
+                parval = str(parval.strip())
             else:
                 parval = parval.strip().split(",")
                 tmp = []                           
@@ -61,23 +63,24 @@ def ReadParameterFile(pf):
                     parval = list(tmp)
                 else:
                     raise ValueError('The format of this parameter is not understood.')
-                
+        
         pf_dict[parname.strip()] = parval
-                
-    return pf_dict
+                    
+    return pf_dict 
     
 def ReadRestartFile(rf):
-    f = h5py.File(rf, 'r')
     
-    pf = {}
-    data = {}
-    for parameter in f["ParameterFile"]:
-        pf[parameter] = f["ParameterFile"][parameter].value
-        
+    # First, the parameter file
+    pf = ReadParameterFile(rf)
+    
+    # Now, the data
+    f = h5py.File('%s.h5' % rf, 'r')
+    
+    data = {} 
     for field in f["Data"]:
         data[field] = f["Data"][field].value
-        
-    return pf, data    
+            
+    return pf, data       
     
 def ProblemType(pt):
     """

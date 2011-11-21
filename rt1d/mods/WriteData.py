@@ -50,3 +50,32 @@ class WriteData:
         
         if rank == 0: print "Wrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.OutputDirectory, DataDumpName)
         
+        self.WriteParameterFile(wct, t, dt)
+
+    def WriteParameterFile(self, wct, t, dt):
+        """
+        Write out parameter file to ASCII format.
+        """
+        
+        DataDumpName = "{0}{1:04d}".format(self.pf["DataDumpName"], wct)
+        
+        f = open("{0}/{1}/{2}".format(GlobalDir, self.OutputDirectory, DataDumpName), 'w')
+        
+        names = self.pf.keys()
+        names.sort()
+        
+        print >> f, "{0} = {1}".format('ProblemType'.ljust(35, ' '), self.pf['ProblemType'])
+        
+        for par in names:
+            
+            if par == 'ProblemType': continue
+            
+            if par == "CurrentTime": val = t / self.TimeUnits
+            elif par == "CurrentTimestep": val = dt / self.TimeUnits
+            else: val = self.pf[par]
+            
+            print >> f, "{0} = {1}".format(par.ljust(35, ' '), val)
+            
+        f.close()    
+        
+        

@@ -28,7 +28,7 @@ import rt1d.mods as rtm
 all_pfs = []
 if sys.argv[1].strip('-') == 'r':
     IsRestart = True
-    pf, ICs = rtm.ReadRestartFile(sys.argv[2])  
+    pf, ICs = rtm.ReadRestartFile(sys.argv[2]) 
     all_pfs.append(pf)
     del pf
 elif sys.argv[1].strip('-') == 'b':
@@ -75,7 +75,8 @@ for i, pf in enumerate(all_pfs):
         print "Box-crossing time = {0} (years), {1} (code)\n".format(LengthUnits / 29979245800.0 / 31557600.0, LengthUnits / 29979245800.0 / TimeUnits)
                         
     # Initialize grid and file system
-    if IsRestart: data = ICs
+    if IsRestart: 
+        data = ICs
     else:
         g = rtm.InitializeGrid(pf)   
         data = g.InitializeFields()
@@ -100,7 +101,8 @@ for i, pf in enumerate(all_pfs):
     w = rtm.WriteData(pf)
     
     # Compute timestep
-    if IsRestart or pf["HIIRestrictedTimestep"] == 0: dt = pf["CurrentTimestep"] * TimeUnits
+    if IsRestart or pf["HIIRestrictedTimestep"] == 0: 
+        dt = pf["CurrentTimestep"] * TimeUnits
     else:
         
         if pf["MultiSpecies"]:
@@ -129,7 +131,7 @@ for i, pf in enumerate(all_pfs):
     if not IsRestart: 
         if rank == 0: 
             w.WriteAllData(data, 0, t, dt)
-            
+                        
     if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(wct, root = 0)         
     
     # If we want to store timestep evolution, setup dump file
@@ -160,13 +162,14 @@ for i, pf in enumerate(all_pfs):
         elif (t + dt) == ddt[wct]: 
             tnow = t + dt
             write_now = True
-        else: write_now = False
+        else: 
+            write_now = False
 
         # Evolve photons
         data, h, newdt, lb = r.EvolvePhotons(data, t, dt, min(h, dt), lb)
         t += dt
         dt = newdt # dt for the next timestep
-                               
+                                                              
         # Write-out data                                        
         if write_now:
             wrote = False

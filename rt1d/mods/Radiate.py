@@ -539,7 +539,7 @@ class Radiate:
                    
         ncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
                    np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
-                
+                                
         if self.MultiSpecies: indices = self.Interpolate.GetIndices3D(ncol) 
         else: indices = None        
                 
@@ -566,7 +566,7 @@ class Radiate:
             # Analogous to Shapiro et al. 2004 but for helium
             dtphot = min(dtphot, self.MaxHeIIChange * newdata['HeIDensity'][cell] / \
                 np.abs(newdata["HeIDensity"][cell] * (Gamma + newdata["ElectronDensity"][cell] * Beta) - newdata['HeIIDensity'][cell] * newdata["ElectronDensity"][cell] * alpha)) 
-        
+                
         return dtphot                   
         
     def UpdatePhotonPackages(self, packs, t_next, data):
