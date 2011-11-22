@@ -13,6 +13,7 @@ import numpy as np
 import pylab as pl
 
 tiny_number = 1e-30
+min_density = 1e-12
 
 class SolveRateEquations:
     def __init__(self, pf, guesses, stepper = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
@@ -85,31 +86,61 @@ class SolveRateEquations:
                 xnext = xf 
             
             # Solve away
-            ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)  
-                                                                                                                                                                                                                                                 
+            ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args) 
+            
+            y_H = ynext[0]                 # Just hydrogen element
+            y_He = list(ynext[1:3])        # Just helium elements
+            y_He.append(np.sum(y_He))      
+                                           
+            limiting_H = list([args[3]])   # Max value for n_HII = n_H
+            limiting_He = 3 * [args[4]]    # Max value for n_HeII, n_HeIII, or their sum = n_He
+                                                                                                                                                                                                                                                             
             # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
             # OR, we're ionizing everything in a cell, which leads to NANs.
             finite = np.isfinite(ynext)
             positive = np.greater_equal(ynext, 0.)
-            if not np.all(finite) or not np.all(positive): 
+            feasible_H = np.less(y_H, limiting_H)
+            feasible_He = np.less(y_He, limiting_He)
+                        
+            something_wrong = [0, 0, 0, 0]          
+            if not np.all(finite):
+                something_wrong[0] = 1
+            if not np.all(positive):
+                something_wrong[1] = 1 
+            if not np.all(feasible_H):
+                something_wrong[2] = 1 
+            if not np.all(feasible_He): 
+                something_wrong[3] = 1 
+                
+            if np.any(something_wrong):    
                 
                 # If we haven't hit our smallest allowed timestep
                 if h > self.hmin:
                     h = max(self.hmin, h / 2.)
                     continue
-                else: 
+                else:
+                    print something_wrong
+                    raise ValueError('Divergent solution on minimum ODE step.  Exiting.')
+                    
+                     
                     # Correct for negatives
-                    c = np.less(ynext, 0)
-                    temp = np.array(ynext)
-                    temp[c] = self.guesses[c] * 1e-8
+                    #c = np.less(ynext, 0)
+                    #temp = np.array(ynext)
+                    #temp[c] = self.guesses[c] * 1e-8
+                    #
+                    ## Correct for NAN
+                    #c = np.isnan(ynext)
+                    #temp[c] = np.array(y[i - 1])[c]  
+                    #
+                    ## Correct for unphysical densities
+                    #if not feasible_H[0]:
+                    #    temp[0] = limiting_H[0] - min_density
+                    #if not feasible_He[0]:
+                        
                     
-                    # Correct for NAN
-                    c = np.isnan(ynext)
-                    temp[c] = np.array(y[i - 1])[c]
-                    
-                    ynext = list(temp)
-                    if self.debug: 
-                        print 'WARNING: Negative/NAN encountered in rate integral quantity.  Setting to zero, since already at minimum ODE step.'
+                    #ynext = list(temp)
+                    #if self.debug: 
+                    #    print 'WARNING: Negative/NAN encountered in rate integral quantity.  Setting to zero, since already at minimum ODE step.'
                                                                                 
             # Adaptive time-stepping
             adapted = False
@@ -120,7 +151,7 @@ class SolveRateEquations:
                 for k, err in enumerate(drel):
                     if (err > self.rtol):
                         if h == self.hmin: 
-                            raise ValueError('Minimum ODE step reached.  Exiting.')
+                            raise ValueError('Tolerance not met on minimum ODE step.  Exiting.')
                         
                         h = max(self.hmin, h / 2.)
                         adapted = True
@@ -169,6 +200,8 @@ class SolveRateEquations:
                 if yi[i] == 0. or (yi[i] > self.guesses[i] and i < 3): guess = self.guesses[i]
                 else: guess = yi[i]
                 
+                #print i, guess
+                                
                 yip1.append(self.rootfinder(ynext, guess))
                                                               
         rtn = yi + h * f(np.array(yip1), xi + h, args)
@@ -221,7 +254,9 @@ class SolveRateEquations:
             # Calculate new estimate of the root - fy1 = f(ynow)
             dy = fy1 / fp
             ypre = ynow
-            ynow -= dy   
+            ynow -= dy
+            
+            #print y1, y2, fy1, fy2, fp   
                                                                      
             # Calculate deviation between this estimate and last            
             err = abs(ypre - ynow) / ypre
@@ -232,6 +267,7 @@ class SolveRateEquations:
                 break
             else: i += 1                       
         
+        #print 'YNOW', ynow
         return ynow # max(ynow, tiny_number)
 
     def Bisection(self, f, y_guess):

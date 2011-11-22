@@ -93,7 +93,7 @@ class InitializeIntegralTables:
         # Set up column density vectors for each absorber
         if self.MultiSpecies > 0: 
             self.HeIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
-            self.HeIIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeIINBins)
+            self.HeIIColumn = np.logspace(np.log10(self.HeIIColumnMin), np.log10(self.HeIIColumnMax), self.HeIINBins)
         else:
             self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
             self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
@@ -318,7 +318,7 @@ class InitializeIntegralTables:
             integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
                         
-            return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-24)[0]
+            return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
                   
         else:
             integral = PhotoIonizationCrossSection(self.rs.E, species) * self.rs.Spectrum(self.rs.E) * \
@@ -341,7 +341,7 @@ class InitializeIntegralTables:
             integrand = lambda E: 1e20 * PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / E
             
-            return 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-30)[0]
+            return 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-8)[0]
             
         else:
             integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \
@@ -359,7 +359,7 @@ class InitializeIntegralTables:
             integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
                 np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_th[0]   
             
-            return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-16)[0]
+            return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-8)[0]
             
         else:
             integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \

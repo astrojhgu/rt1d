@@ -107,9 +107,9 @@ class Radiate:
         
         self.ProgressBar = pf["ProgressBar"]                                                                        
         
-        guesses = [data["HIDensity"][0] + data["HIIDensity"][0], 
-                   data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0], 
-                   data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0], 
+        guesses = [0.5 * (data["HIDensity"][0] + data["HIIDensity"][0]), 
+                   0.5 * (data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0]), 
+                   0.1 * (data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0]), 
                    3 * self.InitialTemperature * k_B * (self.InitialHydrogenDensity + self.InitialHeliumDensity) / 2.]
                 
         self.solver = SolveRateEquations(pf, guesses = guesses, stepper = self.AdaptiveStep, hmin = self.MinStep, hmax = self.MaxStep, \
@@ -172,9 +172,9 @@ class Radiate:
             Gamma_HeII = self.IonizationRateCoefficientHeII(ncol, x_HII, r, Lbol, indices)
             Beta_HeI = 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T) * self.CollisionalIonization
             Beta_HeII = 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T) * self.CollisionalIonization
-            alpha_HeII = 9.94e-11 * T**-0.48                                                            ## WHICH ALPHA_HEIII IS RIGHT FOR US?
-            alpha_HeIII = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1.
-            if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))
+            alpha_HeII = 9.94e-11 * T**-0.48                                                            
+            alpha_HeIII = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1        # To n >= 1
+            if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))                                # To n >= 2
             else: alpha_HeIII *= (1.43 - 0.076 * np.log(T))
             xi_HeII = 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
         else: Gamma_HeI = Gamma_HeII = Beta_HeI = Beta_HeII = alpha_HeII = alpha_HeIII = alpha_HeIII = xi_HeII = 0
@@ -348,20 +348,38 @@ class Radiate:
                 if not self.Isothermal: newT = newE[-1] * 2. * mu / 3. / k_B / n_B
                 else: newT = newdata['Temperature'][cell]
                 
-                # Possible that newHII > n_H and within tolerances, hence the min statements
-                if newHII[-1] > n_H: newHI = min_density
-                else: newHI = n_H - newHII[-1]
+                ## THESE THINGS SHOULDNT HAPPEN ANYMORE
+                ## PROPER TO USE A FUDGE TO SAME COMPUTATIONAL EFFORT?
+                ## SHOULD RESTRICT NANs / NEGATIVE / UNPHYSICAL DENSITIES based on RTOL
                 
+                # Possible that newHII > n_H and within tolerances, hence the min statements
+                if newHII[-1] > n_H: 
+                    newHI = min_density
+                else: 
+                    newHI = n_H - newHII[-1]
+                                    
                 # Same problem could arise with helium - favor accuracy of HeII over HeIII
                 newHeI = n_He - newHeII[-1] - newHeIII[-1]
-                if newHeI < 0: 
-                    newHeI = min_density
-                    newerHeII = n_He - newHeI - newHeIII[-1]
-                    newerHeIII = n_He - newHeI - newerHeII
+                if (newHeI < 0) or not np.all(np.less([newHeII[-1], newHeIII[-1]], n_He)):        
+                    
+                    if newHeII[-1] > n_He:
+                        newerHeII = n_He - 2 * min_density
+                        newerHeIII = min_density
+                        newHeI = min_density
+                    elif newHeIII[-1] > n_He:
+                        newerHeIII = n_He - 2 * min_density
+                        newerHeII = min_density
+                        newHeI = min_density
+                    else:                               # elif (newHeII[-1] + newHeIII[-1]) > n_He:
+                        newHeI = min_density
+                        
                 else:
                     newHeI = n_He - newHeII[-1] - newHeIII[-1]
                     newerHeII = n_He - newHeI - newHeIII[-1]
                     newerHeIII = n_He - newHeI - newerHeII
+                    
+                ###
+                ###    
 
                 # Update quantities in 'data' -> 'newdata'
                 newdata["HIDensity"][cell] = newHI                                                                                            
@@ -476,8 +494,10 @@ class Radiate:
                     else: newT = newdata['Temperature'][cell]
                         
                     # Possible that newHII > n_H and within tolerances, hence the min statements
-                    if newHII[-1] > n_H: newHI = min_density
-                    else: newHI = n_H - newHII[-1]      
+                    if newHII[-1] > n_H: 
+                        newHI = min_density
+                    else: 
+                        newHI = n_H - newHII[-1]      
                     
                     # Same problem could arise with helium - favor accuracy of HeII over HeIII
                     newHeI = n_He - newHeII[-1] - newHeIII[-1]
