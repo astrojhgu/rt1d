@@ -45,8 +45,6 @@ m_HeII = 2.0 * (m_p + m_n) + m_e
 
 E_th = [13.6, 24.6, 54.4]
 
-min_density = 1e-12
-
 # Widget for progressbar.
 widget = ["Ray Casting: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 
@@ -65,16 +63,19 @@ class Radiate:
         self.MaxHeIIChange = pf["MaxHeIIChange"]
         self.HIIRestrictedTimestep = pf["HIIRestrictedTimestep"]
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
+        self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
         
         self.MultiSpecies = pf["MultiSpecies"]
         self.InfiniteSpeedOfLight = pf["InfiniteSpeedOfLight"]
         self.Isothermal = pf["Isothermal"]
+        self.MeanMolecularWeight = pf["MeanMolecularWeight"]
         self.ComptonCooling = pf["ComptonCooling"]
         self.CollisionalIonization = pf["CollisionalIonization"]
         self.CollisionalExcitation = pf["CollisionalExcitation"]
         self.SecondaryIonization = pf["SecondaryIonization"]
         self.InitialTemperature = pf["InitialTemperature"]
         self.PlaneParallelField = pf["PlaneParallelField"]
+        self.NumberDensityFloor = pf["NumberDensityFloor"]
         
         self.InterpolationMethod = pf["InterpolationMethod"]
         self.AdaptiveTimestep = pf["ODEAdaptiveStep"]
@@ -107,13 +108,17 @@ class Radiate:
         
         self.ProgressBar = pf["ProgressBar"]                                                                        
         
-        guesses = [0.5 * (data["HIDensity"][0] + data["HIIDensity"][0]), 
-                   0.5 * (data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0]), 
-                   0.1 * (data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0]), 
-                   3 * self.InitialTemperature * k_B * (self.InitialHydrogenDensity + self.InitialHeliumDensity) / 2.]
+        self.TotalHydrogen = data["HIDensity"][-1] + data["HIIDensity"][-1]
+        self.TotalHelium = data["HeIDensity"][-1] + data["HeIIDensity"][-1] + data["HeIIIDensity"][-1]
+        
+        guesses = [0.5 * self.TotalHydrogen, 
+                   0.5 * self.TotalHelium, 
+                   0.1 * self.TotalHelium, 
+                   3 * self.InitialTemperature * k_B * (self.TotalHydrogen + self.TotalHelium) / 2.]
                 
         self.solver = SolveRateEquations(pf, guesses = guesses, stepper = self.AdaptiveStep, hmin = self.MinStep, hmax = self.MaxStep, \
-            rtol = self.rtol, atol = self.atol, Dfun = None, maxiter = pf["ODEmaxiter"])
+            rtol = self.rtol, atol = self.atol, Dfun = None, maxiter = pf["ODEmaxiter"],
+            nH_tot = self.TotalHydrogen, nHe_tot = self.TotalHelium)
                                 
         self.Interpolate = Interpolate(self.pf, n_col, self.itabs)                        
                                 
@@ -162,7 +167,7 @@ class Radiate:
         E = q[3]        
         if self.Isothermal: T = self.InitialTemperature
         else: T = E * 2. * mu / 3. / k_B / n_B
-        
+                
         # First, solve for rate coefficients
         alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85    
         Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol, indices)        
@@ -177,7 +182,8 @@ class Radiate:
             if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))                                # To n >= 2
             else: alpha_HeIII *= (1.43 - 0.076 * np.log(T))
             xi_HeII = 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
-        else: Gamma_HeI = Gamma_HeII = Beta_HeI = Beta_HeII = alpha_HeII = alpha_HeIII = alpha_HeIII = xi_HeII = 0
+        else: 
+            Gamma_HeI = Gamma_HeII = Beta_HeI = Beta_HeII = alpha_HeII = alpha_HeIII = alpha_HeIII = xi_HeII = 0
                                                                 
         # Always solve hydrogen rate equation
         newHII = Gamma_HI * n_HI - alpha_HII * n_e * q[0]
@@ -197,7 +203,7 @@ class Radiate:
         else:
             newE = self.HeatGain(ncol, nabs, x_HII, r, Lbol, indices) - \
                 self.HeatLoss(nabs, nion, n_e, n_B, E * 2. * mu / 3. / k_B / n_B, z, mu)                                
-                                                                
+                                                                        
         return np.array([newHII, newHeII, newHeIII, newE])
 
     def EvolvePhotons(self, data, t, dt, h, lb):
@@ -258,7 +264,7 @@ class Radiate:
         # If accreting black hole, luminosity will change with time.
         Lbol = self.rs.BolometricLuminosity(t)
         
-        # Deal with c < infinity
+        # Set up 'packs' structure for c < infinity runs
         if not self.InfiniteSpeedOfLight: 
             
             # PhotonPackage guide: pack = [EmissionTime, EmissionTimeInterval, ncolHI, ncolHeI, ncolHeII, Energy]
@@ -279,6 +285,7 @@ class Radiate:
                     packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
             else: packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
         
+        # Initialize dtphot array
         if self.HIIRestrictedTimestep: 
             dtphot = np.zeros(len(self.grid))
             dtphot[0:self.StartCell] = 1e50
@@ -312,7 +319,10 @@ class Radiate:
                 x_HeIII = x_HeIII_arr[cell]
             
                 # Compute mean molecular weight for this cell
-                mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
+                if self.Isothermal:
+                    mu = self.MeanMolecularWeight
+                else:
+                    mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                                         
                 # For convenience     
                 ncol = np.array([ncol_HI[cell], ncol_HeI[cell], ncol_HeII[cell]])
@@ -320,12 +330,12 @@ class Radiate:
                 nion = np.array([n_HII, n_HeII, n_HeIII])
                 n_H = n_HI + n_HII
                 n_He = n_HeI + n_HeII + n_HeIII
-                n_B = n_H + n_He + n_e              # STILL DONT UNDERSTAND THIS
+                n_B = n_H + n_He # + n_e              # STILL DONT UNDERSTAND THIS
                                         
-                # Compute internal energy for this cell
+                # Compute internal energy for this cell if not isothermal
                 T = data["Temperature"][cell]
                 E = 3. * k_B * T * n_B / mu / 2.
-            
+                        
                 # Compute radius
                 r = self.r[cell]
                                             
@@ -337,51 +347,38 @@ class Radiate:
                 indices = None
                 if self.MultiSpecies > 0: 
                     indices = self.Interpolate.GetIndices3D(ncol)
-                                
+                                                    
                 tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                     r, z, mu, n_H, n_He, ncol, Lbol, indices)
                                 
                 # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
-                newHII, newHeII, newHeIII, newE = qnew    
-
+                newHII, newHeII, newHeIII, newE = qnew 
+                                
                 # Convert from internal energy back to temperature
-                if not self.Isothermal: newT = newE[-1] * 2. * mu / 3. / k_B / n_B
-                else: newT = newdata['Temperature'][cell]
-                
-                ## THESE THINGS SHOULDNT HAPPEN ANYMORE
-                ## PROPER TO USE A FUDGE TO SAME COMPUTATIONAL EFFORT?
-                ## SHOULD RESTRICT NANs / NEGATIVE / UNPHYSICAL DENSITIES based on RTOL
+                newT = newE[-1] * 2. * mu / 3. / k_B / n_B   
                 
                 # Possible that newHII > n_H and within tolerances, hence the min statements
                 if newHII[-1] > n_H: 
-                    newHI = min_density
+                    newHI = self.NumberDensityFloor
                 else: 
                     newHI = n_H - newHII[-1]
                                     
                 # Same problem could arise with helium - favor accuracy of HeII over HeIII
-                newHeI = n_He - newHeII[-1] - newHeIII[-1]
-                if (newHeI < 0) or not np.all(np.less([newHeII[-1], newHeIII[-1]], n_He)):        
-                    
-                    if newHeII[-1] > n_He:
-                        newerHeII = n_He - 2 * min_density
-                        newerHeIII = min_density
-                        newHeI = min_density
-                    elif newHeIII[-1] > n_He:
-                        newerHeIII = n_He - 2 * min_density
-                        newerHeII = min_density
-                        newHeI = min_density
-                    else:                               # elif (newHeII[-1] + newHeIII[-1]) > n_He:
-                        newHeI = min_density
-                        
+                # Should we favor accuracy of whichever ion is most abundant?
+                newHeI = n_He - newHeII[-1] - newHeIII[-1]                
+                if newHeI < 0:        
+                    if np.allclose(newHeI, 0, rtol = 1e-10, atol = 1e-10):
+                        newHeI = self.NumberDensityFloor
+                        newerHeII = newHeII[-1]
+                        newerHeIII = n_He - newerHeII - newHeI
+                    else:
+                        raise ValueError('n_HeI < 0.  Exiting.')
+                     
                 else:
-                    newHeI = n_He - newHeII[-1] - newHeIII[-1]
-                    newerHeII = n_He - newHeI - newHeIII[-1]
-                    newerHeIII = n_He - newHeI - newerHeII
-                    
-                ###
-                ###    
+                    newerHeII = newHeII[-1]
+                    newerHeIII = newHeIII[-1]
 
-                # Update quantities in 'data' -> 'newdata'
+                # Update quantities in 'data' -> 'newdata'                
                 newdata["HIDensity"][cell] = newHI                                                                                            
                 newdata["HIIDensity"][cell] = n_H - newHI
                 newdata["HeIDensity"][cell] = newHeI
@@ -495,14 +492,14 @@ class Radiate:
                         
                     # Possible that newHII > n_H and within tolerances, hence the min statements
                     if newHII[-1] > n_H: 
-                        newHI = min_density
+                        newHI = self.NumberDensityFloor
                     else: 
                         newHI = n_H - newHII[-1]      
                     
                     # Same problem could arise with helium - favor accuracy of HeII over HeIII
                     newHeI = n_He - newHeII[-1] - newHeIII[-1]
                     if newHeI < 0: 
-                        newHeI = min_density
+                        newHeI = self.NumberDensityFloor
                         newerHeII = n_He - newHeI - newHeIII[-1]
                         newerHeIII = n_He - newHeI - newerHeII
                     else:
@@ -525,7 +522,7 @@ class Radiate:
                     ################ DONE ################     
                     ######################################                                   
                 
-            if self.HIIRestrictedTimestep:
+            if self.HIIRestrictedTimestep or self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep:
                 for cell in self.grid[self.StartCell:]:
                     dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, self.rs.BolometricLuminosity(t), n_H_arr[0], n_He_arr[0])            
                                                                                                   
@@ -535,8 +532,10 @@ class Radiate:
                 
             dtphot = MPI.COMM_WORLD.allreduce(dtphot, dtphot) 
                                 
-        if self.HIIRestrictedTimestep: newdt = min(np.min(dtphot), 2 * dt)
-        else: newdt = dt
+        if self.HIIRestrictedTimestep or self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep: 
+            newdt = min(np.min(dtphot), 2 * dt)
+        else: 
+            newdt = dt
         
         if self.LightCrossingTimeRestrictedStep: newdt = min(newdt, self.LightCrossingTimeRestrictedStep * self.LengthUnits / self.GridDimensions / 29979245800.0)
         
@@ -563,9 +562,12 @@ class Radiate:
         if self.MultiSpecies: indices = self.Interpolate.GetIndices3D(ncol) 
         else: indices = None        
                 
-        if self.rs.SourceType < 3:        
-            tau = self.Interpolate.interp(indices, "TotalOpticalDepth0", ncol)
-            if tau < 0.5: return 1e50
+        within_HIIregion = False        
+        tauHI = self.Interpolate.interp(indices, "TotalOpticalDepth0", ncol)
+        if tauHI < 0.5: 
+            within_HIIregion = True
+            if not self.MultiSpecies:
+                return 1e50
         
         Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
             xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)        
@@ -573,10 +575,19 @@ class Radiate:
         
         # Shapiro et al. 2004
         dtphot = self.MaxHIIChange * newdata["HIDensity"][cell] / \
-            np.abs(newdata["HIDensity"][cell] * Gamma - newdata["HIIDensity"][cell] * newdata["ElectronDensity"][cell] * alpha)  
+            np.abs(newdata["HIDensity"][cell] * Gamma - newdata["HIIDensity"][cell] * newdata["ElectronDensity"][cell] * alpha)
         
         # Calculate global timstep based on change in helium neutral fraction for next iteration
         if self.MultiSpecies and self.HeIIRestrictedTimestep:
+            
+            within_HeIIregion = False    
+            tauHeI = self.Interpolate.interp(indices, "TotalOpticalDepth1", ncol)
+            if tauHeI < 0.5: 
+                within_HIIregion = True
+            
+            if not self.HeIIIRestrictedTimestep and not within_HIIregion and not within_HeIIregion:    
+                return 1e50
+            
             xHeII = newdata["HeIIDensity"][cell] / n_He
             
             Beta = 2.38e-11 * np.sqrt(newdata['Temperature'][cell]) * (1. + np.sqrt(newdata['Temperature'][cell] / 1.e5))**-1. * np.exp(-2.853e5 /newdata['Temperature'][cell]) * self.CollisionalIonization
@@ -586,6 +597,9 @@ class Radiate:
             # Analogous to Shapiro et al. 2004 but for helium
             dtphot = min(dtphot, self.MaxHeIIChange * newdata['HeIDensity'][cell] / \
                 np.abs(newdata["HeIDensity"][cell] * (Gamma + newdata["ElectronDensity"][cell] * Beta) - newdata['HeIIDensity'][cell] * newdata["ElectronDensity"][cell] * alpha)) 
+        
+        if self.MultiSpecies and self.HeIIIRestrictedTimestep:
+            pass
                 
         return dtphot                   
         

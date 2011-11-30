@@ -177,6 +177,8 @@ for i, pf in enumerate(all_pfs):
                 w.WriteAllData(data, wct, tnow, dt)
                 wrote = True
             wct += 1
+            
+        if dt == 0: raise ValueError('Timestep = 0.  Exiting.')  
            
         # Don't move on until root processor has written out data    
         if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(write_now, root = 0)    

@@ -71,13 +71,16 @@ def SetDefaultParameterValues():
         "CurrentTimestep": 1e-8, \
         "HIIRestrictedTimestep": 1, \
         "HeIIRestrictedTimestep": 0, \
+        "HeIIIRestrictedTimestep": 0, \
         "LightCrossingTimeRestrictedStep": 0, \
         "OnePhotonPackagePerCell": 0, \
         "MaxHIIChange": 0.05, \
         "MaxHeIIChange": 0.05, \
+        "NumberDensityFloor": 1e-12, \
         
         # Physics
         "Isothermal": 0, \
+        "MeanMolecularWeight": 0.5, \
         "MultiSpecies": 0, \
         "CollisionalIonization": 1, \
         "CollisionalExcitation": 1, \
