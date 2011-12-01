@@ -117,8 +117,7 @@ class Radiate:
                    3 * self.InitialTemperature * k_B * (self.TotalHydrogen + self.TotalHelium) / 2.]
                 
         self.solver = SolveRateEquations(pf, guesses = guesses, stepper = self.AdaptiveStep, hmin = self.MinStep, hmax = self.MaxStep, \
-            rtol = self.rtol, atol = self.atol, Dfun = None, maxiter = pf["ODEmaxiter"],
-            nH_tot = self.TotalHydrogen, nHe_tot = self.TotalHelium)
+            rtol = self.rtol, atol = self.atol, Dfun = None, maxiter = pf["ODEmaxiter"])
                                 
         self.Interpolate = Interpolate(self.pf, n_col, self.itabs)                        
                                 
@@ -290,6 +289,9 @@ class Radiate:
             dtphot = np.zeros(len(self.grid))
             dtphot[0:self.StartCell] = 1e50
                 
+        ###
+        ## SOLVE: c -> inf
+        ###        
         if self.InfiniteSpeedOfLight:
             
             # Loop over cells radially, solve rate equations, update values in data -> newdata
@@ -298,6 +300,7 @@ class Radiate:
                 # If within our buffer zone (where we don't solve rate equations), continue
                 if cell < self.StartCell: continue
                 
+                # If this cell belongs to another processor, continue
                 if self.ParallelizationMethod == 1 and size > 1:
                     if cell not in solve_arr: continue
                         
@@ -319,24 +322,21 @@ class Radiate:
                 x_HeIII = x_HeIII_arr[cell]
             
                 # Compute mean molecular weight for this cell
-                if self.Isothermal:
-                    mu = self.MeanMolecularWeight
-                else:
-                    mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
+                mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                                         
                 # For convenience     
                 ncol = np.array([ncol_HI[cell], ncol_HeI[cell], ncol_HeII[cell]])
                 nabs = np.array([n_HI, n_HeI, n_HeII])
                 nion = np.array([n_HII, n_HeII, n_HeIII])
                 n_H = n_HI + n_HII
-                n_He = n_HeI + n_HeII + n_HeIII
-                n_B = n_H + n_He # + n_e              # STILL DONT UNDERSTAND THIS
+                n_He = n_HeI + n_HeII + n_HeIII                
+                n_B = n_H + n_He + n_e
                                         
-                # Compute internal energy for this cell if not isothermal
+                # Compute internal energy for this cell
                 T = data["Temperature"][cell]
                 E = 3. * k_B * T * n_B / mu / 2.
                         
-                # Compute radius
+                # Read radius
                 r = self.r[cell]
                                             
                 ######################################
@@ -347,44 +347,28 @@ class Radiate:
                 indices = None
                 if self.MultiSpecies > 0: 
                     indices = self.Interpolate.GetIndices3D(ncol)
-                                                    
+                           
+                # Call solver                                    
                 tarr, qnew, h = self.solver.integrate(self.qdot, (n_HII, n_HeII, n_HeIII, E), t, t + dt, None, h, \
                     r, z, mu, n_H, n_He, ncol, Lbol, indices)
                                 
-                # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
+                # Unpack results of coupled equations - Remember: these are lists and we only need the last entry 
                 newHII, newHeII, newHeIII, newE = qnew 
                                 
                 # Convert from internal energy back to temperature
                 newT = newE[-1] * 2. * mu / 3. / k_B / n_B   
                 
-                # Possible that newHII > n_H and within tolerances, hence the min statements
-                if newHII[-1] > n_H: 
-                    newHI = self.NumberDensityFloor
-                else: 
-                    newHI = n_H - newHII[-1]
-                                    
-                # Same problem could arise with helium - favor accuracy of HeII over HeIII
-                # Should we favor accuracy of whichever ion is most abundant?
-                newHeI = n_He - newHeII[-1] - newHeIII[-1]                
-                if newHeI < 0:        
-                    if np.allclose(newHeI, 0, rtol = 1e-10, atol = 1e-10):
-                        newHeI = self.NumberDensityFloor
-                        newerHeII = newHeII[-1]
-                        newerHeIII = n_He - newerHeII - newHeI
-                    else:
-                        raise ValueError('n_HeI < 0.  Exiting.')
-                     
-                else:
-                    newerHeII = newHeII[-1]
-                    newerHeIII = newHeIII[-1]
+                # Calculate neutral fractions
+                newHI = n_H - newHII[-1]
+                newHeI = n_He - newHeII[-1] - newHeIII[-1]                   
 
                 # Update quantities in 'data' -> 'newdata'                
                 newdata["HIDensity"][cell] = newHI                                                                                            
                 newdata["HIIDensity"][cell] = n_H - newHI
                 newdata["HeIDensity"][cell] = newHeI
-                newdata["HeIIDensity"][cell] = newerHeII
-                newdata["HeIIIDensity"][cell] = newerHeIII
-                newdata["ElectronDensity"][cell] = (n_H - newHI) + newerHeII + 2.0 * newerHeIII
+                newdata["HeIIDensity"][cell] = newHeII[-1]
+                newdata["HeIIIDensity"][cell] = newHeIII[-1] 
+                newdata["ElectronDensity"][cell] = (n_H - newHI) + newHeIII[-1] + 2.0 * newHeIII[-1] 
                 newdata["Temperature"][cell] = newT        
                                                 
                 if self.HIIRestrictedTimestep: 
@@ -394,10 +378,13 @@ class Radiate:
                 ################ DONE ################
                 ######################################
                 
-        # If the speed of light = c, things are trickier    
+        ###
+        ## SOLVE: c = finite
+        ###   
         else:                
                                           
-            if self.HIIRestrictedTimestep: dtphot = 1e50 * np.ones_like(self.grid)    
+            if self.HIIRestrictedTimestep: 
+                dtphot = 1e50 * np.ones_like(self.grid)    
                                     
             # Loop over photon packages, updating values in cells: data -> newdata
             for j, pack in enumerate(packs):
@@ -417,7 +404,6 @@ class Radiate:
                 while cell_pack < cell_pack_max:
                                                             
                     # What cell are we in
-                    #cell = int(cell_pack)
                     cell = int(round(cell_pack))
                     
                     if cell >= self.GridDimensions: break
@@ -451,7 +437,6 @@ class Radiate:
                     x_HeII = x_HeII_arr[cell]
                     x_HeIII = x_HeIII_arr[cell]
                     
-                    # Compute mean molecular weight for this cell
                     mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                                             
                     # For convenience     
@@ -475,7 +460,8 @@ class Radiate:
                     
                     # Retrieve indices used for 3D interpolation
                     indices = None
-                    if self.MultiSpecies > 0: indices = self.Interpolate.GetIndices3D(ncol)
+                    if self.MultiSpecies > 0: 
+                        indices = self.Interpolate.GetIndices3D(ncol)
                     
                     values = (n_HII, n_HeII, n_HeIII, E)
                     qnew = [[0, n_HII], [0, n_HeII], [0, n_HeIII], [0, E]]
@@ -483,12 +469,13 @@ class Radiate:
                     tarr, qnew, h = self.solver.integrate(self.qdot, values, t, t + subdt, None, h, \
                         r, z, mu, n_H, n_He, packs[j][2:5], Lbol, indices)
                                         
-                    # Unpack results of coupled equations - remember, these are lists and we only need the last entry 
+                    # Unpack results of coupled equations - Remember: these are lists and we only need the last entry 
                     newHII, newHeII, newHeIII, newE = qnew
 
                     # Convert from internal energy back to temperature
-                    if not self.Isothermal: newT = newE[-1] * 2. * mu / 3. / k_B / n_B
-                    else: newT = newdata['Temperature'][cell]
+                    newT = newE[-1] * 2. * mu / 3. / k_B / n_B
+                        
+                    ################################################################################    
                         
                     # Possible that newHII > n_H and within tolerances, hence the min statements
                     if newHII[-1] > n_H: 
@@ -506,6 +493,8 @@ class Radiate:
                         newHeI = n_He - newHeII[-1] - newHeIII[-1]
                         newerHeII = n_He - newHeI - newHeIII[-1]
                         newerHeIII = n_He - newHeI - newerHeII
+                    
+                    ################################################################################    
                         
                     # Update quantities in 'data' -> 'newdata'     
                     newdata["HIDensity"][cell] = newHI                                                                   
@@ -525,7 +514,8 @@ class Radiate:
             if self.HIIRestrictedTimestep or self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep:
                 for cell in self.grid[self.StartCell:]:
                     dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, self.rs.BolometricLuminosity(t), n_H_arr[0], n_He_arr[0])            
-                                                                                                  
+        
+        # If multiple processors at work, communicate data and timestep                                                                                          
         if (size > 1) and (self.ParallelizationMethod == 1):
             for key in newdata.keys(): 
                 newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
@@ -537,7 +527,8 @@ class Radiate:
         else: 
             newdt = dt
         
-        if self.LightCrossingTimeRestrictedStep: newdt = min(newdt, self.LightCrossingTimeRestrictedStep * self.LengthUnits / self.GridDimensions / 29979245800.0)
+        if self.LightCrossingTimeRestrictedStep: 
+            newdt = min(newdt, self.LightCrossingTimeRestrictedStep * self.LengthUnits / self.GridDimensions / 29979245800.0)
         
         if rank == 0 and self.ProgressBar: pbar.finish()
         
@@ -551,7 +542,7 @@ class Radiate:
         
     def ComputePhotonTimestep(self, newdata, cell, Lbol, n_H, n_He):
         """
-        Use Shapiro et al. criteria to set next timestep.
+        Use Shapiro et al. 2004 criteria to set next timestep.
         """          
     
         xHII = newdata['HIIDensity'][cell] / n_H     

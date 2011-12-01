@@ -18,7 +18,7 @@ size = MPI.COMM_WORLD.size
 
 class SolveRateEquations:
     def __init__(self, pf, guesses, stepper = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
-        Dfun = None, maxiter = 1000, nH_tot = None, nHe_tot = None):
+        Dfun = None, maxiter = 1000):
         """
         This 'odeint' class is the driver for ODE integration via the implicit Euler
         method, which is done below by the 'integrate' routine.  
@@ -41,6 +41,7 @@ class SolveRateEquations:
         self.MultiSpecies = pf["MultiSpecies"]
         self.Isothermal = pf["Isothermal"]
         self.NumberDensityFloor = pf["NumberDensityFloor"]
+        self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
         
         self.stepper = stepper
         self.rtol = rtol
@@ -60,10 +61,6 @@ class SolveRateEquations:
         
         # Guesses
         self.guesses = np.array(guesses)
-        
-        # Closure
-        self.TotalHydrogen = nH_tot
-        self.TotalHelium = nHe_tot
                 
     def integrate(self, f, y0, x0, xf, Dfun, hpre, *args):
         """
@@ -72,6 +69,8 @@ class SolveRateEquations:
             f: function(y, x, *args) to be solved.
             x0, y0: Initial conditions on x and y.  y0 may be a tuple if equations are coupled.
             xf: Endpoint of integration in independent variable x.
+            
+            *args = (r, z, mu, n_H, n_He, ncol, Lbol, indices)
             
         """
         
@@ -85,73 +84,71 @@ class SolveRateEquations:
         i = 1
         while x[i - 1] < xf: 
             xnext = x[i - 1] + h
-                        
+                                                
             # Ensure we end exactly at xf.        
             if xnext > xf: 
                 h = xf - x[i - 1]
                 xnext = xf 
             
             # Solve away
-            ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args) 
+            ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)
             
-            y_H = ynext[0]                 # Just hydrogen element
-            y_He = list(ynext[1:3])        # Just helium elements
-            y_He.append(np.sum(y_He))      
-                                           
-            limiting_H = list([self.TotalHydrogen])   # Max value for n_HII = n_H
-            limiting_He = 3 * [self.TotalHelium]      # Max value for n_HeII, n_HeIII, or their sum = n_He
-                                                                                                                                                                                                                                                             
-            # If anything is negative or NAN, our timestep is too big.  Reduce it, and repeat step.
-            # Prodigious ionization can lead to NANs, too.
-            finite = np.isfinite(ynext)
-            positive = np.greater_equal(ynext, 0.)
-            feasible_H = np.less_equal(y_H, limiting_H)
-            feasible_He = np.less_equal(y_He, limiting_He)
-                        
-            something_wrong = [0, 0, 0, 0]          
-            if not np.all(finite):
-                something_wrong[0] = 1
-            if not np.all(positive):
-                something_wrong[1] = 1 
-            if not np.all(feasible_H):
-                something_wrong[2] = 1 
-            if not np.all(feasible_He): 
-                something_wrong[3] = 1 
-                                
-            if np.any(something_wrong):    
-                
-                # If we haven't hit our smallest allowed timestep
-                if h > self.hmin:
+            # Check for goofiness
+            everything_ok = self.SolutionCheck(ynext, args)
+            if not np.all(everything_ok): 
+ 
+                if not everything_ok[0] and h > self.hmin:
                     h = max(self.hmin, h / 2.)
                     continue
-                else:
-                    print something_wrong, ynext, np.sum(ynext[1:3]), self.TotalHelium, np.sum(ynext[1:3]) - self.TotalHelium
+                elif not everything_ok[0] and h == self.hmin:
+                    raise ValueError('NAN encountered on minimum ODE step. Exiting.')
+                        
+                if not np.all(everything_ok[1:]):
+                    ynext, ok = self.ApplyFloor(ynext, args)
                     
-                    raise ValueError('Divergent solution on minimum ODE step.  Exiting.')
-                    MPI.COMM_WORLD.Abort()
-                                                          
+                    if not np.all(ok) and h > self.hmin:
+                        h = max(self.hmin, h / 2.)
+                        continue
+                    elif not np.all(ok) and h == self.hmin:
+                        raise ValueError('NAN encountered on minimum ODE step. Exiting.')    
+            
+            # If nothing is goofy but number densities are below our floor, change them
+            if ynext[0] < (args[3] * self.MinimumSpeciesFraction):
+                ynext[0] = args[3] * self.MinimumSpeciesFraction
+            if ynext[0] > (args[3] * (1. - self.MinimumSpeciesFraction)):
+                ynext[0] = args[3] * (1. - self.MinimumSpeciesFraction)
+                
+            # Potential helium goofiness    
+            if self.MultiSpecies:    
+                if ynext[1] < (args[4] * self.MinimumSpeciesFraction):
+                    ynext[1] = args[4] * self.MinimumSpeciesFraction
+                if ynext[1] > (args[4] * (1. - self.MinimumSpeciesFraction)):
+                    ynext[1] = args[4] * (1. - self.MinimumSpeciesFraction)
+                if ynext[2] < (args[4] * self.MinimumSpeciesFraction):
+                    ynext[2] = args[4] * self.MinimumSpeciesFraction
+                if ynext[2] > (args[4] * (1. - self.MinimumSpeciesFraction)):
+                    ynext[2] = args[4] * (1. - self.MinimumSpeciesFraction)    
+                                  
             # Adaptive time-stepping
             adapted = False
-            if self.stepper > 0 and (h != self.hmin or i == 1):
+            if self.stepper: 
                 drel = self.adapt(f, y[i - 1], x[i - 1], ynext, xnext, h, Dfun, args)
-
-                # Limit determined by worst integration in set of equations.
-                for k, err in enumerate(drel):
-                    if (err > self.rtol):
-                        if h == self.hmin: 
-                            raise ValueError('Tolerance not met on minimum ODE step.  Exiting.')
-                            MPI.COMM_WORLD.Abort()
-                        
-                        h = max(self.hmin, h / 2.)
-                        adapted = True
-                        break
+                   
+                if np.any(np.greater(drel, self.rtol)):   
+                    if h == self.hmin: 
+                        raise ValueError('Tolerance not met on minimum ODE step.  Exiting.')
                                                 
-            # If we've gotten this far without adaptively stepping, increase h for the next timestep
-            if adapted is False: h = min(self.hmax, 2. * h)
-            
-            # If we didn't meet our error requirement, repeat loop with different h
-            else: continue            
-                                    
+                    # Make step smaller
+                    h = max(self.hmin, h / 2.)
+                    adapted = True
+                    break
+                                                                            
+            # If we've gotten this far without adaptively stepping, increase h
+            if adapted is False: 
+                h = min(self.hmax, 2. * h)
+            else: 
+                continue   
+                                                    
             x.append(xnext)        
             y.append(ynext)            
             i += 1
@@ -198,43 +195,90 @@ class SolveRateEquations:
         if self.Isothermal:
             rtn[3] = yip1[3]
             
-        # Apply tolerance to closure relation (n_HI + n_HII = 1, n_HeI + n_HeII + n_HeIII = 1)
-        nH = rtn[0]
-        if nH > self.TotalHydrogen or nH < self.NumberDensityFloor:
-            if np.allclose(nH, self.TotalHydrogen, rtol = self.rtol, atol = self.atol):
-                rtn[0] = self.TotalHydrogen - self.NumberDensityFloor
-            elif np.allclose(nH, 0, rtol = self.rtol, atol = self.atol) or rtn[0] < self.NumberDensityFloor:
-                rtn[0] = self.NumberDensityFloor 
+        return rtn  
         
-        # If not close enough, will trigger small timestep next cycle      
+    def SolutionCheck(self, ynext, args):
+        """
+        Return four-element array representing things that could be wrong with
+        our solutions. [all_finite, all_positive, nHII < nH, (nHeII + nHeIII) < nHe]
+        """    
+        
+        nH = args[3]
+        nHe = args[4]        
+        nHII = ynext[0] 
+        nHeII = ynext[1] 
+        nHeIII = ynext[2] 
+        nHe_ions = nHeII + nHeIII
+        
+        finite = np.isfinite(ynext)            
+        positive = np.greater_equal(ynext, 0.)            
+        feasible_H = np.less_equal(nHII, nH)
+        feasible_He = np.less_equal(np.sum(nHe_ions), nHe)
+        
+        everything_ok = [1, 1, 1, 1]          
+        if not np.all(finite):
+            everything_ok[0] = 0
+        if not np.all(positive):
+            everything_ok[1] = 0 
+        if not np.all(feasible_H):
+            everything_ok[2] = 0 
+        if not np.all(feasible_He): 
+            everything_ok[3] = 0 
+                 
+        return everything_ok                      
+                                                        
+    def ApplyFloor(self, ynext, args):
+        """
+        Apply floors in ionization (and potentially, but not yet implemented) internal energy.
+        """   
+        
+        nH = args[3]
+        nHe = args[4] 
+        nHII = ynext[0] 
+        nHeII = ynext[1] 
+        nHeIII = ynext[2] 
+        nHe_ions = nHeII + nHeIII
+        
+        ok = [1, 1, 1, 1]
+        
+        # Hydrogen first        
+        if nHII > nH:
+            if (nHII - nH) < self.atol:
+                ynext[0] = nH * (1. - self.MinimumSpeciesFraction)
+            else:
+                ok[0] = 0
+        
+        if nHII < 0:
+            if (1 - nH - nHII) < self.atol:
+                ynext[0] = nH * self.MinimumSpeciesFraction
+            else:
+                ok[0] = 0
+                    
+        # Helium if necessary
         if self.MultiSpecies:
+                        
+            if nHeII < 0:
+                if (1 - nHe - nHeII) < self.atol:
+                    ynext[0] = nHe * self.MinimumSpeciesFraction
+                else:
+                    ok[1] = 0
+                        
+            if nHeIII < 0:
+                if (1 - nHe - nHeIII) < self.atol:
+                    ynext[0] = nHe * self.MinimumSpeciesFraction
+                else:
+                    ok[2] = 0
+                   
+            if nHe_ions > nHe:
+                if (nHe_ions - nHe) < self.atol:
+                    norm = nHe_ions / nHe / (1. - 2 * self.MinimumSpeciesFraction)
+                    ynext[1] /= norm
+                    ynext[2] /= norm 
+                else:
+                    ok[3] = 0
             
-            # Check for negative number densities
-            if np.any(np.less([rtn[1], rtn[2]], 0)):    
-                if np.allclose(rtn[1], 0, rtol = self.rtol, atol = self.atol):
-                    rtn[1] = self.NumberDensityFloor  
-                if np.allclose(rtn[2], 0, rtol = self.rtol, atol = self.atol):
-                    rtn[2] = self.NumberDensityFloor  
-            elif np.any(np.less([rtn[1], rtn[2]], self.NumberDensityFloor)):
-                if rtn[1] < self.NumberDensityFloor: 
-                    rtn[1] = self.NumberDensityFloor
-                if rtn[2] < self.NumberDensityFloor: 
-                    rtn[2] = self.NumberDensityFloor               
-
-            # Check for unphysical total helium ion densities
-            nHe = np.sum([rtn[1], rtn[2]])
-            if nHe > self.TotalHelium:
-                if np.allclose(nHe, self.TotalHelium, rtol = self.rtol, atol = self.atol):
-                    diff = nHe - self.TotalHelium
-                                        
-                    if rtn[1] < rtn[2]:
-                        rtn[1] = rtn[1] - diff
-                    else:
-                        rtn[2] = max(rtn[2] - diff, self.NumberDensityFloor)
-                        rtn[1] = max(min(rtn[1], self.TotalHelium - rtn[2]), self.NumberDensityFloor)
-                                                
-        return rtn
-
+        return ynext, ok
+        
     def StepDoubling(self, f, yi, xi, yip1, xip1, h, Dfun, args):    
         """
         Calculate y_n+1 in two ways - first via a single step spanning 2h, and second
@@ -245,11 +289,12 @@ class SolveRateEquations:
         ynp2_os = self.solve(f, yi, xi, 2. * h, Dfun, args) # y_n+2 using one step        
         ynp2_ts = self.solve(f, yip1, xip1, h, Dfun, args)  # y_n+2 using two steps
                 
-        err_abs = np.abs(ynp2_ts - ynp2_os)
+        err_abs = np.abs(ynp2_ts - ynp2_os)        
         err_rel = np.zeros_like(err_abs)
         for i, element in enumerate(ynp2_ts):
             # If MultiSpecies or Isothermal = 1, some entries will be 0 (and should contribute no error)
-            if element > 0: err_rel[i] = err_abs[i] / element   
+            if element > 0: 
+                err_rel[i] = err_abs[i] #/ element   
         
         return err_rel
         

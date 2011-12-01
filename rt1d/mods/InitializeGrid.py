@@ -39,6 +39,7 @@ class InitializeGrid:
         self.IonizationProfile = pf["IonizationProfile"]
         self.InitialHIIFraction = pf["InitialHIIFraction"]
         self.MultiSpecies = pf["MultiSpecies"]
+        self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
         
         self.Clump = pf["Clump"]
         if self.Clump:
@@ -164,7 +165,7 @@ class InitializeGrid:
         Initialize doubly ionized helium density - assumed to be very small (can't be exactly zero or it will crash the root finder).
         """
         
-        return self.Y * self.ionization[cell] * tiny_number * self.density[cell] / 4. / m_H
+        return self.Y * self.MinimumSpeciesFraction * self.density[cell] / 4. / m_H
         
     def InitializeElectronDensity(self, cell):
         """

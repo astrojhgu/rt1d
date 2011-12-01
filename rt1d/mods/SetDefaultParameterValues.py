@@ -77,6 +77,7 @@ def SetDefaultParameterValues():
         "MaxHIIChange": 0.05, \
         "MaxHeIIChange": 0.05, \
         "NumberDensityFloor": 1e-12, \
+        "MinimumSpeciesFraction": 1e-6, \
         
         # Physics
         "Isothermal": 0, \
