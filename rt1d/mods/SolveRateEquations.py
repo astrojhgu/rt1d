@@ -9,8 +9,8 @@ Description: Subset of my homemade odeint routine made special for rt1d.
          
 """
 
+import copy
 import numpy as np
-import pylab as pl
 from mpi4py import MPI
 
 rank = MPI.COMM_WORLD.rank
@@ -62,7 +62,7 @@ class SolveRateEquations:
         # Guesses
         self.guesses = np.array(guesses)
                 
-    def integrate(self, f, y0, x0, xf, Dfun, hpre, *args):
+    def integrate(self, f, ynow, xnow, xf, Dfun, hpre, *args):
         """
         This routine does all the work.
         
@@ -72,26 +72,24 @@ class SolveRateEquations:
             
             *args = (r, z, mu, n_H, n_He, ncol, Lbol, indices)
             
+            TO DO: Dont keep arrays x and y, just keep xprev, xnext, yprev, ynext
+            
         """
-        
+                
         if hpre is None: h = self.hmax
         else: h = hpre
-        
-        x = [x0]
-        if type(y0) is tuple: y = [np.array(y0)]
-        else: y = [y0]
-
+                        
         i = 1
-        while x[i - 1] < xf: 
-            xnext = x[i - 1] + h
-                                                
+        while xnow < xf: 
+            xnext = xnow + h
+                                                             
             # Ensure we end exactly at xf.        
             if xnext > xf: 
-                h = xf - x[i - 1]
+                h = xf - xnow
                 xnext = xf 
-            
+                                            
             # Solve away
-            ynext = self.solve(f, y[i - 1], x[i - 1], h, Dfun, args)
+            ynext = self.solve(f, ynow, xnow, h, Dfun, args)
             
             # Check for goofiness
             everything_ok = self.SolutionCheck(ynext, args)
@@ -132,31 +130,27 @@ class SolveRateEquations:
             # Adaptive time-stepping
             adapted = False
             if self.stepper: 
-                drel = self.adapt(f, y[i - 1], x[i - 1], ynext, xnext, h, Dfun, args)
+                drel = self.adapt(f, ynow, xnow, ynext, xnext, h, Dfun, args)
                    
-                if np.any(np.greater(drel, self.rtol)):   
+                if np.any(np.greater(drel, self.rtol)): 
                     if h == self.hmin: 
                         raise ValueError('Tolerance not met on minimum ODE step.  Exiting.')
                                                 
                     # Make step smaller
                     h = max(self.hmin, h / 2.)
                     adapted = True
-                    break
-                                                                            
+                                                                                                
             # If we've gotten this far without adaptively stepping, increase h
             if adapted is False: 
                 h = min(self.hmax, 2. * h)
             else: 
-                continue   
-                                                    
-            x.append(xnext)        
-            y.append(ynext)            
-            i += 1
-                            
-        # If we're dealing with coupled equations, re-organize return list.    
-        if type(y0) is tuple: y = zip(*y)
-                                                        
-        return np.array(x), np.array(y), h  
+                continue 
+                                                                                                    
+            xnow = xnext        
+            ynow = ynext            
+            i += 1 
+                
+        return xnow, ynow, h  
            
     def ImplicitEuler(self, f, yi, xi, h, Dfun, args):
         """
@@ -165,13 +159,12 @@ class SolveRateEquations:
         manipulation and loop.
         """                
 
-        yip1 = []
+        yip1 = copy.copy(yi)
         for i, element in enumerate(yi):
 
             # If isothermal or Hydrogen only, do not change temperature or helium values
             if (self.MultiSpecies == 0 and (i == 1 or i == 2)) or (self.Isothermal and i == 3):
-                yip1.append(yi[i])
-
+                yip1[i] = yi[i]
             else:
                 newargs = list(args)
                 newargs.append(i)
@@ -182,13 +175,13 @@ class SolveRateEquations:
                     if i == 2: return y - h * f([yi[0], yi[1], y, yi[3]], xi + h, newargs)[i] - yi[i]
                     if i == 3: return y - h * f([yi[0], yi[1], yi[2], y], xi + h, newargs)[i] - yi[i]
                 
-                # Guesses = 0 or for example a guess for n_HI > n_H will mess things up
+                # Guesses = 0 or for example a guess for n_HI > n_H will mess things up                
                 if yi[i] == 0. or (yi[i] > self.guesses[i] and i < 3): guess = self.guesses[i]
                 else: guess = yi[i]
-                                                
-                yip1.append(self.rootfinder(ynext, guess))
-                                                              
-        rtn = yi + h * f(np.array(yip1), xi + h, args)
+                      
+                yip1[i] = self.rootfinder(ynext, guess)
+                                                                                                              
+        rtn = yi + h * f(yip1, xi + h, args)
         if self.MultiSpecies == 0:
             rtn[1] = yip1[1]
             rtn[2] = yip1[2]
@@ -294,7 +287,7 @@ class SolveRateEquations:
         for i, element in enumerate(ynp2_ts):
             # If MultiSpecies or Isothermal = 1, some entries will be 0 (and should contribute no error)
             if element > 0: 
-                err_rel[i] = err_abs[i] #/ element   
+                err_rel[i] = err_abs[i] / element   
         
         return err_rel
         
