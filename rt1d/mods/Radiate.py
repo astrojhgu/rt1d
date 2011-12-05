@@ -75,7 +75,6 @@ class Radiate:
         self.SecondaryIonization = pf["SecondaryIonization"]
         self.InitialTemperature = pf["InitialTemperature"]
         self.PlaneParallelField = pf["PlaneParallelField"]
-        self.NumberDensityFloor = pf["NumberDensityFloor"]
         
         self.InterpolationMethod = pf["InterpolationMethod"]
         self.AdaptiveTimestep = pf["ODEAdaptiveStep"]
@@ -477,28 +476,7 @@ class Radiate:
 
                     # Convert from internal energy back to temperature
                     newT = newE[-1] * 2. * mu / 3. / k_B / n_B
-                        
-                    ################################################################################    
-                        
-                    # Possible that newHII > n_H and within tolerances, hence the min statements
-                    if newHII[-1] > n_H: 
-                        newHI = self.NumberDensityFloor
-                    else: 
-                        newHI = n_H - newHII[-1]      
-                    
-                    # Same problem could arise with helium - favor accuracy of HeII over HeIII
-                    newHeI = n_He - newHeII[-1] - newHeIII[-1]
-                    if newHeI < 0: 
-                        newHeI = self.NumberDensityFloor
-                        newerHeII = n_He - newHeI - newHeIII[-1]
-                        newerHeIII = n_He - newHeI - newerHeII
-                    else:
-                        newHeI = n_He - newHeII[-1] - newHeIII[-1]
-                        newerHeII = n_He - newHeI - newHeIII[-1]
-                        newerHeIII = n_He - newHeI - newerHeII
-                    
-                    ################################################################################    
-                        
+                             
                     # Update quantities in 'data' -> 'newdata'     
                     newdata["HIDensity"][cell] = newHI                                                                   
                     newdata["HIIDensity"][cell] = n_H - newHI

@@ -40,7 +40,6 @@ class SolveRateEquations:
         self.debug = self.pf["Debug"]
         self.MultiSpecies = pf["MultiSpecies"]
         self.Isothermal = pf["Isothermal"]
-        self.NumberDensityFloor = pf["NumberDensityFloor"]
         self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
         
         self.stepper = stepper

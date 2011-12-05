@@ -76,8 +76,7 @@ def SetDefaultParameterValues():
         "OnePhotonPackagePerCell": 0, \
         "MaxHIIChange": 0.05, \
         "MaxHeIIChange": 0.05, \
-        "NumberDensityFloor": 1e-12, \
-        "MinimumSpeciesFraction": 1e-6, \
+        "MinimumSpeciesFraction": 1e-8, \
         
         # Physics
         "Isothermal": 0, \
