@@ -180,7 +180,7 @@ def ProblemType(pt):
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
               "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 1, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
-              "DensityProfile": 1, "InitialRedshift": 20, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
+              "DensityProfile": 1, "InitialRedshift": 10, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
               "IonizationProfile": 1, "InitialHIIFraction": 1e-4, "SourceType": 3, "SourceLifetime": 1e10, \
               "SourceMass": 1e6, "SourceRadiativeEfficiency": 0.1, "SpectrumPowerLawIndex": 1.5, \
               "SpectrumMinEnergy": 1e2, "SpectrumMaxEnergy": 1e4, "SpectrumMinNormEnergy": 1e2, "SpectrumMaxNormEnergy": 1e4 
@@ -194,7 +194,7 @@ def ProblemType(pt):
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
               "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 1, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
-              "DensityProfile": 1, "InitialRedshift": 20, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
+              "DensityProfile": 1, "InitialRedshift": 10, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
               "IonizationProfile": 1, "InitialHIIFraction": 1e-4, "SourceType": 3, "SourceLifetime": 1e10, \
               "DiscreteSpectrumSED": [500.], "DiscreteSpectrumRelLum": [1.], "DiscreteSpectrum": 1,\
               "SourceMass": 1e6, "SourceRadiativeEfficiency": 0.1
