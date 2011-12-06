@@ -193,7 +193,7 @@ def ProblemType(pt):
               "HIColumnMin": 1e18, "HIColumnMax": 1e22, \
               "HeIColumnMin": 1e17, "HeIColumnMax": 1e22, \
               "HeIIColumnMin": 1e15, "HeIIColumnMax": 1e20, \
-              "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
+              "GridDimensions": 100, "LengthUnits": 1000 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
               "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 1, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
