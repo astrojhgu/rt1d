@@ -225,7 +225,7 @@ class InitializeIntegralTables:
                                 
                 for h, integral in enumerate(IntegralList):
                     
-                    if re.search('He', integral): continue
+                    if re.search('HeI', integral): continue
                     
                     if rank == 0: 
                             print "\nComputing value of {0}{1}...".format(integral, 0)

@@ -130,7 +130,7 @@ class SolveRateEquations:
             adapted = False
             if self.stepper: 
                 drel = self.adapt(f, ynow, xnow, ynext, xnext, h, Dfun, args)
-                   
+                
                 if np.any(np.greater(drel, self.rtol)): 
                     if h == self.hmin: 
                         raise ValueError('Tolerance not met on minimum ODE step.  Exiting.')
