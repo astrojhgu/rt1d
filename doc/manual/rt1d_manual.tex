@@ -18,12 +18,53 @@
 \numberwithin{equation}{section}
 \usepackage{graphicx}
 \usepackage{pslatex}
+\usepackage{natbib}
 \usepackage[pdfborder={0 0 0}]{hyperref}
 \usepackage[all]{hypcap}
 
 %%% Beginning of Document
 
 \begin{document}
+    
+%%% START custom commands
+\newcommand{\HI}{\text{HI}}
+\newcommand{\HII}{\text{HII}}
+\newcommand{\HeI}{\text{HeI}}
+\newcommand{\HeII}{\text{HeII}}
+\newcommand{\HeIII}{\text{HeIII}}
+\newcommand{\nH}{n_{\text{H}}} 
+\newcommand{\nHI}{n_{\text{HI}}} 
+\newcommand{\nHII}{n_{\text{HII}}}  
+\newcommand{\nHeI}{n_{\text{HeI}}}
+\newcommand{\nHeII}{n_{\text{HeII}}}
+\newcommand{\nHeIII}{n_{\text{HeIII}}}  
+\newcommand{\nel}{n_{\text{e}}}  
+\newcommand{\nb}{n_{\text{b}}}
+\newcommand{\nnu}{$n_{\nu}$ }
+\newcommand{\ncol}{n_i^{\text{col}}}
+\newcommand{\gHI}{\Gamma_{\text{HI}}}  
+\newcommand{\gHeI}{\Gamma_{\text{HeI}}}
+\newcommand{\gHeII}{\Gamma_{\text{HeII}}}
+\newcommand{\aHII}{\alpha_{\text{HII}}}  
+\newcommand{\aHeII}{\alpha_{\text{HeII}}}  
+\newcommand{\aHeIII}{\alpha_{\text{HeIII}}}
+\newcommand{\bHI}{\beta_{\text{HI}}} 
+\newcommand{\bHeI}{\beta_{\text{HeI}}}  
+\newcommand{\bHeII}{\beta_{\text{HeII}}}  
+\newcommand{\xHeII}{\xi_{\text{HeII}}}
+\newcommand{\kB}{k_{\text{B}}}
+\newcommand{\fheat}{f_i^{\text{heat}}}
+\newcommand{\fion}{f_i^{\text{ion}}}
+\newcommand{\Lbol}{\mathcal{L}_{\text{bol}}}
+\newcommand{\spec}{\mathcal{N}}
+\newcommand{\Heat}{\mathcal{H}}
+\newcommand{\trec}{$t_{\text{rec}}$}
+\newcommand{\Lbox}{L_{\mathrm{box}}}
+\newcommand{\dx}{\Delta x}
+\newcommand{\dd}{\text{d}}
+\newcommand{\Htwo}{\mathrm{H}_2}
+\newcommand{\eV}{\mathrm{eV}}
+%%% END custom commands
 	
 \author{Jordan Mirocha}	
 	
@@ -39,24 +80,150 @@
 %% Introduction
 %%%
 \section{Introduction}
-
+Let's see what happens to the gas around stars and black holes, shall we?
 
 %%% 
 %% Methods
 %%%
 \section{Methods}
+Our radiative transfer scheme is modeled closely after the work of
+\cite{Fukugita1994} and \cite{Thomas2008}, though for completeness we will
+reiterate the aspects of these methods most pertinent to the problem at hand.
+In general, propagating a radiation field relies on solving differential
+equations governing the rate of change in the number densities of all ions and
+the temperature of the gas. Assuming a medium consisting of hydrogen and
+helium only, we first solve for the relative abundances of each ion via
+\begin{align}
+    \frac{d \nHII}{dt} & = \gHI \nHI + \bHI \nel \nHI - \aHII \nel \nHII   \label{eq:HIIRateEquation} \\ 
+    \frac{d \nHeII}{dt} & = \gHeI \nHeI + \bHeI \nel \nHeI - \bHeII \nel \nHeII - \aHeII \nel \nHeII + \aHeIII \nel \nHeIII - \xHeII \nel \nHeIII  \label{eq:HeIIRateEquation} \\ 
+    \frac{d \nHeIII}{dt} & = \gHeII \nHeII + \bHeII \nel \nHeII - \aHeIII \nel \nHeIII . \label{eq:HeIIIRateEquation}
+\end{align}
+Each of these equations represents the balance of ionizations and
+recombinations for ions $\HII$, $\HeII$, $\HeIII$. We associate the index $i$
+with neutral species, $i = \HI, \HeI, \HeII$, and define $\Gamma_i$ as the
+photo-ionization rate coefficient, $\alpha_i$ ($\xi_i$) as the case-A
+(dielectric) recombination rate coefficients, $\beta_i$ as the collisional
+ionization rate coefficients, and $\nel = \nHII + \nHeII + 2\nHeIII$ as the number density of electrons.
+
+In this work, we use the formulae in Appendix B of \cite{Fukugita1994} to
+compute the values of $\alpha_i$, $\beta_i$, and $\xi_i$. As you might expect, collisional ionization and recombination depend solely on the temperature of the gas.  For example, collisional ionization of hydrogen (from $n = 1$) is governed by
+\begin{equation}
+    \beta_{1,\HI} = 5.85 \times 10^{-11} T^{1/2} \left[1 + \left(\frac{T}{10^5 \mathrm{K}}\right)^{1/2}\right]^{-1} \mathrm{exp}\left[-1.578 \times \left(\frac{T}{10^5 \mathrm{K}}\right)^{-1}\right] \mathrm{cm^3 s^{-1}}
+\end{equation}
+and recombinations (to $n \ge 1$) by
+\begin{equation}
+    \alpha_{\HII} = 6.28 \times 10^{-11} T^{-1/2} \left(\frac{T}{10^3\mathrm{K}}\right)^{-1/5} \left[1 + \left(\frac{T}{10^6\mathrm{K}}\right)^{0.7}\right]^{-1} \mathrm{cm^3s^{-1}}
+\end{equation}
+
+We absorb ionizations due to to energetic photo-electrons into the
+photoionization rate coefficients, $\Gamma_i$, which are given by
+\begin{equation}
+    \Gamma_i = \int_{E_i}^{\infty} \sigma_i(E) \spec(E) \frac{dE}{E} + \sum_j \fion \left(\frac{n_j}{n_i}\right) \int_{E_i}^{\infty} \sigma_i(E)\left(\frac{E - E_j}{E_i}\right) \spec(E) \frac{dE}{E} \label{eq:PhotoionizationRate}
+\end{equation}
+where $E_i$, $\sigma_i$, $n_i$, and $f_i$ are the ionization threshold energy,
+bound-free absorption cross section, number density, and fraction of
+photo-electron energy that goes into ionization of species $i$, respectively.
+The term summing over $j$, where $j = \HI, \HeI, \HeII$, represents
+ionizations of species $i$ due to fast secondary electrons from
+photoionizations of species $j$, which has number density $n_j$. $\spec$ is
+the spectral intensity, which we write as
+\begin{equation}
+    \spec(E, r) = \frac{\Lbol}{4\pi r^2} I(E) e^{-\tau(E, r)} . \label{eq:Spectrum}
+\end{equation}
+Here, $r$ is the distance from the source, $I(E)$ is the normalized spectral
+energy distribution (SED), satisfying
+\begin{equation}
+    \int_E I(E) dE = 1 ,
+\end{equation}
+and the optical depth $\tau(E, r)$ is given as a sum over absorbing species,
+\begin{align}
+    \tau(E, r) & = \sum_i \int_r \sigma_i(E) n_i(r) dr \nonumber \\
+               & = \sum_i \sigma_i(E) \ncol(r) \label{eq:OpticalDepth}
+\end{align}
+where $\ncol(r)$ is the column density of species $i$ at distance $r$ from the
+source. We calculate the bound-free absorption cross-sections, $\sigma_i$,
+using the fits of \cite{Verner1996}. 
+
+To be more explicit, let's write out $\Gamma_{\HI}$ in its entirety.
+\begin{align}
+    \Gamma_{\HI} & = \int_{13.6\eV}^{\infty}\sigma_{\HI}(E) \spec(E) \frac{dE}{E} \nonumber \\
+    & + f_{\HI}^{\mathrm{ion}} \left(\frac{n_{\HI}}{n_{\HI}}\right) \int_{13.6\eV}^{\infty}\sigma_{\HI}(E) \left(\frac{E - 13.6\eV}{E}\right)\spec(E)\frac{dE}{E} \nonumber \\
+    & + f_{\HeI}^{\mathrm{ion}} \left(\frac{n_{\HeI}}{n_{\HI}}\right) \int_{24.4\eV}^{\infty}\sigma_{\HeI}(E) \left(\frac{E - 24.4\eV}{E}\right)\spec(E)\frac{dE}{E} \nonumber \\
+    & + f_{\HeII}^{\mathrm{ion}} \left(\frac{n_{\HeII}}{n_{\HI}}\right) \int_{54.4\eV}^{\infty}\sigma_{\HeI}(E) \left(\frac{E - 54.4\eV}{E}\right)\spec(E)\frac{dE}{E}
+\end{align}    
+The first term accounts for all hydrogen photoionization.  The final three terms account for collisional ionization of hydrogen due to secondary photo-electrons from ionizations of neutral hydrogen (second term), neutral helium (third term), and singly ionized helium (fourth term).  Collisional ionizations due to thermal electrons in the gas are accounted for separately through the $\beta_i$ coefficients.
+
+At each time-step, we also solve for the temperature evolution, $dT/dt$, which
+is given by
+\begin{equation}
+    \frac{3}{2}\frac{d}{dt}\left(\frac{\kB T \nb}{\mu}\right) = \fheat \sum_i n_i \Heat_i - \sum_i \zeta_i n_e n_i - \sum_i \eta_i n_e n_i - \sum_i \psi_i n_e n_i \label{eq:TemperatureEvolution} 
+\end{equation}
+where $\Heat_i$ is the photo-electric heating rate, given by
+\begin{equation}
+    \Heat_i = \int_{E_i}^{\infty} \sigma_i(E) \spec(E, r)(E - E_i) \frac{dE}{E} \label{eq:HeatingRate} ,
+\end{equation}    
+and $\zeta_i$, $\eta_i$, and $\psi_i$ are the collisional ionization,
+recombination, and collisional excitation cooling coefficients, respectively.
+The constants in Equation \ref{eq:HeatingRate} are the total number density of
+baryons, $\nb$, the mean molecular weight, $\mu$, Boltzmann's constant, $\kB$,
+and the fraction of a photon's original energy deposited as heat, $\fheat$. In
+the remaining sections we only include the effects of secondary electrons when
+considering X-ray sources, which emit photons in the range $10^2\mathrm{eV} <
+E < 10^4\mathrm{eV}$. In this regime, the values of $\fheat$ and $\fion$
+computed via the formulae of \cite{Shull1985} are sufficiently accurate, but
+for radiation at lower energies, the lookup tables of \cite{Furlanetto2010}
+would be more appropriate.
+
+An important simplification is that all radial and time dependencies can be
+pulled outside of the integrals in Equations \ref{eq:PhotoionizationRate} and
+\ref{eq:HeatingRate}, leaving (ignoring the secondary ionization term)
+\begin{equation}
+    \Gamma_i(n^{\mathrm{col}}) = A \int_{E_i}^{\infty} \sigma_i(E) I(E) e^{-\tau(E, n^{\mathrm{col}})} \frac{dE}{E} \label{eq:Gamma_final} ,
+\end{equation}
+and
+\begin{equation}
+    \Heat_i(n^{\mathrm{col}}) = A \int_{E_i}^{\infty} \sigma_i(E) I(E) (E - E_i) e^{-\tau(E, n^{\mathrm{col}})} \frac{dE}{E} \label{eq:Heat_final}
+\end{equation}
+where $A \equiv \Lbol / 4 \pi r^2$, and $n^{\mathrm{col}} =
+(n_{\mathrm{HI}}^{\mathrm{col}}, n_{\mathrm{HeI}}^{\mathrm{col}},
+n_{\mathrm{HeII}}^{\mathrm{col}})$.
+
+From Equations \ref{eq:Gamma_final} and \ref{eq:Heat_final} it is clear that
+the values of $\Gamma_i$ and $\Heat_i$ can be tabulated as a function of
+column density for a given source. This greatly improves the speed of 1D
+radiative transfer calculations, like those of \cite{Thomas2008}, since
+integral values in Equations \ref{eq:HIIRateEquation},
+\ref{eq:HeIIRateEquation}, \ref{eq:HeIIIRateEquation}, and
+\ref{eq:HeatingRate} no longer need to be computed numerically on-the-fly. It
+also provides the basis for our frequency resolution optimization strategy, as
+presented in \S\ref{sec:Methods}. Note, however, that the dimensionality of
+these lookup tables is equal to the number of absorbing species, so the tables
+for simulations including only hydrogen are 1D, while those including helium
+are 3D. If we choose to adopt the secondary electron treatment of
+\cite{Furlanetto2010} our lookup tables inherit an additional dimension, as
+the secondary ionization and heating factors $\fion$ and $\fheat$ depend on
+both energy and ionized fraction, $x_i$. Since integration takes place over
+energy, $x_i$ becomes the final dimension of the lookup tables.
+
+For simplicity, our current treatment neglects cooling via free-free emission,
+as well as cosmological effects, including Hubble cooling due to cosmological
+expansion, Compton heating/cooling off cosmic microwave background (CMB)
+photons, and photo-ionization by Wien-tail CMB photons.  
 
 
 %%% 
 %% Classes
 %%%
 \section{Classes}
-In order of appearance in \texttt{rt1d.py}.
+In order of appearance in \texttt{RT1D.py}.
 
 \subsection{\texttt{InitializeGrid}}
 \subsection{\texttt{InitializeIntegralTables}}
 \subsection{\texttt{RadiationSource}}
 \subsection{\texttt{Radiate}}
+\subsection{\texttt{SolveRateEquations}}
+\subsection{\texttt{Interpolate}}
+\subsection{\texttt{WriteData}}
 
 %%% 
 %% Parameters
@@ -70,10 +237,11 @@ These were added for convenience in January, 2011.  If you want to make changes 
     
 \item [\texttt{ProblemType = 1}] This will set up a standard test with known analytic solution: the propagation of an ionization front in an isothermal, hydrogen-only, static universe.  The spectrum used is monochromatic at $E = 13.6 \ \text{eV}$, with photon luminosity $L_{\nu} = 5\times 10^{48} \ s^{-1}$.  The initial density, temperature, and box size are the same as the values used in Test 1 of Wise \& Abel 2010. 
 
-\item [\texttt{ProblemType = 2}] This problem is almost exactly the same as \texttt{ProblemType = 1}.  However, the temperature is allowed to evolve, and instead of using a monochromatic spectrum, we sample a $10^5$ K blackbody with four energy groups.  Again, the initial density, temperature, box size, and energy groups are the same as the values used in Test 1 of Wise \& Abel 2010.  
+\item [\texttt{ProblemType = 2}] This problem is almost exactly the same as \texttt{ProblemType = 1}.  However, the temperature is allowed to evolve, and instead of using a monochromatic spectrum, we use a $10^5$ K blackbody spectrum.  Again, the initial density, temperature, box size, and energy groups are the same as the values used in Test 1 of Wise \& Abel 2010.  
 
-\item [\texttt{ProblemType = 2.1}] Same as \texttt{ProblemType = 2} for everything, except we use a continuous blackbody spectrum rather than a discrete one.
+\item [\texttt{ProblemType = 2.1}] Same as \texttt{ProblemType = 2} for everything, except we sample the continuous blackbody spectrum with the four energy groups used by Wise \& Abel 2010.
 
+\item [\texttt{ProblemType = 3.1}] Test problem \# 3 from \cite{Iliev2006} -- I-front trapping in a dense clump and the formation of a shadow.  The setup is the same as in \texttt{ProblemType = 2.1}, except a 1D clump is initialized at $x = 0.76 L_{\mathrm{box}}$, overdensity $\delta = 200$, radius $0.12$kpc, and temperature $T = 40$K, and the radiation field is plane-parallel.
 \end{description}
 
 \subsection{Initial Conditions}
@@ -81,7 +249,9 @@ These were added for convenience in January, 2011.  If you want to make changes 
     
 \item [\texttt{DensityProfile}]  
 
-\item [TemperatureProfile]  
+\item [\texttt{TemperatureProfile}]
+
+\item [\texttt{InitialHIIFraction}]  
 
 \end{description}
 
@@ -110,7 +280,9 @@ pl.loglog(ds.data[10].r, ds.data[10].x_HI)  # radius vs. neutral fraction
 %%%
 \section{Start to Finish}
 
-
+%%% 
+%% Convergence
+%%%
 \section{Convergence}
 In \texttt{rt1d/doc/examples} you will find directories containing convergence test suites for RT06 test problems 1 \& 2 (\texttt{RT06\_1\_ResolutionTestSuite} and \texttt{RT06\_2\_ResolutionTestSuite}).  Each of these directories contains the parameter files necessary to run these problems on grids containing $100 \times 2^n$ cells, where $n = 0,1,...6$.  If you want, you can run them all at once, though keep in mind the simulations with 100 cells will finish much much faster than those containing 6400 cells, so it might not be good to check out a node for this as most of the computation will be spent on 1 or 2 simulations.  For instance, you could do:
 \begin{verbatim}
@@ -120,8 +292,9 @@ In \texttt{rt1d/doc/examples} you will find directories containing convergence t
 I've included the same setup for $c \neq \infty$ in \texttt{rt1d/doc/examples/RT06\_1\_ResolutionTestSuite/c\_finite}, so you can see the differences (if any) caused by making the $c \rightarrow \infty$ approximation.
 
 
-
-
+\newpage
+\bibliography{references}
+\bibliographystyle{plain}
 
 
 
