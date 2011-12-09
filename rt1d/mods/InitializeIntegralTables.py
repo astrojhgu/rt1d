@@ -16,9 +16,15 @@ from rt1d.mods.Constants import *
 from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
 from rt1d.mods.RadiationSource import RadiationSource
 from rt1d.mods.SecondaryElectrons import SecondaryElectrons
-from progressbar import *
 import numpy as np
 import h5py, os, re
+
+try:
+    from progressbar import *
+    pb = True
+except ImportError:
+    "Module progressbar not found."
+    pb = False
 
 try:
     from mpi4py import MPI
@@ -59,7 +65,7 @@ class InitializeIntegralTables:
         self.esec = SecondaryElectrons(pf)
         
         self.OutputDirectory = pf["OutputDirectory"]
-        self.ProgressBar = pf["ProgressBar"]
+        self.ProgressBar = pf["ProgressBar"] and pb   
         
         # Physics, initial conditions, control parameters
         self.MultiSpecies = pf["MultiSpecies"]

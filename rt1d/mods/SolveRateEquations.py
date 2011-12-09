@@ -11,10 +11,6 @@ Description: Subset of my homemade odeint routine made special for rt1d.
 
 import copy
 import numpy as np
-from mpi4py import MPI
-
-rank = MPI.COMM_WORLD.rank
-size = MPI.COMM_WORLD.size
 
 class SolveRateEquations:
     def __init__(self, pf, guesses, stepper = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
@@ -128,10 +124,10 @@ class SolveRateEquations:
                                   
             # Adaptive time-stepping
             adapted = False
-            if self.stepper: 
-                drel = self.adapt(f, ynow, xnow, ynext, xnext, h, Dfun, args)
+            if self.stepper:                 
+                tol_met = self.adapt(f, ynow, xnow, ynext, xnext, h, Dfun, args)
                 
-                if np.any(np.greater(drel, self.rtol)): 
+                if not np.all(tol_met):                 
                     if h == self.hmin: 
                         raise ValueError('Tolerance not met on minimum ODE step.  Exiting.')
                                                 
@@ -282,13 +278,9 @@ class SolveRateEquations:
         ynp2_ts = self.solve(f, yip1, xip1, h, Dfun, args)  # y_n+2 using two steps
                 
         err_abs = np.abs(ynp2_ts - ynp2_os)        
-        err_rel = np.zeros_like(err_abs)
-        for i, element in enumerate(ynp2_ts):
-            # If MultiSpecies or Isothermal = 1, some entries will be 0 (and should contribute no error)
-            if element > 0: 
-                err_rel[i] = err_abs[i] / element   
-        
-        return err_rel
+        err_tol = self.atol + self.rtol * ynp2_os
+
+        return np.less_equal(err_abs, err_tol)
         
     def Newton(self, f, y_guess):
         """

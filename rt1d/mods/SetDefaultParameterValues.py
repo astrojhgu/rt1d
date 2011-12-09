@@ -29,10 +29,10 @@ def SetDefaultParameterValues():
         
         # ODE Solver
         "ODEAdaptiveStep": 1, \
-        "ODEMinStep": 1e-10, \
+        "ODEMinStep": 1e-8, \
         "ODEMaxStep": 1e-1, \
-        "ODErtol": 1e-3, \
-        "ODEatol": 1e-6, \
+        "ODErtol": 1e-8, \
+        "ODEatol": 1e-8, \
         "ODEmaxiter": 1e4, \
         "RootFinder": 0, \
         
@@ -76,16 +76,17 @@ def SetDefaultParameterValues():
         "OnePhotonPackagePerCell": 0, \
         "MaxHIIChange": 0.05, \
         "MaxHeIIChange": 0.05, \
+        "MaxHeIIIChange": 0.05, \
         "MinimumSpeciesFraction": 1e-8, \
         
         # Physics
         "Isothermal": 0, \
-        "MeanMolecularWeight": 0.5, \
         "MultiSpecies": 0, \
         "CollisionalIonization": 1, \
         "CollisionalExcitation": 1, \
         "SecondaryIonization": 1, \
         "ComptonCooling": 0, \
+        "FreeFreeEmission": 0, \
         "CosmologicalExpansion": 0, \
         "InfiniteSpeedOfLight": 1, \
         "PlaneParallelField": 0, \

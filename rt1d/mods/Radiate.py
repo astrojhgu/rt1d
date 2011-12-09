@@ -19,7 +19,13 @@ from rt1d.mods.Interpolate import Interpolate
 from rt1d.mods.Cosmology import Cosmology
 from rt1d.mods.SolveRateEquations import SolveRateEquations
 from Integrate import simpson as integrate
-from progressbar import *
+
+try:
+    from progressbar import *
+    pb = True
+except ImportError:
+    "Module progressbar not found."
+    pb = False
 
 try:
     from mpi4py import MPI
@@ -61,6 +67,7 @@ class Radiate:
         
         self.MaxHIIChange = pf["MaxHIIChange"]
         self.MaxHeIIChange = pf["MaxHeIIChange"]
+        self.MaxHeIIIChange = pf["MaxHeIIIChange"]
         self.HIIRestrictedTimestep = pf["HIIRestrictedTimestep"]
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
         self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
@@ -68,11 +75,11 @@ class Radiate:
         self.MultiSpecies = pf["MultiSpecies"]
         self.InfiniteSpeedOfLight = pf["InfiniteSpeedOfLight"]
         self.Isothermal = pf["Isothermal"]
-        self.MeanMolecularWeight = pf["MeanMolecularWeight"]
         self.ComptonCooling = pf["ComptonCooling"]
         self.CollisionalIonization = pf["CollisionalIonization"]
         self.CollisionalExcitation = pf["CollisionalExcitation"]
         self.SecondaryIonization = pf["SecondaryIonization"]
+        self.FreeFreeEmission = pf["FreeFreeEmission"]
         self.InitialTemperature = pf["InitialTemperature"]
         self.PlaneParallelField = pf["PlaneParallelField"]
         
@@ -105,7 +112,7 @@ class Radiate:
         self.atol = pf["ODEatol"]
         self.rtol = pf["ODErtol"]
         
-        self.ProgressBar = pf["ProgressBar"]                                                                        
+        self.ProgressBar = pf["ProgressBar"] and pb                                                                 
         
         self.TotalHydrogen = data["HIDensity"][-1] + data["HIIDensity"][-1]
         self.TotalHelium = data["HeIDensity"][-1] + data["HeIIDensity"][-1] + data["HeIIIDensity"][-1]
@@ -538,49 +545,42 @@ class Radiate:
         if self.MultiSpecies: indices = self.Interpolate.GetIndices3D(ncol) 
         else: indices = None        
                 
-        within_HIIregion = False        
         tauHI = self.Interpolate.interp(indices, "TotalOpticalDepth0", ncol)
-        if tauHI < 0.5: 
-            within_HIIregion = True
-
-        if within_HIIregion:
-            return 1e50    
+        if tauHI < 0.5:
+            dtHI = 1e50    
+        else:
+            Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
+                xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)        
+            alpha = 2.6e-13 * (newdata['Temperature'][cell] / 1.e4)**-0.85  
+            
+            # Shapiro et al. 2004
+            dtHI = self.MaxHIIChange * newdata["HIDensity"][cell] / \
+                np.abs(newdata["HIDensity"][cell] * Gamma - newdata["HIIDensity"][cell] * newdata["ElectronDensity"][cell] * alpha)
         
-        Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
-            xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)        
-        alpha = 2.6e-13 * (newdata['Temperature'][cell] / 1.e4)**-0.85  
-        
-        # Shapiro et al. 2004
-        dtphot = self.MaxHIIChange * newdata["HIDensity"][cell] / \
-            np.abs(newdata["HIDensity"][cell] * Gamma - newdata["HIIDensity"][cell] * newdata["ElectronDensity"][cell] * alpha)
-        
-        # Calculate global timstep based on change in helium neutral fraction for next iteration
-        #if self.MultiSpecies and self.HeIIRestrictedTimestep:
-        #    
-        #    within_HeIIregion = False    
-        #    tauHeI = self.Interpolate.interp(indices, "TotalOpticalDepth1", ncol)
-        #    if tauHeI < 0.5: 
-        #        within_HIIregion = True
-        #    
-        #    if not self.HeIIIRestrictedTimestep and not within_HIIregion and not within_HeIIregion:    
-        #        return 1e50
-        #    
-        #    xHeII = newdata["HeIIDensity"][cell] / n_He
-        #    
-        #    Beta = 2.38e-11 * np.sqrt(newdata['Temperature'][cell]) * (1. + np.sqrt(newdata['Temperature'][cell] / 1.e5))**-1. * np.exp(-2.853e5 /newdata['Temperature'][cell]) * self.CollisionalIonization
-        #    Gamma = self.IonizationRateCoefficientHeI(ncol, newdata['HIDensity'][cell], newdata['HeIDensity'][cell], xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)                    
-        #    alpha = 9.94e-11 * newdata['Temperature'][cell]**-0.48   
-        #    
-        #    # Analogous to Shapiro et al. 2004 but for helium
-        #    dtphot = min(dtphot, self.MaxHeIIChange * newdata['HeIDensity'][cell] / \
-        #        np.abs(newdata["HeIDensity"][cell] * (Gamma + newdata["ElectronDensity"][cell] * Beta) - newdata['HeIIDensity'][cell] * newdata["ElectronDensity"][cell] * alpha)) 
-        #
-        #if self.MultiSpecies and self.HeIIIRestrictedTimestep:
-        #    pass
+        dtHeI = 1e50
+        if self.MultiSpecies and self.HeIIRestrictedTimestep:
+            
+            tauHeI = self.Interpolate.interp(indices, "TotalOpticalDepth1", ncol)
+            if tauHeI < 0.5:
+                dtHeI = 1e50
+            else:
+                xHeII = newdata["HeIIDensity"][cell] / n_He
                 
-        #if cell == 1: print self.StartCell, dtphot, Gamma, alpha, newdata["HIDensity"][cell], newdata["HIIDensity"][cell]
+                Beta = 2.38e-11 * np.sqrt(newdata['Temperature'][cell]) * (1. + np.sqrt(newdata['Temperature'][cell] / 1.e5))**-1. * np.exp(-2.853e5 /newdata['Temperature'][cell]) * self.CollisionalIonization
+                Gamma = self.IonizationRateCoefficientHeI(ncol, newdata['HIDensity'][cell], newdata['HeIDensity'][cell], xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)                    
+                alpha = 9.94e-11 * newdata['Temperature'][cell]**-0.48   
                 
-        return dtphot                   
+                # Analogous to Shapiro et al. 2004 but for helium
+                dtHeI = self.MaxHeIIChange * newdata['HeIDensity'][cell] / \
+                    np.abs(newdata["HeIDensity"][cell] * (Gamma + newdata["ElectronDensity"][cell] * Beta) - \
+                    newdata['HeIIDensity'][cell] * newdata["ElectronDensity"][cell] * alpha) 
+        
+        dtHeII = 1e50
+        if self.MultiSpecies and self.HeIIIRestrictedTimestep:
+            pass
+            #tauHeII = self.Interpolate.interp(indices, "TotalOpticalDepth2", ncol)
+        
+        return min(dtHI, dtHeI, dtHeII)                   
         
     def UpdatePhotonPackages(self, packs, t_next, data):
         """
@@ -755,7 +755,8 @@ class Radiate:
             cool += 4. * k_B * (T - T_cmb) * (np.pi**2 / 15.) * (k_B * T_cmb / hbar / c)**3 * (k_B * T_cmb / m_e / c**2) * sigma_T * c
         
         # Cooling by free-free emission
-        #cool += (nion[0] + nion[1] + 4. * nion[2]) * 1.42e-27 * 1.1 * np.sqrt(T) # Check on Gaunt factor        
+        if self.FreeFreeEmission:
+            cool += (nion[0] + nion[1] + 4. * nion[2]) * 1.42e-27 * 1.1 * np.sqrt(T) # Check on Gaunt factor        
                 
         cool *= n_e
         

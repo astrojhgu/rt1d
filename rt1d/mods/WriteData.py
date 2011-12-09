@@ -12,6 +12,7 @@ of the parameter 'WriteFormat' in the parameter file.
 
 import h5py, os
 import numpy as np
+
 try:
     from mpi4py import MPI
     rank = MPI.COMM_WORLD.rank
