@@ -56,4 +56,6 @@ class DataDump:
             self.x_HeIII = self.n_HeIII / self.n_He
             self.ncol_HeI = np.cumsum(self.n_HeI) * self.dx
             self.ncol_HeII = np.cumsum(self.n_HeII) * self.dx
+            self.ncol_e = np.cumsum(self.n_e) * self.dx
+            
             

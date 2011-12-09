@@ -519,7 +519,7 @@ class Radiate:
                                 
         if size > 1: lb = self.LoadBalance(dtphot)   
         else: lb = None     
-                                                                     
+                                                                                                           
         return newdata, h, newdt, lb  
         
     def ComputePhotonTimestep(self, newdata, cell, Lbol, n_H, n_He):
@@ -543,8 +543,8 @@ class Radiate:
         if tauHI < 0.5: 
             within_HIIregion = True
 
-        #if not within_HIIregion:
-        #    return 1e50    
+        if within_HIIregion:
+            return 1e50    
         
         Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
             xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)        
@@ -579,6 +579,7 @@ class Radiate:
         #    pass
                 
         #if cell == 1: print self.StartCell, dtphot, Gamma, alpha, newdata["HIDensity"][cell], newdata["HIIDensity"][cell]
+                
         return dtphot                   
         
     def UpdatePhotonPackages(self, packs, t_next, data):
