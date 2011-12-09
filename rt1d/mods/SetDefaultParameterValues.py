@@ -31,8 +31,8 @@ def SetDefaultParameterValues():
         "ODEAdaptiveStep": 1, \
         "ODEMinStep": 1e-8, \
         "ODEMaxStep": 1e-1, \
-        "ODErtol": 1e-8, \
-        "ODEatol": 1e-8, \
+        "ODErtol": 1e-5, \
+        "ODEatol": 1e-5, \
         "ODEmaxiter": 1e4, \
         "RootFinder": 0, \
         

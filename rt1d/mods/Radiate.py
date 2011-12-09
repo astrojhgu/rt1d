@@ -537,48 +537,67 @@ class Radiate:
         
         """          
     
-        xHII = newdata['HIIDensity'][cell] / n_H     
-                   
         ncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
-                   np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
+                np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
+        
+        T = newdata['Temperature'][cell]
+        n_e = newdata["ElectronDensity"][cell]
+        n_HI = newdata["HIDensity"][cell]
+        n_HII = newdata["HIDensity"][cell]
+        x_HII = newdata['HIIDensity'][cell] / n_H 
+        n_HeI = newdata["HeIDensity"][cell]
+        n_HeII = newdata["HeIIDensity"][cell]
                                 
         if self.MultiSpecies: indices = self.Interpolate.GetIndices3D(ncol) 
         else: indices = None        
-                
+         
+        dtHI = 1e50        
         tauHI = self.Interpolate.interp(indices, "TotalOpticalDepth0", ncol)
-        if tauHI < 0.5:
-            dtHI = 1e50    
-        else:
-            Gamma = self.IonizationRateCoefficientHI(ncol, newdata["ElectronDensity"][cell], newdata['HIDensity'][cell], newdata['HeIDensity'][cell], 
-                xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)        
-            alpha = 2.6e-13 * (newdata['Temperature'][cell] / 1.e4)**-0.85  
+        if tauHI >= 0.5:
+
+            Gamma = self.IonizationRateCoefficientHI(ncol, n_e, n_HI, n_HeI, 
+                x_HII, T, self.r[cell], Lbol, indices)        
+            alpha = 2.6e-13 * (T / 1.e4)**-0.85  
             
             # Shapiro et al. 2004
             dtHI = self.MaxHIIChange * newdata["HIDensity"][cell] / \
-                np.abs(newdata["HIDensity"][cell] * Gamma - newdata["HIIDensity"][cell] * newdata["ElectronDensity"][cell] * alpha)
+                np.abs(n_HI * Gamma - n_HII * n_e * alpha)
         
         dtHeI = 1e50
         if self.MultiSpecies and self.HeIIRestrictedTimestep:
             
             tauHeI = self.Interpolate.interp(indices, "TotalOpticalDepth1", ncol)
-            if tauHeI < 0.5:
-                dtHeI = 1e50
-            else:
-                xHeII = newdata["HeIIDensity"][cell] / n_He
+            print tauHeI
+            if tauHeI >= 0.5:
+                xHeII = n_HeII / n_He
                 
-                Beta = 2.38e-11 * np.sqrt(newdata['Temperature'][cell]) * (1. + np.sqrt(newdata['Temperature'][cell] / 1.e5))**-1. * np.exp(-2.853e5 /newdata['Temperature'][cell]) * self.CollisionalIonization
-                Gamma = self.IonizationRateCoefficientHeI(ncol, newdata['HIDensity'][cell], newdata['HeIDensity'][cell], xHII, newdata['Temperature'][cell], self.r[cell], Lbol, indices)                    
-                alpha = 9.94e-11 * newdata['Temperature'][cell]**-0.48   
+                Beta = 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 /T) * self.CollisionalIonization
+                Gamma = self.IonizationRateCoefficientHeI(ncol, n_HI, n_HeI, x_HII, T, self.r[cell], Lbol, indices)                    
+                alpha = 9.94e-11 * T**-0.48   
                 
                 # Analogous to Shapiro et al. 2004 but for helium
-                dtHeI = self.MaxHeIIChange * newdata['HeIDensity'][cell] / \
-                    np.abs(newdata["HeIDensity"][cell] * (Gamma + newdata["ElectronDensity"][cell] * Beta) - \
-                    newdata['HeIIDensity'][cell] * newdata["ElectronDensity"][cell] * alpha) 
-        
+                dtHeI = self.MaxHeIIChange * n_HeI / \
+                    np.abs(n_HeI * (Gamma + n_e * Beta) - n_HeII * n_e * alpha) 
+                
         dtHeII = 1e50
         if self.MultiSpecies and self.HeIIIRestrictedTimestep:
             pass
             #tauHeII = self.Interpolate.interp(indices, "TotalOpticalDepth2", ncol)
+            #
+            #if tauHeII >= 0.5:
+            #    xHeIII = n_HeIII / n_He
+            #    
+            #    Beta = 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)
+            #    
+            #    Beta = 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 /T) * self.CollisionalIonization
+            #    Gamma = self.IonizationRateCoefficientHeII(ncol, n_HI, n_HeI, x_HII, T, self.r[cell], Lbol, indices)                    
+            #    alpha = 9.94e-11 * T**-0.48   
+            #    
+            #    # Analogous to Shapiro et al. 2004 but for helium
+            #    dtHeI = self.MaxHeIIChange * n_HeI / \
+            #        np.abs(newdata["HeIDensity"][cell] * (Gamma + n_e * Beta) - \
+            #        newdata['HeIIDensity'][cell] * n_e * alpha) 
+        
         
         return min(dtHI, dtHeI, dtHeII)                   
         
