@@ -75,8 +75,8 @@ class InitializeGrid:
         Initialize the gas density - depends on parameter DensityProfile as follows:
         
             DensityProfile:
-                0: Uniform density given by cosmic mean at z = InitialRedshift.
-                1: Density profile given by NFW model.  Requires r_s and c in this case too.
+                0: Uniform density given by InitialDensity parameter.
+                1: Uniform density given by cosmic mean at z = InitialRedshift.
         """        
         
         if self.DensityProfile == 0: density = self.InitialDensity * m_H
@@ -125,7 +125,7 @@ class InitializeGrid:
         
         if self.IonizationProfile == 0: ionization = self.InitialHIIFraction 
         if self.IonizationProfile == 1: 
-            if (float(cell) / self.GridDimensions) < self.StartRadius: ionization = 1#0.99999999999
+            if (float(cell) / self.GridDimensions) < self.StartRadius: ionization = 1
             else: ionization = self.InitialHIIFraction
         
         return ionization    

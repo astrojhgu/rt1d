@@ -53,6 +53,7 @@ def SetDefaultParameterValues():
           
         # Grid parameters
         "GridDimensions": 100, \
+        "LogarithmicGrid": 0, \
           
         # Units
         "LengthUnits": cm_per_kpc, \

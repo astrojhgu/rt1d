@@ -96,14 +96,25 @@ class Radiate:
         self.StartCell = int(self.StartRadius * self.GridDimensions)
         self.InitialHydrogenDensity = (data["HIDensity"][0] + data["HIIDensity"][0]) / (1. + self.InitialRedshift)**3
         self.InitialHeliumDensity = (data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0]) / (1. + self.InitialRedshift)**3
-        self.grid = np.arange(self.GridDimensions)
-        self.r = self.LengthUnits * self.grid / self.GridDimensions  
-        self.dx = self.LengthUnits / self.GridDimensions
-        self.CellCrossingTime = self.dx / c
         self.HIColumn = n_col[0]
         self.HeIColumn = n_col[1]
         self.HeIIColumn = n_col[2]
         
+        self.grid = np.arange(self.GridDimensions)
+        self.LogGrid = pf['LogarithmicGrid']
+        
+        if self.LogGrid:
+            self.lgrid = [0]
+            self.lgrid.extend(np.logspace(0, np.log10(self.GridDimensions), self.GridDimensions - 1))
+            self.lgrid = np.array(self.lgrid)
+            self.r = self.LengthUnits * self.lgrid / self.GridDimensions
+            self.dx = np.diff(self.r)
+            self.dx = np.concatenate([self.dx, [0]]) # ?
+        else:
+            self.r = self.LengthUnits * self.grid / self.GridDimensions  
+            self.dx = self.LengthUnits / self.GridDimensions
+                
+        self.CellCrossingTime = self.dx / c
         self.OnePhotonPackagePerCell = pf["OnePhotonPackagePerCell"]
         self.LightCrossingTimeRestrictedStep = pf["LightCrossingTimeRestrictedStep"]
         self.AdaptiveStep = pf["ODEAdaptiveStep"]
@@ -253,9 +264,9 @@ class Radiate:
             data["ElectronDensity"] = data["HIIDensity"] + data["HeIIDensity"] + 2. * data["HeIIIDensity"]
 
         # Compute column densities
-        ncol_HI = np.cumsum(data["HIDensity"]) * self.dx
-        ncol_HeI = np.cumsum(data["HeIDensity"]) * self.dx
-        ncol_HeII = np.cumsum(data["HeIIDensity"]) * self.dx
+        ncol_HI = np.cumsum(data["HIDensity"] * self.dx) 
+        ncol_HeI = np.cumsum(data["HeIDensity"] * self.dx) 
+        ncol_HeII = np.cumsum(data["HeIIDensity"] * self.dx) 
         ncol_all = np.transpose([ncol_HI, ncol_HeI, ncol_HeII])
         nabs_all = np.transpose([data["HIDensity"], data["HeIDensity"], data["HeIIDensity"]])
         nion_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"]])
@@ -459,6 +470,7 @@ class Radiate:
                     T = newdata["Temperature"][cell]
                     E = 3. * k_B * T * n_B / mu / 2.
                     
+                    # Will need to change to account for log-grid
                     packs[j][2] += newdata['HIDensity'][cell] * dc * self.CellCrossingTime * c  
                     packs[j][3] += newdata['HeIDensity'][cell] * dc * self.CellCrossingTime * c 
                     packs[j][4] += newdata['HeIIDensity'][cell] * dc * self.CellCrossingTime * c
@@ -537,8 +549,8 @@ class Radiate:
         
         """          
     
-        ncol = [np.cumsum(newdata["HIDensity"])[cell] * self.dx, np.cumsum(newdata["HeIDensity"])[cell] * self.dx,
-                np.cumsum(newdata["HeIIDensity"])[cell] * self.dx]
+        ncol = [np.cumsum(newdata["HIDensity"] * self.dx)[cell], np.cumsum(newdata["HeIDensity"] * self.dx)[cell],
+                np.cumsum(newdata["HeIIDensity"] * self.dx)[cell]]
         
         T = newdata['Temperature'][cell]
         n_e = newdata["ElectronDensity"][cell]
@@ -567,7 +579,6 @@ class Radiate:
         if self.MultiSpecies and self.HeIIRestrictedTimestep:
             
             tauHeI = self.Interpolate.interp(indices, "TotalOpticalDepth1", ncol)
-            print tauHeI
             if tauHeI >= 0.5:
                 xHeII = n_HeII / n_He
                 
