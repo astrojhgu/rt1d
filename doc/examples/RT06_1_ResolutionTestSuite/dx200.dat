@@ -1,3 +1,4 @@
 ProblemType = 1
 GridDimensions = 200
 OutputDirectory = dx200
+ParallelizationMethod = 2
