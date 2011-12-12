@@ -25,9 +25,27 @@ class Analyze:
         self.pf = self.ds.pf
         
         # Convenience
-        self.grid = np.arange(self.pf['GridDimensions'])
-        self.r = self.pf['LengthUnits'] * self.grid / self.pf['GridDimensions']
-        self.StartRadius = self.pf["StartRadius"] * self.pf['LengthUnits'] / cm_per_kpc
+        self.GridDimensions = self.pf['GridDimensions']
+        self.grid = np.arange(self.GridDimensions)
+        self.LengthUnits = self.pf['LengthUnits']
+        self.StartRadius = self.pf['StartRadius']
+
+        #self.r = self.pf['LengthUnits'] * self.grid / self.pf['GridDimensions']
+        #self.StartRadius = self.pf["StartRadius"] * self.pf['LengthUnits'] / cm_per_kpc
+        
+        if self.pf['LogarithmicGrid']:
+            self.lgrid = [0]
+            self.lgrid.extend(np.logspace(0, np.log10(self.GridDimensions - 1), self.GridDimensions - 1))
+            self.lgrid = np.array(self.lgrid)
+            self.r = self.LengthUnits * self.lgrid / self.GridDimensions
+            self.dx = np.diff(self.r)
+            self.dx = np.concatenate([[0], self.dx]) # ?
+            i = np.argmin(np.abs(self.StartRadius - self.r / self.LengthUnits))
+            self.StartCell = max(self.grid[i], 1)
+        else:
+            self.r = self.LengthUnits * self.grid / self.GridDimensions  
+            self.dx = self.LengthUnits / self.GridDimensions
+            self.StartCell = int(self.StartRadius * self.GridDimensions)
         
         # Store bins used for PDFs/CDFs
         self.bins = {}

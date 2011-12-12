@@ -23,13 +23,27 @@ class DataDump:
         
         """        
         
+        self.LengthUnits = pf["LengthUnits"].value
+        self.StartRadius = pf["StartRadius"].value
         self.GridDimensions = pf["GridDimensions"].value
-        self.StartCell = self.GridDimensions * pf["StartRadius"].value
-        self.grid = np.arange(self.GridDimensions)[self.StartCell:]
-        
-        self.r = self.grid * pf["LengthUnits"].value / self.GridDimensions
+        self.StartCell = int(self.StartRadius * self.GridDimensions)
+        self.grid = np.arange(self.GridDimensions)
+        if pf['LogarithmicGrid'].value:
+            self.lgrid = [0]
+            self.lgrid.extend(np.logspace(0, np.log10(self.GridDimensions - 1), self.GridDimensions - 1))
+            self.lgrid = np.array(self.lgrid)
+            self.r = self.LengthUnits * self.lgrid / self.GridDimensions
+            self.dx = np.diff(self.r)
+            self.dx = np.concatenate([[0], self.dx])
+            i = np.argmin(np.abs(self.StartRadius - self.r / self.LengthUnits))
+            self.StartCell = max(self.grid[i], 1)
+            self.r = self.r[self.StartCell:]
+            self.dx = self.dx[self.StartCell:]
+        else:
+            self.r = self.LengthUnits * self.grid[self.StartCell:] / self.GridDimensions  
+            self.dx = self.LengthUnits / self.GridDimensions
+                    
         self.t = pf["CurrentTime"].value * pf["TimeUnits"].value
-        self.dx = pf["LengthUnits"].value / self.GridDimensions
         
         # Fields
         self.T = dd["Temperature"].value[self.StartCell:]
@@ -39,7 +53,7 @@ class DataDump:
         self.n_H = self.n_HI + self.n_HII
         self.x_HI = self.n_HI / self.n_H
         self.x_HII = self.n_HII / self.n_H
-        self.ncol_HI = np.cumsum(self.n_HI) * self.dx 
+        self.ncol_HI = np.cumsum(self.n_HI * self.dx)
         self.dtPhoton = dd["dtPhoton"].value[self.StartCell:] / pf["TimeUnits"].value
         
         #try:
@@ -54,8 +68,8 @@ class DataDump:
             self.x_HeI = self.n_HeI / self.n_He
             self.x_HeII = self.n_HeII / self.n_He
             self.x_HeIII = self.n_HeIII / self.n_He
-            self.ncol_HeI = np.cumsum(self.n_HeI) * self.dx
-            self.ncol_HeII = np.cumsum(self.n_HeII) * self.dx
-            self.ncol_e = np.cumsum(self.n_e) * self.dx
+            self.ncol_HeI = np.cumsum(self.n_HeI * self.dx)
+            self.ncol_HeII = np.cumsum(self.n_HeII * self.dx)
+            self.ncol_e = np.cumsum(self.n_e * self.dx)
             
             

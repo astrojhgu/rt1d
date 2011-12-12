@@ -1,5 +1,7 @@
 syntax: glob
 
+rt1d.tmproj
+
 # General things
 *.pyc
 *~
@@ -14,3 +16,6 @@ build/*
 *.pdf
 *.ps
 *.synctex.gz
+*.out
+*.toc
+*.DS_Store

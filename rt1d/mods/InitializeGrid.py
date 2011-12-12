@@ -29,8 +29,8 @@ class InitializeGrid:
     def __init__(self, pf):
         self.Cosmology = Cosmology(pf)
         self.GridDimensions = int(pf["GridDimensions"])
+        self.LogGrid = pf["LogarithmicGrid"]
         self.StartRadius = pf["StartRadius"]
-        self.StartCell = int(self.StartRadius * self.GridDimensions)
         self.InitialRedshift = pf["InitialRedshift"]
         self.DensityProfile = pf["DensityProfile"]
         self.InitialDensity = pf["InitialDensity"]
@@ -40,6 +40,7 @@ class InitializeGrid:
         self.InitialHIIFraction = pf["InitialHIIFraction"]
         self.MultiSpecies = pf["MultiSpecies"]
         self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
+        self.LengthUnits = pf["LengthUnits"]
         
         self.Clump = pf["Clump"]
         if self.Clump:
@@ -52,9 +53,24 @@ class InitializeGrid:
         self.Y = 0.2477 * self.MultiSpecies
                         
         # Generic data array                
-        self.cells = np.arange(self.GridDimensions)
-        self.density = map(self.InitializeDensity, self.cells)
-        self.ionization = map(self.InitializeIonization, self.cells)
+        self.grid = np.arange(self.GridDimensions)
+        self.density = map(self.InitializeDensity, self.grid)
+        self.ionization = map(self.InitializeIonization, self.grid)
+        
+        # Deal with log-grid
+        if self.LogGrid:
+            self.lgrid = [0]
+            self.lgrid.extend(np.logspace(0, np.log10(self.GridDimensions - 1), self.GridDimensions - 1))
+            self.lgrid = np.array(self.lgrid)
+            self.r = self.LengthUnits * self.lgrid / self.GridDimensions
+            self.dx = np.diff(self.r)
+            self.dx = np.concatenate([[0], self.dx]) # ?
+            i = np.argmin(np.abs(self.StartRadius - self.r / self.LengthUnits))
+            self.StartCell = max(self.grid[i], 1)
+        else:
+            self.r = self.LengthUnits * self.grid / self.GridDimensions  
+            self.dx = self.LengthUnits / self.GridDimensions
+            self.StartCell = int(self.StartRadius * self.GridDimensions)
             
     def InitializeFields(self):
         """
@@ -63,7 +79,7 @@ class InitializeGrid:
  
         fields = {}
         for field in FieldList:
-            fields[field] = np.array(eval("map(self.Initialize{0}, self.cells)".format(field)))
+            fields[field] = np.array(eval("map(self.Initialize{0}, self.grid)".format(field)))
         
         # Additional fields
         fields['dtPhoton'] = np.ones_like(fields[fields.keys()[0]])

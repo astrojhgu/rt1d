@@ -1,4 +1,3 @@
 ProblemType = 1
 GridDimensions = 100
-OutputDirectory = dx100_dt3
-HIIRestrictedTimestep = 1
+OutputDirectory = dx100

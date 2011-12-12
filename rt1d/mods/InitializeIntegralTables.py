@@ -261,6 +261,8 @@ class InitializeIntegralTables:
                                                                   
                     for species in np.arange(3):
                         
+                        if integral == 'TotalOpticalDepth' and species > 0: continue
+                        
                         # This could take a while
                         if rank == 0: 
                             print "\nComputing value of {0}{1}...".format(integral, species)
