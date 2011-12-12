@@ -86,21 +86,24 @@ for i, pf in enumerate(all_pfs):
                 try: os.mkdir("{0}".format(pf["OutputDirectory"]))
                 except OSError: pass        
             made = True
-        else: made = False
+        else: 
+            made = False
         
         # Wait here if parallelizing over grid
-        if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(made, root = 0)    
+        if size > 1 and pf["ParallelizationMethod"] == 1: 
+            MPI.COMM_WORLD.bcast(made, root = 0)    
 
     # Initialize integral tables
     iits = rtm.InitializeIntegralTables(pf, data)
     itabs = iits.TabulateRateIntegrals()        
-    if pf["ExitAfterIntegralTabulation"]: continue
+    if pf["ExitAfterIntegralTabulation"]: 
+        continue
                 
     # Initialize radiation and write data classes
     r = rtm.Radiate(pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
     w = rtm.WriteData(pf)
     
-    # Compute timestep
+    # Compute initial timestep
     if IsRestart or pf["HIIRestrictedTimestep"] == 0: 
         dt = pf["CurrentTimestep"] * TimeUnits
     else:
@@ -173,7 +176,8 @@ for i, pf in enumerate(all_pfs):
         # Write-out data                                        
         if write_now:
             wrote = False
-            if i == rank: 
+            if (pf["ParallelizationMethod"] == 1 and i == 0) or \
+               (pf["ParallelizationMethod"] == 2): 
                 w.WriteAllData(data, wct, tnow, dt)
                 wrote = True
             wct += 1

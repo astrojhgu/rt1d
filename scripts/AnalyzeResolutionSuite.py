@@ -19,40 +19,35 @@ Conventions:
 
 *A dash-dotted yellow line will be assigned to something not fitting the above criteria
 
-sys.argv[1] = ProblemType
-sys.argv[2] = cinf or cfin
+Notes: Run from directory containing all parameter files.
 
 """
 
 import os, re, sys
 import pylab as pl
 import numpy as np
-import rt1d.analysis as rta
 from jmpy.stats import *
+import rt1d.analysis as rta
 
 pl.rcParams['figure.subplot.left'] = 0.12
 pl.rcParams['figure.subplot.right'] = 0.88
 pl.rcParams['legend.fontsize'] = 10
 
-RT1D = os.environ.get('RT1D')
-cinf = "{0}/doc/examples/RT06_{1}_ResolutionTestSuite/c_infinite".format(RT1D, int(sys.argv[1]))
-cfin = "{0}/doc/examples/RT06_{1}_ResolutionTestSuite/c_finite".format(RT1D, int(sys.argv[1]))
-
-if sys.argv[2] == 'cinf': path = cinf
-else: path = cfin
-
-pfs = ['dx100_dt3', 'dx200_dt3', 'dx400_dt3', 'dx800_dt3', 'dx1600_dt3', 'dx3200_dt3', 'dx6400_dt3']
+path = os.getcwd()
+pfs = ['dx100', 'dx200', 'dx400', 'dx800', 'dx1600', 'dx3200', 'dx6400']
 
 resolution = []
 meanerror = []
 maxerror = []
 minerror = []
 
-ds = rta.Analyze("{0}/{1}.dat".format(path, 'dx6400_dt3'))
+# Highest resolution run
+ds = rta.Analyze("{0}/{1}.dat".format(path, 'dx6400'))
 ds.ComputeIonizationFrontEvolution()
+ptype = ds.pf['ProblemType']
 ref_error = ds.rIF / ds.ranl
 
-# First, the c -> infinite tests
+# Loop over simulations
 mp = rta.multiplot(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
 for pf in pfs:
     print "Loading {0}/{1}".format(path, pf)
@@ -60,8 +55,8 @@ for pf in pfs:
     try: ds = rta.Analyze("{0}/{1}.dat".format(path, pf))
     except OSError: continue
     
-    if not ds.pf["HIIRestrictedTimestep"]: continue
-    if not os.path.exists("{0}/".format(cinf, ds.pf["OutputDirectory"])): continue
+    if not os.path.exists("{0}/{1}".format(path, ds.pf["OutputDirectory"])): 
+        continue
 
     if ds.pf['GridDimensions'] == 100: color = 'cyan'
     elif ds.pf['GridDimensions'] == 200: color = 'magenta'
@@ -101,7 +96,7 @@ pl.rcParams['legend.fontsize'] = 12
 mp.grid[0].legend(loc = 'lower right', frameon = False, ncol = 2)
 
 pl.draw()
-pl.savefig('RT06_{0}_IfrontEvolution.png'.format(int(sys.argv[1])))
+pl.savefig('RT06_{0}_IfrontEvolution.png'.format(ptype))
 
 pl.close()
 

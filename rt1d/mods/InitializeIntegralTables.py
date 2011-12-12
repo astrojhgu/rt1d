@@ -66,6 +66,7 @@ class InitializeIntegralTables:
         
         self.OutputDirectory = pf["OutputDirectory"]
         self.ProgressBar = pf["ProgressBar"] and pb   
+        self.ParallelizationMethod = pf["ParallelizationMethod"]
         
         # Physics, initial conditions, control parameters
         self.MultiSpecies = pf["MultiSpecies"]
@@ -231,6 +232,7 @@ class InitializeIntegralTables:
                                 
                 for h, integral in enumerate(IntegralList):
                     
+                    # Skip helium integrals
                     if re.search('HeI', integral): continue
                     
                     if rank == 0: 
@@ -241,7 +243,8 @@ class InitializeIntegralTables:
                     tab = np.zeros(self.HINBins)
                     for i, ncol_HI in enumerate(self.HIColumn):
                         
-                        if i % size != rank: continue
+                        if self.ParallelizationMethod == 1 and (i % size != rank): 
+                            continue
                         
                         if rank == 0 and self.ProgressBar:
                             pbar.update(i + 1)
@@ -272,7 +275,7 @@ class InitializeIntegralTables:
                         tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
                         for i, ncol_HI in enumerate(self.HIColumn):  
                             
-                            if i % size != rank: continue
+                            if self.ParallelizationMethod == 1 and (i % size != rank): continue
                             
                             for j, ncol_HeI in enumerate(self.HeIColumn):
                                 for k, ncol_HeII in enumerate(self.HeIIColumn):

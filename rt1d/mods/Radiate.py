@@ -344,7 +344,7 @@ class Radiate:
                 # Compute mean molecular weight for this cell
                 mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                                         
-                # For convenience - dunno if we need to compute this stuff anymore
+                # For convenience
                 ncol = ncol_all[cell]
                 nabs = nabs_all[cell]
                 nion = nion_all[cell]
@@ -404,7 +404,8 @@ class Radiate:
         ## SOLVE: c = finite
         ###   
         else:                
-                                          
+                   
+            # Is this necessary?                              
             if self.HIIRestrictedTimestep: 
                 dtphot = 1e50 * np.ones_like(self.grid)    
                                     
@@ -459,6 +460,7 @@ class Radiate:
                     x_HeII = x_HeII_arr[cell]
                     x_HeIII = x_HeIII_arr[cell]
                     
+                    # Compute mean molecular weight for this cell
                     mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                                             
                     # For convenience     
@@ -486,26 +488,29 @@ class Radiate:
                     if self.MultiSpecies > 0: 
                         indices = self.Interpolate.GetIndices3D(ncol)
                     
-                    values = (n_HII, n_HeII, n_HeIII, E)
-                    qnew = [[0, n_HII], [0, n_HeII], [0, n_HeIII], [0, E]]
+                    qnew = np.array([n_HII, n_HeII, n_HeIII, E])
                                                                                 
-                    tarr, qnew, h = self.solver.integrate(self.qdot, values, t, t + subdt, None, h, \
+                    tarr, qnew, h = self.solver.integrate(self.qdot, qnew, t, t + subdt, None, h, \
                         r, z, mu, n_H, n_He, packs[j][2:5], Lbol, indices)
                                         
                     # Unpack results of coupled equations - Remember: these are lists and we only need the last entry 
                     newHII, newHeII, newHeIII, newE = qnew
 
                     # Convert from internal energy back to temperature
-                    newT = newE[-1] * 2. * mu / 3. / k_B / n_B
+                    newT = newE * 2. * mu / 3. / k_B / n_B
+                    
+                    # Calculate neutral fractions
+                    newHI = n_H - newHII
+                    newHeI = n_He - newHeII - newHeIII
                              
-                    # Update quantities in 'data' -> 'newdata'     
-                    newdata["HIDensity"][cell] = newHI                                                                   
+                    # Update quantities in 'data' -> 'newdata'                
+                    newdata["HIDensity"][cell] = newHI                                                                                            
                     newdata["HIIDensity"][cell] = n_H - newHI
                     newdata["HeIDensity"][cell] = newHeI
-                    newdata["HeIIDensity"][cell] = newerHeII
-                    newdata["HeIIIDensity"][cell] = newerHeIII
-                    newdata["ElectronDensity"][cell] = (n_H - newHI) + newerHeII + 2.0 * newerHeIII
-                    newdata["Temperature"][cell] = newT                               
+                    newdata["HeIIDensity"][cell] = newHeII
+                    newdata["HeIIIDensity"][cell] = newHeIII
+                    newdata["ElectronDensity"][cell] = (n_H - newHI) + newHeIII + 2.0 * newHeIII
+                    newdata["Temperature"][cell] = newT                   
                                                                                 
                     cell_pack += dc
                                                     

@@ -29,7 +29,6 @@ class WriteData:
         self.pf = pf
         self.TimeUnits = pf["TimeUnits"]
         self.OutputDirectory = pf["OutputDirectory"]
-        #self.OutputFormat = pf["OutputFormat"]
 
     def WriteAllData(self, data, wct, t, dt):
         DataDumpName = "{0}{1:04d}".format(self.pf["DataDumpName"], wct)
@@ -69,6 +68,7 @@ class WriteData:
         
         for par in names:
             
+            # ProblemType must be the first parameter
             if par == 'ProblemType': continue
             
             if par == "CurrentTime": val = t / self.TimeUnits
