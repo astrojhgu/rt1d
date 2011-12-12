@@ -2,3 +2,4 @@ ProblemType = 2
 GridDimensions = 6400
 OutputDirectory = dx6400
 LengthUnits = 3.08568e22
+ParallelizationMethod = 2
