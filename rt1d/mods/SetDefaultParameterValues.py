@@ -124,6 +124,7 @@ def SetDefaultParameterValues():
         "SpectrumMinNormEnergy": 100, \
         "SpectrumMaxNormEnergy": 1e4, \
         "SpectrumPhotonLuminosity": 5e48, \
+        "SpectrumIntrinsicAbsorbingColumn": 1.585e19, \
           
         "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
         "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], \

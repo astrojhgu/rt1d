@@ -20,6 +20,7 @@ SourceType = 0: Monochromatic/Polychromatic emission of SpectrumPhotonLuminosity
 import numpy as np
 from Integrate import simpson as integrate                  # why did scipy.integrate.quad mess up LphotNorm? 
 from scipy.integrate import quad
+from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
 h = 6.626068e-27     			                            # Planck's constant - [h] = erg*s
 k_B = 1.3806503e-16     			                        # Boltzmann's constant - [k_B] = erg/K
@@ -34,6 +35,7 @@ erg_per_ev = 1.60217646e-19 / 1e-7                          # Conversion between
 cm_per_rsun = 695500.0 * 1e5                                # Radius of the sun - [cm_per_rsun] = cm
 s_per_yr = 365.25 * 24 * 3600                               # Seconds per year
 t_edd = 0.45 * 1e9 * s_per_yr                               # Eddington timescale (see eq. 1 in Volonteri & Rees 2005) 
+y_He = 0.08
 
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB - will return 0 as it should for x large
 
@@ -71,7 +73,6 @@ class RadiationSource:
         # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
         if self.SourceType < 3:
             self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * integrate(lambda x: x**2 / (np.exp(x) - 1.), 13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
-                    
             self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
                                                                 
@@ -82,6 +83,9 @@ class RadiationSource:
         # SourceType = 3
         self.alpha = -pf["SpectrumPowerLawIndex"] 
         self.epsilon = pf["SourceRadiativeEfficiency"] 
+        
+        # SourceType = 4
+        self.SpectrumIntrinsicAbsorbingColumn = pf["SpectrumIntrinsicAbsorbingColumn"]
                         
         # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()
@@ -94,8 +98,10 @@ class RadiationSource:
         Return the fraction of the bolometric luminosity emitted at this energy.  This quantity is dimensionless, and its integral should be 1.
         """
                         
-        if self.DiscreteSpectrum == 1: return self.F  
-        else: return self.LuminosityNormalization * self.SpecificIntensity(E) / self.BolometricLuminosity()
+        if self.DiscreteSpectrum == 1: 
+            return self.F  
+        else: 
+            return self.LuminosityNormalization * self.SpecificIntensity(E) / self.BolometricLuminosity()
                 
     def SpecificIntensity(self, E):    
         """ 
@@ -108,6 +114,7 @@ class RadiationSource:
         if self.SourceType == 0: return self.F[0]
         if self.SourceType == 1 or self.SourceType == 2: return self.BlackBody(E)
         if self.SourceType == 3: return self.PowerLaw(E)
+        if self.SourceType == 4: return self.AbsorbedPowerLaw(E)
         
     def BlackBody(self, E):
         """
@@ -124,6 +131,15 @@ class RadiationSource:
         """
         return E * (E / 1000.0)**self.alpha
         
+    def AbsorbedPowerLaw(self, E):
+        """
+        Same as PowerLaw, except we apply an instrinsic absorbing column as in 
+        Kramer & Haiman 2008.
+        """    
+        
+        return self.PowerLaw(E) * np.exp(-self.SpectrumIntrinsicAbsorbingColumn * \
+            (sigma_E(E, 0) + y_He * sigma_E(E, 1)))
+        
     def NormalizeLuminosity(self):
         """
         Returns a constant that normalizes a given spectrum to its bolometric luminosity.
@@ -134,10 +150,10 @@ class RadiationSource:
         
         else:
         
-            if self.SourceType == 1 or self.SourceType == 2:
+            if self.SourceType in [1, 2]:
                 integral = integrate(self.SpecificIntensity, small_number, big_number)[0]
                 
-            if self.SourceType == 3:
+            if self.SourceType in [3, 4]:
                 if self.alpha == -1.0: 
                     integral = (1. / 1000.0**self.alpha) * (self.EmaxNorm - self.EminNorm)
                 elif self.alpha == -2.0: 

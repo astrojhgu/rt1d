@@ -195,7 +195,7 @@ class Radiate:
             Gamma_HeII = self.IonizationRateCoefficientHeII(ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices)
             Beta_HeI = 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T) * self.CollisionalIonization
             Beta_HeII = 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T) * self.CollisionalIonization
-            alpha_HeII = 9.94e-11 * T**-0.48                                                            
+            alpha_HeII = 9.94e-11 * T**-0.6687                                                           
             alpha_HeIII = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1        # To n >= 1
             if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))                                # To n >= 2
             else: alpha_HeIII *= (1.43 - 0.076 * np.log(T))
