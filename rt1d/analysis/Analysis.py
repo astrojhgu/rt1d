@@ -29,10 +29,8 @@ class Analyze:
         self.grid = np.arange(self.GridDimensions)
         self.LengthUnits = self.pf['LengthUnits']
         self.StartRadius = self.pf['StartRadius']
-
-        #self.r = self.pf['LengthUnits'] * self.grid / self.pf['GridDimensions']
-        #self.StartRadius = self.pf["StartRadius"] * self.pf['LengthUnits'] / cm_per_kpc
         
+        # Grid
         if self.pf['LogarithmicGrid']:
             self.lgrid = [0]
             self.lgrid.extend(np.logspace(0, np.log10(self.GridDimensions - 1), self.GridDimensions - 1))

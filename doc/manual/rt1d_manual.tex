@@ -258,6 +258,16 @@ These were added for convenience in January, 2011.  If you want to make changes 
 
 \subsection{Control Parameters}
 
+\begin{description}
+    
+\item [\texttt{ODEatol}] Absolute tolerance of the ODE solver.  If ionized fractions are zero to this tolerance, they are reset to \texttt{MinimumSpeciesFraction}.  Combination of this parameter and \texttt{ODErtol} (below) determine whether or not the ODE time-step is cut in half. (Default = $10^{-5}$)
+
+\item [\texttt{ODErtol}]
+Relative tolerance of the ODE solver.  Combination of this parameter and \texttt{ODEatol} determine whether or not the ODE time-step is cut in half via the formulae $|y_2 - y_1| = \texttt{ODEatol} + \texttt{ODErtol}\times y_2$. (Default = $10^{-5}$)
+ 
+
+\end{description}
+
 
 \subsection{Source Parameters}
 
