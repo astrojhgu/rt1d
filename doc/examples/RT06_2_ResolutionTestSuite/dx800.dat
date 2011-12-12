@@ -1,4 +1,4 @@
-ProblemType = 2.1
+ProblemType = 2
 GridDimensions = 800
-OutputDirectory = dx800_dt3
-HIIRestrictedTimestep = 1
+OutputDirectory = dx800
+LengthUnits = 3.08568e22

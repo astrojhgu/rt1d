@@ -1,4 +1,4 @@
-ProblemType = 2.1
+ProblemType = 2
 GridDimensions = 6400
-OutputDirectory = dx6400_dt3
-HIIRestrictedTimestep = 1
+OutputDirectory = dx6400
+LengthUnits = 3.08568e22

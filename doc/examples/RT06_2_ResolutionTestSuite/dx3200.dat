@@ -1,4 +1,4 @@
-ProblemType = 2.1
+ProblemType = 2
 GridDimensions = 3200
-OutputDirectory = dx3200_dt3
-HIIRestrictedTimestep = 1
+OutputDirectory = dx3200
+LengthUnits = 3.08568e22
