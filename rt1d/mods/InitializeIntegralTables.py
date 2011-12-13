@@ -235,9 +235,9 @@ class InitializeIntegralTables:
                     # Skip helium integrals
                     if re.search('HeI', integral): continue
                     
-                    if rank == 0: 
+                    if rank == 0 and self.ParallelizationMethod == 1: 
                             print "\nComputing value of {0}{1}...".format(integral, 0)
-                    if rank == 0 and self.ProgressBar: 
+                    if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
                             pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start()
                                         
                     tab = np.zeros(self.HINBins)
@@ -246,12 +246,13 @@ class InitializeIntegralTables:
                         if self.ParallelizationMethod == 1 and (i % size != rank): 
                             continue
                         
-                        if rank == 0 and self.ProgressBar:
+                        if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1:
                             pbar.update(i + 1)
                         
                         tab[i] = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0, 0]))
 
-                    if size > 1: tab = MPI.COMM_WORLD.allreduce(tab, tab)
+                    if size > 1 and self.ParallelizationMethod == 1: 
+                        tab = MPI.COMM_WORLD.allreduce(tab, tab)
 
                     # Append species to name - here, will always be zero (hydrogen only)  
                     itabs["{0}{1}".format(integral, 0)] = tab                    
@@ -275,7 +276,8 @@ class InitializeIntegralTables:
                         tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
                         for i, ncol_HI in enumerate(self.HIColumn):  
                             
-                            if self.ParallelizationMethod == 1 and (i % size != rank): continue
+                            if self.ParallelizationMethod == 1 and (i % size != rank): 
+                                continue
                             
                             for j, ncol_HeI in enumerate(self.HeIColumn):
                                 for k, ncol_HeII in enumerate(self.HeIIColumn):
@@ -285,14 +287,17 @@ class InitializeIntegralTables:
                                 try: pbar.update(i + 1)
                                 except AssertionError: pass
                        
-                        if size > 1: tab = MPI.COMM_WORLD.allreduce(tab, tab)
+                        if size > 1 and self.ParallelizationMethod == 1: 
+                            tab = MPI.COMM_WORLD.allreduce(tab, tab)
                         
                         itabs["{0}{1}".format(integral, species)] = tab
                         del tab
                         
-            if rank == 0 and self.ProgressBar: pbar.finish()            
+            if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
+                pbar.finish()            
                                                      
-            if rank == 0: self.WriteIntegralTable(itabs)
+            if rank == 0 or self.ParallelizationMethod == 2: 
+                self.WriteIntegralTable(itabs)
                 
             return itabs
             

@@ -231,9 +231,7 @@ class Radiate:
             condition = (solve_arr >= lb[rank]) & (solve_arr < lb[rank + 1])
             proc_mask[condition] = 1
             solve_arr = solve_arr[proc_mask == 1]  
-            
-            #print rank, solve_arr 
-                            
+                                        
         newdata = {}
         for key in data.keys(): 
             newdata[key] = copy.deepcopy(data[key])

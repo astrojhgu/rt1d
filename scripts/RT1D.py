@@ -45,7 +45,7 @@ else:
     pf = rtm.ReadParameterFile(sys.argv[1])
     all_pfs.append(pf)
     del pf
-    
+        
 # Print some output to the screen        
 if rank == 0: 
     print "\nStarting rt1d..."
@@ -57,9 +57,10 @@ start = time.time()
 
 # Loop over parameter sets. 
 for i, pf in enumerate(all_pfs):   
-    
-    if (i % size != rank) and (pf["ParallelizationMethod"] == 2): continue
-     
+        
+    if pf["ParallelizationMethod"] == 2:
+        if i % size != rank: continue
+          
     TimeUnits = pf["TimeUnits"]
     LengthUnits = pf["LengthUnits"]
     GridDimensions = pf["GridDimensions"]
@@ -67,7 +68,7 @@ for i, pf in enumerate(all_pfs):
     dtDataDump = pf["dtDataDump"] * TimeUnits
     
     # Print out cell-crossing and box-crossing times for convenience
-    if rank == 0:
+    if i % size == rank:
         print "Cell-crossing time = {0} (years), {1} (code)".format(LengthUnits / GridDimensions / 29979245800.0 / 31557600.0, \
             LengthUnits / GridDimensions / 29979245800.0 / TimeUnits)
         print "Box-crossing time = {0} (years), {1} (code)\n".format(LengthUnits / 29979245800.0 / 31557600.0, LengthUnits / 29979245800.0 / TimeUnits)
@@ -130,10 +131,11 @@ for i, pf in enumerate(all_pfs):
     h = dt
     wct = int(t / dtDataDump) + 1
     if not IsRestart: 
-        if rank == 0: 
+        if i % size == rank:
             w.WriteAllData(data, 0, t, dt)
                         
-    if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(wct, root = 0)         
+    if size > 1 and pf["ParallelizationMethod"] == 1: 
+        MPI.COMM_WORLD.bcast(wct, root = 0)         
     
     # If we want to store timestep evolution, setup dump file
     if pf["OutputTimestep"]: 
@@ -142,6 +144,7 @@ for i, pf in enumerate(all_pfs):
         print >> fdt, '# t  dt'
         fdt.close()
     
+    # Initialize load balance if 
     if size > 1: 
         lb = list(np.linspace(pf["GridDimensions"] / size, pf["GridDimensions"], size))
         lb.insert(0, 0)
@@ -181,17 +184,19 @@ for i, pf in enumerate(all_pfs):
             wct += 1
             
         if dt == 0: 
-            raise ValueError('Timestep = 0.  Exiting.')  
+            raise ValueError('dt = 0.  Exiting.')  
            
         # Don't move on until root processor has written out data    
-        if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(write_now, root = 0)    
+        if size > 1 and pf["ParallelizationMethod"] == 1: 
+            MPI.COMM_WORLD.bcast(write_now, root = 0)    
     
     if pf["OutputTimestep"]: 
         print >> fdt, ""
         fdt.close()
                 
-    elapsed = time.time() - start    
-    print "Calculation {0} complete (output to {1}).  Elapsed time = {2} hours.".format(i + 1, pf["OutputDirectory"], round(elapsed / 3600., 2))
+    elapsed = time.time() - start  
+    if i % size == rank:  
+        print "Calculation {0} complete (output to {1}).  Elapsed time = {2} hours.".format(i + 1, pf["OutputDirectory"], round(elapsed / 3600., 2))
 
     f = open('{0}/RunComplete'.format(pf["OutputDirectory"]), 'w')
     print >> f, '# walltime (s)'
