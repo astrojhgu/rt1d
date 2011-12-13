@@ -438,6 +438,10 @@ class Radiate:
                                                                                                                                                                                                                                                                                                                                               
                     r = cell_pack * self.LengthUnits / self.GridDimensions
                     
+                    if r < (self.StartRadius / self.LengthUnits): 
+                        cell_pack += dc
+                        continue
+                    
                     n_e = newdata["ElectronDensity"][cell]
                     n_HI = newdata["HIDensity"][cell]
                     n_HII = newdata["HIIDensity"][cell]
@@ -487,7 +491,7 @@ class Radiate:
                         indices = self.Interpolate.GetIndices3D(ncol)
                     
                     qnew = np.array([n_HII, n_HeII, n_HeIII, E])
-                                                                                
+
                     tarr, qnew, h = self.solver.integrate(self.qdot, qnew, t, t + subdt, None, h, \
                         r, z, mu, n_H, n_He, packs[j][2:5], Lbol, indices)
                                         
