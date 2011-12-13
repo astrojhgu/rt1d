@@ -51,6 +51,8 @@ m_HeII = 2.0 * (m_p + m_n) + m_e
 
 E_th = [13.6, 24.6, 54.4]
 
+neglible_column = 1
+
 # Widget for progressbar.
 widget = ["Ray Casting: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 
@@ -268,7 +270,7 @@ class Radiate:
         ncol_HI = np.cumsum(data["HIDensity"] * self.dx) 
         ncol_HeI = np.cumsum(data["HeIDensity"] * self.dx) 
         ncol_HeII = np.cumsum(data["HeIIDensity"] * self.dx) 
-        ncol_HI[0] = ncol_HeI[0] = ncol_HeII[0] = 0.0
+        ncol_HI[0] = ncol_HeI[0] = ncol_HeII[0] = neglible_column
         
         # Convenience arrays
         ncol_all = np.transpose([ncol_HI, ncol_HeI, ncol_HeII])
@@ -364,12 +366,12 @@ class Radiate:
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################
-                
+                                
                 # Retrieve indices used for 3D interpolation
                 indices = None
                 if self.MultiSpecies > 0: 
                     indices = self.Interpolate.GetIndices3D(ncol)
-                           
+                
                 # Call solver                                    
                 tarr, qnew, h = self.solver.integrate(self.qdot, q_all[cell], t, t + dt, None, h, \
                     r, z, mu, n_H, n_He, ncol, Lbol, indices)

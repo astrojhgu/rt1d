@@ -111,29 +111,38 @@ class Analyze:
         
         if mp is None: self.mp.fix_ticks()  
         
-    def PlotRadialProfiles(self, field = ['x_HI', 'x_HII'], t = [10, 100, 500], 
-        ls = ['-', '--'], color = ['k', 'k']):
+    def PlotRadialProfiles(self, species = 'H', t = [1, 10, 100], color = 'k'):
         """
-        Plot radial profiles of fields at times t.
+        Plot radial profiles of species = [H, He] at times t (Myr).
         """      
         
-        ax = pl.subplot(111)
+        if not hasattr(self, 'ax'):
+            self.ax = pl.subplot(111)
         
-        ax.set_xscale('log')
-        ax.set_yscale('log')
+        self.ax.set_xscale('log')
+        self.ax.set_yscale('log')
         
         for dd in self.data.keys():
-            if self.data[dd].t / self.pf['TimeUnits'] not in t: continue
+            if self.data[dd].t / self.pf['TimeUnits'] not in t: 
+                continue
             
-            for i, f in enumerate(field):
-                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, f, ls[i], color[i]))
+            if species == 'H':
+                exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, 'x_HI', '-', color))
+                exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, 'x_HII', '--', color))    
+            if species == 'He':
+                exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, 'x_HeI', '-', color))
+                exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, 'x_HeII', '--', color))
+                exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, 'x_HeIII', ':', color))                
             
-        ax.set_xlabel(r'$r / L_{\mathrm{box}}$')  
+        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
+        self.ax.set_ylabel(r'Species Fraction')  
         pl.draw()
-        
-        return ax
-                     
+                             
     def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):
         """
         Histogram all fields.
