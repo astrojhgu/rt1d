@@ -137,7 +137,7 @@ class RadiationSource:
         Kramer & Haiman 2008.
         """    
         
-        return self.PowerLaw(E) * np.exp(-self.SpectrumIntrinsicAbsorbingColumn * \
+        return self.PowerLaw(E) * np.exp(-self.SpectrumAbsorbingColumn * \
             (sigma_E(E, 0) + y_He * sigma_E(E, 1)))
         
     def NormalizeLuminosity(self):

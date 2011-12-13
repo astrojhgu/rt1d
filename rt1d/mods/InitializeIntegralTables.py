@@ -144,7 +144,7 @@ class InitializeIntegralTables:
             mort = "{0}M".format(int(self.SourceMass))
             
             if self.SourceType == 3: spec = "pl"
-            elif self.SourceType == 4: spec = "mcd"
+            elif self.SourceType == 4: spec = "apl"
             else: spec = "unknown"
         
             return "{0}_{1}{2}_{3}.h5".format(src, spec, self.SpectrumPowerLawIndex, dim)
