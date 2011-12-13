@@ -68,7 +68,7 @@ for i, pf in enumerate(all_pfs):
     dtDataDump = pf["dtDataDump"] * TimeUnits
     
     # Print out cell-crossing and box-crossing times for convenience
-    if i % size == rank:
+    if rank == 0:
         print "Cell-crossing time = {0} (years), {1} (code)".format(LengthUnits / GridDimensions / 29979245800.0 / 31557600.0, \
             LengthUnits / GridDimensions / 29979245800.0 / TimeUnits)
         print "Box-crossing time = {0} (years), {1} (code)\n".format(LengthUnits / 29979245800.0 / 31557600.0, LengthUnits / 29979245800.0 / TimeUnits)
