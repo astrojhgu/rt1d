@@ -7,7 +7,7 @@ Created on 2010-10-18.
 
 Description: Construct 1D arrays for our data in code units.  Return as dictionary.
 
-Notes: Do I want to keep track of CellWidth as well?
+Notes: Non-constant profiles need fixing.
      
 """
 
@@ -51,26 +51,23 @@ class InitializeGrid:
             self.ClumpDensityProfile = pf["ClumpDensityProfile"]
         
         self.Y = 0.2477 * self.MultiSpecies
-                        
-        # Generic data array                
-        self.grid = np.arange(self.GridDimensions)
-        self.density = map(self.InitializeDensity, self.grid)
-        self.ionization = map(self.InitializeIonization, self.grid)
-        
+                
         # Deal with log-grid
         if self.LogGrid:
-            self.lgrid = [0]
-            self.lgrid.extend(np.logspace(0, np.log10(self.GridDimensions - 1), self.GridDimensions - 1))
-            self.lgrid = np.array(self.lgrid)
-            self.r = self.LengthUnits * self.lgrid / self.GridDimensions
-            self.dx = np.diff(self.r)
-            self.dx = np.concatenate([[0], self.dx]) # ?
-            i = np.argmin(np.abs(self.StartRadius - self.r / self.LengthUnits))
-            self.StartCell = max(self.grid[i], 1)
+            self.r = np.logspace(np.log10(self.StartRadius * self.LengthUnits), \
+                np.log10(self.LengthUnits), self.GridDimensions)
+            r_tmp = np.concatenate([[0], self.r])
+            self.dx = np.diff(r_tmp)    
+            self.grid = np.arange(len(self.r))            
         else:
-            self.r = self.LengthUnits * self.grid / self.GridDimensions  
             self.dx = self.LengthUnits / self.GridDimensions
-            self.StartCell = int(self.StartRadius * self.GridDimensions)
+            rmin = max(self.dx, self.StartRadius * self.LengthUnits)
+            self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions)
+            self.grid = np.arange(len(self.r))
+                            
+        # Generic data array                
+        self.density = map(self.InitializeDensity, self.grid)
+        self.ionization = map(self.InitializeIonization, self.grid)    
             
     def InitializeFields(self):
         """
@@ -94,7 +91,7 @@ class InitializeGrid:
                 0: Uniform density given by InitialDensity parameter.
                 1: Uniform density given by cosmic mean at z = InitialRedshift.
         """        
-        
+                
         if self.DensityProfile == 0: density = self.InitialDensity * m_H
         if self.DensityProfile == 1: density = self.Cosmology.MeanBaryonDensity(self.InitialRedshift)
         
@@ -116,11 +113,10 @@ class InitializeGrid:
                 1: Uniform temperature given assuming the gas decouples from the CMB at z = 250
                 2: Gas within StartRadius at 10^4 K, InitialTemperature elsewhere
         """
+                
         if self.TemperatureProfile == 0: temperature = self.InitialTemperature    
         if self.TemperatureProfile == 1: temperature = 2.725 * (1. + self.InitialRedshift)**3. / 251.
-        if self.TemperatureProfile == 2: 
-            if cell < self.StartCell: temperature = 1e4
-            else: temperature = self.InitialTemperature
+        if self.TemperatureProfile == 2: temperature = self.InitialTemperature
             
         if self.Clump:
             if (cell >= (self.ClumpPosition - self.ClumpRadius)) and (cell <= (self.ClumpPosition + self.ClumpRadius)):
@@ -138,7 +134,7 @@ class InitializeGrid:
                    
         Returns the HII fraction in 'cell'.
         """
-        
+                
         if self.IonizationProfile == 0: ionization = self.InitialHIIFraction 
         if self.IonizationProfile == 1: 
             if (float(cell) / self.GridDimensions) < self.StartRadius: ionization = 1
@@ -150,14 +146,14 @@ class InitializeGrid:
         """
         Initialize neutral hydrogen density.
         """
-        
+                
         return (1. - self.Y) * (1. - self.ionization[cell]) * self.density[cell] / m_H
     
     def InitializeHIIDensity(self, cell):
         """
         Initialize ionized hydrogen density.
         """
-        
+                
         return (1. - self.Y) * self.ionization[cell] * self.density[cell] / m_H
         
     def InitializeHeIDensity(self, cell):
@@ -165,7 +161,7 @@ class InitializeGrid:
         Initialize neutral helium density - initial ionized fraction of helium is assumed
         to be the same as that of hydrogen.
         """
-        
+                
         return self.Y * (1. - self.ionization[cell]) * self.density[cell] / 4. / m_H
         
     def InitializeHeIIDensity(self, cell):

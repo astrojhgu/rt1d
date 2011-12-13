@@ -85,7 +85,7 @@ class RadiationSource:
         self.epsilon = pf["SourceRadiativeEfficiency"] 
         
         # SourceType = 4
-        self.SpectrumIntrinsicAbsorbingColumn = pf["SpectrumIntrinsicAbsorbingColumn"]
+        self.SpectrumAbsorbingColumn = pf["SpectrumAbsorbingColumn"]
                         
         # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()
@@ -170,7 +170,8 @@ class RadiationSource:
         bolometric luminosity will increase with time, hence the optional 't' argument.
         """
         
-        if (t / self.TimeUnits) > self.tau: return 0.0
+        if (t / self.TimeUnits) > self.tau: 
+            return 0.0
         
         if self.SourceType == 0: 
             return self.Lph / (np.sum(self.F / self.E / erg_per_ev))

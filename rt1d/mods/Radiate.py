@@ -93,28 +93,27 @@ class Radiate:
         self.TimeUnits = pf["TimeUnits"]
         self.StopTime = pf["StopTime"] * self.TimeUnits
         self.StartRadius = pf["StartRadius"]
+        self.R0 = self.StartRadius * self.LengthUnits
         self.InitialHydrogenDensity = (data["HIDensity"][0] + data["HIIDensity"][0]) / (1. + self.InitialRedshift)**3
         self.InitialHeliumDensity = (data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0]) / (1. + self.InitialRedshift)**3
         self.HIColumn = n_col[0]
         self.HeIColumn = n_col[1]
         self.HeIIColumn = n_col[2]
         
-        self.grid = np.arange(self.GridDimensions)
         self.LogGrid = pf['LogarithmicGrid']
-        
+            
+        # Deal with log-grid
         if self.LogGrid:
-            self.lgrid = [0]
-            self.lgrid.extend(np.logspace(0, np.log10(self.GridDimensions - 1), self.GridDimensions - 1))
-            self.lgrid = np.array(self.lgrid)
-            self.r = self.LengthUnits * self.lgrid / self.GridDimensions
-            self.dx = np.diff(self.r)
-            self.dx = np.concatenate([[0], self.dx]) # ?
-            i = np.argmin(np.abs(self.StartRadius - self.r / self.LengthUnits))
-            self.StartCell = max(self.grid[i], 1)
+            self.r = np.logspace(np.log10(self.StartRadius * self.LengthUnits), \
+                np.log10(self.LengthUnits), self.GridDimensions)
+            r_tmp = np.concatenate([[0], self.r])
+            self.dx = np.diff(r_tmp)    
+            self.grid = np.arange(len(self.r))            
         else:
-            self.r = self.LengthUnits * self.grid / self.GridDimensions  
             self.dx = self.LengthUnits / self.GridDimensions
-            self.StartCell = int(self.StartRadius * self.GridDimensions)
+            rmin = max(self.dx, self.StartRadius * self.LengthUnits)
+            self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions)
+            self.grid = np.arange(len(self.r))    
     
         self.CellCrossingTime = self.dx / c
         self.OnePhotonPackagePerCell = pf["OnePhotonPackagePerCell"]
@@ -129,17 +128,19 @@ class Radiate:
         
         self.TotalHydrogen = data["HIDensity"][-1] + data["HIIDensity"][-1]
         self.TotalHelium = data["HeIDensity"][-1] + data["HeIIDensity"][-1] + data["HeIIIDensity"][-1]
-        
         guesses = [0.5 * self.TotalHydrogen, 
                    0.5 * self.TotalHelium, 
                    0.1 * self.TotalHelium, 
                    3 * self.InitialTemperature * k_B * (self.TotalHydrogen + self.TotalHelium) / 2.]
                 
+        # Initialize solver        
         self.solver = SolveRateEquations(pf, guesses = guesses, stepper = self.AdaptiveStep, hmin = self.MinStep, hmax = self.MaxStep, \
             rtol = self.rtol, atol = self.atol, Dfun = None, maxiter = pf["ODEmaxiter"])
-                                
+        
+        # Initialize interpolation routines                        
         self.Interpolate = Interpolate(self.pf, n_col, self.itabs)                        
-                                
+        
+        # Initialize helium abundance                        
         self.Y = 0.2477 * self.MultiSpecies
         self.X = 1. - self.Y
 
@@ -226,7 +227,7 @@ class Radiate:
         
         # Do this so an MPI all-reduce doesn't add stuff together
         if self.ParallelizationMethod == 1 and size > 1:
-            solve_arr = np.arange(len(self.grid))
+            solve_arr = np.arange(self.GridDimensions)
             proc_mask = np.zeros_like(solve_arr)
             
             condition = (solve_arr >= lb[rank]) & (solve_arr < lb[rank + 1])
@@ -269,6 +270,7 @@ class Radiate:
         ncol_HI = np.cumsum(data["HIDensity"] * self.dx) 
         ncol_HeI = np.cumsum(data["HeIDensity"] * self.dx) 
         ncol_HeII = np.cumsum(data["HeIIDensity"] * self.dx) 
+        ncol_HI[0] = ncol_HeI[0] = ncol_HeII[0] = 0.0
         ncol_all = np.transpose([ncol_HI, ncol_HeI, ncol_HeII])
         nabs_all = np.transpose([data["HIDensity"], data["HeIDensity"], data["HeIIDensity"]])
         nion_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"]])
@@ -304,11 +306,10 @@ class Radiate:
                     packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
             else: packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
         
-        # Initialize dtphot array
+        # Initialize timestep array
         if self.HIIRestrictedTimestep: 
-            dtphot = np.zeros(len(self.grid))
-            dtphot[0:self.StartCell] = 1e50
-                
+            dtphot = 1e50 * np.ones_like(self.grid)    
+        
         ###
         ## SOLVE: c -> inf
         ###        
@@ -317,14 +318,12 @@ class Radiate:
             # Loop over cells radially, solve rate equations, update values in data -> newdata
             for cell in self.grid:
                             
-                # If within our buffer zone (where we don't solve rate equations), continue
-                if cell < self.StartCell: continue
-                
                 # If this cell belongs to another processor, continue
                 if self.ParallelizationMethod == 1 and size > 1:
                     if cell not in solve_arr: continue
                         
-                if rank == 0 and self.ProgressBar: pbar.update(cell * size)
+                if rank == 0 and self.ProgressBar: 
+                    pbar.update(cell * size)
                                                                 
                 # Read in densities for this cell
                 n_e = data["ElectronDensity"][cell]
@@ -404,11 +403,7 @@ class Radiate:
         ## SOLVE: c = finite
         ###   
         else:                
-                   
-            # Is this necessary?                              
-            if self.HIIRestrictedTimestep: 
-                dtphot = 1e50 * np.ones_like(self.grid)    
-                                    
+       
             # Loop over photon packages, updating values in cells: data -> newdata
             for j, pack in enumerate(packs):
                 t_birth = pack[0]
@@ -418,8 +413,6 @@ class Radiate:
                 # Cells we need to know about - not necessarily integer
                 cell_pack = r_pack * self.GridDimensions / self.LengthUnits
                 cell_pack_max = r_max * self.GridDimensions / self.LengthUnits
-                
-                if cell_pack_max < self.StartCell: continue
                               
                 Lbol = pack[-1] / pack[1]          
                                                 
@@ -435,9 +428,9 @@ class Radiate:
                     if cell_pack % 1 == 0: dc = min(cell_pack_max - cell_pack, 1)
                     else: dc = min(math.ceil(cell_pack) - cell_pack, cell_pack_max - cell_pack)        
                                               
-                    if cell < self.StartCell: 
-                        cell_pack += dc
-                        continue
+                    #if cell < self.StartCell: 
+                    #    cell_pack += dc
+                    #    continue
                                                 
                     # We really need to evolve this cell until the next photon package arrives, which
                     # is probably longer than a cell crossing time unless the global dt is vv small.
@@ -474,10 +467,16 @@ class Radiate:
                     T = newdata["Temperature"][cell]
                     E = 3. * k_B * T * n_B / mu / 2.
                     
-                    # Will need to change to account for log-grid
-                    packs[j][2] += newdata['HIDensity'][cell] * dc * self.CellCrossingTime * c  
-                    packs[j][3] += newdata['HeIDensity'][cell] * dc * self.CellCrossingTime * c 
-                    packs[j][4] += newdata['HeIIDensity'][cell] * dc * self.CellCrossingTime * c
+                    # Crossing time will depend on cell for logarithmic grids
+                    if self.LogGrid:
+                        dct = self.CellCrossingTime[cell]
+                    else:
+                        dct = self.CellCrossingTime
+                    
+                    # Add columns of this cell
+                    packs[j][2] += newdata['HIDensity'][cell] * dc * dct * c  
+                    packs[j][3] += newdata['HeIDensity'][cell] * dc * dct * c 
+                    packs[j][4] += newdata['HeIIDensity'][cell] * dc * dct * c
                     
                     ######################################
                     ######## Solve Rate Equations ########
@@ -519,7 +518,7 @@ class Radiate:
                     ######################################                                   
                 
             if self.HIIRestrictedTimestep or self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep:
-                for cell in self.grid[self.StartCell:]:
+                for cell in self.grid:
                     dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, self.rs.BolometricLuminosity(t), n_H_arr[0], n_He_arr[0])            
         
         # If multiple processors at work, communicate data and timestep                                                                                          
@@ -637,15 +636,13 @@ class Radiate:
         Return cells that should be solved by each processor.
         """    
         
-        nsubsteps = 1. / dtphot[self.StartCell:]
+        nsubsteps = 1. / dtphot
                 
         # Compute CDF for timesteps
         cdf = np.cumsum(nsubsteps) / np.sum(nsubsteps)
         intervals = np.linspace(1. / size, 1, size)
                 
-        lb = list(np.interp(intervals, cdf, self.grid[self.StartCell:], left = self.StartCell))
-        lb.insert(0, self.StartCell)
-                
+        lb = list(np.interp(intervals, cdf, self.grid, left = 0))
         lb[-1] = self.GridDimensions
         
         for i, entry in enumerate(lb):
@@ -655,7 +652,7 @@ class Radiate:
         while np.any(np.diff(lb) == 0):
             for i, entry in enumerate(lb[1:-1]):
                                 
-                if entry == self.StartCell: 
+                if entry == 0: 
                     lb[i + 1] = entry + 1
                 if entry == lb[i]:
                     lb[i + 1] = entry + 1
