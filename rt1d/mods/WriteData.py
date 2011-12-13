@@ -37,7 +37,7 @@ class WriteData:
 
         pf_grp = f.create_group("ParameterFile")
         data_grp = f.create_group("Data")
-                        
+        
         for par in self.pf: 
             if par == "CurrentTime": pf_grp.create_dataset(par, data = t / self.TimeUnits)
             elif par == "CurrentTimestep": pf_grp.create_dataset(par, data = dt / self.TimeUnits)
@@ -48,7 +48,8 @@ class WriteData:
         
         f.close()
         
-        if rank == 0: print "Wrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.OutputDirectory, DataDumpName)
+        if rank == 0: 
+            print "Wrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.OutputDirectory, DataDumpName)
         
         self.WriteParameterFile(wct, t, dt)
 

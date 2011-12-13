@@ -97,7 +97,7 @@ def SetDefaultParameterValues():
         "InitialDensity": 0, \
         "TemperatureProfile": 0, \
         "InitialTemperature": 100, \
-        "IonizationProfile": 0, \
+        "IonizationProfile": 1, \
         "InitialHIIFraction": 1e-4, \
         "Clump": 0, \
         "ClumpPosition": 0.1, \

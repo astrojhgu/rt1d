@@ -65,8 +65,6 @@ for i, pf in enumerate(all_pfs):
     GridDimensions = pf["GridDimensions"]
     StopTime = pf["StopTime"] * TimeUnits
     dtDataDump = pf["dtDataDump"] * TimeUnits
-    StartCell = int(pf["StartRadius"] * GridDimensions)
-    r_0 = LengthUnits * StartCell / GridDimensions
     
     # Print out cell-crossing and box-crossing times for convenience
     if rank == 0:
@@ -113,19 +111,19 @@ for i, pf in enumerate(all_pfs):
         else:
             indices = None    
             
-        Gamma = r.IonizationRateCoefficientHI(3 * [1e-10], 0, data['HIDensity'][StartCell], data['HeIDensity'][StartCell], data["ElectronDensity"][StartCell], \
-            data['Temperature'][StartCell], r_0, r.rs.BolometricLuminosity(0), indices)        
-        alpha = 2.6e-13 * (data['Temperature'][StartCell] / 1.e4)**-0.85  
+        Gamma = r.IonizationRateCoefficientHI(3 * [1e-10], 0, data['HIDensity'][0], data['HeIDensity'][0], data["ElectronDensity"][0], \
+            data['Temperature'][0], g.r[0], r.rs.BolometricLuminosity(0), indices)        
+        alpha = 2.6e-13 * (data['Temperature'][0] / 1.e4)**-0.85  
                 
         # Shapiro et al. 2004 - override initial timestep in parameter file
-        dt = pf["MaxHIIChange"] * data['HIDensity'][StartCell] / \
-            np.abs(data['HIDensity'][StartCell] * Gamma - data["ElectronDensity"][StartCell]**2 * alpha)
-    
+        dt = pf["MaxHIIChange"] * data['HIDensity'][0] / \
+            np.abs(data['HIDensity'][0] * Gamma - data["ElectronDensity"][0]**2 * alpha)
+        
         # Make it even smaller just to play it safe if helium is involved
         if pf["MultiSpecies"]: dt *= 0.1   
             
     dt = min(dt, StopTime)
-            
+                
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
     ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
     t = pf["CurrentTime"] * TimeUnits
@@ -146,7 +144,7 @@ for i, pf in enumerate(all_pfs):
     
     if size > 1: 
         lb = list(np.linspace(pf["GridDimensions"] / size, pf["GridDimensions"], size))
-        lb.insert(0, StartCell)
+        lb.insert(0, 0)
     else: 
         lb = None
     
@@ -182,7 +180,8 @@ for i, pf in enumerate(all_pfs):
                 wrote = True
             wct += 1
             
-        if dt == 0: raise ValueError('Timestep = 0.  Exiting.')  
+        if dt == 0: 
+            raise ValueError('Timestep = 0.  Exiting.')  
            
         # Don't move on until root processor has written out data    
         if size > 1 and pf["ParallelizationMethod"] == 1: MPI.COMM_WORLD.bcast(write_now, root = 0)    

@@ -18,28 +18,26 @@ class DataDump:
         """
         Turns an hdf5 file object into attributes of the DataDump object!
         
-        Note: I'm not including the first cells because values will be zero and mess
-        up log plots!
+        Note: pf is an hdf5 group object here.
         
         """        
         
         self.LengthUnits = pf["LengthUnits"].value
         self.StartRadius = pf["StartRadius"].value
         self.GridDimensions = pf["GridDimensions"].value
+        self.grid = np.arange(self.GridDimensions)
         
         # Deal with log-grid
-        if pf['LogarithmicGrid']:
+        if pf['LogarithmicGrid'].value:
             self.r = np.logspace(np.log10(self.StartRadius * self.LengthUnits), \
                 np.log10(self.LengthUnits), self.GridDimensions)
             r_tmp = np.concatenate([[0], self.r])
             self.dx = np.diff(r_tmp)    
-            self.grid = np.arange(len(self.r))            
         else:
             self.dx = self.LengthUnits / self.GridDimensions
             rmin = max(self.dx, self.StartRadius * self.LengthUnits)
             self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions)
-            self.grid = np.arange(len(self.r))    
-                    
+                            
         self.t = pf["CurrentTime"].value * pf["TimeUnits"].value
         
         # Fields
@@ -52,10 +50,6 @@ class DataDump:
         self.x_HII = self.n_HII / self.n_H
         self.ncol_HI = np.cumsum(self.n_HI * self.dx)
         self.dtPhoton = dd["dtPhoton"].value / pf["TimeUnits"].value
-        
-        #try:
-        #    if not pf["InfiniteSpeedOfLight"]: self.PhotonPackages = dd["PhotonPackages"].value
-        #except KeyError: pass
         
         if pf["MultiSpecies"].value > 0:
             self.n_HeI = dd["HeIDensity"].value

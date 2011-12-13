@@ -58,12 +58,12 @@ class InitializeGrid:
                 np.log10(self.LengthUnits), self.GridDimensions)
             r_tmp = np.concatenate([[0], self.r])
             self.dx = np.diff(r_tmp)    
-            self.grid = np.arange(len(self.r))            
         else:
             self.dx = self.LengthUnits / self.GridDimensions
             rmin = max(self.dx, self.StartRadius * self.LengthUnits)
             self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions)
-            self.grid = np.arange(len(self.r))
+        
+        self.grid = np.arange(len(self.r))
                             
         # Generic data array                
         self.density = map(self.InitializeDensity, self.grid)
@@ -136,9 +136,9 @@ class InitializeGrid:
         """
                 
         if self.IonizationProfile == 0: ionization = self.InitialHIIFraction 
-        if self.IonizationProfile == 1: 
-            if (float(cell) / self.GridDimensions) < self.StartRadius: ionization = 1
-            else: ionization = self.InitialHIIFraction
+        #if self.IonizationProfile == 1: 
+        #    if (float(cell) / self.GridDimensions) < self.StartRadius: ionization = 1
+        #    else: ionization = self.InitialHIIFraction
         
         return ionization    
         

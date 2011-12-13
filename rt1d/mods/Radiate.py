@@ -101,6 +101,7 @@ class Radiate:
         self.HeIIColumn = n_col[2]
         
         self.LogGrid = pf['LogarithmicGrid']
+        self.grid = np.arange(self.GridDimensions)
             
         # Deal with log-grid
         if self.LogGrid:
@@ -108,13 +109,11 @@ class Radiate:
                 np.log10(self.LengthUnits), self.GridDimensions)
             r_tmp = np.concatenate([[0], self.r])
             self.dx = np.diff(r_tmp)    
-            self.grid = np.arange(len(self.r))            
         else:
             self.dx = self.LengthUnits / self.GridDimensions
             rmin = max(self.dx, self.StartRadius * self.LengthUnits)
             self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions)
-            self.grid = np.arange(len(self.r))    
-    
+                    
         self.CellCrossingTime = self.dx / c
         self.OnePhotonPackagePerCell = pf["OnePhotonPackagePerCell"]
         self.LightCrossingTimeRestrictedStep = pf["LightCrossingTimeRestrictedStep"]
@@ -229,10 +228,11 @@ class Radiate:
         if self.ParallelizationMethod == 1 and size > 1:
             solve_arr = np.arange(self.GridDimensions)
             proc_mask = np.zeros_like(solve_arr)
-            
             condition = (solve_arr >= lb[rank]) & (solve_arr < lb[rank + 1])
             proc_mask[condition] = 1
-            solve_arr = solve_arr[proc_mask == 1]   
+            solve_arr = solve_arr[proc_mask == 1]  
+            
+            #print rank, solve_arr 
                             
         newdata = {}
         for key in data.keys(): 
@@ -271,6 +271,8 @@ class Radiate:
         ncol_HeI = np.cumsum(data["HeIDensity"] * self.dx) 
         ncol_HeII = np.cumsum(data["HeIIDensity"] * self.dx) 
         ncol_HI[0] = ncol_HeI[0] = ncol_HeII[0] = 0.0
+        
+        # Convenience arrays
         ncol_all = np.transpose([ncol_HI, ncol_HeI, ncol_HeII])
         nabs_all = np.transpose([data["HIDensity"], data["HeIDensity"], data["HeIIDensity"]])
         nion_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"]])
@@ -308,7 +310,10 @@ class Radiate:
         
         # Initialize timestep array
         if self.HIIRestrictedTimestep: 
-            dtphot = 1e50 * np.ones_like(self.grid)    
+            if self.InfiniteSpeedOfLight:
+                dtphot = 1. * np.zeros_like(self.grid)    
+            else:
+                dtphot = 1e50 * np.ones_like(self.grid)        
         
         ###
         ## SOLVE: c -> inf
@@ -427,11 +432,7 @@ class Radiate:
                     # Compute dc (like dx but in fractional cell units)
                     if cell_pack % 1 == 0: dc = min(cell_pack_max - cell_pack, 1)
                     else: dc = min(math.ceil(cell_pack) - cell_pack, cell_pack_max - cell_pack)        
-                                              
-                    #if cell < self.StartCell: 
-                    #    cell_pack += dc
-                    #    continue
-                                                
+                                                         
                     # We really need to evolve this cell until the next photon package arrives, which
                     # is probably longer than a cell crossing time unless the global dt is vv small.
                     if (len(packs) > 1) and ((j + 1) < len(packs)): subdt = min(dt, packs[j + 1][0] - pack[0])
@@ -536,15 +537,19 @@ class Radiate:
         if self.LightCrossingTimeRestrictedStep: 
             newdt = min(newdt, self.LightCrossingTimeRestrictedStep * self.LengthUnits / self.GridDimensions / 29979245800.0)
         
-        if rank == 0 and self.ProgressBar: pbar.finish()
+        if rank == 0 and self.ProgressBar: 
+            pbar.finish()
         
         # Update photon packages        
         if not self.InfiniteSpeedOfLight: 
             newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt, newdata)  # t + newdt?            
                                 
+        # Store timestep information
+        newdata['dtPhoton'] = dtphot                        
+                                
         if size > 1: lb = self.LoadBalance(dtphot)   
         else: lb = None     
-                                                                                                           
+                                                                                                                   
         return newdata, h, newdt, lb  
         
     def ComputePhotonTimestep(self, newdata, cell, Lbol, n_H, n_He):
@@ -636,6 +641,7 @@ class Radiate:
         Return cells that should be solved by each processor.
         """    
         
+        # Estimate of number of steps for each cell
         nsubsteps = 1. / dtphot
                 
         # Compute CDF for timesteps
@@ -644,10 +650,11 @@ class Radiate:
                 
         lb = list(np.interp(intervals, cdf, self.grid, left = 0))
         lb[-1] = self.GridDimensions
-        
+        lb.insert(0, 0)
+                
         for i, entry in enumerate(lb):
             lb[i] = int(entry)
-        
+                
         # Make sure no two elements are the same - this may not always work
         while np.any(np.diff(lb) == 0):
             for i, entry in enumerate(lb[1:-1]):
@@ -656,7 +663,7 @@ class Radiate:
                     lb[i + 1] = entry + 1
                 if entry == lb[i]:
                     lb[i + 1] = entry + 1
-                                                                        
+                                                                                            
         return lb
         
     def IonizationRateCoefficientHI(self, ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol, indices):

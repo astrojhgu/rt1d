@@ -22,13 +22,14 @@ class Analyze:
     def __init__(self, pf):
         self.ds = Dataset(pf)
         self.data = self.ds.data
-        self.pf = self.ds.pf
+        self.pf = self.ds.pf    # dictionary
         
         # Convenience
         self.GridDimensions = self.pf['GridDimensions']
         self.grid = np.arange(self.GridDimensions)
         self.LengthUnits = self.pf['LengthUnits']
         self.StartRadius = self.pf['StartRadius']
+        self.grid = np.arange(self.GridDimensions)
         
         # Deal with log-grid
         if self.pf['LogarithmicGrid']:
@@ -36,13 +37,11 @@ class Analyze:
                 np.log10(self.LengthUnits), self.GridDimensions)
             r_tmp = np.concatenate([[0], self.r])
             self.dx = np.diff(r_tmp)    
-            self.grid = np.arange(len(self.r))            
         else:
             self.dx = self.LengthUnits / self.GridDimensions
             rmin = max(self.dx, self.StartRadius * self.LengthUnits)
             self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions)
-            self.grid = np.arange(len(self.r))    
-        
+                
         # Store bins used for PDFs/CDFs
         self.bins = {}
         
