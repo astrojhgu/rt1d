@@ -295,9 +295,15 @@ class InitializeIntegralTables:
                         
             if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
                 pbar.finish()            
-                                                     
+                                        
+            wrote = False                                         
             if rank == 0 or self.ParallelizationMethod == 2: 
                 self.WriteIntegralTable(itabs)
+                wrote = True
+                
+            # Don't move on until root processor has written out data    
+            if size > 1 and self.ParallelizationMethod == 1: 
+                MPI.COMM_WORLD.barrier()       
                 
             return itabs
             

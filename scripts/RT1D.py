@@ -188,7 +188,7 @@ for i, pf in enumerate(all_pfs):
            
         # Don't move on until root processor has written out data    
         if size > 1 and pf["ParallelizationMethod"] == 1: 
-            MPI.COMM_WORLD.bcast(write_now, root = 0)    
+            MPI.COMM_WORLD.barrier()    
     
     if pf["OutputTimestep"]: 
         print >> fdt, ""

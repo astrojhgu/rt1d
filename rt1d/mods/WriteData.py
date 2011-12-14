@@ -31,6 +31,10 @@ class WriteData:
         self.OutputDirectory = pf["OutputDirectory"]
 
     def WriteAllData(self, data, wct, t, dt):
+        """
+        Write all data to hdf5 file.
+        """
+        
         DataDumpName = "{0}{1:04d}".format(self.pf["DataDumpName"], wct)
                                 
         f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.OutputDirectory, DataDumpName), 'w') 
@@ -52,6 +56,14 @@ class WriteData:
             print "Wrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.OutputDirectory, DataDumpName)
         
         self.WriteParameterFile(wct, t, dt)
+        
+    def WriteASCII(self, data, wc, t, dt):
+        """
+        Write all data to ASCII file.
+        """    
+        pass
+    
+        
 
     def WriteParameterFile(self, wct, t, dt):
         """
