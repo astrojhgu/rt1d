@@ -123,7 +123,7 @@ def ProblemType(pt):
              "Isothermal": 0, "MultiSpecies": 0, "SecondaryIonization": 0, "CosmologicalExpansion": 0, \
              "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
              "IonizationProfile": 0, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 1e10, \
-             "SpectrumPhotonLuminosity": 5e48, "DiscreteSpectrum": 1, \
+             "SpectrumPhotonLuminosity": 5e48, "HIColumnMax": 1e20, "DiscreteSpectrum": 1, \
              "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188]
             }         
     

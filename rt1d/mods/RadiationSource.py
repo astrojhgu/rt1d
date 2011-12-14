@@ -61,9 +61,11 @@ class RadiationSource:
         self.Emax = pf["SpectrumMaxEnergy"]
         self.EminNorm = pf["SpectrumMinNormEnergy"]
         self.EmaxNorm = pf["SpectrumMaxNormEnergy"]
-                    
+
         self.E = np.array(pf["DiscreteSpectrumSED"])
-        self.F = np.array(pf["DiscreteSpectrumRelLum"])
+        self.F = np.array(pf["DiscreteSpectrumRelLum"])            
+        
+        # SourceType 0, 1, 2
         self.Lph = pf["SpectrumPhotonLuminosity"]
             
         # SourceType = 1, 2
@@ -86,13 +88,14 @@ class RadiationSource:
         
         # SourceType = 4
         self.SpectrumAbsorbingColumn = pf["SpectrumAbsorbingColumn"]
-                        
+                     
         # Normalize spectrum
-        self.LuminosityNormalization = self.NormalizeLuminosity()
-        
-        # Calculate mean emission energy
-        #self.MeanEmissionEnergy = quad(lambda E: E * self.Spectrum(E), 13.6, np.inf, epsrel = 1e-15)
-                                                                
+        self.LuminosityNormalization = self.NormalizeLuminosity()    
+                        
+        # Possibly override self.F - only makes sense for monochromatic sources
+        if pf["ConserveIonizingPhotonLuminosity"]:
+            self.F[0] = self.IonizingPhotonLuminosity() * self.E[0] * erg_per_ev / self.BolometricLuminosity()    
+                                    
     def Spectrum(self, E):
         """
         Return the fraction of the bolometric luminosity emitted at this energy.  This quantity is dimensionless, and its integral should be 1.
@@ -186,7 +189,18 @@ class RadiationSource:
             if self.FixedSourceMass: Mnow = self.M
             else: Mnow = self.M * np.exp( ((1.0 - self.epsilon) / self.epsilon) * t / t_edd)
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
-            
+    
+    def IonizingPhotonLuminosity(self):
+        """
+        Return Qdot (photons / s) for this source.
+        """
+        
+        if self.SourceType < 3:
+            return self.Lph
+        else:
+            integrand = lambda E: self.Spectrum(E) / E / erg_per_ev
+            return self.BolometricLuminosity() * quad(integrand, self.Emin, self.Emax)[0]
+                            
     def SpectrumCDF(self, E):
         """
         Returns cumulative energy output contributed by photons at or less than energy E.

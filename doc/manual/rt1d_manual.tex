@@ -301,6 +301,20 @@ In \texttt{rt1d/doc/examples} you will find directories containing convergence t
 \end{verbatim}
 I've included the same setup for $c \neq \infty$ in \texttt{rt1d/doc/examples/RT06\_1\_ResolutionTestSuite/c\_finite}, so you can see the differences (if any) caused by making the $c \rightarrow \infty$ approximation.
 
+%%% 
+%% Troubleshooting
+%%%
+\section{Troubleshooting}
+If your results look horribly, horribly wrong, here are a few places where you could've gone wrong.  We'll start with things that may occur with the stable version of the code.
+
+
+Now, if you modify or add anything in the source code (awesome by the way!), you're far more likely to encounter troubles.
+
+
+\begin{description}
+    \item[Totally Bogus Results] This is will almost certainly happen at some point in the development process. But, if it happens even after you're \textit{positive} the error was fixed, my guess is that you are using the integral tables that were generated with the previous, error-ridden version of the code.  Try removing the integral tables and re-running your simulation.
+\end{description}
+
 
 \newpage
 \bibliography{references}

@@ -117,7 +117,6 @@ def SetDefaultParameterValues():
           
         # Spectral parameters
         "DiscreteSpectrum": 0, \
-        "EnergyAveragedCrossSection": 0, \
         "SpectrumPowerLawIndex": 1.5, \
         "SpectrumMinEnergy": 100, \
         "SpectrumMaxEnergy": 1e4, \
@@ -126,8 +125,12 @@ def SetDefaultParameterValues():
         "SpectrumPhotonLuminosity": 5e48, \
         "SpectrumAbsorbingColumn": 1.585e19, \
           
+        # Set discrete spectrum manually  
         "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
         "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], \
+        
+        # Or, conserve bolometric (default) or ionizing luminosity of continuous source
+        "ConserveIonizingPhotonLuminosity": 0, \
           
         # Cosmological Parameters (WMAP 7)
         "InitialRedshift": 20.0, \
