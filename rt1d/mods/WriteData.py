@@ -14,11 +14,18 @@ import h5py, os
 import numpy as np
 
 try:
+    import h5py
+    h5 = True
+except ImportError:
+    print 'Module h5py not found. Will read/write to ASCII instead of HDF5.'
+    h5 = False
+    
+try:
     from mpi4py import MPI
     rank = MPI.COMM_WORLD.rank
     size = MPI.COMM_WORLD.size
-except:
-    ImportError("Module mpi4py not found.  No worries, we'll just run in serial.")
+except ImportError:
+    print "Module mpi4py not found.  No worries, we'll just run in serial."
     rank = 0
     size = 1
 
@@ -29,15 +36,26 @@ class WriteData:
         self.pf = pf
         self.TimeUnits = pf["TimeUnits"]
         self.OutputDirectory = pf["OutputDirectory"]
+        self.OutputFormat = pf["OutputFormat"] and h5
 
     def WriteAllData(self, data, wct, t, dt):
         """
         Write all data to hdf5 file.
         """
         
-        DataDumpName = "{0}{1:04d}".format(self.pf["DataDumpName"], wct)
-                                
-        f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.OutputDirectory, DataDumpName), 'w') 
+        if self.OutputFormat == 0:
+            self.WriteASCII(data, wct, t, dt)
+        else:
+            self.WriteHDF5(data, wct, t, dt)
+            
+        self.WriteParameterFile(wct, t, dt)    
+        
+    def WriteHDF5(self, data, wct, t, dt):
+        """
+        Write all data to hdf5 file.
+        """
+                                        
+        f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.OutputDirectory.rstrip('/'), self.GetDataDumpName(wct)), 'w') 
 
         pf_grp = f.create_group("ParameterFile")
         data_grp = f.create_group("Data")
@@ -53,26 +71,28 @@ class WriteData:
         f.close()
         
         if rank == 0: 
-            print "Wrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.OutputDirectory, DataDumpName)
-        
-        self.WriteParameterFile(wct, t, dt)
-        
+            print "Wrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.OutputDirectory.rstrip('/'), self.GetDataDumpName(wct))
+
     def WriteASCII(self, data, wc, t, dt):
         """
         Write all data to ASCII file.
         """    
-        pass
-    
         
+        raise ValueError('WriteASCII not yet implemented.')
+
+    def GetDataDumpName(self, wct):
+        """
+        Return name of data dump to be written
+        """
+        
+        return "{0}{1:04d}".format(self.pf["DataDumpName"], wct)
 
     def WriteParameterFile(self, wct, t, dt):
         """
         Write out parameter file to ASCII format.
         """
-        
-        DataDumpName = "{0}{1:04d}".format(self.pf["DataDumpName"], wct)
-        
-        f = open("{0}/{1}/{2}".format(GlobalDir, self.OutputDirectory, DataDumpName), 'w')
+                
+        f = open("{0}/{1}/{2}".format(GlobalDir, self.OutputDirectory, self.GetDataDumpName(wct)), 'w')
         
         names = self.pf.keys()
         names.sort()

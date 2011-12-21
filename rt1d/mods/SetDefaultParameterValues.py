@@ -66,7 +66,7 @@ def SetDefaultParameterValues():
         "dtDataDump": 1.0, \
         "DataDumpName": 'dd', \
         "OutputDirectory": './', \
-        "OutputFormat": 0, \
+        "OutputFormat": 1, \
         "OutputTimestep": 0, \
         "ProgressBar": 0, \
         "CurrentTimestep": 1e-8, \

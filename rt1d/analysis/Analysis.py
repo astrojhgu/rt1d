@@ -64,12 +64,15 @@ class Analyze:
         
         return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) + self.StartRadius
         
-    def LocateIonizationFront(self, dd):
+    def LocateIonizationFront(self, dd, species = 0):
         """
         Find the position of the ionization front in data dump 'dd'.
         """
         
-        return np.interp(0.5, self.data[dd].x_HI, self.data[dd].r)
+        if species == 0:
+            return np.interp(0.5, self.data[dd].x_HI, self.data[dd].r)
+        else:
+            return np.interp(0.5, self.data[dd].x_HeI, self.data[dd].r)
         
     def ComputeIonizationFrontEvolution(self, T0 = None):
         """

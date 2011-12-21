@@ -66,15 +66,14 @@ class SolveRateEquations:
             xf: Endpoint of integration in independent variable x.
             
             *args = (r, z, mu, n_H, n_He, ncol, Lbol, indices)
-            
-            TO DO: Dont keep arrays x and y, just keep xprev, xnext, yprev, ynext
-            
+                        
         """
                 
         if hpre is None: h = self.hmax
         else: h = hpre
                         
         i = 1
+        last_adaptation = 1
         while xnow < xf: 
             xnext = xnow + h
                                                              
@@ -124,7 +123,8 @@ class SolveRateEquations:
                                   
             # Adaptive time-stepping
             adapted = False
-            if self.stepper:                 
+            if self.stepper:       
+                      
                 tol_met = self.adapt(f, ynow, xnow, ynext, xnext, h, Dfun, args)
                 
                 if not np.all(tol_met):                 
@@ -134,10 +134,13 @@ class SolveRateEquations:
                     # Make step smaller
                     h = max(self.hmin, h / 2.)
                     adapted = True
+                    #3last_adaptation = i
                                                                                                 
             # If we've gotten this far without adaptively stepping, increase h
             if adapted is False: 
                 h = min(self.hmax, 2. * h)
+            #elif (i - last_adaptation) > 10:
+            #    h = h
             else: 
                 continue 
                                                                                                     

@@ -24,7 +24,7 @@ try:
     from progressbar import *
     pb = True
 except ImportError:
-    "Module progressbar not found."
+    print "Module progressbar not found."
     pb = False
 
 try:
