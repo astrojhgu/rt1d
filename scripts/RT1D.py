@@ -50,9 +50,11 @@ else:
 if rank == 0: 
     print "\nStarting rt1d..."
     print "Initializing {0} 1D radiative transfer calculation(s)...".format(len(all_pfs)) 
-    if IsRestart: print "Restarting from {0}".format(sys.argv[2])
+    if IsRestart: 
+        print "Restarting from {0}".format(sys.argv[2])
     print "Press ctrl-C to quit at any time.\n" 
 
+# Start clock
 start = time.time()
 
 # Loop over parameter sets. 
@@ -60,7 +62,17 @@ for i, pf in enumerate(all_pfs):
         
     if pf["ParallelizationMethod"] == 2:
         if i % size != rank: continue
+        
+    # Check for parameter conflicts    
+    conflicts, errmsg = rtm.CheckForParameterConflicts(pf)
+    if conflicts:
+        print 'ERROR -- PARAMETER VALUES IN CONFLICT:'
+        for msg in errmsg:
+            print msg
+        print '\n'    
+        raise Exception()   
           
+    # Read in a few things for convenience      
     TimeUnits = pf["TimeUnits"]
     LengthUnits = pf["LengthUnits"]
     GridDimensions = pf["GridDimensions"]
@@ -69,9 +81,10 @@ for i, pf in enumerate(all_pfs):
     
     # Print out cell-crossing and box-crossing times for convenience
     if rank == 0:
-        print "Cell-crossing time = {0} (years), {1} (code)".format(LengthUnits / GridDimensions / 29979245800.0 / 31557600.0, \
-            LengthUnits / GridDimensions / 29979245800.0 / TimeUnits)
-        print "Box-crossing time = {0} (years), {1} (code)\n".format(LengthUnits / 29979245800.0 / 31557600.0, LengthUnits / 29979245800.0 / TimeUnits)
+        print "Cell-crossing time = {0} (years), {1} (code)".format(LengthUnits / GridDimensions / \
+            29979245800.0 / 31557600.0, LengthUnits / GridDimensions / 29979245800.0 / TimeUnits)
+        print "Box-crossing time = {0} (years), {1} (code)\n".format(LengthUnits / 29979245800.0 / \
+            31557600.0, LengthUnits / 29979245800.0 / TimeUnits)
                         
     # Initialize grid and file system
     if IsRestart: 
@@ -90,7 +103,7 @@ for i, pf in enumerate(all_pfs):
         
         # Wait here if parallelizing over grid
         if size > 1 and pf["ParallelizationMethod"] == 1: 
-            MPI.COMM_WORLD.bcast(made, root = 0)    
+            MPI.COMM_WORLD.barrier()
 
     # Initialize integral tables
     iits = rtm.InitializeIntegralTables(pf, data)
@@ -106,23 +119,15 @@ for i, pf in enumerate(all_pfs):
     if IsRestart or pf["HIIRestrictedTimestep"] == 0: 
         dt = pf["CurrentTimestep"] * TimeUnits
     else:
+        # Use Shapiro et al. 2004 condition for limiting change in neutral fraction
+        dt = r.ComputePhotonTimestep(data, 0, r.rs.BolometricLuminosity(0), \
+            g.density[0] / 1.67e-24, g.density[0] / 4. / 1.67e-24)
         
-        if pf["MultiSpecies"]:
-            indices = r.Interpolate.GetIndices3D(3 * [1e-10])
-        else:
-            indices = None    
-            
-        Gamma = r.IonizationRateCoefficientHI(3 * [1e-10], 0, data['HIDensity'][0], data['HeIDensity'][0], data["ElectronDensity"][0], \
-            data['Temperature'][0], g.r[0], r.rs.BolometricLuminosity(0), indices)        
-        alpha = 2.6e-13 * (data['Temperature'][0] / 1.e4)**-0.85  
-                
-        # Shapiro et al. 2004 - override initial timestep in parameter file
-        dt = pf["MaxHIIChange"] * data['HIDensity'][0] / \
-            np.abs(data['HIDensity'][0] * Gamma - data["ElectronDensity"][0]**2 * alpha)
-        
-        # Make it even smaller just to play it safe if helium is involved
-        if pf["MultiSpecies"]: dt *= 0.1   
-            
+        # Play it safe if helium is involved
+        if pf["MultiSpecies"]: 
+            dt *= 0.1   
+    
+    # If (probalby for testing purposes) we have StopTime << 1, make sure dt <= StopTime        
     dt = min(dt, StopTime)
                 
     # Figure out data dump times, write out initial dataset (or not if this is a restart).
@@ -131,20 +136,24 @@ for i, pf in enumerate(all_pfs):
     h = dt
     wct = int(t / dtDataDump) + 1
     if not IsRestart: 
-        if i % size == rank:
+        if (pf["ParallelizationMethod"] == 1 and rank == 0) or \
+           (pf["ParallelizationMethod"] == 2): 
             w.WriteAllData(data, 0, t, dt)
-                        
+    
+    # Wait for root processor to write out initial dataset if running in parallel            
     if size > 1 and pf["ParallelizationMethod"] == 1: 
-        MPI.COMM_WORLD.bcast(wct, root = 0)         
+        MPI.COMM_WORLD.barrier()
     
     # If we want to store timestep evolution, setup dump file
     if pf["OutputTimestep"]: 
-        if IsRestart: fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'a')
-        else: fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'w')
+        aw = 'w'
+        if IsRestart: 
+            aw = 'a'
+        fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), aw)
         print >> fdt, '# t  dt'
         fdt.close()
     
-    # Initialize load balance if 
+    # Initialize load balance if running in parallel
     if size > 1: 
         lb = list(np.linspace(pf["GridDimensions"] / size, pf["GridDimensions"], size))
         lb.insert(0, 0)
@@ -177,7 +186,7 @@ for i, pf in enumerate(all_pfs):
         # Write-out data                                        
         if write_now:
             wrote = False
-            if (pf["ParallelizationMethod"] == 1 and i == 0) or \
+            if (pf["ParallelizationMethod"] == 1 and rank == 0) or \
                (pf["ParallelizationMethod"] == 2): 
                 w.WriteAllData(data, wct, tnow, dt)
                 wrote = True

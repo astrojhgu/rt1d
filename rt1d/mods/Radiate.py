@@ -90,12 +90,12 @@ class Radiate:
         self.CosmologicalExpansion = pf["CosmologicalExpansion"]
         self.InitialHIIFraction = pf["InitialHIIFraction"]
         self.GridDimensions = int(pf["GridDimensions"])
-        self.InitialRedshift = pf["InitialRedshift"]
         self.LengthUnits = pf["LengthUnits"]
         self.TimeUnits = pf["TimeUnits"]
         self.StopTime = pf["StopTime"] * self.TimeUnits
         self.StartRadius = pf["StartRadius"]
         self.R0 = self.StartRadius * self.LengthUnits
+        self.InitialRedshift = pf["InitialRedshift"]
         self.InitialHydrogenDensity = (data["HIDensity"][0] + data["HIIDensity"][0]) / (1. + self.InitialRedshift)**3
         self.InitialHeliumDensity = (data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0]) / (1. + self.InitialRedshift)**3
         self.HIColumn = n_col[0]
@@ -171,7 +171,7 @@ class Radiate:
         indices = args[0][7]
                         
         # Derived quantities
-        n_HII = min(q[0], n_H)          # This could be > n_H within machine precision and really screw things up
+        n_HII = min(q[0], n_H)  # This could be > n_H within machine precision and really screw things up
         n_HI = n_H - n_HII
         x_HII = n_HII / n_H   
               
@@ -185,8 +185,10 @@ class Radiate:
         n_B = n_H + n_He + n_e
 
         E = q[3]        
-        if self.Isothermal: T = self.InitialTemperature
-        else: T = E * 2. * mu / 3. / k_B / n_B
+        if self.Isothermal: 
+            T = self.InitialTemperature
+        else: 
+            T = E * 2. * mu / 3. / k_B / n_B
                 
         # First, solve for rate coefficients
         alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85    
@@ -233,7 +235,8 @@ class Radiate:
             condition = (solve_arr >= lb[rank]) & (solve_arr < lb[rank + 1])
             proc_mask[condition] = 1
             solve_arr = solve_arr[proc_mask == 1]  
-                                        
+                          
+        # Set up newdata dictionary                                
         newdata = {}
         for key in data.keys(): 
             newdata[key] = copy.deepcopy(data[key])
@@ -255,7 +258,8 @@ class Radiate:
             x_HeIII_arr = data["HeIIIDensity"] / n_He_arr
         
         # This is not a good idea in general, but in this case they'll never be touched again.
-        else: n_He_arr = x_HeI_arr = x_HeII_arr = x_HeIII_arr = np.zeros_like(x_HI_arr)
+        else: 
+            n_He_arr = x_HeI_arr = x_HeII_arr = x_HeIII_arr = np.zeros_like(x_HI_arr)
                                                         
         # If we're in an expanding universe, dilute densities by (1 + z)**3    
         if self.CosmologicalExpansion: 

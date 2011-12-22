@@ -147,9 +147,9 @@ using the fits of \cite{Verner1996}.
 To be more explicit, let's write out $\Gamma_{\HI}$ in its entirety.
 \begin{align}
     \Gamma_{\HI} & = \int_{13.6\eV}^{\infty}\sigma_{\HI}(E) \spec(E) \frac{dE}{E} \nonumber \\
-    & + f_{\HI}^{\mathrm{ion}} \left(\frac{n_{\HI}}{n_{\HI}}\right) \int_{13.6\eV}^{\infty}\sigma_{\HI}(E) \left(\frac{E - 13.6\eV}{E}\right)\spec(E)\frac{dE}{E} \nonumber \\
-    & + f_{\HeI}^{\mathrm{ion}} \left(\frac{n_{\HeI}}{n_{\HI}}\right) \int_{24.4\eV}^{\infty}\sigma_{\HeI}(E) \left(\frac{E - 24.4\eV}{E}\right)\spec(E)\frac{dE}{E} \nonumber \\
-    & + f_{\HeII}^{\mathrm{ion}} \left(\frac{n_{\HeII}}{n_{\HI}}\right) \int_{54.4\eV}^{\infty}\sigma_{\HeI}(E) \left(\frac{E - 54.4\eV}{E}\right)\spec(E)\frac{dE}{E}
+    & + f_{\HI}^{\mathrm{ion}} \left(\frac{n_{\HI}}{n_{\HI}}\right) \int_{13.6\eV}^{\infty}\sigma_{\HI}(E) \left(\frac{E - 13.6\eV}{13.6\eV}\right)\spec(E)\frac{dE}{E} \nonumber \\
+    & + f_{\HeI}^{\mathrm{ion}} \left(\frac{n_{\HeI}}{n_{\HI}}\right) \int_{24.4\eV}^{\infty}\sigma_{\HeI}(E) \left(\frac{E - 24.4\eV}{13.6\eV}\right)\spec(E)\frac{dE}{E} \nonumber \\
+    & + f_{\HeII}^{\mathrm{ion}} \left(\frac{n_{\HeII}}{n_{\HI}}\right) \int_{54.4\eV}^{\infty}\sigma_{\HeI}(E) \left(\frac{E - 54.4\eV}{13.6\eV}\right)\spec(E)\frac{dE}{E}
 \end{align}    
 The first term accounts for all hydrogen photoionization.  The final three terms account for collisional ionization of hydrogen due to secondary photo-electrons from ionizations of neutral hydrogen (second term), neutral helium (third term), and singly ionized helium (fourth term).  Collisional ionizations due to thermal electrons in the gas are accounted for separately through the $\beta_i$ coefficients.
 
@@ -315,6 +315,32 @@ Now, if you modify or add anything in the source code (awesome by the way!), you
     \item[Totally Bogus Results] This is will almost certainly happen at some point in the development process. But, if it happens even after you're \textit{positive} the error was fixed, my guess is that you are using the integral tables that were generated with the previous, error-ridden version of the code.  Try removing the integral tables and re-running your simulation.
 \end{description}
 
+%%%
+%% INTERACTIVE MODE
+%%%
+\section{Interactive Mode}
+Is it worth doing this?  Would want it to look something like this:
+
+\begin{verbatim}
+import rt1d
+import numpy as np
+pf = rt1d.SetDefaultParameterValues()
+r = np.linspace(3e19, 3e21, 100) # 100 grid cells between 0.01-1kpc. (optional)
+data = rt1d.Shine(pf, r)    
+\end{verbatim}    
+
+This would make it easy to:
+\begin{itemize}
+    \item Allow users to write their own rt1d `scripts.'
+    \item Change source properties manually with time.
+    \item Making arbitrarily structured grids.
+    \item Very specific initial conditions.
+\end{itemize}    
+
+How to change the code to allow for this?
+Define main loop in RT1D.py as Shine.  Insert if __name__ == `main' stuff?
+Would be nice to have an executable...
+Move RT1D.py to \$RT1D/bin, import it from \$RT1D/rt1d/__init__.py
 
 \newpage
 \bibliography{references}
