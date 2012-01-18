@@ -20,6 +20,14 @@ except ImportError:
     print "Module mpi4py not found.  No worries, we'll just run in serial."
     rank = 0
     size = 1
+    
+def Shine(pf, ):
+    """
+    w00t.
+    """    
+    
+    
+    
 
 # Class definitions
 import rt1d.mods as rtm

@@ -54,7 +54,8 @@ E_th = [13.6, 24.6, 54.4]
 neglible_column = 1
 
 # Widget for progressbar.
-widget = ["Ray Casting: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
+if pb: 
+    widget = ["Ray Casting: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 
 class Radiate:
     def __init__(self, pf, data, itabs, n_col): 

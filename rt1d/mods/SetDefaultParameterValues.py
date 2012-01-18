@@ -22,7 +22,7 @@ def SetDefaultParameterValues():
        {
     
         # Override
-        "ProblemType": 0, \
+        "ProblemType": 1, \
           
         # Integration
         "InterpolationMethod": 0, \
@@ -38,10 +38,12 @@ def SetDefaultParameterValues():
         
         "ParallelizationMethod": 1, \
         "Debug": 1, \
+        
+        "PhotonConserving": 0, \
           
         # Integral tabulation
         "HIColumnMin": 1e16, \
-        "HIColumnMax": 1e22, \
+        "HIColumnMax": 1e20, \
         "HeIColumnMin": 1e18, \
         "HeIColumnMax": 1e22, \
         "HeIIColumnMin": 1e16, \
@@ -63,7 +65,7 @@ def SetDefaultParameterValues():
         "CurrentTime": 0.0, \
         "StopTime": 50.0, \
         "StartRadius": 0.01, \
-        "dtDataDump": 1.0, \
+        "dtDataDump": 5.0, \
         "DataDumpName": 'dd', \
         "OutputDirectory": './', \
         "OutputFormat": 1, \
@@ -81,7 +83,7 @@ def SetDefaultParameterValues():
         "MinimumSpeciesFraction": 1e-8, \
         
         # Physics
-        "Isothermal": 0, \
+        "Isothermal": 1, \
         "MultiSpecies": 0, \
         "CollisionalIonization": 1, \
         "CollisionalExcitation": 1, \
@@ -96,8 +98,8 @@ def SetDefaultParameterValues():
         "DensityProfile": 0, \
         "InitialDensity": 0, \
         "TemperatureProfile": 0, \
-        "InitialTemperature": 100, \
-        "IonizationProfile": 1, \
+        "InitialTemperature": 1e4, \
+        "IonizationProfile": 0, \
         "InitialHIIFraction": 1e-4, \
         "Clump": 0, \
         "ClumpPosition": 0.1, \
@@ -118,10 +120,10 @@ def SetDefaultParameterValues():
         # Spectral parameters
         "DiscreteSpectrum": 0, \
         "SpectrumPowerLawIndex": 1.5, \
-        "SpectrumMinEnergy": 100, \
-        "SpectrumMaxEnergy": 1e4, \
-        "SpectrumMinNormEnergy": 100, \
-        "SpectrumMaxNormEnergy": 1e4, \
+        "SpectrumMinEnergy": 13.6, \
+        "SpectrumMaxEnergy": 1e2, \
+        "SpectrumMinNormEnergy": 0.01, \
+        "SpectrumMaxNormEnergy": 5e2, \
         "SpectrumPhotonLuminosity": 5e48, \
         "SpectrumAbsorbingColumn": 1.585e19, \
           
