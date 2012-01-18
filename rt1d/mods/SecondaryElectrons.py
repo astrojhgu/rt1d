@@ -58,18 +58,25 @@ class SecondaryElectrons:
         
         """
         
-        if E == 0.0: E = tiny_number
+        if E == 0.0: 
+            E = tiny_number
         
         if self.Method == 0:
-            if channel == 0: return 1.0
-            else: return 0.0
+            if channel == 0: 
+                return 1.0
+            else: 
+                return 0.0
             
         if self.Method == 1: 
             if channel == 0: 
-                if xi <= 1e-4: return 0.15 # This is what they do in TZ07.
-                else: return 0.9971 * (1 - pow(1 - pow(xi, 0.2663), 1.3163))
-            if channel == 1: return 0.3908 * pow(1 - pow(xi, 0.4092), 1.7592)
-            if channel == 2: return 0.0554 * pow(1 - pow(xi, 0.4614), 1.6660)     
+                if xi <= 1e-4: 
+                    return 0.15 # This is what they do in TZ07.
+                else: 
+                    return 0.9971 * (1 - pow(1 - pow(xi, 0.2663), 1.3163))
+            if channel == 1: 
+                return 0.3908 * pow(1 - pow(xi, 0.4092), 1.7592)
+            if channel == 2: 
+                return 0.0554 * pow(1 - pow(xi, 0.4614), 1.6660)     
             
         if self.Method == 2:
             

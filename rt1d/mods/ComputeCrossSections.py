@@ -12,6 +12,7 @@ coefficients and anything else like this that may crop up.
 
 import numpy as np
 
+E_th = [13.6, 24.6, 54.4]
 params = [[4.298e-1, 5.475e4, 3.288e1, 2.963, 0.0, 0.0, 0.0],
           [13.61, 9.492e2, 1.469, 3.188, 2.039, 4.434e-1, 2.136],
           [1.72, 1.369e4, 3.288e1, 2.963, 0.0, 0.0, 0.0]]
@@ -32,6 +33,10 @@ def PhotoIonizationCrossSection(E, species = 0):
         Note: The units are cm^2.
     
     """                            
+    
+    if E < E_th[species]:
+        return 0
+    
     x = (E / params[species][0]) - params[species][5]
     y = np.sqrt(x**2 + params[species][6]**2)
     F_y = ((x - 1.0)**2 + params[species][4]**2) * \
