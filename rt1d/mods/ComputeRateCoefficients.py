@@ -18,10 +18,13 @@ from SecondaryElectrons import SecondaryElectrons
 from . import Interpolate 
 from Interpolate import Interpolate
 
+E_th = [13.6, 24.6, 54.4]
+
 class RateCoefficients:
-    def __init__(self, pf, itabs = None, n_col = None):
+    def __init__(self, pf, rs, itabs = None, n_col = None):
         self.pf = pf
         self.itabs = itabs
+        self.rs = rs
         self.esec = SecondaryElectrons(pf)
         
         # Initialize integral tables
@@ -59,28 +62,37 @@ class RateCoefficients:
         eta = np.zeros(3)
         psi = np.zeros(3)
         if self.PhotonConserving:
-              Gamma_HI = 0
-              gamma_HI = 0
-              Beta_HI = 0
-              alpha_HII = 0
-              Heat_HI = 0
-              for i, E in enumerate(self.rs.DiscreteSpectrumSED):
-                  G = self.coeff.PhotoIonization(E = E, Qdot = self.rs.Qdot[i], ncol = ncol,
-                      nabs = nabs, r = r, dr = self.dx, dt = dt, species = 0)
-                  a = self.coeff.RadiativeRecombination(T = T)
-                  
-                  g = 0
-                  if self.SecondaryIonization:
-                      g = G * (E - 13.6) * self.coeff.esec.DepositionFraction(E = E, xi = x_HII, channel = 1)
-                  
-                  b = 0
-                  if self.CollisionalIonization:
-                      b = self.coeff.CollisionalIonization(n_e = n_e, T = T)
-                  
-                  Gamma_HI += G 
-                  gamma_HI += g
-                  Beta_HI += b
-                  alpha_HII += a
+            
+            # Loop over species   
+            for i in xrange(3):
+                
+                if not self.MultiSpecies and i > 0:
+                    continue
+                
+                Gamma_E = np.zeros_like(self.rs.E)
+                for j, E in enumerate(self.rs.DiscreteSpectrumSED):
+                
+                    Gamma_E[j] = self.coeff.PhotoIonization(E = E, Qdot = self.rs.Qdot[j], ncol = ncol,
+                        nabs = nabs, r = r, dr = self.dx, dt = dt, species = i)
+                    
+                    ee = Gamma_E[j] * (E - E_th[i]) # Total photo-electron energy
+                        
+                    # Ionization
+                    Gamma[i] += Gamma_E[j]
+                    
+                    if self.SecondaryIonization:
+                        gamma[i] += ee * self.coeff.esec.DepositionFraction(E = E, xi = x_HII, channel = 1 + i)
+                
+                    # Photo-heating           
+                    k_H[i] += ee * self.coeff.esec.DepositionFraction(E = E, xi = x_HII, channel = 0)
+                        
+            
+                # Collisional ionization + radiative recombination + cooling (no dep. on radiation field)
+                Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
+                alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
+                zeta[i] += self.CollisionalIonizationCoolingRate(species = i, T = T)  
+                eta[i] = 0
+                psi[i] = 0
                                                           
         else:
                

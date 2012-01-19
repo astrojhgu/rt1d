@@ -64,7 +64,7 @@ class Radiate:
         self.pf = pf
         self.rs = RadiationSource(pf)
         self.cosmo = Cosmology(pf)
-        self.coeff = RateCoefficients(pf, itabs = itabs, n_col = n_col)
+        self.coeff = RateCoefficients(pf, itabs = itabs, rs = self.rs, n_col = n_col)
         self.control = ControlSimulation(pf)
         
         self.PhotonConserving = pf['PhotonConserving']
@@ -141,10 +141,7 @@ class Radiate:
                 
         # Initialize solver        
         self.solver = SolveRateEquations(pf, guesses = guesses, stepper = self.AdaptiveStep, hmin = self.MinStep, hmax = self.MaxStep, \
-            rtol = self.rtol, atol = self.atol, Dfun = None, maxiter = pf["ODEmaxiter"])
-        
-        # Initialize interpolation routines                        
-        #self.Interpolate = Interpolate(self.pf, n_col, self.itabs)                        
+            rtol = self.rtol, atol = self.atol, Dfun = None, maxiter = pf["ODEmaxiter"])                 
         
         # Initialize helium abundance                        
         self.Y = 0.2477 * self.MultiSpecies
@@ -256,6 +253,10 @@ class Radiate:
             
             # Loop over cells radially, solve rate equations, update values in data -> newdata
             for cell in self.grid:
+                
+                # If within StartRadius, continue                
+                if self.r[cell] <= self.R0:
+                    continue
                             
                 # If this cell belongs to another processor, continue
                 if self.ParallelizationMethod == 1 and size > 1:
@@ -312,7 +313,7 @@ class Radiate:
                                             
                 ######################################
                 ######## Solve Rate Equations ########
-                ######################################                
+                ######################################                          
                                 
                 tarr, qnew, h = self.solver.integrate(self.RateEquations, q_all[cell], t, t + dt, 
                     None, h, *args)
@@ -334,8 +335,10 @@ class Radiate:
                 newdata["HeIIDensity"][cell] = newHeII
                 newdata["HeIIIDensity"][cell] = newHeIII
                 newdata["ElectronDensity"][cell] = (n_H - newHI) + newHeIII + 2.0 * newHeIII
-                newdata["Temperature"][cell] = newT        
-                                                                              
+                newdata["Temperature"][cell] = newT
+                
+                print cell, newHI
+                                                                                              
                 # Adjust timestep based on maximum allowed neutral fraction change                              
                 if self.HIIRestrictedTimestep:
                     dtphot[cell] = self.control.ComputePhotonTimestep(self.coeff.tau, 
@@ -532,9 +535,8 @@ class Radiate:
         #
         #
         
-        
-        
-        q[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + np.sum(eta * nabs) + np.sum(psi * nabs))
+        if not self.Isothermal:
+            q[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + np.sum(eta * nabs) + np.sum(psi * nabs))
         
         return q    
     
