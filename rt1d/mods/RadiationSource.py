@@ -77,8 +77,7 @@ class RadiationSource:
             self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * integrate(lambda x: x**2 / (np.exp(x) - 1.), 13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
             self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
-            
-        self.Qdot = self.F * self.Lbol / self.E   
+            self.Qdot = self.F * self.Lbol / self.E   
                                                                 
         # SourceType = 2, 3
         self.M = pf["SourceMass"]

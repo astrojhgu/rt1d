@@ -48,6 +48,7 @@ class RateCoefficients:
         """    
         
         nabs = args[0]
+        nion = args[1]
         n_H = args[1]
         x_HII = (n_H - nabs[0]) / n_H
         n_He = args[2]
@@ -61,8 +62,40 @@ class RateCoefficients:
         zeta = np.zeros(3)
         eta = np.zeros(3)
         psi = np.zeros(3)
-        if self.PhotonConserving:
+        xi = np.zeros(3)
+        
+        # Standard - integral tabulation
+        if not self.PhotonConserving:
             
+            # Loop over species   
+            for i in xrange(3):
+                
+                if not self.MultiSpecies and i > 0:
+                    continue
+                
+                # Ionization
+                Gamma[i] = self.PhotoIonizationRate(species = i, indices = indices,  
+                    Lbol = Lbol, r = r, ncol = ncol, nabs = nabs)
+               
+                gamma[i] = self.SecondaryIonizationRate(indices = indices)
+                Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
+                alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
+                
+                # Heating/cooling            
+                k_H[i] = self.PhotoElectricHeatingRate(species = i, Lbol = Lbol, r = r, 
+                    x_HII = x_HII, indices = indices, ncol = ncol)
+                    
+                zeta[i] = self.CollisionalIonizationCoolingRate(species = i, T = T)    
+                eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
+                psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)
+        
+                # Dielectric recombination
+                if i == 2:
+                    xi[i] = self.DielectricRecombinationRate(T = T)
+        
+        # Photon-conserving algorithm                                                  
+        else:
+               
             # Loop over species   
             for i in xrange(3):
                 
@@ -92,33 +125,9 @@ class RateCoefficients:
                 alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
                 zeta[i] += self.CollisionalIonizationCoolingRate(species = i, T = T)  
                 eta[i] = 0
-                psi[i] = 0
-                                                          
-        else:
-               
-            # Loop over species   
-            for i in xrange(3):
-                
-                if not self.MultiSpecies and i > 0:
-                    continue
-                
-                # Ionization
-                Gamma[i] = self.PhotoIonizationRate(species = i, indices = indices,  
-                    Lbol = Lbol, r = r, ncol = ncol, nabs = nabs)
-               
-                gamma[i] = self.SecondaryIonizationRate()
-                Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
-                alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
-                
-                # Heating/cooling            
-                k_H[i] = self.PhotoElectricHeatingRate(species = i, Lbol = Lbol, r = r, 
-                    x_HII = x_HII, indices = indices, ncol = ncol)
-                    
-                zeta[i] = self.CollisionalIonizationCoolingRate(species = i, T = T)    
-                eta[i] = 0
-                psi[i] = 0 
-        
-        return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi]
+                psi[i] = 0               
+
+        return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi]
 
     def PhotoIonizationRate(self, species = None, E = None, Qdot = None, Lbol = None, 
         ncol = None, n_e = None, nabs = None, x_HII = None, 
@@ -193,10 +202,7 @@ class RateCoefficients:
             pass
         
         else:
-            IonizationRate = Lbol * self.Interpolate.interp(indices, "SecondaryIonizationRateHI0", ncol)
-            
-            
-                
+            IonizationRate = Lbol * self.Interpolate.interp(indices, "SecondaryIonizationRateHI0", ncol)                
         
         IonizationRate += Lbol * \
             self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
@@ -211,13 +217,22 @@ class RateCoefficients:
         
     def RadiativeRecombinationRate(self, species = 0, T = None):
         """
-        Coefficient for radiative recombination of hydrogen.
+        Coefficient for radiative recombination.  Here, species = 0, 1, 2
+        refers to HII, HeII, and HeIII.
         """
         
         if species == 0:
             return 2.6e-13 * (T / 1.e4)**-0.85 
+        elif species == 1:
+            return 9.94e-11 * T**-0.6687
         else:
-            return 0.0       
+            alpha = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1
+            if T < 2.2e4: 
+                alpha *= (1.11 - 0.044 * np.log(T)) # To n >= 1                       
+            else: 
+                alpha *= (1.43 - 0.076 * np.log(T)) # To n >= 2
+            
+            return alpha        
         
     def DielectricRecombinationRate(self, T = None):
         """
@@ -249,15 +264,58 @@ class RateCoefficients:
         
         return heat
         
-    def CollisionalIonizationCoolingRate(self, T, species):
+    def CollisionalIonizationCoolingRate(self, species = 0, T = None):
+        """
+        Returns coefficient for cooling by collisional ionization.  These are equations B4.1a, b, and d respectively
+        from FK96.
+        
+            units: erg cm^3 / s
         """
         
-        """
-        
-        if species == 0: return 1.27e-21 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.58e5 / T)
-        if species == 1: return 9.38e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-2.85e5 / T)
-        if species == 2: return 4.95e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-6.31e5 / T)
+        if species == 0: 
+            return 1.27e-21 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.58e5 / T)
+        if species == 1: 
+            return 9.38e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-2.85e5 / T)
+        if species == 2: 
+            return 4.95e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-6.31e5 / T)
             
+    def CollisionalExcitationCoolingRate(self, species = 0, T = None, nabs = None, nion = None):
+        """
+        Returns coefficient for cooling by collisional excitation.  These are equations B4.3a, b, and c respectively
+        from FK96.
+        
+            units: erg cm^3 / s
+        """
+        
+        if species == 0: 
+            return 7.5e-19 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.18e5 / T)
+        if species == 1: 
+            return 9.1e-27 * T**-0.1687 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.31e4 / T) * nion[1] / nabs[1]   # CONFUSION
+        if species == 2: 
+            return 5.54e-17 * T**-0.397 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-4.73e5 / T)    
+        
+    def RecombinationCoolingRate(self, species = 0, T = None):
+        """
+        Returns coefficient for cooling by recombination.  These are equations B4.2a, b, and d respectively
+        from FK96.
+        
+            units: erg cm^3 / s
+        """
+        
+        if species == 0: 
+            return 6.5e-27 * T**0.5 * (T / 1e3)**-0.2 * (1.0 + (T / 1e6)**0.7)**-1.0
+        if species == 1: 
+            return 1.55e-26 * T**0.3647
+        if species == 2: 
+            return 3.48e-26 * np.sqrt(T) * (T / 1e3)**-0.2 * (1. + (T / 4e6)**0.7)**-1.
+        
+    def DielectricRecombinationCoolingRate(self, T):
+        """
+        Returns coefficient for cooling by dielectric recombination.  This is equation B4.2c from FK96.
+        
+            units: erg cm^3 / s
+        """
+        return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
         
     def IonizationRateCoefficientHeI(self, ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices):
         """
@@ -383,41 +441,6 @@ class RateCoefficients:
         if species == 1: return 9.38e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-2.85e5 / T)
         if species == 2: return 4.95e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-6.31e5 / T)
     
-    def CollisionalExcitationCoolingCoefficient(self, T, nabs, nion, species):
-        """
-        Returns coefficient for cooling by collisional excitation.  These are equations B4.3a, b, and c respectively
-        from FK96.
-        
-            units: erg cm^3 / s
-        """
-        
-        if species == 0: return 7.5e-19 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.18e5 / T)
-        if species == 1: 
-            if self.MultiSpecies == 0: return 0.0
-            else: return 9.1e-27 * T**-0.1687 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.31e4 / T) * nion[1] / nabs[1]   # CONFUSION
-        if species == 2: 
-            if self.MultiSpecies == 0: return 0.0
-            else: return 5.54e-17 * T**-0.397 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-4.73e5 / T)    
-        
-    def RecombinationCoolingCoefficient(self, T, species):
-        """
-        Returns coefficient for cooling by recombination.  These are equations B4.2a, b, and d respectively
-        from FK96.
-        
-            units: erg cm^3 / s
-        """
-        
-        if species == 0: return 6.5e-27 * T**0.5 * (T / 1e3)**-0.2 * (1.0 + (T / 1e6)**0.7)**-1.0
-        if species == 1: return 1.55e-26 * T**0.3647
-        if species == 2: return 3.48e-26 * np.sqrt(T) * (T / 1e3)**-0.2 * (1. + (T / 4e6)**0.7)**-1.
-        
-    def DielectricRecombinationCoolingCoefficient(self, T):
-        """
-        Returns coefficient for cooling by dielectric recombination.  This is equation B4.2c from FK96.
-        
-            units: erg cm^3 / s
-        """
-        return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
     
     def OpticalDepth(self, n, indices = None):
         """

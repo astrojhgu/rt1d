@@ -99,6 +99,7 @@ class Radiate:
         self.TimeUnits = pf["TimeUnits"]
         self.StopTime = pf["StopTime"] * self.TimeUnits
         self.StartRadius = pf["StartRadius"]
+        self.StartCell = self.StartRadius * self.GridDimensions
         self.R0 = self.StartRadius * self.LengthUnits
         self.InitialRedshift = pf["InitialRedshift"]
         self.InitialHydrogenDensity = (data["HIDensity"][0] + data["HIIDensity"][0]) / (1. + self.InitialRedshift)**3
@@ -168,6 +169,7 @@ class Radiate:
             if self.ParallelizationMethod == 1 and size > 1:
                 newdata[key][proc_mask == 0] = 0        
              
+        # Convert time to redshift     
         z = self.cosmo.TimeToRedshiftConverter(0., t, self.InitialRedshift)
         
         # Nice names for ionized fractions
@@ -239,24 +241,19 @@ class Radiate:
         # Initialize timestep array
         if self.HIIRestrictedTimestep: 
             if self.InfiniteSpeedOfLight:
-                dtphot = 1. * np.zeros_like(self.grid)    
+                dtphot = 1. * np.zeros_like(self.grid)
             else:
-                dtphot = 1e50 * np.ones_like(self.grid)
-                
+                dtphot = 1.e50 * np.ones_like(self.grid)
         else:
             dtphot = dt                
-        
+                
         ###
         ## SOLVE: c -> inf
         ###        
         if self.InfiniteSpeedOfLight:
             
             # Loop over cells radially, solve rate equations, update values in data -> newdata
-            for cell in self.grid:
-                
-                # If within StartRadius, continue                
-                if self.r[cell] <= self.R0:
-                    continue
+            for cell in self.grid:   
                             
                 # If this cell belongs to another processor, continue
                 if self.ParallelizationMethod == 1 and size > 1:
@@ -290,34 +287,36 @@ class Radiate:
                 n_B = n_H + n_He + n_e
                 
                 # Compute mean molecular weight for this cell
-                mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
-                                                        
+                #mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
+                mu = mu_all[cell] 
+                                                                              
                 # Compute internal energy for this cell
                 T = data["Temperature"][cell]
-                E = 3. * k_B * T * n_B / mu / 2.
+                #E = 3. * k_B * T * n_B / mu / 2.
+                E = q_all[cell] 
                         
                 # Read radius
                 r = self.r[cell]
-                
+                                
                 # Retrieve indices used for 3D interpolation
                 indices = None
                 if self.MultiSpecies > 0 and not self.PhotonConserving: 
                     indices = self.coeff.Interpolate.GetIndices3D(ncol)
                 
                 # Retrieve coefficients and what not.
-                args = [nabs, n_H, n_He, n_e]
+                args = [nabs, nion, n_H, n_He, n_e]
                 args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T))
                 
                 # Unpack so we have everything by name
-                nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi = args
-                                            
+                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args
+                                                                                                                        
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################                          
                                 
                 tarr, qnew, h = self.solver.integrate(self.RateEquations, q_all[cell], t, t + dt, 
                     None, h, *args)
-                                                                                                         
+                                                                                                                                           
                 # Unpack results of coupled equations
                 newHII, newHeII, newHeIII, newE = qnew 
                                                 
@@ -336,15 +335,13 @@ class Radiate:
                 newdata["HeIIIDensity"][cell] = newHeIII
                 newdata["ElectronDensity"][cell] = (n_H - newHI) + newHeIII + 2.0 * newHeIII
                 newdata["Temperature"][cell] = newT
-                
-                print cell, newHI
                                                                                               
                 # Adjust timestep based on maximum allowed neutral fraction change                              
                 if self.HIIRestrictedTimestep:
                     dtphot[cell] = self.control.ComputePhotonTimestep(self.coeff.tau, 
                         Gamma, gamma, Beta, alpha, 
                         nabs, nion, ncol, n_H, n_He, n_e)                            
-                                
+                                                              
                 ######################################
                 ################ DONE ################
                 ######################################
@@ -499,124 +496,58 @@ class Radiate:
         if size > 1: 
             lb = self.control.LoadBalance(dtphot)   
         else: 
-            lb = None     
-                                                                                                                                                     
+            lb = None                                  
+                                                                                                                                                                            
         return newdata, h, newdt, lb 
         
     def RateEquations(self, q, t, args):    
         """
-        NEW!
+        This function returns the right-hand side of our ODE's (Equations 1, 2, 3 and 9 in Mirocha et al. 2012).
+
+        q = [n_HII, n_HeII, n_HeIII, E] - our four coupled equations. q = generalized quantity I guess.
         
-        args = (nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi)
+        args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi)
         
-        where Gamma, gamma, beta, alpha = 3 element arrays (one entry per species)
+        where nabs, nion, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = 3 element arrays 
+            (one entry per species)
         
         """
                 
         nabs = args[0]
-        n_H = args[1]
-        n_He = args[2]
-        n_e = args[3]
+        nion = args[1]
+        n_H = args[2]
+        n_He = args[3]
+        n_e = args[4]
         
-        Gamma = args[4]
-        gamma = args[5]
-        Beta = args[6]
-        alpha = args[7]
-        k_H = args[8]
-        zeta = args[9]
-        eta = args[10]
-        psi = args[11]
+        Gamma = args[5]
+        gamma = args[6]
+        Beta = args[7]
+        alpha = args[8]
+        k_H = args[9]
+        zeta = args[10]
+        eta = args[11]
+        psi = args[12]
+        xi = args[13]
         
-        q[0] = (Gamma[0] + gamma[0]) * nabs[0] + Beta[0] * n_e * nabs[0] - alpha[0] * n_e * q[0]
-                
-        #q[1] = Gamma_HeI * n_HeI + Beta_HeI * n_e * n_HeI - Beta_HeII * n_e * q[1] - \
-        #              alpha_HeII * n_e * q[1] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * q[1]    
-        #q[2] = Gamma_HeII * n_HeII + Beta_HeII * n_e * n_HeII - alpha_HeIII * n_e * q[2]      
-        #
-        #
+        tmp = copy.deepcopy(q)
         
-        if not self.Isothermal:
-            q[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + np.sum(eta * nabs) + np.sum(psi * nabs))
-        
-        return q    
-    
-    def qdot(self, q, t, *args):
-        """
-        This function returns the right-hand side of our ODE's (Equations 1, 2, 3 and 9 in Mirocha et al. 2012).
-
-        q = [n_HII, n_HeII, n_HeIII, E] - our four coupled equations. q = generalized quantity I guess.
-
-        for q[0, 1, 2]: units: 1 /cm^3 / s
-        for q[3]: units: erg / cm^3 / s
-
-        args = ([r, z, mu, n_H, n_He, ncol],)       
-        
-        Should probably calculate most of this stuff once, so it needn't be on each iteration of the solver.
-        
-        """
-
-        # Extra arguments
-        r = args[0][0]                         
-        z = args[0][1]
-        mu = args[0][2]
-        n_H = args[0][3]
-        n_He = args[0][4]
-        ncol = args[0][5]
-        Lbol = args[0][6]
-        indices = args[0][7]
-                        
-        # Derived quantities
-        n_HII = min(q[0], n_H)  # This could be > n_H within machine precision and really screw things up
-        n_HI = n_H - n_HII
-        x_HII = n_HII / n_H   
-              
-        n_HeII = q[1]
-        n_HeIII = q[2]
-        n_HeI = n_He - (n_HeII + n_HeIII) 
-        
-        n_e = n_HII + n_HeII + 2.0 * n_HeIII
-        nion = [n_HII, n_HeII, n_HeIII]
-        nabs = [n_H, n_HeI, n_HeII]
-        n_B = n_H + n_He + n_e
-
-        E = q[3]        
-        if self.Isothermal: 
-            T = self.InitialTemperature
-        else: 
-            T = E * 2. * mu / 3. / k_B / n_B
-                
-        # First, solve for rate coefficients
-        alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85    
-        Gamma_HI = self.IonizationRateCoefficientHI(ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol, indices)        
-                                                                                             
-        if self.MultiSpecies > 0: 
-            Gamma_HeI = self.IonizationRateCoefficientHeI(ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices)
-            Gamma_HeII = self.IonizationRateCoefficientHeII(ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices)
-            Beta_HeI = 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T) * self.CollisionalIonization
-            Beta_HeII = 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T) * self.CollisionalIonization
-            alpha_HeII = 9.94e-11 * T**-0.6687                                                           
-            alpha_HeIII = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1        # To n >= 1
-            if T < 2.2e4: alpha_HeIII *= (1.11 - 0.044 * np.log(T))                                # To n >= 2
-            else: alpha_HeIII *= (1.43 - 0.076 * np.log(T))
-            xi_HeII = 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
-        else: 
-            Gamma_HeI = Gamma_HeII = Beta_HeI = Beta_HeII = alpha_HeII = alpha_HeIII = alpha_HeIII = xi_HeII = 0
-                                                                
         # Always solve hydrogen rate equation
-        q[0] = Gamma_HI * n_HI - alpha_HII * n_e * q[0]
-       
-        # Only solve helium rate equations if self.MultiSpeces = 1
+        tmp[0] = (Gamma[0] + gamma[0] + Beta[0] * n_e) * (n_H - q[0]) - alpha[0] * n_e * q[0]
+                
+        # Helium rate equations        
         if self.MultiSpecies:
-            q[1] = Gamma_HeI * n_HeI + Beta_HeI * n_e * n_HeI - Beta_HeII * n_e * q[1] - \
-                      alpha_HeII * n_e * q[1] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * q[1]    
-            q[2] = Gamma_HeII * n_HeII + Beta_HeII * n_e * n_HeII - alpha_HeIII * n_e * q[2]            
-
-        # Only solve internal energy equation if we're not doing an isothermal calculation
+            tmp[1] = (Gamma[1] + gamma[1] + Beta[1] * n_e) * (n_He - q[1] - q[2]) + \
+                      alpha[2] * n_e * q[2] - \
+                     (Beta[2] + alpha[1]) * n_e * q[1] - \
+                      xi[2] * n_e * q[2]
+                   
+            tmp[2] = (Gamma[2] + gamma[2] + Beta[2] * n_e) * q[1] - alpha[2] * n_e * q[2]
+        
+        # Temperature evolution
         if not self.Isothermal:
-            q[3] = self.HeatGain(ncol, nabs, x_HII, r, Lbol, indices) - \
-                self.HeatLoss(nabs, nion, n_e, n_B, E * 2. * mu / 3. / k_B / n_B, z, mu)                                
-                                                                        
-        return q     
+            tmp[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + np.sum(eta * nabs) + np.sum(psi * nabs))
+                
+        return tmp   
 
     def UpdatePhotonPackages(self, packs, t_next, data):
         """

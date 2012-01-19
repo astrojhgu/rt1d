@@ -65,12 +65,14 @@ class SolveRateEquations:
             x0, y0: Initial conditions on x and y.  y0 may be a tuple if equations are coupled.
             xf: Endpoint of integration in independent variable x.
             
-            *args = (nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi)
+            *args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi)
                         
         """
                 
-        if hpre is None: h = self.hmax
-        else: h = hpre
+        if hpre is None: 
+            h = self.hmax
+        else: 
+            h = hpre
                         
         i = 1
         last_adaptation = 1
@@ -104,22 +106,24 @@ class SolveRateEquations:
                     elif not np.all(ok) and h == self.hmin:
                         raise ValueError('NAN encountered on minimum ODE step. Exiting.')    
             
+            # IS THIS STUFF NECESSARY SINCE WE ALREADY RAN APPLYFLOOR?
+            
             # If nothing is goofy but number densities are below our floor, change them
-            if ynext[0] < (args[1] * self.MinimumSpeciesFraction):
-                ynext[0] = args[1] * self.MinimumSpeciesFraction
-            if ynext[0] > (args[1] * (1. - self.MinimumSpeciesFraction)):
-                ynext[0] = args[1] * (1. - self.MinimumSpeciesFraction)
+            if ynext[0] < (args[2] * self.MinimumSpeciesFraction):
+                ynext[0] = args[2] * self.MinimumSpeciesFraction
+            if ynext[0] > (args[2] * (1. - self.MinimumSpeciesFraction)):
+                ynext[0] = args[2] * (1. - self.MinimumSpeciesFraction)
                 
             # Potential helium goofiness    
             if self.MultiSpecies:    
-                if ynext[1] < (args[2] * self.MinimumSpeciesFraction):
-                    ynext[1] = args[2] * self.MinimumSpeciesFraction
-                if ynext[1] > (args[2] * (1. - self.MinimumSpeciesFraction)):
-                    ynext[1] = args[2] * (1. - self.MinimumSpeciesFraction)
-                if ynext[2] < (args[2] * self.MinimumSpeciesFraction):
-                    ynext[2] = args[2] * self.MinimumSpeciesFraction
-                if ynext[2] > (args[2] * (1. - self.MinimumSpeciesFraction)):
-                    ynext[2] = args[2] * (1. - self.MinimumSpeciesFraction)    
+                if ynext[1] < (args[3] * self.MinimumSpeciesFraction):
+                    ynext[1] = args[3] * self.MinimumSpeciesFraction
+                if ynext[1] > (args[3] * (1. - self.MinimumSpeciesFraction)):
+                    ynext[1] = args[3] * (1. - self.MinimumSpeciesFraction)
+                if ynext[2] < (args[3] * self.MinimumSpeciesFraction):
+                    ynext[2] = args[3] * self.MinimumSpeciesFraction
+                if ynext[2] > (args[3] * (1. - self.MinimumSpeciesFraction)):
+                    ynext[2] = args[3] * (1. - self.MinimumSpeciesFraction)    
                                   
             # Adaptive time-stepping
             adapted = False
@@ -134,13 +138,10 @@ class SolveRateEquations:
                     # Make step smaller
                     h = max(self.hmin, h / 2.)
                     adapted = True
-                    #3last_adaptation = i
                                                                                                 
             # If we've gotten this far without adaptively stepping, increase h
             if adapted is False: 
                 h = min(self.hmax, 2. * h)
-            #elif (i - last_adaptation) > 10:
-            #    h = h
             else: 
                 continue 
                                                                                                     
@@ -174,8 +175,10 @@ class SolveRateEquations:
                     if i == 3: return y - h * f([yi[0], yi[1], yi[2], y], xi + h, newargs)[i] - yi[i]
                 
                 # Guesses = 0 or for example a guess for n_HI > n_H will mess things up                
-                if yi[i] == 0. or (yi[i] > self.guesses[i] and i < 3): guess = self.guesses[i]
-                else: guess = yi[i]
+                if yi[i] == 0. or (yi[i] > self.guesses[i] and i < 3): 
+                    guess = self.guesses[i]
+                else: 
+                    guess = yi[i]
                       
                 yip1[i] = self.rootfinder(ynext, guess)
                                                                                                               
@@ -193,11 +196,11 @@ class SolveRateEquations:
         Return four-element array representing things that could be wrong with
         our solutions. [all_finite, all_positive, nHII < nH, (nHeII + nHeIII) < nHe]
         
-            Remember, args = (nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi)
+            Remember, args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi)
         """    
         
-        nH = args[1]
-        nHe = args[2]        
+        nH = args[2]
+        nHe = args[3]        
         nHII = ynext[0]
         nHeII = ynext[1] 
         nHeIII = ynext[2] 
@@ -225,15 +228,15 @@ class SolveRateEquations:
         Apply floors in ionization (and potentially, but not yet implemented) internal energy.
         """   
                 
-        nH = args[1]
-        nHe = args[2] 
+        nH = args[2]
+        nHe = args[3] 
         nHII = ynext[0] 
         nHeII = ynext[1] 
         nHeIII = ynext[2] 
         nHe_ions = nHeII + nHeIII
         
         ok = [1, 1, 1, 1]
-        
+                
         # Hydrogen first        
         if nHII > nH:
             if (nHII - nH) < self.atol:

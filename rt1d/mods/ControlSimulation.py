@@ -43,7 +43,7 @@ class ControlSimulation:
             if tau[1] >= 0.5:
                 xHeII = nion[1] / n_He
                 
-                # Analogous to Shapiro et al. 2004 but for helium
+                # Analogous to Shapiro et al. 2004 but for HeII
                 dtHeI = self.MaxHeIIChange * nabs[1] / \
                     np.abs(nabs[1] * (Gamma[1] + gamma[1] + n_e * Beta[1]) - nion[1] * n_e * alpha[1]) 
                 
@@ -52,17 +52,11 @@ class ControlSimulation:
                         
             if tau[2] >= 0.5:
                 xHeIII = nion[2] / n_He
-                
                          
-                alpha = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1        # To n >= 1
-                if T < 2.2e4: alpha *= (1.11 - 0.044 * np.log(T))                                # To n >= 2
-                else: alpha *= (1.43 - 0.076 * np.log(T))
-                
-                # Analogous to Shapiro et al. 2004 but for helium
-                dtHeI = self.MaxHeIIIChange * n_HeII / \
-                    np.abs(n_HeII * (Gamma + n_e * Beta) - \
-                    n_HeIII * n_e * alpha) 
-        
+                # Analogous to Shapiro et al. 2004 but for HeIII
+                dtHeI = self.MaxHeIIIChange * nabs[2] / \
+                    np.abs(nabs[2] * (Gamma[2] + n_e * Beta[2]) - \
+                    nion[2] * n_e * alpha[2]) 
         
         return min(dtHI, dtHeI, dtHeII)
         

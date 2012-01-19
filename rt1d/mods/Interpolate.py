@@ -77,7 +77,7 @@ class Interpolate:
         """
         
         value = np.log10(value)
-                
+                                                
         # Smaller indices
         i_s = int((value[0] / self.dHIColumn) - self.offsetHIColumn)
         j_s = int((value[1] / self.dHeIColumn) - self.offsetHeIColumn)

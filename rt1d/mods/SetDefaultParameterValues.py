@@ -74,7 +74,7 @@ def SetDefaultParameterValues():
         "CurrentTimestep": 1e-8, \
         "HIIRestrictedTimestep": 1, \
         "HeIIRestrictedTimestep": 0, \
-        "HeIIIRestrictedTimestep": 0, \
+        "HeIIIRestrictedTimestep": 1, \
         "LightCrossingTimeRestrictedStep": 0, \
         "OnePhotonPackagePerCell": 0, \
         "MaxHIIChange": 0.05, \

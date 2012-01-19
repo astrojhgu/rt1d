@@ -135,10 +135,13 @@ class InitializeGrid:
         Returns the HII fraction in 'cell'.
         """
                 
-        if self.IonizationProfile == 0: ionization = self.InitialHIIFraction 
+        if self.IonizationProfile == 0: 
+            ionization = self.InitialHIIFraction 
         #if self.IonizationProfile == 1: 
-        #    if (float(cell) / self.GridDimensions) < self.StartRadius: ionization = 1
-        #    else: ionization = self.InitialHIIFraction
+        #    if (float(cell) / self.GridDimensions) < self.StartRadius: 
+        #        ionization = 1
+        #    else: 
+        #        ionization = self.InitialHIIFraction
         
         return ionization    
         

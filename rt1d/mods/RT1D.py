@@ -114,13 +114,13 @@ def Shine(pf, r = None, IsRestart = False):
             dt = pf["CurrentTimestep"] * TimeUnits
         else:
             
-            tau = 3 * [1.0]
-            gamma = Beta = alpha = ncol = nion = 3 * [0]
-            
+            tau = ncol = 3 * [1.0]
+            gamma = Beta = alpha = nion = 3 * [0]
+                        
             indices = None
-            if pf['MultiSpecies'] > 0 and not pf['self.PhotonConserving']: 
-                indices = self.coeff.Interpolate.GetIndices3D(ncol)
-            
+            if pf['MultiSpecies'] > 0 and not pf['PhotonConserving']: 
+                indices = r.coeff.Interpolate.GetIndices3D(ncol)            
+                                                
             if pf["PhotonConserving"]:
                 Gamma = 0
                 for i, E in enumerate(r.rs.DiscreteSpectrumSED):
@@ -135,7 +135,7 @@ def Shine(pf, r = None, IsRestart = False):
                 [data['HIDensity'][-1], 0, 0], nion, ncol, 
                 data['HIDensity'][-1] + data['HIIDensity'][-1], 
                 data['HeIDensity'][-1] + data['HeIIDensity'][-1] + data['HeIIIDensity'][-1], 0)
-                        
+                                                
             # Play it safe if helium is involved
             if pf["MultiSpecies"]: 
                 dt *= 0.1   
