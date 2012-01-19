@@ -307,26 +307,33 @@ class InitializeIntegralTables:
                 
             return itabs
             
-    def TotalOpticalDepth(self, n = [0.0, 0.0, 0.0], species = 0):
+    def TotalOpticalDepth(self, ncol = [0.0, 0.0, 0.0], species = 0):
         """
         Optical depth integrated over entire spectrum.
         """        
         
         if self.rs.DiscreteSpectrum == 0:
-            integrand = lambda E: self.OpticalDepth(E, n)                            
+            integrand = lambda E: self.OpticalDepth(E, ncol)                            
             return integrate(integrand, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0]
                   
         else:                                                                                                                                                                                
-            return np.sum(self.OpticalDepth(self.rs.E, n)  )
+            return np.sum(self.OpticalDepth(self.rs.E, ncol))
             
-    def OpticalDepth(self, E, n):
+    def OpticalDepth(self, E, ncol):
         """
         Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which
         are stored in the variable 'n' as a three element array.
         """
-                                                                        
-        return PhotoIonizationCrossSection(E, 0) * n[0] + PhotoIonizationCrossSection(E, 1) * n[1] \
-            + PhotoIonizationCrossSection(E, 2) * n[2]
+        
+        tau = 0
+        if E >= E_th[0]:
+            tau += PhotoIonizationCrossSection(E, 0) * ncol[0]
+        if E >= E_th[1]:
+            tau += PhotoIonizationCrossSection(E, 1) * ncol[1]
+        if E >= E_th[2]:
+            tau += PhotoIonizationCrossSection(E, 2) * ncol[2]
+        
+        return tau
         
     def PhotoIonizationRate(self, n = [0.0, 0.0, 0.0], species = 0):
         """

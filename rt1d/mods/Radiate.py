@@ -19,6 +19,7 @@ from rt1d.mods.Interpolate import Interpolate
 from rt1d.mods.Cosmology import Cosmology
 from rt1d.mods.ComputeRateCoefficients import RateCoefficients
 from rt1d.mods.SolveRateEquations import SolveRateEquations
+from rt1d.mods.ControlSimulation import ControlSimulation
 from Integrate import simpson as integrate
 
 try:
@@ -62,10 +63,9 @@ class Radiate:
     def __init__(self, pf, data, itabs, n_col): 
         self.pf = pf
         self.rs = RadiationSource(pf)
-        
         self.cosmo = Cosmology(pf)
-        self.coeff = RateCoefficients(pf, itabs = itabs)
-        #self.itabs = itabs
+        self.coeff = RateCoefficients(pf, itabs = itabs, n_col = n_col)
+        self.control = ControlSimulation(pf)
         
         self.PhotonConserving = pf['PhotonConserving']
         
@@ -144,7 +144,7 @@ class Radiate:
             rtol = self.rtol, atol = self.atol, Dfun = None, maxiter = pf["ODEmaxiter"])
         
         # Initialize interpolation routines                        
-        self.Interpolate = Interpolate(self.pf, n_col, self.itabs)                        
+        #self.Interpolate = Interpolate(self.pf, n_col, self.itabs)                        
         
         # Initialize helium abundance                        
         self.Y = 0.2477 * self.MultiSpecies
@@ -244,7 +244,10 @@ class Radiate:
             if self.InfiniteSpeedOfLight:
                 dtphot = 1. * np.zeros_like(self.grid)    
             else:
-                dtphot = 1e50 * np.ones_like(self.grid)        
+                dtphot = 1e50 * np.ones_like(self.grid)
+                
+        else:
+            dtphot = dt                
         
         ###
         ## SOLVE: c -> inf
@@ -276,9 +279,6 @@ class Radiate:
                 x_HeI = x_HeI_arr[cell]
                 x_HeII = x_HeII_arr[cell]
                 x_HeIII = x_HeIII_arr[cell]
-            
-                # Compute mean molecular weight for this cell
-                mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                                         
                 # Convenience arrays for column, absorber, and ion densities plus a few others
                 ncol = ncol_all[cell]
@@ -287,6 +287,9 @@ class Radiate:
                 n_H = n_HI + n_HII
                 n_He = n_HeI + n_HeII + n_HeIII                
                 n_B = n_H + n_He + n_e
+                
+                # Compute mean molecular weight for this cell
+                mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                                                         
                 # Compute internal energy for this cell
                 T = data["Temperature"][cell]
@@ -298,48 +301,22 @@ class Radiate:
                 # Retrieve indices used for 3D interpolation
                 indices = None
                 if self.MultiSpecies > 0 and not self.PhotonConserving: 
-                    indices = self.Interpolate.GetIndices3D(ncol)
+                    indices = self.coeff.Interpolate.GetIndices3D(ncol)
                 
-                # Compute rate coefficients for this cell (do this all at once before main for loop?)
-                if self.PhotonConserving:
-                    Gamma_HI = 0
-                    gamma_HI = 0
-                    Beta_HI = 0
-                    alpha_HII = 0
-                    for i, E in enumerate(self.rs.DiscreteSpectrumSED):
-                        G = self.coeff.PhotoIonization(E = E, Qdot = self.rs.Qdot[i], ncol = ncol,
-                            n_HI = n_HI, r = r, dr = self.dx, dt = dt)
-                        
-                        a = self.coeff.RadiativeRecombination()
-                        
-                        g = 0
-                        if self.SecondaryIonization:
-                            g = G * (E - 13.6) * self.coeff.esec.DepositionFraction(E = E, xi = x_HII[cell], channel = 1)
-                        
-                        b = 0
-                        if self.CollisionalIonization:
-                            b = self.coeff.CollisionalIonization(n_e = n_e, T = T)
-                        
-                        Gamma_HI += G 
-                        gamma_HI += g
-                        Beta_HI += b
-                        alpha_HII += a
-                                                                
-                else:
-                    Gamma_HI = self.coeff.IonizationRate(indices = indices, Lbol = Lbol, 
-                        ncol = ncol, n_HI = n_HI, r = r)             
-                                
+                # Retrieve coefficients and what not.
+                args = [nabs, n_H, n_He, n_e]
+                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T))
+                
+                # Unpack so we have everything by name
+                nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi = args
                                             
                 ######################################
                 ######## Solve Rate Equations ########
-                ######################################
+                ######################################                
                                 
-                
-                
-                # Call solver                                    
-                tarr, qnew, h = self.solver.integrate(self.qdot, q_all[cell], t, t + dt, None, h, \
-                    r, z, mu, n_H, n_He, ncol, Lbol, indices)
-                                                                                         
+                tarr, qnew, h = self.solver.integrate(self.RateEquations, q_all[cell], t, t + dt, 
+                    None, h, *args)
+                                                                                                         
                 # Unpack results of coupled equations
                 newHII, newHeII, newHeIII, newE = qnew 
                                                 
@@ -358,11 +335,12 @@ class Radiate:
                 newdata["HeIIIDensity"][cell] = newHeIII
                 newdata["ElectronDensity"][cell] = (n_H - newHI) + newHeIII + 2.0 * newHeIII
                 newdata["Temperature"][cell] = newT        
-                                       
-                # Could probably do this with data, and it wouldn't matter too much - would be 
-                # a more conservative estimate of Gamma_i actually.                                
-                if self.HIIRestrictedTimestep: 
-                    dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, Lbol, n_H, n_He)                            
+                                                                              
+                # Adjust timestep based on maximum allowed neutral fraction change                              
+                if self.HIIRestrictedTimestep:
+                    dtphot[cell] = self.control.ComputePhotonTimestep(self.coeff.tau, 
+                        Gamma, gamma, Beta, alpha, 
+                        nabs, nion, ncol, n_H, n_He, n_e)                            
                                 
                 ######################################
                 ################ DONE ################
@@ -454,7 +432,7 @@ class Radiate:
                     # Retrieve indices used for 3D interpolation
                     indices = None
                     if self.MultiSpecies > 0: 
-                        indices = self.Interpolate.GetIndices3D(ncol)
+                        indices = self.coeff.Interpolate.GetIndices3D(ncol)
                     
                     qnew = np.array([n_HII, n_HeII, n_HeIII, E])
 
@@ -515,41 +493,52 @@ class Radiate:
         # Store timestep information
         newdata['dtPhoton'] = dtphot                        
                                 
-        if size > 1: lb = self.LoadBalance(dtphot)   
-        else: lb = None     
-                                                                                                                   
+        if size > 1: 
+            lb = self.control.LoadBalance(dtphot)   
+        else: 
+            lb = None     
+                                                                                                                                                     
         return newdata, h, newdt, lb 
         
-    def qdot(self, q, *args):    
+    def RateEquations(self, q, t, args):    
         """
         NEW!
         
-        args = [Gamma, gamma, beta, alpha, n, n_e]
+        args = (nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi)
         
         where Gamma, gamma, beta, alpha = 3 element arrays (one entry per species)
         
         """
-    
-        q[0] = (Gamma[0] + gamma_HI[0]) * n[0] + Beta_HI * n_e * n[0] - alpha_HII * n_e * q[0]
+                
+        nabs = args[0]
+        n_H = args[1]
+        n_He = args[2]
+        n_e = args[3]
         
+        Gamma = args[4]
+        gamma = args[5]
+        Beta = args[6]
+        alpha = args[7]
+        k_H = args[8]
+        zeta = args[9]
+        eta = args[10]
+        psi = args[11]
         
-        
+        q[0] = (Gamma[0] + gamma[0]) * nabs[0] + Beta[0] * n_e * nabs[0] - alpha[0] * n_e * q[0]
+                
         #q[1] = Gamma_HeI * n_HeI + Beta_HeI * n_e * n_HeI - Beta_HeII * n_e * q[1] - \
         #              alpha_HeII * n_e * q[1] + alpha_HeIII * n_e * n_HeIII - xi_HeII * n_e * q[1]    
         #q[2] = Gamma_HeII * n_HeII + Beta_HeII * n_e * n_HeII - alpha_HeIII * n_e * q[2]      
         #
         #
-        #q[3] = self.HeatGain(ncol, nabs, x_HII, r, Lbol, indices) - \
-        #        self.HeatLoss(nabs, nion, n_e, n_B, E * 2. * mu / 3. / k_B / n_B, z, mu)              
-    
         
-        return q
+        
+        
+        q[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + np.sum(eta * nabs) + np.sum(psi * nabs))
+        
+        return q    
     
-    
-    
-    
-    
-    def RateEquations(self, q, t, *args):
+    def qdot(self, q, t, *args):
         """
         This function returns the right-hand side of our ODE's (Equations 1, 2, 3 and 9 in Mirocha et al. 2012).
 
@@ -626,77 +615,7 @@ class Radiate:
                 self.HeatLoss(nabs, nion, n_e, n_B, E * 2. * mu / 3. / k_B / n_B, z, mu)                                
                                                                         
         return q     
-        
-    def ComputePhotonTimestep(self, newdata, cell, Lbol, n_H, n_He):
-        """
-        Use Shapiro et al. 2004 criteria to set next timestep.
-        
-        Pre-compute Gamma, alpha, etc. to save time?
-        
-        """          
-    
-        ncol = [np.cumsum(newdata["HIDensity"] * self.dx)[cell], np.cumsum(newdata["HeIDensity"] * self.dx)[cell],
-                np.cumsum(newdata["HeIIDensity"] * self.dx)[cell]]
-        
-        T = newdata['Temperature'][cell]
-        n_e = newdata["ElectronDensity"][cell]
-        n_HI = newdata["HIDensity"][cell]
-        n_HII = newdata["HIDensity"][cell]
-        x_HII = newdata['HIIDensity'][cell] / n_H 
-        n_HeI = newdata["HeIDensity"][cell]
-        n_HeII = newdata["HeIIDensity"][cell]
-        n_HeIII = newdata["HeIIIDensity"][cell]
-                                
-        if self.MultiSpecies: indices = self.Interpolate.GetIndices3D(ncol) 
-        else: indices = None        
-         
-        dtHI = 1e50        
-        tau = self.Interpolate.interp(indices, "TotalOpticalDepth0", ncol)
-        if tau >= 0.5:
 
-            Gamma = self.IonizationRateCoefficientHI(ncol, n_e, n_HI, n_HeI, 
-                x_HII, T, self.r[cell], Lbol, indices)        
-            alpha = 2.6e-13 * (T / 1.e4)**-0.85  
-            
-            # Shapiro et al. 2004
-            dtHI = self.MaxHIIChange * newdata["HIDensity"][cell] / \
-                np.abs(n_HI * Gamma - n_HII * n_e * alpha)
-        
-        dtHeI = 1e50
-        if self.MultiSpecies and self.HeIIRestrictedTimestep:
-            
-            if tau >= 0.5:
-                xHeII = n_HeII / n_He
-                
-                Beta = 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 /T) * self.CollisionalIonization
-                Gamma = self.IonizationRateCoefficientHeI(ncol, n_HI, n_HeI, x_HII, T, self.r[cell], Lbol, indices)                    
-                alpha = 9.94e-11 * T**-0.48   
-                
-                # Analogous to Shapiro et al. 2004 but for helium
-                dtHeI = self.MaxHeIIChange * n_HeI / \
-                    np.abs(n_HeI * (Gamma + n_e * Beta) - n_HeII * n_e * alpha) 
-                
-        dtHeII = 1e50
-        if self.MultiSpecies and self.HeIIIRestrictedTimestep:
-                        
-            if tau >= 0.5:
-                xHeIII = n_HeIII / n_He
-                
-                Beta = 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)
-                
-                Gamma = self.IonizationRateCoefficientHeII(ncol, n_HI, n_HeI, x_HII, T, self.r[cell], Lbol, indices)                                    
-                alpha = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1        # To n >= 1
-                if T < 2.2e4: alpha *= (1.11 - 0.044 * np.log(T))                                # To n >= 2
-                else: alpha *= (1.43 - 0.076 * np.log(T))
-                
-                # Analogous to Shapiro et al. 2004 but for helium
-                dtHeI = self.MaxHeIIIChange * n_HeII / \
-                    np.abs(n_HeII * (Gamma + n_e * Beta) - \
-                    n_HeIII * n_e * alpha) 
-        
-        
-        return min(dtHI, dtHeI, dtHeII)                   
-        
     def UpdatePhotonPackages(self, packs, t_next, data):
         """
         Get rid of old photon packages.
@@ -711,234 +630,3 @@ class Radiate:
                 
         return packs
         
-    def LoadBalance(self, dtphot):
-        """
-        Return cells that should be solved by each processor.
-        """    
-        
-        # Estimate of number of steps for each cell
-        nsubsteps = 1. / dtphot
-                
-        # Compute CDF for timesteps
-        cdf = np.cumsum(nsubsteps) / np.sum(nsubsteps)
-        intervals = np.linspace(1. / size, 1, size)
-                
-        lb = list(np.interp(intervals, cdf, self.grid, left = 0))
-        lb[-1] = self.GridDimensions
-        lb.insert(0, 0)
-                
-        for i, entry in enumerate(lb):
-            lb[i] = int(entry)
-                
-        # Make sure no two elements are the same - this may not always work
-        while np.any(np.diff(lb) == 0):
-            for i, entry in enumerate(lb[1:-1]):
-                                
-                if entry == 0: 
-                    lb[i + 1] = entry + 1
-                if entry == lb[i]:
-                    lb[i + 1] = entry + 1
-                                                                                            
-        return lb
-        
-    def IonizationRateCoefficientHI(self, ncol, n_e, n_HI, n_HeI, x_HII, T, r, Lbol, indices):
-        """
-        Returns ionization rate coefficient for HI, which we denote elsewhere as Gamma_HI.  Includes photo, collisional, 
-        and secondary ionizations from fast electrons.
-        
-            units: 1 / s
-        """     
-           
-        # Photo-Ionization       
-        IonizationRate = Lbol * \
-                         self.Interpolate.interp(indices, "PhotoIonizationRate0", ncol)
-                                 
-        if self.SecondaryIonization:
-            IonizationRate += Lbol * \
-                              self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
-                              self.Interpolate.interp(indices, "SecondaryIonizationRateHI0", ncol)    
-                                                      
-            if self.MultiSpecies > 0:
-                IonizationRate += Lbol * (n_HeI / n_HI) * \
-                                 self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
-                                 self.Interpolate.interp(indices, "SecondaryIonizationRateHI1", ncol)
-        
-        if not self.PlaneParallelField: IonizationRate /= (4. * np.pi * r**2)
-                                                
-        # Collisional Ionization
-        if self.CollisionalIonization:
-            IonizationRate += n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)
-                
-        return IonizationRate
-        
-    def IonizationRateCoefficientHeI(self, ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices):
-        """
-        Returns ionization rate coefficient for HeI, which we denote elsewhere as Gamma_HeI.  Includes photo 
-        and secondary ionizations from fast electrons.  Unlike the hydrogen case, the collisional ionizations
-        are included in the rate equation itself instead of a coefficient.
-        
-            units: 1 / s
-        """                
-        
-        IonizationRate = Lbol * \
-                         self.Interpolate.interp(indices, "PhotoIonizationRate1", ncol)
-        
-        if self.SecondaryIonization:
-            IonizationRate += Lbol * \
-                              self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
-                              self.Interpolate.interp(indices, "SecondaryIonizationRateHeI1", ncol)
-            
-            IonizationRate += (n_HI / n_HeI) * Lbol * \
-                              self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
-                              self.Interpolate.interp(indices, "SecondaryIonizationRateHeI1", ncol) 
-        
-        if not self.PlaneParallelField: 
-            IonizationRate /= (4. * np.pi * r**2)
-        
-        return IonizationRate
-        
-    def IonizationRateCoefficientHeII(self, ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices):
-        """
-        Returns ionization rate coefficient for HeII, which we denote elsewhere as Gamma_HeII.  Includes photo 
-        and secondary ionizations from fast electrons.  Unlike the hydrogen case, the collisional ionizations
-        are included in the rate equation itself instead of a coefficient.  Note: TZ07 do not include secondary
-        helium II ionizations, but I am going to.
-        
-            units: 1 / s
-        """       
-        
-        IonizationRate = Lbol * \
-                         self.Interpolate.interp(indices, "PhotoIonizationRate2", ncol) \
-        
-        if self.SecondaryIonization > 1:
-            IonizationRate += Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 3) * \
-                self.Interpolate.interp(indices, "SecondaryIonizationRate2", ncol)
-                        
-        if not self.PlaneParallelField: 
-            IonizationRate /= (4. * np.pi * r**2)
-        
-        return IonizationRate
-        
-    def HeatGain(self, ncol, nabs, x_HII, r, Lbol, indices):
-        """
-        Returns the total heating rate at radius r and time t.  These are all the terms in Eq. 12 of TZ07 on
-        the RHS that are positive.
-        
-            units: erg / s / cm^3
-        """
-                                 
-        heat = nabs[0] * self.Interpolate.interp(indices, "ElectronHeatingRate0", ncol)
-
-        if self.MultiSpecies > 0:
-            heat += nabs[1] * self.Interpolate.interp(indices, "ElectronHeatingRate1", ncol)
-            heat += nabs[2] * self.Interpolate.interp(indices, "ElectronHeatingRate2", ncol)
-                                                           
-        heat *= Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 0)
-        
-        if not self.PlaneParallelField: heat /= (4. * np.pi * r**2)
-                                                                                                                                                                                                                         
-        return heat
-    
-    def HeatLoss(self, nabs, nion, n_e, n_B, T, z, mu):
-        """
-        Returns the total cooling rate for a cell of temperature T and with species densities given in 'nabs', 'nion', and 'n_e'. 
-        This quantity is the sum of all terms on the RHS of Eq. 12 in TZ07 that are negative, 
-        though we do not apply the minus sign until later, in 'ThermalRateEquation'.
-        
-            units: erg / s / cm^3
-        """
-            
-        T_cmb = 2.725 * (1. + z)
-        cool = 0.
-        
-        # Cooling by collisional ionization
-        for i, n in enumerate(nabs):
-            cool += n * self.CollisionalIonizationCoolingCoefficient(T, i)
-                
-        # Cooling by recombinations
-        for i, n in enumerate(nion):
-            cool += n * self.RecombinationCoolingCoefficient(T, i)
-            
-        # Cooling by dielectronic recombination
-        cool += nion[2] * self.DielectricRecombinationCoolingCoefficient(T)
-                
-        # Cooling by collisional excitation
-        if self.CollisionalExcitation:
-            for i, n in enumerate(nabs):
-                cool += n * self.CollisionalExcitationCoolingCoefficient(T, nabs, nion, i)
-        
-        # Compton cooling - from FK96
-        if self.ComptonCooling:
-            cool += 4. * k_B * (T - T_cmb) * (np.pi**2 / 15.) * (k_B * T_cmb / hbar / c)**3 * (k_B * T_cmb / m_e / c**2) * sigma_T * c
-        
-        # Cooling by free-free emission
-        if self.FreeFreeEmission:
-            cool += (nion[0] + nion[1] + 4. * nion[2]) * 1.42e-27 * 1.1 * np.sqrt(T) # Check on Gaunt factor        
-                
-        cool *= n_e
-        
-        # Hubble cooling
-        if self.CosmologicalExpansion:
-            cool += 2. * self.cosmo.HubbleParameter(z) * (k_B * T * n_B / mu)
-                                
-        return cool
-        
-    def CollisionalIonizationCoolingCoefficient(self, T, species):
-        """
-        Returns coefficient for cooling by collisional ionization.  These are equations B4.1a, b, and d respectively
-        from FK96.
-        
-            units: erg cm^3 / s
-        """
-        
-        if species == 0: return 1.27e-21 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.58e5 / T)
-        if species == 1: return 9.38e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-2.85e5 / T)
-        if species == 2: return 4.95e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-6.31e5 / T)
-    
-    def CollisionalExcitationCoolingCoefficient(self, T, nabs, nion, species):
-        """
-        Returns coefficient for cooling by collisional excitation.  These are equations B4.3a, b, and c respectively
-        from FK96.
-        
-            units: erg cm^3 / s
-        """
-        
-        if species == 0: return 7.5e-19 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.18e5 / T)
-        if species == 1: 
-            if self.MultiSpecies == 0: return 0.0
-            else: return 9.1e-27 * T**-0.1687 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.31e4 / T) * nion[1] / nabs[1]   # CONFUSION
-        if species == 2: 
-            if self.MultiSpecies == 0: return 0.0
-            else: return 5.54e-17 * T**-0.397 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-4.73e5 / T)    
-        
-    def RecombinationCoolingCoefficient(self, T, species):
-        """
-        Returns coefficient for cooling by recombination.  These are equations B4.2a, b, and d respectively
-        from FK96.
-        
-            units: erg cm^3 / s
-        """
-        
-        if species == 0: return 6.5e-27 * T**0.5 * (T / 1e3)**-0.2 * (1.0 + (T / 1e6)**0.7)**-1.0
-        if species == 1: return 1.55e-26 * T**0.3647
-        if species == 2: return 3.48e-26 * np.sqrt(T) * (T / 1e3)**-0.2 * (1. + (T / 4e6)**0.7)**-1.
-        
-    def DielectricRecombinationCoolingCoefficient(self, T):
-        """
-        Returns coefficient for cooling by dielectric recombination.  This is equation B4.2c from FK96.
-        
-            units: erg cm^3 / s
-        """
-        return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
-        
-    def OpticalDepth(self, n):
-        """
-        Returns the total optical depth at energy E due to column densities of HI, HeI, and HeII, which
-        are stored in the variable 'n' as a three element array.
-        """
-        
-        func = lambda E: PhotoIonizationCrossSection(E, 0) * n[0] + PhotoIonizationCrossSection(E, 1) * n[1] \
-            + PhotoIonizationCrossSection(E, 2) * n[2]
-            
-        return quad(func, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0]   
-            

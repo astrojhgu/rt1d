@@ -65,7 +65,7 @@ class SolveRateEquations:
             x0, y0: Initial conditions on x and y.  y0 may be a tuple if equations are coupled.
             xf: Endpoint of integration in independent variable x.
             
-            *args = (r, z, mu, n_H, n_He, ncol, Lbol, indices)
+            *args = (nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi)
                         
         """
                 
@@ -105,21 +105,21 @@ class SolveRateEquations:
                         raise ValueError('NAN encountered on minimum ODE step. Exiting.')    
             
             # If nothing is goofy but number densities are below our floor, change them
-            if ynext[0] < (args[3] * self.MinimumSpeciesFraction):
-                ynext[0] = args[3] * self.MinimumSpeciesFraction
-            if ynext[0] > (args[3] * (1. - self.MinimumSpeciesFraction)):
-                ynext[0] = args[3] * (1. - self.MinimumSpeciesFraction)
+            if ynext[0] < (args[1] * self.MinimumSpeciesFraction):
+                ynext[0] = args[1] * self.MinimumSpeciesFraction
+            if ynext[0] > (args[1] * (1. - self.MinimumSpeciesFraction)):
+                ynext[0] = args[1] * (1. - self.MinimumSpeciesFraction)
                 
             # Potential helium goofiness    
             if self.MultiSpecies:    
-                if ynext[1] < (args[4] * self.MinimumSpeciesFraction):
-                    ynext[1] = args[4] * self.MinimumSpeciesFraction
-                if ynext[1] > (args[4] * (1. - self.MinimumSpeciesFraction)):
-                    ynext[1] = args[4] * (1. - self.MinimumSpeciesFraction)
-                if ynext[2] < (args[4] * self.MinimumSpeciesFraction):
-                    ynext[2] = args[4] * self.MinimumSpeciesFraction
-                if ynext[2] > (args[4] * (1. - self.MinimumSpeciesFraction)):
-                    ynext[2] = args[4] * (1. - self.MinimumSpeciesFraction)    
+                if ynext[1] < (args[2] * self.MinimumSpeciesFraction):
+                    ynext[1] = args[2] * self.MinimumSpeciesFraction
+                if ynext[1] > (args[2] * (1. - self.MinimumSpeciesFraction)):
+                    ynext[1] = args[2] * (1. - self.MinimumSpeciesFraction)
+                if ynext[2] < (args[2] * self.MinimumSpeciesFraction):
+                    ynext[2] = args[2] * self.MinimumSpeciesFraction
+                if ynext[2] > (args[2] * (1. - self.MinimumSpeciesFraction)):
+                    ynext[2] = args[2] * (1. - self.MinimumSpeciesFraction)    
                                   
             # Adaptive time-stepping
             adapted = False
@@ -192,11 +192,13 @@ class SolveRateEquations:
         """
         Return four-element array representing things that could be wrong with
         our solutions. [all_finite, all_positive, nHII < nH, (nHeII + nHeIII) < nHe]
+        
+            Remember, args = (nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi)
         """    
         
-        nH = args[3]
-        nHe = args[4]        
-        nHII = ynext[0] 
+        nH = args[1]
+        nHe = args[2]        
+        nHII = ynext[0]
         nHeII = ynext[1] 
         nHeIII = ynext[2] 
         nHe_ions = nHeII + nHeIII
@@ -222,9 +224,9 @@ class SolveRateEquations:
         """
         Apply floors in ionization (and potentially, but not yet implemented) internal energy.
         """   
-        
-        nH = args[3]
-        nHe = args[4] 
+                
+        nH = args[1]
+        nHe = args[2] 
         nHII = ynext[0] 
         nHeII = ynext[1] 
         nHeIII = ynext[2] 
