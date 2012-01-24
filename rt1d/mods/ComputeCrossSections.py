@@ -34,9 +34,6 @@ def PhotoIonizationCrossSection(E, species = 0):
     
     """                            
     
-    if E < E_th[species]:
-        return 0
-    
     x = (E / params[species][0]) - params[species][5]
     y = np.sqrt(x**2 + params[species][6]**2)
     F_y = ((x - 1.0)**2 + params[species][4]**2) * \

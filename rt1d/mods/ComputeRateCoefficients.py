@@ -11,14 +11,13 @@ Description:
 """
 
 import numpy as np
-from . import ComputeCrossSections 
+from . import ComputeCrossSections, SecondaryElectrons, Interpolate
 from ComputeCrossSections import PhotoIonizationCrossSection
-from . import SecondaryElectrons
 from SecondaryElectrons import SecondaryElectrons
-from . import Interpolate 
 from Interpolate import Interpolate
 
 E_th = [13.6, 24.6, 54.4]
+erg_per_ev = 1.60217646e-19 / 1e-7 
 
 class RateCoefficients:
     def __init__(self, pf, rs, itabs = None, n_col = None):
@@ -32,15 +31,13 @@ class RateCoefficients:
         
         # Physics parameters
         self.MultiSpecies = pf["MultiSpecies"]
+        self.Isothermal = pf["Isothermal"]
         self.PhotonConserving = pf["PhotonConserving"]        
         self.CollisionalIonization = pf["CollisionalIonization"]
         self.SecondaryIonization = pf["SecondaryIonization"]
         self.PlaneParallelField = pf["PlaneParallelField"]
         
-        # Storage for optical depth
-        self.tau = np.zeros(3)
-        
-    def ConstructArgs(self, args, indices, Lbol, r, ncol, T):
+    def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dx, tau):
         """
         Make list of rate coefficients that we'll pass to solver.
         
@@ -75,11 +72,18 @@ class RateCoefficients:
                 
                 # Ionization
                 Gamma[i] = self.PhotoIonizationRate(species = i, indices = indices,  
-                    Lbol = Lbol, r = r, ncol = ncol, nabs = nabs)
+                    Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, tau = tau)
                
                 gamma[i] = self.SecondaryIonizationRate(indices = indices)
                 Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
                 alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
+                
+                # Dielectric recombination
+                if i == 2:
+                    xi[i] = self.DielectricRecombinationRate(T = T)
+                
+                if self.Isothermal:
+                    continue
                 
                 # Heating/cooling            
                 k_H[i] = self.PhotoElectricHeatingRate(species = i, Lbol = Lbol, r = r, 
@@ -88,10 +92,6 @@ class RateCoefficients:
                 zeta[i] = self.CollisionalIonizationCoolingRate(species = i, T = T)    
                 eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
                 psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)
-        
-                # Dielectric recombination
-                if i == 2:
-                    xi[i] = self.DielectricRecombinationRate(T = T)
         
         # Photon-conserving algorithm                                                  
         else:
@@ -103,35 +103,46 @@ class RateCoefficients:
                     continue
                 
                 Gamma_E = np.zeros_like(self.rs.E)
-                for j, E in enumerate(self.rs.DiscreteSpectrumSED):
+                for j, E in enumerate(self.rs.E):
                 
-                    Gamma_E[j] = self.coeff.PhotoIonization(E = E, Qdot = self.rs.Qdot[j], ncol = ncol,
-                        nabs = nabs, r = r, dr = self.dx, dt = dt, species = i)
-                    
-                    ee = Gamma_E[j] * (E - E_th[i]) # Total photo-electron energy
+                    Gamma_E[j] = self.PhotoIonizationRate(E = E, Qdot = self.rs.Qdot[j], ncol = ncol,
+                        nabs = nabs, r = r, dr = dx, species = i, tau = tau)
                         
                     # Ionization
                     Gamma[i] += Gamma_E[j]
                     
-                    if self.SecondaryIonization:
-                        gamma[i] += ee * self.coeff.esec.DepositionFraction(E = E, xi = x_HII, channel = 1 + i)
-                
-                    # Photo-heating           
-                    k_H[i] += ee * self.coeff.esec.DepositionFraction(E = E, xi = x_HII, channel = 0)
+                    if not self.Isothermal:
+                        ee = Gamma_E[j] * (E - E_th[i]) # Total photo-electron energy
                         
-            
-                # Collisional ionization + radiative recombination + cooling (no dep. on radiation field)
-                Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
+                        # Photo-heating           
+                        k_H[i] += ee * self.esec.DepositionFraction(E = E, xi = x_HII, channel = 0) 
+                        
+                    if self.SecondaryIonization:
+                        gamma[i] += ee * self.esec.DepositionFraction(E = E, xi = x_HII, channel = 1 + i)
+                    
+                # Collisional ionization + radiative recombination + cooling (no dep. on radiation field)    
                 alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
+                Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
+                
+                # Dielectric recombination
+                if i == 2:
+                    xi[i] = self.DielectricRecombinationRate(T = T)
+                
+                if self.Isothermal:
+                    continue
+                
                 zeta[i] += self.CollisionalIonizationCoolingRate(species = i, T = T)  
-                eta[i] = 0
-                psi[i] = 0               
+                eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
+                psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)               
+
+            k_H *= erg_per_ev
+            gamma *= erg_per_ev
 
         return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi]
 
     def PhotoIonizationRate(self, species = None, E = None, Qdot = None, Lbol = None, 
         ncol = None, n_e = None, nabs = None, x_HII = None, 
-        T = None, r = None, dr = None, dt = None, indices = None):
+        T = None, r = None, dr = None, tau = None, indices = None):
         """
         Returns photo-ionization rate coefficient which we denote elsewhere as Gamma.  
         
@@ -143,28 +154,26 @@ class RateCoefficients:
             Lbol = Bolometric luminosity of source (erg/s)
             
         """     
-        
-        if self.PhotonConserving:
-            sigma = PhotoIonizationCrossSection(E, species = species)
-            
-            if sigma == 0:
+                                
+        if self.PhotonConserving:            
+            if E < E_th[species]:
                 IonizationRate = 0
-            else:
-                self.tau[species] = ncol[species] * sigma
-                tau_c = dr * nabs[species] * sigma
-                Vcell = dr 
-                Q0 = Qdot * np.exp(-self.tau[species]) / 4. / np.pi / r**2       # number of photons entering cell
-                dQ = Q0 * (1. - np.exp(-tau_c))
-                                    
-                IonizationRate = dQ / dt / nabs[species] / Vcell    
+            else:                
+                sigma = PhotoIonizationCrossSection(E, species = species)
+                tau_E = ncol[species] * sigma       # Optical depth up until this cell
+                tau_c = dr * nabs[species] * sigma  # Optical depth of this cell
+                Vcell = 4. * np.pi * ((r + dr)**3 - r**3) / 3.
+                Q0 = Qdot * np.exp(-tau_E)          # number of photons entering cell per sec
+                dQ = Q0 * (1. - np.exp(-tau_c))     # number of photons absorbed in cell per sec
+                                                                                                                                                                                                                                                                                                                         
+                IonizationRate = dQ / nabs[species] / Vcell    # ionizations / sec / hydrogen atom
           
         else:   
             IonizationRate = Lbol * self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)
-            self.tau[species] = self.TotalOpticalDepth(ncol = ncol, species = species, indices = indices)
             
             if not self.PlaneParallelField: 
-                IonizationRate /= (4. * np.pi * r**2)
-                                          
+                IonizationRate /= (4. * np.pi * r**2)                                                                                        
+                                                                                     
         return IonizationRate
         
     def CollisionalIonizationRate(self, species = None, n_e = None, T = None):
@@ -248,6 +257,9 @@ class RateCoefficients:
         bound to `species.'
         """
         
+        if self.Isothermal:
+            return 0
+        
         if self.PhotonConserving:
             pass
         else:
@@ -272,6 +284,9 @@ class RateCoefficients:
             units: erg cm^3 / s
         """
         
+        if self.Isothermal:
+            return 0
+        
         if species == 0: 
             return 1.27e-21 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.58e5 / T)
         if species == 1: 
@@ -286,6 +301,9 @@ class RateCoefficients:
         
             units: erg cm^3 / s
         """
+        
+        if self.Isothermal:
+            return 0
         
         if species == 0: 
             return 7.5e-19 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.18e5 / T)
@@ -302,6 +320,9 @@ class RateCoefficients:
             units: erg cm^3 / s
         """
         
+        if self.Isothermal:
+            return 0
+        
         if species == 0: 
             return 6.5e-27 * T**0.5 * (T / 1e3)**-0.2 * (1.0 + (T / 1e6)**0.7)**-1.0
         if species == 1: 
@@ -315,6 +336,10 @@ class RateCoefficients:
         
             units: erg cm^3 / s
         """
+        
+        if self.Isothermal:
+            return 0
+        
         return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
         
     def IonizationRateCoefficientHeI(self, ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices):

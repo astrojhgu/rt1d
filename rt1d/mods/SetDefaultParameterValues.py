@@ -93,6 +93,7 @@ def SetDefaultParameterValues():
         "CosmologicalExpansion": 0, \
         "InfiniteSpeedOfLight": 1, \
         "PlaneParallelField": 0, \
+        "ClumpingFactor": 1, \
         
         # Initial conditions
         "DensityProfile": 0, \

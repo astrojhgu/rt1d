@@ -25,7 +25,7 @@ class Analyze:
         self.pf = self.ds.pf    # dictionary
         
         # Convenience
-        self.GridDimensions = self.pf['GridDimensions']
+        self.GridDimensions = int(self.pf['GridDimensions'])
         self.grid = np.arange(self.GridDimensions)
         self.LengthUnits = self.pf['LengthUnits']
         self.StartRadius = self.pf['StartRadius']
@@ -38,10 +38,13 @@ class Analyze:
             r_tmp = np.concatenate([[0], self.r])
             self.dx = np.diff(r_tmp)    
         else:
-            self.dx = self.LengthUnits / self.GridDimensions
-            rmin = max(self.dx, self.StartRadius * self.LengthUnits)
+            self.dx = np.array([self.LengthUnits / self.GridDimensions] * self.GridDimensions)
+            rmin = max(self.dx[0], self.StartRadius * self.LengthUnits)
             self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions)
                 
+        # Shift radii to cell-centered values
+        # (later)    
+                                
         # Store bins used for PDFs/CDFs
         self.bins = {}
         

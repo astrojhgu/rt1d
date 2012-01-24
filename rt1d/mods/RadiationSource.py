@@ -67,18 +67,20 @@ class RadiationSource:
         
         # SourceType 0, 1, 2
         self.Lph = pf["SpectrumPhotonLuminosity"]
-            
+        
         # SourceType = 1, 2
         self.T = pf["SourceTemperature"]
         
         # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
         # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
-        if self.SourceType < 3:
+        if self.SourceType in [1, 2]:
             self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * integrate(lambda x: x**2 / (np.exp(x) - 1.), 13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
             self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
-            self.Qdot = self.F * self.Lbol / self.E   
-                                                                
+        else:
+            self.Lbol = self.Lph * self.F * self.E * erg_per_ev 
+            self.Qdot = [self.Lph]                                  
+                                                                                                                      
         # SourceType = 2, 3
         self.M = pf["SourceMass"]
         self.FixedSourceMass = pf["FixedSourceMass"]

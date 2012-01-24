@@ -325,13 +325,17 @@ class InitializeIntegralTables:
         are stored in the variable 'n' as a three element array.
         """
         
+        if type(E) is float:
+            E = [E]
+        
         tau = 0
-        if E >= E_th[0]:
-            tau += PhotoIonizationCrossSection(E, 0) * ncol[0]
-        if E >= E_th[1]:
-            tau += PhotoIonizationCrossSection(E, 1) * ncol[1]
-        if E >= E_th[2]:
-            tau += PhotoIonizationCrossSection(E, 2) * ncol[2]
+        for energy in E:
+            if energy >= E_th[0]:
+                tau += PhotoIonizationCrossSection(energy, 0) * ncol[0]
+            if energy >= E_th[1]:
+                tau += PhotoIonizationCrossSection(energy, 1) * ncol[1]
+            if energy >= E_th[2]:
+                tau += PhotoIonizationCrossSection(energy, 2) * ncol[2]
         
         return tau
         

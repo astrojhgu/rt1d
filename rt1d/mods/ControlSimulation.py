@@ -35,7 +35,7 @@ class ControlSimulation:
         if tau[0] >= 0.5:
                                     
             dtHI = self.MaxHIIChange * nabs[0] / \
-                np.abs(nabs[0] * (Gamma[0] + gamma[0] + n_e * Beta[0]) - nion[0] * n_e * alpha[0])
+                np.abs(nabs[0] * Gamma[0] - nion[0] * n_e * alpha[0])
         
         dtHeI = 1e50
         if self.MultiSpecies and self.HeIIRestrictedTimestep:
@@ -45,7 +45,7 @@ class ControlSimulation:
                 
                 # Analogous to Shapiro et al. 2004 but for HeII
                 dtHeI = self.MaxHeIIChange * nabs[1] / \
-                    np.abs(nabs[1] * (Gamma[1] + gamma[1] + n_e * Beta[1]) - nion[1] * n_e * alpha[1]) 
+                    np.abs(nabs[1] * Gamma[1] - nion[1] * n_e * alpha[1]) 
                 
         dtHeII = 1e50
         if self.MultiSpecies and self.HeIIIRestrictedTimestep:
@@ -55,8 +55,7 @@ class ControlSimulation:
                          
                 # Analogous to Shapiro et al. 2004 but for HeIII
                 dtHeI = self.MaxHeIIIChange * nabs[2] / \
-                    np.abs(nabs[2] * (Gamma[2] + n_e * Beta[2]) - \
-                    nion[2] * n_e * alpha[2]) 
+                    np.abs(nabs[2] * Gamma[2] - nion[2] * n_e * alpha[2]) 
         
         return min(dtHI, dtHeI, dtHeII)
         

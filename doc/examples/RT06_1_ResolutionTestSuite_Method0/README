@@ -16,3 +16,6 @@ If you'd like to just run a single test, do something like the following:
 cp $RT1D/scripts/RT1D.py .
 python RT1D.py dx100.dat        # Simulation with 100 grid cells
 ###
+
+Note: These tests are done with the default solver, which does not preserve
+photon number.  The 'Method1' tests use a photon-conserving algorithm.

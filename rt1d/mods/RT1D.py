@@ -97,13 +97,13 @@ def Shine(pf, r = None, IsRestart = False):
                 MPI.COMM_WORLD.barrier()
     
         # Initialize integral tables
+        iits = rtm.InitializeIntegralTables(pf, data)
         if not pf['PhotonConserving']:
-            iits = rtm.InitializeIntegralTables(pf, data)
             itabs = iits.TabulateRateIntegrals()        
             if pf["ExitAfterIntegralTabulation"]: 
                 continue
         else:
-            iits = itabs = None
+            itabs = None
                     
         # Initialize radiation and write data classes
         r = rtm.Radiate(pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
@@ -114,8 +114,8 @@ def Shine(pf, r = None, IsRestart = False):
             dt = pf["CurrentTimestep"] * TimeUnits
         else:
             
-            tau = ncol = 3 * [1.0]
-            gamma = Beta = alpha = nion = 3 * [0]
+            tau1 = ncol = 3 * [1.0]
+            tau0 = gamma = Beta = alpha = nion = 3 * [0]
                         
             indices = None
             if pf['MultiSpecies'] > 0 and not pf['PhotonConserving']: 
@@ -123,19 +123,20 @@ def Shine(pf, r = None, IsRestart = False):
                                                 
             if pf["PhotonConserving"]:
                 Gamma = 0
-                for i, E in enumerate(r.rs.DiscreteSpectrumSED):
-                    Gamma += r.coeff.PhotoIonizationRate(E = E, Qdot = self.rs.Qdot[i], ncol = ncol,
-                            n_HI = data['HIDensity'][-1], r = r.dx, dr = r.dx, dt = r.CellCrossingTime)
+                for i, E in enumerate(r.rs.E):
+                    Gamma += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.Qdot[i], ncol = ncol, 
+                            nabs = [data['HIDensity'][0], 0, 0], r = LengthUnits * StartRadius, 
+                            dr = r.dx[0], species = 0, tau = tau0)
             else:                    
                 Gamma = r.coeff.PhotoIonizationRate(species = 0, Lbol = r.rs.BolometricLuminosity(0), \
                     indices = indices, r = LengthUnits * StartRadius, 
-                    nabs = [data['HIDensity'][-1], 0, 0], ncol = ncol)
+                    nabs = [data['HIDensity'][0], 0, 0], ncol = ncol, tau = tau0)
                                                 
-            dt = r.control.ComputePhotonTimestep(tau, [Gamma, 0, 0], gamma, Beta, alpha, 
-                [data['HIDensity'][-1], 0, 0], nion, ncol, 
-                data['HIDensity'][-1] + data['HIIDensity'][-1], 
-                data['HeIDensity'][-1] + data['HeIIDensity'][-1] + data['HeIIIDensity'][-1], 0)
-                                                
+            dt = r.control.ComputePhotonTimestep(tau1, [Gamma, 0, 0], gamma, Beta, alpha, 
+                [data['HIDensity'][0], 0, 0], nion, ncol, 
+                data['HIDensity'][0] + data['HIIDensity'][0], 
+                data['HeIDensity'][0] + data['HeIIDensity'][0] + data['HeIIIDensity'][0], 0)
+                                                                                                                             
             # Play it safe if helium is involved
             if pf["MultiSpecies"]: 
                 dt *= 0.1   
@@ -218,7 +219,7 @@ def Shine(pf, r = None, IsRestart = False):
                     
         elapsed = time.time() - start  
         if i % size == rank:  
-            print "Calculation {0} complete (output to {1}).  Elapsed time = {2} hours.".format(i + 1, pf["OutputDirectory"], round(elapsed / 3600., 2))
+            print "Calculation {0} complete (output to {1}).  Elapsed time = {2} hours.".format(i + 1, pf["OutputDirectory"], round(elapsed / 3600., 4))
     
         f = open('{0}/RunComplete'.format(pf["OutputDirectory"]), 'w')
         print >> f, '# walltime (s)'
