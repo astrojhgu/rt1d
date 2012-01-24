@@ -1,0 +1,22 @@
+To run this entire test suite, do:
+
+###
+cp $RT1D/scripts/RT1D.py .
+mpirun -np N python RT1D.py -b batch_list.dat
+###
+
+where N = # of processors to use.
+
+If you'd prefer not to run all the tests to save some time, 
+just remove their parameter files from batch_list.dat.
+
+If you'd like to just run a single test, do something like the following:
+
+###
+cp $RT1D/scripts/RT1D.py .
+python RT1D.py dx100.dat        # Simulation with 100 grid cells
+###
+
+Note: These tests are done with a photon-conserving algorithm, whereas the
+'Method0' tests do not conserve photon number.
+
