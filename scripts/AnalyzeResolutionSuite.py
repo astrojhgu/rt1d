@@ -34,7 +34,7 @@ pl.rcParams['figure.subplot.right'] = 0.88
 pl.rcParams['legend.fontsize'] = 10
 
 path = os.getcwd()
-pfs = ['dx100', 'dx200', 'dx400', 'dx800', 'dx1600', 'dx3200', 'dx6400']
+pfs = ['dx100', 'dx200', 'dx400', 'dx800', 'dx1600', 'dx3200']#, 'dx6400']
 
 resolution = []
 meanerror = []
@@ -63,15 +63,15 @@ for pf in pfs:
     elif ds.pf['GridDimensions'] == 400: color = 'red'
     elif ds.pf['GridDimensions'] == 800: color = 'green'
     elif ds.pf['GridDimensions'] == 1600: color = 'blue'
-    elif ds.pf['GridDimensions'] == 3200: color = 'gray'
+    elif ds.pf['GridDimensions'] == 3200: color = 'k'
     else: color = 'yellow' 
                                                       
     ds.ComputeIonizationFrontEvolution()
         
-    if ds.pf['GridDimensions'] == 6400: 
+    if ds.pf['GridDimensions'] == 3200: 
         mp.grid[0].plot(ds.t / ds.trec, ds.ranl, linestyle = '-', color = 'k', label = r'$r_{\mathrm{anl}}$')
         mp.grid[0].plot(ds.t / ds.trec, ds.rIF, color = 'k', ls = '--', label = r'$r_{\mathrm{num}}$')
-        mp.grid[1].plot(ds.t / ds.trec, ds.rIF / ds.ranl, color = 'k', ls = '-', label = r'$\Delta x = 1/6400$')
+        mp.grid[1].plot(ds.t / ds.trec, ds.rIF / ds.ranl, color = 'k', ls = '-', label = r'$\Delta x = 1/3200$')
         
     else:
         mp.grid[1].plot(ds.t / ds.trec, ds.rIF / ds.ranl, color = color, ls = '-', label = r'$\Delta x = 1/{0}$'.format(int(ds.pf['GridDimensions'])))
@@ -81,11 +81,12 @@ for pf in pfs:
         maxerror.append(np.abs(np.max(ref_error - np.resize(ds.rIF / ds.ranl, len(ref_error)))))
         minerror.append(np.abs(np.min(ref_error - np.resize(ds.rIF / ds.ranl, len(ref_error)))))
 
-mp.grid[1].set_ylim(0.9, 1.05) 
+mp.grid[1].set_ylim(0.95, 1.05) 
 mp.fix_ticks()     
 mp.grid[0].set_xlim(0, max(ds.t / ds.trec))
 mp.grid[1].set_xlim(0, max(ds.t / ds.trec))
-mp.grid[1].yaxis.set_ticks(np.linspace(0.91, 1.05, 8), minor = True)    
+mp.grid[1].yaxis.set_ticks(np.linspace(0.94, 1.04, 6))    
+mp.grid[1].yaxis.set_ticks(np.linspace(0.95, 1.03, 5), minor = True)    
 mp.grid[0].set_ylabel(r'$r \ (\mathrm{kpc})$') 
 mp.grid[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
 mp.grid[1].set_ylabel(r'$r_{\mathrm{num}} /r_{\mathrm{anl}}$')

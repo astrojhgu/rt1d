@@ -42,6 +42,7 @@ def SetDefaultParameterValues():
         "PhotonConserving": 0, \
           
         # Integral tabulation
+        "TabulateIntegrals": 1, \
         "HIColumnMin": 1e16, \
         "HIColumnMax": 1e20, \
         "HeIColumnMin": 1e18, \

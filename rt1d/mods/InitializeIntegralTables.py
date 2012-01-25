@@ -71,7 +71,7 @@ class InitializeIntegralTables:
         # Physics, initial conditions, control parameters
         self.MultiSpecies = pf["MultiSpecies"]
         self.InitialRedshift = pf["InitialRedshift"]
-        self.dx = pf["LengthUnits"] / pf["GridDimensions"]
+        self.PhotonConserving = pf["PhotonConserving"]
         
         # Source parameters
         self.SourceType = pf["SourceType"]
@@ -348,17 +348,31 @@ class InitializeIntegralTables:
         """
         
         if self.rs.DiscreteSpectrum == 0:
-            integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * self.rs.Spectrum(E) * \
-                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev)    
-                        
+            if self.PhotonConserving:
+                integrand = lambda E: 1e10 * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / \
+                    (E * erg_per_ev)
+            else:
+                integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * \
+                    self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / \
+                    (E * erg_per_ev)
+        
             return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
-                  
+        
         else:
-            integral = PhotoIonizationCrossSection(self.rs.E, species) * self.rs.Spectrum(self.rs.E) * \
-                np.exp(-self.OpticalDepth(self.rs.E, n)) / (self.rs.E * erg_per_ev)     
-                                                                                                                                                                                
+            if self.PhotonConserving:
+                integral = self.rs.Spectrum(self.rs.E) * \
+                    np.exp(-self.OpticalDepth(self.rs.E, n)) / \
+                    (self.rs.E * erg_per_ev)
+            else:
+                integral = PhotoIonizationCrossSection(self.rs.E, species) * \
+                    self.rs.Spectrum(self.rs.E) * \
+                    np.exp(-self.OpticalDepth(self.rs.E, n)) / \
+                    (self.rs.E * erg_per_ev)     
+        
             return np.sum(integral)
-            
+        
     def ElectronHeatingRate(self, n = [0.0, 0.0, 0.0], species = 0):    
         """
         Returns the amount of heat deposited by secondary electrons from ionizations of 'species'.  This is 
@@ -371,15 +385,28 @@ class InitializeIntegralTables:
         """    
         
         if self.rs.DiscreteSpectrum == 0:
-            integrand = lambda E: 1e20 * PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
-                np.exp(-self.OpticalDepth(E, n)) / E
-            
-            return 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-8)[0]
-            
+            if self.PhotonConserving:
+                integrand = lambda E: 1e20 * self.rs.Spectrum(E) * \
+                    (E - E_th[species]) * \
+                    np.exp(-self.OpticalDepth(E, n)) / E
+            else:
+                integrand = lambda E: 1e20 * PhotoIonizationCrossSection(E, species) * \
+                    (E - E_th[species]) * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, n)) / E
+        
+            return 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
+        
         else:
-            integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \
-                self.rs.Spectrum(self.rs.E) * np.exp(-self.OpticalDepth(self.rs.E, n)) / self.rs.E
-            
+            if self.PhotonConserving:
+                integral = self.rs.Spectrum(self.rs.E) * \
+                    (self.rs.E - E_th[species]) * \
+                    np.exp(-self.OpticalDepth(self.rs.E, n)) / self.rs.E
+            else:
+                integral = PhotoIonizationCrossSection(self.rs.E, species) * \
+                    (self.rs.E - E_th[species]) * \
+                    self.rs.Spectrum(self.rs.E) * \
+                    np.exp(-self.OpticalDepth(self.rs.E, n)) / self.rs.E     
+        
             return np.sum(integral)
             
     def SecondaryIonizationRateHI(self, n = [0.0, 0.0, 0.0], species = 0):

@@ -98,7 +98,7 @@ def Shine(pf, r = None, IsRestart = False):
     
         # Initialize integral tables
         iits = rtm.InitializeIntegralTables(pf, data)
-        if not pf['PhotonConserving']:
+        if pf['TabulateIntegrals']:
             itabs = iits.TabulateRateIntegrals()        
             if pf["ExitAfterIntegralTabulation"]: 
                 continue
@@ -114,8 +114,9 @@ def Shine(pf, r = None, IsRestart = False):
             dt = pf["CurrentTimestep"] * TimeUnits
         else:
             
-            tau1 = ncol = 3 * [1.0]
-            tau0 = gamma = Beta = alpha = nion = 3 * [0]
+            tau1 = ncol = np.array(3 * [1.0])
+            tau0 = gamma = Beta = alpha = nion = np.array(3 * [0])
+            nabs = np.array([data['HIDensity'][0], 0, 0])
                         
             indices = None
             if pf['MultiSpecies'] > 0 and not pf['PhotonConserving']: 
@@ -125,8 +126,8 @@ def Shine(pf, r = None, IsRestart = False):
                 Gamma = 0
                 for i, E in enumerate(r.rs.E):
                     Gamma += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.Qdot[i], ncol = ncol, 
-                            nabs = [data['HIDensity'][0], 0, 0], r = LengthUnits * StartRadius, 
-                            dr = r.dx[0], species = 0, tau = tau0)
+                            nabs = nabs, r = LengthUnits * StartRadius, 
+                            dr = r.dx[0], species = 0, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))
             else:                    
                 Gamma = r.coeff.PhotoIonizationRate(species = 0, Lbol = r.rs.BolometricLuminosity(0), \
                     indices = indices, r = LengthUnits * StartRadius, 

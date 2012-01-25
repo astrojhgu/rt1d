@@ -28,6 +28,7 @@ class RateCoefficients:
         
         # Initialize integral tables
         self.Interpolate = Interpolate(pf, n_col, itabs)
+        self.TabulateIntegrals = self.pf["TabulateIntegrals"]
         
         # Physics parameters
         self.MultiSpecies = pf["MultiSpecies"]
@@ -62,7 +63,7 @@ class RateCoefficients:
         xi = np.zeros(3)
         
         # Standard - integral tabulation
-        if not self.PhotonConserving:
+        if self.TabulateIntegrals:
             
             # Loop over species   
             for i in xrange(3):
@@ -93,7 +94,7 @@ class RateCoefficients:
                 eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
                 psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)
         
-        # Photon-conserving algorithm                                                  
+        # Only the photon-conserving algorithm is capable of this                                                  
         else:
                
             # Loop over species   
@@ -106,7 +107,7 @@ class RateCoefficients:
                 for j, E in enumerate(self.rs.E):
                 
                     Gamma_E[j] = self.PhotoIonizationRate(E = E, Qdot = self.rs.Qdot[j], ncol = ncol,
-                        nabs = nabs, r = r, dr = dx, species = i, tau = tau)
+                        nabs = nabs, r = r, dr = dx, species = i, tau = tau, Lbol = Lbol)
                         
                     # Ionization
                     Gamma[i] += Gamma_E[j]
@@ -139,6 +140,12 @@ class RateCoefficients:
             gamma *= erg_per_ev
 
         return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi]
+        
+    def ShellVolume(self, r, dr):
+        """
+        Return volume of shell at distance r, thickness dr.
+        """
+        return 4. * np.pi * ((r + dr)**3 - r**3) / 3.
 
     def PhotoIonizationRate(self, species = None, E = None, Qdot = None, Lbol = None, 
         ncol = None, n_e = None, nabs = None, x_HII = None, 
@@ -154,27 +161,29 @@ class RateCoefficients:
             Lbol = Bolometric luminosity of source (erg/s)
             
         """     
-                                
-        if self.PhotonConserving:            
-            if E < E_th[species]:
-                IonizationRate = 0
-            else:                
-                sigma = PhotoIonizationCrossSection(E, species = species)
-                tau_E = ncol[species] * sigma       # Optical depth up until this cell
-                tau_c = dr * nabs[species] * sigma  # Optical depth of this cell
-                Vcell = 4. * np.pi * ((r + dr)**3 - r**3) / 3.
-                Q0 = Qdot * np.exp(-tau_E)          # number of photons entering cell per sec
-                dQ = Q0 * (1. - np.exp(-tau_c))     # number of photons absorbed in cell per sec
-                                                                                                                                                                                                                                                                                                                         
-                IonizationRate = dQ / nabs[species] / Vcell    # ionizations / sec / hydrogen atom
-          
-        else:   
-            IonizationRate = Lbol * self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)
+           
+        if self.TabulateIntegrals:
+            if self.PhotonConserving:
+                A = Lbol / nabs[species] / self.ShellVolume(r, dr)
+                incident = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)
+                outgoing = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol + dr * nabs)
+                IonizationRate = incident - outgoing  
+            else:
+                A = Lbol / 4. / np.pi / r**2
+                IonizationRate = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)       
+           
+        else:
+            sigma = PhotoIonizationCrossSection(E, species = species)
+            tau_E = ncol[species] * sigma       # Optical depth up until this cell
+            tau_c = dr * nabs[species] * sigma  # Optical depth of this cell
+            Vcell = 4. * np.pi * ((r + dr)**3 - r**3) / 3.
+            Q0 = Qdot * np.exp(-tau_E)          # number of photons entering cell per sec
+            dQ = Q0 * (1. - np.exp(-tau_c))     # number of photons absorbed in cell per sec
             
-            if not self.PlaneParallelField: 
-                IonizationRate /= (4. * np.pi * r**2)                                                                                        
-                                                                                     
-        return IonizationRate
+            A = 1.          
+            IonizationRate = dQ / nabs[species] / Vcell    # ionizations / sec / hydrogen atom
+                                                                                                                        
+        return A * IonizationRate
         
     def CollisionalIonizationRate(self, species = None, n_e = None, T = None):
         """
@@ -257,24 +266,18 @@ class RateCoefficients:
         bound to `species.'
         """
         
-        if self.Isothermal:
-            return 0
-        
         if self.PhotonConserving:
-            pass
+            A = Lbol / nabs[species] / self.ShellVolume(r, dr)
+            heat = nabs[species] * self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
         else:
-                        
-            heat = Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 0) * \
-                self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
+            A = Lbol / 4. / np.pi / r**2            
+            heat = nabs[species] * self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
             
             #if self.MultiSpecies > 0:
             #    heat += nabs[1] * self.Interpolate.interp(indices, "ElectronHeatingRate1", ncol)
             #    heat += nabs[2] * self.Interpolate.interp(indices, "ElectronHeatingRate2", ncol)
-                                                                           
-            if not self.PlaneParallelField: 
-                heat /= (4. * np.pi * r**2)
         
-        return heat
+        return A * self.esec.DepositionFraction(0.0, x_HII, channel = 0) * heat
         
     def CollisionalIonizationCoolingRate(self, species = 0, T = None):
         """
