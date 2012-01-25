@@ -39,7 +39,7 @@ def SetDefaultParameterValues():
         "ParallelizationMethod": 1, \
         "Debug": 1, \
         
-        "PhotonConserving": 0, \
+        "PhotonConserving": 1, \
           
         # Integral tabulation
         "TabulateIntegrals": 1, \
