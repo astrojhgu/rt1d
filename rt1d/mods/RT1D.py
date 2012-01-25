@@ -60,7 +60,7 @@ def Shine(pf, r = None, IsRestart = False):
             for msg in errmsg:
                 print msg
             print '\n'    
-            raise Exception()   
+            return
               
         # Read in a few things for convenience, convert times to real units     
         TimeUnits = pf["TimeUnits"]

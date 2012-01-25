@@ -10,23 +10,29 @@ Description: Check to make sure there are no conflicts between parameters.
 
 """
 
+import numpy as np
 
-conflicts = [(['InfiniteSpeedOfLight', 0], ['ParallelizationMethod', 1]),
-             (['DiscreteSpectrum', 0], ['PhotonConserving', 1])]
+known_conflicts = [(['InfiniteSpeedOfLight', 0], ['ParallelizationMethod', 1]),
+                   (['TabulateIntegrals', 0], ['PhotonConserving', 0]),
+                   (['DiscreteSpectrum', 0], ['PhotonConserving', 1], ['TabulateIntegrals', 0])]
 
 def CheckForParameterConflicts(pf):
     """
     Loop over parameters and make sure none of them are in conflict.
     """
-    
-    
+        
     probs = []
-    for con in conflicts:
-        if (con[0][0] not in pf.keys()) and (con[1][0] not in pf.keys()): 
-            continue
-            
-        if (pf[con[0][0]] == con[0][1]) and (pf[con[1][0]] == con[1][1]):
-            probs.append(con)
+    for conflict in known_conflicts:
+        
+        ok = []
+        for element in conflict:
+            if pf[element[0]] == element[1]:
+                ok.append(False)
+            else:
+                ok.append(True)
+                                
+        if not np.any(ok):
+            probs.append(conflict)
         
     if probs:
         msg = []

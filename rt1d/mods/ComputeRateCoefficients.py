@@ -73,7 +73,7 @@ class RateCoefficients:
                 
                 # Ionization
                 Gamma[i] = self.PhotoIonizationRate(species = i, indices = indices,  
-                    Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, tau = tau)
+                    Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, tau = tau, dr = dx)
                
                 gamma[i] = self.SecondaryIonizationRate(indices = indices)
                 Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
@@ -88,7 +88,7 @@ class RateCoefficients:
                 
                 # Heating/cooling            
                 k_H[i] = self.PhotoElectricHeatingRate(species = i, Lbol = Lbol, r = r, 
-                    x_HII = x_HII, indices = indices, ncol = ncol)
+                    x_HII = x_HII, indices = indices, ncol = ncol, dr = dx, nabs = nabs)
                     
                 zeta[i] = self.CollisionalIonizationCoolingRate(species = i, T = T)    
                 eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
@@ -263,20 +263,18 @@ class RateCoefficients:
         T = None, r = None, dr = None, dt = None, indices = None):
         """
         Photo-electric heating rate coefficient due to photo-electrons previously 
-        bound to `species.'
+        bound to `species.'  If this method is called, it means TabulateIntegrals = 1.
         """
         
         if self.PhotonConserving:
             A = Lbol / nabs[species] / self.ShellVolume(r, dr)
-            heat = nabs[species] * self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
+            incident = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
+            outgoing = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol + dr * nabs)
+            heat = (incident - outgoing)
         else:
             A = Lbol / 4. / np.pi / r**2            
-            heat = nabs[species] * self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
-            
-            #if self.MultiSpecies > 0:
-            #    heat += nabs[1] * self.Interpolate.interp(indices, "ElectronHeatingRate1", ncol)
-            #    heat += nabs[2] * self.Interpolate.interp(indices, "ElectronHeatingRate2", ncol)
-        
+            heat = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
+
         return A * self.esec.DepositionFraction(0.0, x_HII, channel = 0) * heat
         
     def CollisionalIonizationCoolingRate(self, species = 0, T = None):
@@ -345,53 +343,53 @@ class RateCoefficients:
         
         return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
         
-    def IonizationRateCoefficientHeI(self, ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices):
-        """
-        Returns ionization rate coefficient for HeI, which we denote elsewhere as Gamma_HeI.  Includes photo 
-        and secondary ionizations from fast electrons.  Unlike the hydrogen case, the collisional ionizations
-        are included in the rate equation itself instead of a coefficient.
+    #def IonizationRateCoefficientHeI(self, ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices):
+    #    """
+    #    Returns ionization rate coefficient for HeI, which we denote elsewhere as Gamma_HeI.  Includes photo 
+    #    and secondary ionizations from fast electrons.  Unlike the hydrogen case, the collisional ionizations
+    #    are included in the rate equation itself instead of a coefficient.
+    #    
+    #        units: 1 / s
+    #    """                
+    #    
+    #    IonizationRate = Lbol * \
+    #                     self.Interpolate.interp(indices, "PhotoIonizationRate1", ncol)
+    #    
+    #    if self.SecondaryIonization:
+    #        IonizationRate += Lbol * \
+    #                          self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
+    #                          self.Interpolate.interp(indices, "SecondaryIonizationRateHeI1", ncol)
+    #        
+    #        IonizationRate += (n_HI / n_HeI) * Lbol * \
+    #                          self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
+    #                          self.Interpolate.interp(indices, "SecondaryIonizationRateHeI1", ncol) 
+    #    
+    #    if not self.PlaneParallelField: 
+    #        IonizationRate /= (4. * np.pi * r**2)
+    #    
+    #    return IonizationRate
         
-            units: 1 / s
-        """                
-        
-        IonizationRate = Lbol * \
-                         self.Interpolate.interp(indices, "PhotoIonizationRate1", ncol)
-        
-        if self.SecondaryIonization:
-            IonizationRate += Lbol * \
-                              self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
-                              self.Interpolate.interp(indices, "SecondaryIonizationRateHeI1", ncol)
-            
-            IonizationRate += (n_HI / n_HeI) * Lbol * \
-                              self.esec.DepositionFraction(0.0, x_HII, channel = 2) * \
-                              self.Interpolate.interp(indices, "SecondaryIonizationRateHeI1", ncol) 
-        
-        if not self.PlaneParallelField: 
-            IonizationRate /= (4. * np.pi * r**2)
-        
-        return IonizationRate
-        
-    def IonizationRateCoefficientHeII(self, ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices):
-        """
-        Returns ionization rate coefficient for HeII, which we denote elsewhere as Gamma_HeII.  Includes photo 
-        and secondary ionizations from fast electrons.  Unlike the hydrogen case, the collisional ionizations
-        are included in the rate equation itself instead of a coefficient.  Note: TZ07 do not include secondary
-        helium II ionizations, but I am going to.
-        
-            units: 1 / s
-        """       
-        
-        IonizationRate = Lbol * \
-                         self.Interpolate.interp(indices, "PhotoIonizationRate2", ncol) \
-        
-        if self.SecondaryIonization > 1:
-            IonizationRate += Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 3) * \
-                self.Interpolate.interp(indices, "SecondaryIonizationRate2", ncol)
-                        
-        if not self.PlaneParallelField: 
-            IonizationRate /= (4. * np.pi * r**2)
-        
-        return IonizationRate
+    #def IonizationRateCoefficientHeII(self, ncol, n_HI, n_HeI, x_HII, T, r, Lbol, indices):
+    #    """
+    #    Returns ionization rate coefficient for HeII, which we denote elsewhere as Gamma_HeII.  Includes photo 
+    #    and secondary ionizations from fast electrons.  Unlike the hydrogen case, the collisional ionizations
+    #    are included in the rate equation itself instead of a coefficient.  Note: TZ07 do not include secondary
+    #    helium II ionizations, but I am going to.
+    #    
+    #        units: 1 / s
+    #    """       
+    #    
+    #    IonizationRate = Lbol * \
+    #                     self.Interpolate.interp(indices, "PhotoIonizationRate2", ncol) \
+    #    
+    #    if self.SecondaryIonization > 1:
+    #        IonizationRate += Lbol * self.esec.DepositionFraction(0.0, x_HII, channel = 3) * \
+    #            self.Interpolate.interp(indices, "SecondaryIonizationRate2", ncol)
+    #                    
+    #    if not self.PlaneParallelField: 
+    #        IonizationRate /= (4. * np.pi * r**2)
+    #    
+    #    return IonizationRate
         
     def HeatGain(self, ncol, nabs, x_HII, r, Lbol, indices):
         """
@@ -457,56 +455,47 @@ class RateCoefficients:
                                 
         return cool
         
-    def CollisionalIonizationCoolingCoefficient(self, T, species):
-        """
-        Returns coefficient for cooling by collisional ionization.  These are equations B4.1a, b, and d respectively
-        from FK96.
-        
-            units: erg cm^3 / s
-        """
-        
-        if species == 0: return 1.27e-21 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.58e5 / T)
-        if species == 1: return 9.38e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-2.85e5 / T)
-        if species == 2: return 4.95e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-6.31e5 / T)
+    #def CollisionalIonizationCoolingCoefficient(self, T, species):
+    #    """
+    #    Returns coefficient for cooling by collisional ionization.  These are equations B4.1a, b, and d respectively
+    #    from FK96.
+    #    
+    #        units: erg cm^3 / s
+    #    """
+    #    
+    #    if species == 0: 
+    #        return 1.27e-21 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.58e5 / T)
+    #    if species == 1: 
+    #        return 9.38e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-2.85e5 / T)
+    #    if species == 2: 
+    #        return 4.95e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-6.31e5 / T)
     
-    
-    def OpticalDepth(self, n, indices = None):
-        """
-        Returns the total optical depth over all energies due to column densities of HI, HeI, and HeII, which
-        are stored in the variable 'n' as a three element array.
-        """
+    #def OpticalDepth(self, n, indices = None):
+    #    """
+    #    Returns the total optical depth over all energies due to column densities of HI, HeI, and HeII, which
+    #    are stored in the variable 'n' as a three element array.
+    #    """
+    #    
+    #    func = lambda E: PhotoIonizationCrossSection(E, 0) * n[0] + PhotoIonizationCrossSection(E, 1) * n[1] \
+    #        + PhotoIonizationCrossSection(E, 2) * n[2]
+    #        
+    #    return quad(func, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0] 
         
-        func = lambda E: PhotoIonizationCrossSection(E, 0) * n[0] + PhotoIonizationCrossSection(E, 1) * n[1] \
-            + PhotoIonizationCrossSection(E, 2) * n[2]
-            
-        return quad(func, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0] 
-        
-    def TotalOpticalDepth(self, ncol = [0.0, 0.0, 0.0], species = 0, indices = None):
-        """
-        Optical depth integrated over entire spectrum.
-        """        
-        
-        if self.PhotonConserving:            
-            pass
-            #return np.sum(self.OpticalDepth(self.rs.E, n))
-        else:
-            return self.Interpolate.interp(indices, "TotalOpticalDepth%i" % species, ncol)    
-        
-    def OpticalDepth(self, E, ncol):
-        """
-        Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which
-        are stored in the variable 'ncol' as a three element array.
-        """
-        
-        tau = 0
-        if E > E_th[0]:
-            tau += PhotoIonizationCrossSection(E, 0) * ncol[0]
-        if E > E_th[1]:
-            tau += PhotoIonizationCrossSection(E, 1) * ncol[1]
-        if E > E_th[2]:
-            tau += PhotoIonizationCrossSection(E, 2) * ncol[2]
-        
-        return tau    
+    #def OpticalDepth(self, E, ncol):
+    #    """
+    #    Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which
+    #    are stored in the variable 'ncol' as a three element array.
+    #    """
+    #    
+    #    tau = 0
+    #    if E > E_th[0]:
+    #        tau += PhotoIonizationCrossSection(E, 0) * ncol[0]
+    #    if E > E_th[1]:
+    #        tau += PhotoIonizationCrossSection(E, 1) * ncol[1]
+    #    if E > E_th[2]:
+    #        tau += PhotoIonizationCrossSection(E, 2) * ncol[2]
+    #    
+    #    return tau    
         
         
         

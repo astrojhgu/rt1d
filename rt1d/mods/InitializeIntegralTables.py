@@ -322,29 +322,32 @@ class InitializeIntegralTables:
     def OpticalDepth(self, E, ncol):
         """
         Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which
-        are stored in the variable 'n' as a three element array.
+        are stored in the variable 'ncol' as a three element array.
         """
-        
+                
         if type(E) is float:
             E = [E]
-        
-        tau = 0
-        for energy in E:
+                
+        tau = np.zeros_like(E)
+        for i, energy in enumerate(E):
+            t = 0
+            
             if energy >= E_th[0]:
-                tau += PhotoIonizationCrossSection(energy, 0) * ncol[0]
+                t += PhotoIonizationCrossSection(energy, 0) * ncol[0]
             if energy >= E_th[1]:
-                tau += PhotoIonizationCrossSection(energy, 1) * ncol[1]
+                t += PhotoIonizationCrossSection(energy, 1) * ncol[1]
             if energy >= E_th[2]:
-                tau += PhotoIonizationCrossSection(energy, 2) * ncol[2]
-        
+                t += PhotoIonizationCrossSection(energy, 2) * ncol[2]
+                 
+            tau[i] = t     
+                        
         return tau
         
     def PhotoIonizationRate(self, n = [0.0, 0.0, 0.0], species = 0):
         """
         Returns the value of the bound-free photoionization rate integral of 'species'.  However, because 
         source luminosities vary with time and distance, it is unnormalized.  To get a true 
-        photoionization rate, one must multiply these values by the spectrum's normalization factor
-        and divide by 4*np.pi*r^2. 
+        photoionization rate, one must multiply these values by the spectrum's normalization factor. 
         """
         
         if self.rs.DiscreteSpectrum == 0:
@@ -370,12 +373,12 @@ class InitializeIntegralTables:
                     self.rs.Spectrum(self.rs.E) * \
                     np.exp(-self.OpticalDepth(self.rs.E, n)) / \
                     (self.rs.E * erg_per_ev)     
-        
+                                
             return np.sum(integral)
         
     def ElectronHeatingRate(self, n = [0.0, 0.0, 0.0], species = 0):    
         """
-        Returns the amount of heat deposited by secondary electrons from ionizations of 'species'.  This is 
+        Returns the amount of heat deposited by photo-electrons from 'species'.  This is 
         the first term in TZ07 Eq. 12.
         
             units: cm^2 / s
@@ -406,7 +409,7 @@ class InitializeIntegralTables:
                     (self.rs.E - E_th[species]) * \
                     self.rs.Spectrum(self.rs.E) * \
                     np.exp(-self.OpticalDepth(self.rs.E, n)) / self.rs.E     
-        
+                
             return np.sum(integral)
             
     def SecondaryIonizationRateHI(self, n = [0.0, 0.0, 0.0], species = 0):
