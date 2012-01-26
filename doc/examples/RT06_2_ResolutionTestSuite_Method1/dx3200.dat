@@ -1,0 +1,5 @@
+ProblemType = 2
+GridDimensions = 3200 
+OutputDirectory = dx3200
+PhotonConserving = 1
+ParallelizationMethod = 2
