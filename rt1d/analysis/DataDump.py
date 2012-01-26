@@ -13,6 +13,8 @@ Notes:
 
 import numpy as np
 
+neglible_column = 1.
+
 class DataDump:
     def __init__(self, dd, pf):
         """
@@ -48,7 +50,8 @@ class DataDump:
         self.n_H = self.n_HI + self.n_HII
         self.x_HI = self.n_HI / self.n_H
         self.x_HII = self.n_HII / self.n_H
-        self.ncol_HI = np.cumsum(self.n_HI * self.dx)
+        self.ncol_HI = np.roll(np.cumsum(self.n_HI * self.dx), 1)
+        self.ncol_HI[0] = neglible_column
         self.dtPhoton = dd["dtPhoton"].value / pf["TimeUnits"].value
         
         if pf["MultiSpecies"].value > 0:
@@ -59,8 +62,10 @@ class DataDump:
             self.x_HeI = self.n_HeI / self.n_He
             self.x_HeII = self.n_HeII / self.n_He
             self.x_HeIII = self.n_HeIII / self.n_He
-            self.ncol_HeI = np.cumsum(self.n_HeI * self.dx)
-            self.ncol_HeII = np.cumsum(self.n_HeII * self.dx)
-            self.ncol_e = np.cumsum(self.n_e * self.dx)
+            self.ncol_HeI = np.roll(np.cumsum(self.n_HeI * self.dx), 1)
+            self.ncol_HeII = np.roll(np.cumsum(self.n_HeII * self.dx), 1)
+            self.ncol_e = np.roll(np.cumsum(self.n_e * self.dx), 1)
+            self.ncol_HeI[0] = self.ncol_HeII[0] = negligble_column
+            
             
             

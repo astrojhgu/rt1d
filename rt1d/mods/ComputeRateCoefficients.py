@@ -21,14 +21,24 @@ erg_per_ev = 1.60217646e-19 / 1e-7
 
 class RateCoefficients:
     def __init__(self, pf, rs, itabs = None, n_col = None):
-        self.pf = pf
-        self.itabs = itabs
+        self.pf = pf        
         self.rs = rs
         self.esec = SecondaryElectrons(pf)
         
         # Initialize integral tables
-        self.Interpolate = Interpolate(pf, n_col, itabs)
+        if type(itabs) is list:
+            self.itabs = itabs[0]
+            self.itabs_fback = itabs[1]
+            self.Interpolate = Interpolate(pf, n_col, self.itabs)
+            self.Interpolate_fback = Interpolate(pf, n_col, self.itabs_fback)
+        else:
+            self.itabs = itabs
+            self.itabs_fback = self.Interpolate_fback = None
+            self.Interpolate = Interpolate(pf, n_col, self.itabs)
+            
         self.TabulateIntegrals = self.pf["TabulateIntegrals"]
+        self.AutoFallback = self.pf['AutoFallback']
+        self.Fallback = self.pf["PhotonConserving"] and self.pf['AutoFallback']
         
         # Physics parameters
         self.MultiSpecies = pf["MultiSpecies"]
@@ -164,10 +174,17 @@ class RateCoefficients:
            
         if self.TabulateIntegrals:
             if self.PhotonConserving:
-                A = Lbol / nabs[species] / self.ShellVolume(r, dr)
-                incident = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)
-                outgoing = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol + dr * nabs)
-                IonizationRate = incident - outgoing  
+                nout = ncol + dr * nabs    # Column density up to and *including* this cell
+                ncell = nout - ncol
+                if ncell[species] < self.Interpolate.MinimumColumns[species] and self.Fallback:
+                    A = Lbol / 4. / np.pi / r**2
+                    IonizationRate = self.Interpolate_fback.interp(indices, "PhotoIonizationRate%i" % species, ncol)
+                else:
+                    A = Lbol / nabs[species] / self.ShellVolume(r, dr)
+                    incident = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)
+                    outgoing = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, nout)
+                    IonizationRate = incident - outgoing  
+                
             else:
                 A = Lbol / 4. / np.pi / r**2
                 IonizationRate = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)       
@@ -267,10 +284,18 @@ class RateCoefficients:
         """
         
         if self.PhotonConserving:
-            A = Lbol / nabs[species] / self.ShellVolume(r, dr)
-            incident = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
-            outgoing = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol + dr * nabs)
-            heat = (incident - outgoing)
+            nout = ncol + dr * nabs    # Column density up to and *including* this cell
+            ncell = nout - ncol
+            if ncell[species] < self.Interpolate.MinimumColumns[species] and self.Fallback:
+                A = Lbol / 4. / np.pi / r**2            
+                heat = self.Interpolate_fback.interp(indices, "ElectronHeatingRate%i" % species, ncol)
+            else:
+                A = Lbol / nabs[species] / self.ShellVolume(r, dr)  
+                incident = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
+                outgoing = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, nout)
+                heat = incident - outgoing  
+                    
+                
         else:
             A = Lbol / 4. / np.pi / r**2            
             heat = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
@@ -455,50 +480,7 @@ class RateCoefficients:
                                 
         return cool
         
-    #def CollisionalIonizationCoolingCoefficient(self, T, species):
-    #    """
-    #    Returns coefficient for cooling by collisional ionization.  These are equations B4.1a, b, and d respectively
-    #    from FK96.
-    #    
-    #        units: erg cm^3 / s
-    #    """
-    #    
-    #    if species == 0: 
-    #        return 1.27e-21 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.58e5 / T)
-    #    if species == 1: 
-    #        return 9.38e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-2.85e5 / T)
-    #    if species == 2: 
-    #        return 4.95e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-6.31e5 / T)
-    
-    #def OpticalDepth(self, n, indices = None):
-    #    """
-    #    Returns the total optical depth over all energies due to column densities of HI, HeI, and HeII, which
-    #    are stored in the variable 'n' as a three element array.
-    #    """
-    #    
-    #    func = lambda E: PhotoIonizationCrossSection(E, 0) * n[0] + PhotoIonizationCrossSection(E, 1) * n[1] \
-    #        + PhotoIonizationCrossSection(E, 2) * n[2]
-    #        
-    #    return quad(func, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0] 
-        
-    #def OpticalDepth(self, E, ncol):
-    #    """
-    #    Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which
-    #    are stored in the variable 'ncol' as a three element array.
-    #    """
-    #    
-    #    tau = 0
-    #    if E > E_th[0]:
-    #        tau += PhotoIonizationCrossSection(E, 0) * ncol[0]
-    #    if E > E_th[1]:
-    #        tau += PhotoIonizationCrossSection(E, 1) * ncol[1]
-    #    if E > E_th[2]:
-    #        tau += PhotoIonizationCrossSection(E, 2) * ncol[2]
-    #    
-    #    return tau    
-        
-        
-        
+
         
         
           

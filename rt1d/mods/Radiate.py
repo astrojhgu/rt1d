@@ -245,8 +245,11 @@ class Radiate:
         tau_all = zip(*tau_all) 
 
         # Print status, and update progress bar
-        if rank == 0: print "rt1d: {0} < t < {1}".format(round(t / self.TimeUnits, 8), round((t + dt) / self.TimeUnits, 8))            
-        if rank == 0 and self.ProgressBar: pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
+        if rank == 0: 
+            print "rt1d: %s < t < %s" % (str(format(round(t / self.TimeUnits, 8), 'f').ljust(8, '0')), \
+                str(format(round((t + dt) / self.TimeUnits, 8), 'f')).ljust(8, '0'))            
+        if rank == 0 and self.ProgressBar: 
+            pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
         
         # If accreting black hole, luminosity will change with time.
         Lbol = self.rs.BolometricLuminosity(t)
@@ -337,7 +340,7 @@ class Radiate:
                 tau = tau_all[cell]
                 
                 # Retrieve path length through this cell
-                dx = self.dx[cell]
+                dx = self.dx[cell]                  
                                                 
                 # Retrieve coefficients and what not.
                 args = [nabs, nion, n_H, n_He, n_e]
@@ -345,6 +348,18 @@ class Radiate:
                 
                 # Unpack so we have everything by name
                 nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args                           
+                            
+                # Adjust timestep based on maximum allowed neutral fraction change     
+                if self.HIIRestrictedTimestep: 
+                    dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
+                        Gamma, gamma, Beta, alpha, 
+                        nabs, nion, ncol, n_H, n_He, n_e)
+                            
+                #if Gamma[0] == 0:
+                #    for key in data.keys():
+                #        newdata[key][cell] = data[key][cell]
+                #    
+                #    continue                                         
                                                               
                 ######################################
                 ######## Solve Rate Equations ########
@@ -371,13 +386,10 @@ class Radiate:
                 newdata["HeIIIDensity"][cell] = newHeIII
                 newdata["ElectronDensity"][cell] = (n_H - newHI) + newHeIII + 2.0 * newHeIII
                 newdata["Temperature"][cell] = newT
-                                                                                                                                                                                     
-                # Adjust timestep based on maximum allowed neutral fraction change                              
-                if self.HIIRestrictedTimestep: 
-                    dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
-                        Gamma, gamma, Beta, alpha, 
-                        nabs, nion, ncol, n_H, n_He, n_e)
-                                                                                      
+                
+                #if newdata['HIDensity'][cell] > data['HIDensity'][cell]:
+                #    print cell, dx * nabs[0]
+                                                                                                                        
                 ######################################
                 ################ DONE ################
                 ######################################

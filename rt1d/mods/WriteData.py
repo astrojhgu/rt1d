@@ -71,7 +71,7 @@ class WriteData:
         f.close()
         
         if rank == 0: 
-            print "Wrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.OutputDirectory.rstrip('/'), self.GetDataDumpName(wct))
+            print "\nWrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.OutputDirectory.rstrip('/'), self.GetDataDumpName(wct))
 
     def WriteASCII(self, data, wc, t, dt):
         """

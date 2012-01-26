@@ -9,7 +9,7 @@ Description: Driver script for a 1D radiative transfer code.
 
 """
 
-import sys, os, time
+import sys, os, time, copy
 import numpy as np
 
 try:
@@ -37,7 +37,7 @@ def Shine(pf, r = None, IsRestart = False):
         
     # Print some output to the screen        
     if rank == 0: 
-        print "\nStarting rt1d..."
+        print "\nStarting rt1d...\n"
         print "Initializing {0} 1D radiative transfer calculation(s)...".format(len(all_pfs)) 
         if IsRestart: 
             print "Restarting from {0}".format(sys.argv[2])
@@ -74,7 +74,7 @@ def Shine(pf, r = None, IsRestart = False):
         if rank == 0:
             print "Cell-crossing time = {0} (years), {1} (code)".format(LengthUnits / GridDimensions / \
                 29979245800.0 / 31557600.0, LengthUnits / GridDimensions / 29979245800.0 / TimeUnits)
-            print "Box-crossing time = {0} (years), {1} (code)\n".format(LengthUnits / 29979245800.0 / \
+            print "Box-crossing time = {0} (years), {1} (code)".format(LengthUnits / 29979245800.0 / \
                 31557600.0, LengthUnits / 29979245800.0 / TimeUnits)
                             
         # Initialize grid and file system
@@ -100,9 +100,18 @@ def Shine(pf, r = None, IsRestart = False):
         iits = rtm.InitializeIntegralTables(pf, data)
         if pf['TabulateIntegrals']:
             itabs = iits.TabulateRateIntegrals()        
+            
+            if pf['PhotonConserving'] and pf['AutoFallback']:
+                itabs = [itabs]
+                tmp_pf = copy.deepcopy(pf)
+                tmp_pf['PhotonConserving'] = 0
+                tmp_iits = rtm.InitializeIntegralTables(tmp_pf, data)
+                itabs.append(tmp_iits.TabulateRateIntegrals())
+            
             if pf["ExitAfterIntegralTabulation"]: 
                 continue
         else:
+            print '\nNo integral tabulation necessary!'
             itabs = None
                     
         # Initialize radiation and write data classes

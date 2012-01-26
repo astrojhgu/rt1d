@@ -27,14 +27,18 @@ class Interpolate:
         self.dHeIColumn = np.diff(self.HeIColumn)[0]
         self.dHeIIColumn = np.diff(self.HeIIColumn)[0]
         
+        self.MinimumColumns = 10**np.array([self.HIColumnMin, self.HeIColumnMin, self.HeIIColumnMin])
+        
         self.offsetHIColumn = self.HIColumnMin / self.dHIColumn
         self.offsetHeIColumn = self.HeIColumnMin / self.dHeIColumn
         self.offsetHeIIColumn = self.HeIIColumnMin / self.dHeIIColumn
         self.offsets = np.array([self.offsetHIColumn, self.offsetHeIColumn, self.offsetHeIIColumn])
         
-        self.itabs = itabs  # This is a dictionary with all the lookup tables
+        # This is a dictionary with all the lookup tables
+        self.itabs = itabs
         
-        if self.pf["MultiSpecies"] == 0: self.interp = self.InterpolateLinear
+        if self.pf["MultiSpecies"] == 0: 
+            self.interp = self.InterpolateLinear
         else: 
             if self.pf["InterpolationMethod"] == 0: self.interp = self.InterpolateTriLinear
             if self.pf["InterpolationMethod"] == 1: self.interp = self.InterpolateNN

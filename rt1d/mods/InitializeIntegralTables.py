@@ -83,6 +83,7 @@ class InitializeIntegralTables:
         self.SpectrumPhotonLuminosity = pf["SpectrumPhotonLuminosity"]
         self.SpectrumMinEnergy = pf["SpectrumMinEnergy"]
         self.SpectrumMaxEnergy = pf["SpectrumMaxEnergy"]
+        self.SpectrumAbsorbingColumn = pf["SpectrumAbsorbingColumn"]
         
         # Column densities
         self.HIColumnMin = pf["HIColumnMin"]
@@ -108,9 +109,10 @@ class InitializeIntegralTables:
         # Make output directory          
         try: 
             os.mkdir("{0}".format(self.OutputDirectory))
-        except OSError: pass
+        except OSError: 
+            pass
             
-        # Retrive rt1d environment
+        # Retrive rt1d environment - look for tables in rt1d/input
         self.rt1d = os.environ.get("RT1D")
                 
     def DetermineTableName(self):    
@@ -120,34 +122,31 @@ class InitializeIntegralTables:
             filename = SourceType_<SourceTemperature>_{SourceType}.h5
         
         """
-                        
-        if self.MultiSpecies == 0: dim = "1D"
-        else: dim = "3D"
+              
+        ms = 'ms%i' % self.MultiSpecies
+        pc = 'pc%i' % self.PhotonConserving        
         
         if self.SourceType == 0: 
-            src = "mp"
-            mort = "{0:g}phot".format(int(self.SpectrumPhotonLuminosity))
-            return "{0}_{1}_{2}.h5".format(src, mort, dim)
+            src = "mf"
+            prop = "{0:g}phot".format(int(self.SpectrumPhotonLuminosity))
         
         if self.SourceType == 1: 
             src = "bb"
-            mort = "{0}K".format(int(self.SourceTemperature))
-            return "{0}_{1}_{2}.h5".format(src, mort, dim)
+            prop = "{0}K".format(int(self.SourceTemperature))
                                                               
         elif self.SourceType == 2:                            
             src = "popIII"                                    
-            mort = "{0}M".format(int(self.SourceMass))        
-            return "{0}_{1}_{2}.h5".format(src, mort, dim)
+            prop = "{0}M".format(int(self.SourceMass))        
             
-        else: 
-            src = "bh"
-            mort = "{0}M".format(int(self.SourceMass))
-            
-            if self.SourceType == 3: spec = "pl"
-            elif self.SourceType == 4: spec = "apl"
-            else: spec = "unknown"
+        elif self.SourceType == 3:
+            src = "pl"
+            prop = "{0}i".format(self.SpectrumPowerLawIndex)
         
-            return "{0}_{1}{2}_{3}.h5".format(src, spec, self.SpectrumPowerLawIndex, dim)
+        elif self.SourceType == 4:
+            src = "apl"
+            prop = "{0}i{0}n".format(self.SpectrumPowerLawIndex, self.SpectrumAbsorbingColumn)    
+                    
+        return "{0}_{1}_{2}_{3}.h5".format(src, prop, pc, ms)
             
     def ReadIntegralTable(self):
         """
@@ -161,19 +160,22 @@ class InitializeIntegralTables:
         filename = self.DetermineTableName()
         itab = {}
                                 
-        if os.path.exists("{0}/input/{1}".format(self.rt1d, filename)): tabloc = "{0}/input/{1}".format(self.rt1d, filename)
-        elif os.path.exists("{0}/{1}".format(self.OutputDirectory, filename)): tabloc = "{0}/{1}".format(self.OutputDirectory, filename)
+        if os.path.exists("{0}/input/{1}".format(self.rt1d, filename)): 
+            tabloc = "{0}/input/{1}".format(self.rt1d, filename)
+        elif os.path.exists("{0}/{1}".format(self.OutputDirectory, filename)): 
+            tabloc = "{0}/{1}".format(self.OutputDirectory, filename)
         else:
             if rank == 0:
-                print "Did not find a pre-existing integral table.  Generating {0}/{1} now...\n".format(self.OutputDirectory, filename)
+                print "\nDid not find a pre-existing integral table.  Generating {0}/{1} now...".format(self.OutputDirectory, filename)
             return None
         
         if rank == 0:
-            print "Found an integral table for this source.  Reading {0}/{1}\n".format(self.OutputDirectory, filename)
+            print "\nFound an integral table for this source.  Reading {0}/{1}".format(self.OutputDirectory, filename)
         
         f = h5py.File("{0}/{1}".format(self.OutputDirectory, filename), 'r')
         
-        for item in f["IntegralTable"]: itab[item] = f["IntegralTable"][item].value
+        for item in f["IntegralTable"]: 
+            itab[item] = f["IntegralTable"][item].value
         
         itab["HIColumnValues_x"] = f["ColumnVectors"]["HIColumnValues_x"].value
         
@@ -195,8 +197,10 @@ class InitializeIntegralTables:
         tab_grp = f.create_group("IntegralTable")
         col_grp = f.create_group("ColumnVectors")
         
-        for par in self.pf: pf_grp.create_dataset(par, data = self.pf[par])
-        for integral in itabs: tab_grp.create_dataset(integral, data = itabs[integral])
+        for par in self.pf: 
+            pf_grp.create_dataset(par, data = self.pf[par])
+        for integral in itabs: 
+            tab_grp.create_dataset(integral, data = itabs[integral])
     
         col_grp.create_dataset("HIColumnValues_x", data = self.HIColumn)
         
@@ -284,8 +288,10 @@ class InitializeIntegralTables:
                                     tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
                            
                             if rank == 0 and self.ProgressBar:
-                                try: pbar.update(i + 1)
-                                except AssertionError: pass
+                                try: 
+                                    pbar.update(i + 1)
+                                except AssertionError: 
+                                    pass
                        
                         if size > 1 and self.ParallelizationMethod == 1: 
                             tab = MPI.COMM_WORLD.allreduce(tab, tab)
