@@ -1,5 +1,0 @@
-ProblemType = 2
-GridDimensions = 400
-OutputDirectory = op_1bin_ii
-DiscreteSpectrumSED = dunno yet         # Optimized for any optical depth in specified ncol range
-DiscreteSpectrumRelLum = [0.5]

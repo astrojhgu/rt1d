@@ -1,5 +1,0 @@
-ProblemType = 4.1
-MultiSpecies = 0
-OutputDirectory = op_4bin
-DiscreteSpectrumSED = [120.52209814, 225.24442516, 476.59279883,  999.95940128]
-DiscreteSpectrumRelLum = [0.02755707,  0.06182094,  0.09800432,  0.15538627]

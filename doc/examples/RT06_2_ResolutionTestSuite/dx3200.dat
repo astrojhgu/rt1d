@@ -1,5 +1,0 @@
-ProblemType = 2
-GridDimensions = 3200
-OutputDirectory = dx3200
-LengthUnits = 3.08568e22
-ParallelizationMethod = 2

@@ -1,3 +1,0 @@
-ProblemType = 2                 # Uses's bins from Wise et al. 2011 by default
-GridDimensions = 400
-OutputDirectory = ex_4bin_i

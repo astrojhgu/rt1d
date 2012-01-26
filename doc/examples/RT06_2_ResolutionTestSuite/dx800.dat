@@ -1,5 +1,0 @@
-ProblemType = 2
-GridDimensions = 800
-OutputDirectory = dx800
-LengthUnits = 3.08568e22
-ParallelizationMethod = 2

@@ -1,5 +1,0 @@
-ProblemType = 2
-GridDimensions = 400
-OutputDirectory = ex_1bin_i
-DiscreteSpectrumSED = [15.]
-DiscreteSpectrumReLum = [1.0]
