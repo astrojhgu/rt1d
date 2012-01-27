@@ -337,9 +337,9 @@ class InitializeIntegralTables:
         are stored in the variable 'ncol' as a three element array.
         """
                 
-        if type(E) is not list:
+        if type(E) is float:
             E = [E]
-                
+                               
         tau = np.zeros_like(E)
         for i, energy in enumerate(E):
             tmp = 0
