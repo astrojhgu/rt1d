@@ -61,11 +61,14 @@ class WriteData:
         data_grp = f.create_group("Data")
         
         for par in self.pf: 
-            if par == "CurrentTime": pf_grp.create_dataset(par, data = t / self.TimeUnits)
-            elif par == "CurrentTimestep": pf_grp.create_dataset(par, data = dt / self.TimeUnits)
-            else: pf_grp.create_dataset(par, data = self.pf[par])
+            if par == "CurrentTime": 
+                pf_grp.create_dataset(par, data = t / self.TimeUnits)
+            elif par == "CurrentTimestep": 
+                pf_grp.create_dataset(par, data = dt / self.TimeUnits)
+            else: 
+                pf_grp.create_dataset(par, data = self.pf[par])
+        
         for field in data: 
-            if len(data[field]) == 0: continue
             data_grp.create_dataset(field, data = data[field])
         
         f.close()

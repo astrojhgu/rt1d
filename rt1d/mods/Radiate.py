@@ -222,28 +222,38 @@ class Radiate:
                 indices_all.append(None)
         
         # Compute optical depths
-        tau_all = np.zeros([3, self.GridDimensions])    
+        tau_all_arr = np.zeros([3, self.GridDimensions])    
         if self.PhotonConserving:
             sigma = PhotoIonizationCrossSection(self.rs.E, species = 0)
             tmp_HI = np.transpose(len(self.rs.E) * [ncol_HI])            
-            tau_all[0] = np.sum(tmp_HI * sigma, axis = 1)
+            tau_all_arr[0] = np.sum(tmp_HI * sigma, axis = 1)
             
             if self.MultiSpecies:
                 tmp_HeI = np.transpose(len(self.rs.E) * [ncol_HeI])
                 tmp_HeII = np.transpose(len(self.rs.E) * [ncol_HeII])
-                tau_all[1] = np.sum(tmp_HeI * sigma, axis = 1)
-                tau_all[2] = np.sum(tmp_HeII * sigma, axis = 1)
+                tau_all_arr[1] = np.sum(tmp_HeI * sigma, axis = 1)
+                tau_all_arr[2] = np.sum(tmp_HeII * sigma, axis = 1)
             
         else:
             for i, col in enumerate(ncol_all):
-                tau_all[0][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth0", col)
+                tau_all_arr[0][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth0", col)
                 
                 if self.MultiSpecies:
-                    tau_all[1][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth1", col)
-                    tau_all[2][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth2", col)
+                    tau_all_arr[1][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth1", col)
+                    tau_all_arr[2][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth2", col)
 
-        tau_all = zip(*tau_all) 
-
+        tau_all = zip(*tau_all_arr) 
+                
+        # If no cells are "outside" the I-front, force adaptive step
+        force_adapt = 3 * [False]
+        if np.all(tau_all_arr[0] < 0.5):
+            force_adapt[0] = True
+        if self.MultiSpecies:
+            if np.all(tau_all_arr[1] < 0.5):
+                force_adapt[1] = True
+            if np.all(tau_all_arr[2] < 0.5):
+                force_adapt[2] = True  
+                                
         # Print status, and update progress bar
         if rank == 0: 
             print "rt1d: %s < t < %s" % (str(format(round(t / self.TimeUnits, 8), 'f').ljust(8, '0')), \
@@ -353,7 +363,8 @@ class Radiate:
                 if self.HIIRestrictedTimestep: 
                     dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
                         Gamma, gamma, Beta, alpha, 
-                        nabs, nion, ncol, n_H, n_He, n_e)
+                        nabs, nion, ncol, n_H, n_He, n_e,
+                        force_adapt)
                             
                 #if Gamma[0] == 0:
                 #    for key in data.keys():

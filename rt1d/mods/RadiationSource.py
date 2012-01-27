@@ -71,17 +71,6 @@ class RadiationSource:
         # SourceType = 1, 2
         self.T = pf["SourceTemperature"]
         
-        # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
-        # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
-        if self.SourceType in [1, 2]:
-            self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * integrate(lambda x: x**2 / (np.exp(x) - 1.), 13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
-            self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
-            self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
-            self.Qdot = self.Lbol * self.F / self.E / erg_per_ev 
-        else:
-            self.Lbol = self.Lph * self.F * self.E * erg_per_ev 
-            self.Qdot = [self.Lph]                                  
-                                                                                                                      
         # SourceType = 2, 3
         self.M = pf["SourceMass"]
         self.FixedSourceMass = pf["FixedSourceMass"]
@@ -92,7 +81,20 @@ class RadiationSource:
         
         # SourceType = 4
         self.SpectrumAbsorbingColumn = pf["SpectrumAbsorbingColumn"]
-                     
+        
+        # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
+        # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
+        if self.SourceType == 0:
+            self.Lbol = self.Lph * self.F * self.E * erg_per_ev 
+            self.Qdot = [self.Lph]
+        elif self.SourceType in [1, 2]:
+            self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * integrate(lambda x: x**2 / (np.exp(x) - 1.), 13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
+            self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
+            self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
+            self.Qdot = self.Lbol * self.F / self.E / erg_per_ev 
+        else:
+            self.Qdot = self.BolometricLuminosity
+                                       
         # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()    
                         
@@ -109,6 +111,20 @@ class RadiationSource:
             return self.F  
         else: 
             return self.LuminosityNormalization * self.SpecificIntensity(E) / self.BolometricLuminosity()        
+                
+    def IonizingPhotonLuminosity(self, E = None, i = None):
+        """
+        Return Qdot (photons / s) for this source at energy E.
+        """
+        
+        if self.SourceType == 0:
+            return self.Qdot[0]
+        elif self.SourceType in [1, 2]:
+            return self.Qdot[i]
+        else:
+            
+            integrand = lambda E: self.Spectrum(E) / E / erg_per_ev
+            return self.BolometricLuminosity() * quad(integrand, self.Emin, self.Emax)[0]            
                 
     def SpecificIntensity(self, E):    
         """ 
@@ -190,21 +206,13 @@ class RadiationSource:
             return 10**SchaererTable["Luminosity"][SchaererTable["Mass"].index(self.M)] * lsun
             
         if self.SourceType > 2:
-            if self.FixedSourceMass: Mnow = self.M
-            else: Mnow = self.M * np.exp( ((1.0 - self.epsilon) / self.epsilon) * t / t_edd)
+            if self.FixedSourceMass: 
+                Mnow = self.M
+            else: 
+                Mnow = self.M * np.exp( ((1.0 - self.epsilon) / self.epsilon) * t / t_edd)
+            
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
     
-    def IonizingPhotonLuminosity(self):
-        """
-        Return Qdot (photons / s) for this source.
-        """
-        
-        if self.SourceType < 3:
-            return self.Lph
-        else:
-            integrand = lambda E: self.Spectrum(E) / E / erg_per_ev
-            return self.BolometricLuminosity() * quad(integrand, self.Emin, self.Emax)[0]
-                            
     def SpectrumCDF(self, E):
         """
         Returns cumulative energy output contributed by photons at or less than energy E.

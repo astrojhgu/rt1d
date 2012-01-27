@@ -48,19 +48,25 @@ class RateCoefficients:
         self.SecondaryIonization = pf["SecondaryIonization"]
         self.PlaneParallelField = pf["PlaneParallelField"]
         
+        if self.MultiSpecies:
+            self.donors = np.arange(3)
+        else:
+            self.donors = np.array([0])
+        
     def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dx, tau):
         """
         Make list of rate coefficients that we'll pass to solver.
         
-            args = (nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi)
+            incoming args: [nabs, nion, n_H, n_He, n_e]
+            outgoing args: [nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi]
         """    
         
         nabs = args[0]
         nion = args[1]
-        n_H = args[1]
+        n_H = args[2]
         x_HII = (n_H - nabs[0]) / n_H
-        n_He = args[2]
-        n_e = args[3]
+        n_He = args[3]
+        n_e = args[4]
         
         Gamma = np.zeros(3)
         gamma = np.zeros(3)
@@ -71,7 +77,7 @@ class RateCoefficients:
         eta = np.zeros(3)
         psi = np.zeros(3)
         xi = np.zeros(3)
-        
+                        
         # Standard - integral tabulation
         if self.TabulateIntegrals:
             
@@ -81,25 +87,32 @@ class RateCoefficients:
                 if not self.MultiSpecies and i > 0:
                     continue
                 
-                # Ionization
+                # Photo-Ionization
                 Gamma[i] = self.PhotoIonizationRate(species = i, indices = indices,  
                     Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, tau = tau, dr = dx)
                
-                gamma[i] = self.SecondaryIonizationRate(indices = indices)
-                Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
+                # Recombination
                 alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
                 
                 # Dielectric recombination
                 if i == 2:
                     xi[i] = self.DielectricRecombinationRate(T = T)
                 
+                if self.SecondaryIonization:
+                    for j in self.donors:
+                        gamma[i] += self.SecondaryIonizationRate(indices = indices, \
+                            Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, tau = tau, dr = dx,
+                            species = i, donor_species = j, x_HII = x_HII)
+                                    
+                if self.CollisionalIonization:
+                    Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
+                                
                 if self.Isothermal:
                     continue
                 
                 # Heating/cooling            
                 k_H[i] = self.PhotoElectricHeatingRate(species = i, Lbol = Lbol, r = r, 
                     x_HII = x_HII, indices = indices, ncol = ncol, dr = dx, nabs = nabs)
-                    
                 zeta[i] = self.CollisionalIonizationCoolingRate(species = i, T = T)    
                 eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
                 psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)
@@ -113,41 +126,57 @@ class RateCoefficients:
                 if not self.MultiSpecies and i > 0:
                     continue
                 
+                # Loop over energy groups
                 Gamma_E = np.zeros_like(self.rs.E)
                 for j, E in enumerate(self.rs.E):
                 
-                    Gamma_E[j] = self.PhotoIonizationRate(E = E, Qdot = self.rs.Qdot[j], ncol = ncol,
-                        nabs = nabs, r = r, dr = dx, species = i, tau = tau, Lbol = Lbol)
+                    # Photo-ionization by *this* energy group
+                    Gamma_E[j] = self.PhotoIonizationRate(E = E, Qdot = self.rs.IonizingPhotonLuminosity(i = j), \
+                        ncol = ncol, nabs = nabs, r = r, dr = dx, species = i, tau = tau, Lbol = Lbol)
                         
-                    # Ionization
+                    # Total photo-ionization tally
                     Gamma[i] += Gamma_E[j]
                     
-                    if not self.Isothermal:
-                        ee = Gamma_E[j] * (E - E_th[i]) # Total photo-electron energy
-                        
-                        # Photo-heating           
-                        k_H[i] += ee * self.esec.DepositionFraction(E = E, xi = x_HII, channel = 0) 
+                    # Energy in photo-electrons due to ionizations by *this* energy group
+                    ee = Gamma_E[j] * (E - E_th[i]) * erg_per_ev                    
                         
                     if self.SecondaryIonization:
-                        gamma[i] += ee * self.esec.DepositionFraction(E = E, xi = x_HII, channel = 1 + i)
-                    
-                # Collisional ionization + radiative recombination + cooling (no dep. on radiation field)    
+                        
+                        # Ionizations of species k by photoelectrons from species i
+                        for k in xrange(3):
+                            if not self.MultiSpecies and k > 0:
+                                continue
+                            
+                            # If these photo-electrons dont have enough energy to ionize species i, continue    
+                            if (E - E_th[i]) <= E_th[k]:
+                                continue    
+                            
+                            gamma[k] += ee * self.esec.DepositionFraction(E = E, xi = x_HII, channel = 1 + i) * \
+                                (nabs[i] / nabs[k]) / \
+                                (E_th[i] * erg_per_ev)
+                                                                        
+                    if self.Isothermal:
+                        continue
+                            
+                    # Heating rate coefficient        
+                    k_H[i] += ee * self.esec.DepositionFraction(E = E, xi = x_HII, channel = 0)    
+                                    
+                # Recombination
                 alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
-                Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
                 
                 # Dielectric recombination
                 if i == 2:
                     xi[i] = self.DielectricRecombinationRate(T = T)
                 
+                if self.CollisionalIonization:
+                    Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
+                                
                 if self.Isothermal:
                     continue
                 
                 zeta[i] += self.CollisionalIonizationCoolingRate(species = i, T = T)  
                 eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
                 psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)               
-
-            k_H *= erg_per_ev
-            gamma *= erg_per_ev
 
         return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi]
         
@@ -202,6 +231,43 @@ class RateCoefficients:
                                                                                                                         
         return A * IonizationRate
         
+    def SecondaryIonizationRate(self, species = 0, donor_species = 0, E = None, Qdot = None, Lbol = None, 
+        ncol = None, n_e = None, nabs = None, x_HII = None, tau = None,
+        T = None, r = None, dr = None, dt = None, indices = None):
+        """
+        Secondary ionization rate which we denote elsewhere as gamma (note little g).
+        
+            species = species being ionized by photo-electron
+            donor_species = species the photo-electron came from
+            
+        If this routine is called, it means TabulateIntegrals = 1.    
+        
+        """    
+        
+        if self.PhotonConserving:
+            nout = ncol + dr * nabs    # Column density up to and *including* this cell
+            ncell = nout - ncol
+            if ncell[species] < self.Interpolate.MinimumColumns[species] and self.Fallback:
+                A = Lbol / 4. / np.pi / r**2
+                IonizationRate = self.Interpolate_fback.interp(indices, 
+                    "SecondaryIonizationRate%i%i" % (species, donor_species), ncol)
+            else:
+                A = Lbol / nabs[species] / self.ShellVolume(r, dr)
+                incident = self.Interpolate.interp(indices, \
+                    "SecondaryIonizationRate%i%i" % (species, donor_species), ncol)
+                outgoing = self.Interpolate.interp(indices, \
+                    "SecondaryIonizationRate%i%i" % (species, donor_species), nout)
+                IonizationRate = incident - outgoing            
+        else:
+            A = Lbol / 4. / np.pi / r**2
+            
+            IonizationRate = self.Interpolate.interp(indices, \
+                "SecondaryIonizationRate%i%i" % (species, donor_species), ncol)    
+                                                                                                                              
+        return A * IonizationRate * \
+            self.esec.DepositionFraction(E = E, xi = x_HII, channel = species + 1) * \
+            (nabs[donor_species] / nabs[species])
+        
     def CollisionalIonizationRate(self, species = None, n_e = None, T = None):
         """
         Secondary ionization rate which we denote elsewhere as Beta (note little g).
@@ -218,37 +284,6 @@ class RateCoefficients:
         
         if species == 2:
             return 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)     
-        
-    def SecondaryIonizationRate(self, species1 = None, species2 = None, E = None, Qdot = None, Lbol = None, 
-        ncol = None, n_e = None, n_HI = None, n_HeI = None, x_HII = None, 
-        T = None, r = None, dr = None, dt = None, indices = None):
-        """
-        Secondary ionization rate which we denote elsewhere as gamma (note little g).
-        
-            species1 = species experiencing primary photo-ionization
-            species2 = species being ionized by photo-electron
-        
-        """    
-        
-        if not self.SecondaryIonization:
-            return 0.0
-        
-        if self.PhotonConserving:
-            pass
-        
-        else:
-            IonizationRate = Lbol * self.Interpolate.interp(indices, "SecondaryIonizationRateHI0", ncol)                
-        
-        IonizationRate += Lbol * \
-            self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
-            self.Interpolate.interp(indices, "SecondaryIonizationRateHI0", ncol)    
-                                                          
-        if self.MultiSpecies > 0:
-            IonizationRate += Lbol * (n_HeI / n_HI) * \
-                self.esec.DepositionFraction(0.0, x_HII, channel = 1) * \
-                self.Interpolate.interp(indices, "SecondaryIonizationRateHI1", ncol)
-        
-        return IonizationRate 
         
     def RadiativeRecombinationRate(self, species = 0, T = None):
         """

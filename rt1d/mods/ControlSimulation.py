@@ -25,14 +25,14 @@ class ControlSimulation:
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
         self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
                 
-    def ComputePhotonTimestep(self, tau, Gamma, gamma, Beta, alpha, nabs, nion, ncol, n_H, n_He, n_e):
+    def ComputePhotonTimestep(self, tau, Gamma, gamma, Beta, alpha, nabs, nion, ncol, n_H, n_He, n_e, force):
         """
         Compute photon timestep based on maximum allowed fractional change
         in hydrogen and helium neutral fractions (Shapiro et al. 2004).
         """          
-        
+                
         dtHI = 1e50        
-        if tau[0] >= 0.5:
+        if tau[0] >= 0.5 or force[0]:
                                     
             dtHI = self.MaxHIIChange * nabs[0] / \
                 np.abs(nabs[0] * Gamma[0] - nion[0] * n_e * alpha[0])
@@ -40,7 +40,7 @@ class ControlSimulation:
         dtHeI = 1e50
         if self.MultiSpecies and self.HeIIRestrictedTimestep:
             
-            if tau[1] >= 0.5:
+            if tau[1] >= 0.5 or force[1]:
                 xHeII = nion[1] / n_He
                 
                 # Analogous to Shapiro et al. 2004 but for HeII
@@ -50,13 +50,13 @@ class ControlSimulation:
         dtHeII = 1e50
         if self.MultiSpecies and self.HeIIIRestrictedTimestep:
                         
-            if tau[2] >= 0.5:
+            if tau[2] >= 0.5 or force[2]:
                 xHeIII = nion[2] / n_He
                          
                 # Analogous to Shapiro et al. 2004 but for HeIII
                 dtHeI = self.MaxHeIIIChange * nabs[2] / \
                     np.abs(nabs[2] * Gamma[2] - nion[2] * n_e * alpha[2]) 
-        
+                
         return min(dtHI, dtHeI, dtHeII)
         
     def LoadBalance(self, dtphot):

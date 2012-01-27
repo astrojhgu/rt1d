@@ -2,5 +2,5 @@ ProblemType = 2.1
 GridDimensions = 200
 LengthUnits = 3.08568e22
 OutputDirectory = wise_4bin
-
+TabulateIntegrals = 0
 

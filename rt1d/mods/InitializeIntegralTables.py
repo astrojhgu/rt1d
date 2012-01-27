@@ -56,7 +56,8 @@ m_HeII = 2.0 * (m_p + m_n) + m_e
 
 tiny_number = 1e-30
 
-IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', 'SecondaryIonizationRateHI', 'SecondaryIonizationRateHeI', 'TotalOpticalDepth']#, 'ComptonHeatingRate']
+IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', \
+                'SecondaryIonizationRate', 'TotalOpticalDepth']
 
 class InitializeIntegralTables: 
     def __init__(self, pf, data):
@@ -140,11 +141,11 @@ class InitializeIntegralTables:
             
         elif self.SourceType == 3:
             src = "pl"
-            prop = "{0}i".format(self.SpectrumPowerLawIndex)
+            prop = "{0}".format(self.SpectrumPowerLawIndex)
         
         elif self.SourceType == 4:
             src = "apl"
-            prop = "{0}i{0}n".format(self.SpectrumPowerLawIndex, self.SpectrumAbsorbingColumn)    
+            prop = "{0}_{0}n".format(self.SpectrumPowerLawIndex, self.SpectrumAbsorbingColumn)    
                     
         return "{0}_{1}_{2}_{3}.h5".format(src, prop, pc, ms)
             
@@ -226,92 +227,95 @@ class InitializeIntegralTables:
                 
         itabs = self.ReadIntegralTable()
 
+        # If there was a pre-existing table, return it
         if itabs is not None:
             return itabs
+        
+        # Otherwise, make a lookup table
+        itabs = {}     
+        
+        # If hydrogen-only
+        if self.MultiSpecies == 0:
+                            
+            # Loop over integrals                
+            for h, integral in enumerate(IntegralList):
+                
+                # Print some info to the screen
+                if rank == 0 and self.ParallelizationMethod == 1: 
+                        print "\nComputing value of {0}{1}...".format(integral, 0)
+                if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
+                        pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start()
+                                    
+                # Loop over column density                    
+                tab = np.zeros(self.HINBins)
+                for i, ncol_HI in enumerate(self.HIColumn):
+                    
+                    if self.ParallelizationMethod == 1 and (i % size != rank): 
+                        continue
+                    if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1:
+                        pbar.update(i + 1)
+                    
+                    # Evaluate integral
+                    tab[i], name = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0, 0]))
+        
+                if size > 1 and self.ParallelizationMethod == 1: 
+                    tab = MPI.COMM_WORLD.allreduce(tab, tab)
+        
+                # Store table
+                itabs[name] = tab                    
+                del tab
+                
+        # If we're including helium as well         
         else:
-            itabs = {}     
-
-            # If hydrogen-only
-            if self.MultiSpecies == 0:
-                                
-                for h, integral in enumerate(IntegralList):
+                            
+            for h, integral in enumerate(IntegralList):
+                                                              
+                for species in np.arange(3):
                     
-                    # Skip helium integrals
-                    if re.search('HeI', integral): continue
+                    if integral == 'TotalOpticalDepth' and species > 0: 
+                        continue
                     
-                    if rank == 0 and self.ParallelizationMethod == 1: 
-                            print "\nComputing value of {0}{1}...".format(integral, 0)
-                    if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
-                            pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start()
-                                        
-                    tab = np.zeros(self.HINBins)
-                    for i, ncol_HI in enumerate(self.HIColumn):
+                    # This could take a while
+                    if rank == 0: 
+                        print "\nComputing value of {0}{1}...".format(integral, species)
+                    if rank == 0 and self.ProgressBar: 
+                        pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start()
+                    
+                    tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
+                    for i, ncol_HI in enumerate(self.HIColumn):  
                         
                         if self.ParallelizationMethod == 1 and (i % size != rank): 
                             continue
                         
-                        if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1:
-                            pbar.update(i + 1)
-                        
-                        tab[i] = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0, 0]))
-
+                        for j, ncol_HeI in enumerate(self.HeIColumn):
+                            for k, ncol_HeII in enumerate(self.HeIIColumn):
+                                tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
+                       
+                        if rank == 0 and self.ProgressBar:
+                            try: 
+                                pbar.update(i + 1)
+                            except AssertionError: 
+                                pass
+                   
                     if size > 1 and self.ParallelizationMethod == 1: 
                         tab = MPI.COMM_WORLD.allreduce(tab, tab)
-
-                    # Append species to name - here, will always be zero (hydrogen only)  
-                    itabs["{0}{1}".format(integral, 0)] = tab                    
+                    
+                    itabs["{0}{1}".format(integral, species)] = tab
                     del tab
                     
-            # If we're including helium as well         
-            else:
-                                
-                for h, integral in enumerate(IntegralList):
-                                                                  
-                    for species in np.arange(3):
-                        
-                        if integral == 'TotalOpticalDepth' and species > 0: continue
-                        
-                        # This could take a while
-                        if rank == 0: 
-                            print "\nComputing value of {0}{1}...".format(integral, species)
-                        if rank == 0 and self.ProgressBar: 
-                            pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start()
-                        
-                        tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
-                        for i, ncol_HI in enumerate(self.HIColumn):  
-                            
-                            if self.ParallelizationMethod == 1 and (i % size != rank): 
-                                continue
-                            
-                            for j, ncol_HeI in enumerate(self.HeIColumn):
-                                for k, ncol_HeII in enumerate(self.HeIIColumn):
-                                    tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
-                           
-                            if rank == 0 and self.ProgressBar:
-                                try: 
-                                    pbar.update(i + 1)
-                                except AssertionError: 
-                                    pass
-                       
-                        if size > 1 and self.ParallelizationMethod == 1: 
-                            tab = MPI.COMM_WORLD.allreduce(tab, tab)
-                        
-                        itabs["{0}{1}".format(integral, species)] = tab
-                        del tab
-                        
-            if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
-                pbar.finish()            
-                                        
-            wrote = False                                         
-            if rank == 0 or self.ParallelizationMethod == 2: 
-                self.WriteIntegralTable(itabs)
-                wrote = True
-                
-            # Don't move on until root processor has written out data    
-            if size > 1 and self.ParallelizationMethod == 1: 
-                MPI.COMM_WORLD.barrier()       
-                
-            return itabs
+        if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
+            pbar.finish()            
+                                    
+        wrote = False                                         
+        if rank == 0 or self.ParallelizationMethod == 2: 
+            self.WriteIntegralTable(itabs)
+            wrote = True
+            
+        # Don't move on until root processor has written out data    
+        if size > 1 and self.ParallelizationMethod == 1: 
+            MPI.COMM_WORLD.barrier()       
+            
+        return itabs
             
     def TotalOpticalDepth(self, ncol = [0.0, 0.0, 0.0], species = 0):
         """
@@ -320,10 +324,12 @@ class InitializeIntegralTables:
         
         if self.rs.DiscreteSpectrum == 0:
             integrand = lambda E: self.OpticalDepth(E, ncol)                            
-            return integrate(integrand, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0]
+            result = integrate(integrand, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0]
                   
         else:                                                                                                                                                                                
-            return np.sum(self.OpticalDepth(self.rs.E, ncol))
+            result = np.sum(self.OpticalDepth(self.rs.E, ncol))
+            
+        return result, 'TotalOpticalDepth%i' % species        
             
     def OpticalDepth(self, E, ncol):
         """
@@ -331,25 +337,25 @@ class InitializeIntegralTables:
         are stored in the variable 'ncol' as a three element array.
         """
                 
-        if type(E) is float:
+        if type(E) is not list:
             E = [E]
                 
         tau = np.zeros_like(E)
         for i, energy in enumerate(E):
-            t = 0
+            tmp = 0
             
             if energy >= E_th[0]:
-                t += PhotoIonizationCrossSection(energy, 0) * ncol[0]
+                tmp += PhotoIonizationCrossSection(energy, 0) * ncol[0]
             if energy >= E_th[1]:
-                t += PhotoIonizationCrossSection(energy, 1) * ncol[1]
+                tmp += PhotoIonizationCrossSection(energy, 1) * ncol[1]
             if energy >= E_th[2]:
-                t += PhotoIonizationCrossSection(energy, 2) * ncol[2]
+                tmp += PhotoIonizationCrossSection(energy, 2) * ncol[2]
                  
-            tau[i] = t     
+            tau[i] = tmp     
                         
         return tau
         
-    def PhotoIonizationRate(self, n = [0.0, 0.0, 0.0], species = 0):
+    def PhotoIonizationRate(self, ncol = [0.0, 0.0, 0.0], species = 0):
         """
         Returns the value of the bound-free photoionization rate integral of 'species'.  However, because 
         source luminosities vary with time and distance, it is unnormalized.  To get a true 
@@ -359,30 +365,65 @@ class InitializeIntegralTables:
         if self.rs.DiscreteSpectrum == 0:
             if self.PhotonConserving:
                 integrand = lambda E: 1e10 * self.rs.Spectrum(E) * \
-                    np.exp(-self.OpticalDepth(E, n)) / \
+                    np.exp(-self.OpticalDepth(E, ncol)) / \
                     (E * erg_per_ev)
             else:
                 integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * \
                     self.rs.Spectrum(E) * \
-                    np.exp(-self.OpticalDepth(E, n)) / \
+                    np.exp(-self.OpticalDepth(E, ncol)) / \
                     (E * erg_per_ev)
-        
-            return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
-        
+            
+            result = 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
+                
         else:
             if self.PhotonConserving:
                 integral = self.rs.Spectrum(self.rs.E) * \
-                    np.exp(-self.OpticalDepth(self.rs.E, n)) / \
+                    np.exp(-self.OpticalDepth(self.rs.E, ncol)) / \
                     (self.rs.E * erg_per_ev)
             else:
                 integral = PhotoIonizationCrossSection(self.rs.E, species) * \
                     self.rs.Spectrum(self.rs.E) * \
-                    np.exp(-self.OpticalDepth(self.rs.E, n)) / \
+                    np.exp(-self.OpticalDepth(self.rs.E, ncol)) / \
                     (self.rs.E * erg_per_ev)     
                                 
-            return np.sum(integral)
+            result = np.sum(integral)
+            
+        return result, 'PhotoIonizationRate%i' % species
         
-    def ElectronHeatingRate(self, n = [0.0, 0.0, 0.0], species = 0):    
+    def SecondaryIonizationRate(self, ncol = [0.0, 0.0, 0.0], species = 0, donor_species = 0):
+        """
+        Ionization rate due to fast secondary electrons from hydrogen or helium ionizations.
+        """
+        
+        if self.rs.DiscreteSpectrum == 0:
+            if self.PhotonConserving:
+                integrand = lambda E: 1e10 * self.rs.Spectrum(E) * \
+                    (E - E_th[donor_species]) * np.exp(-self.OpticalDepth(E, ncol)) / \
+                    (E * erg_per_ev) / E_th[species]
+            else:
+                integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, donor_species) * \
+                    (E - E_th[donor_species]) * self.rs.Spectrum(E) * \
+                    np.exp(-self.OpticalDepth(E, ncol)) / \
+                    (E * erg_per_ev) / E_th[species]
+        
+            result = 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
+        
+        else:
+            if self.PhotonConserving:
+                integral = self.rs.Spectrum(self.rs.E) * \
+                    (self.rs.E - E_th[donor_species]) * np.exp(-self.OpticalDepth(self.rs.E, ncol)) / \
+                    (self.rs.E * erg_per_ev) / E_th[species]
+            else:
+                integral = PhotoIonizationCrossSection(self.rs.E, donor_species) * \
+                    (self.rs.E - E_th[donor_species]) * self.rs.Spectrum(self.rs.E) * \
+                    np.exp(-self.OpticalDepth(self.rs.E, ncol)) / \
+                    (self.rs.E * erg_per_ev) / E_th[species]     
+                                
+            result = np.sum(integral)     
+            
+        return result, 'SecondaryIonizationRate%i%i' % (species, donor_species)        
+        
+    def ElectronHeatingRate(self, ncol = [0.0, 0.0, 0.0], species = 0):    
         """
         Returns the amount of heat deposited by photo-electrons from 'species'.  This is 
         the first term in TZ07 Eq. 12.
@@ -397,61 +438,26 @@ class InitializeIntegralTables:
             if self.PhotonConserving:
                 integrand = lambda E: 1e20 * self.rs.Spectrum(E) * \
                     (E - E_th[species]) * \
-                    np.exp(-self.OpticalDepth(E, n)) / E
+                    np.exp(-self.OpticalDepth(E, ncol)) / E
             else:
                 integrand = lambda E: 1e20 * PhotoIonizationCrossSection(E, species) * \
                     (E - E_th[species]) * self.rs.Spectrum(E) * \
-                    np.exp(-self.OpticalDepth(E, n)) / E
+                    np.exp(-self.OpticalDepth(E, ncol)) / E
         
-            return 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
+            result = 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
         
         else:
             if self.PhotonConserving:
                 integral = self.rs.Spectrum(self.rs.E) * \
                     (self.rs.E - E_th[species]) * \
-                    np.exp(-self.OpticalDepth(self.rs.E, n)) / self.rs.E
+                    np.exp(-self.OpticalDepth(self.rs.E, ncol)) / self.rs.E
             else:
                 integral = PhotoIonizationCrossSection(self.rs.E, species) * \
                     (self.rs.E - E_th[species]) * \
                     self.rs.Spectrum(self.rs.E) * \
-                    np.exp(-self.OpticalDepth(self.rs.E, n)) / self.rs.E     
+                    np.exp(-self.OpticalDepth(self.rs.E, ncol)) / self.rs.E     
                 
-            return np.sum(integral)
+            result = np.sum(integral)
             
-    def SecondaryIonizationRateHI(self, n = [0.0, 0.0, 0.0], species = 0):
-        """
-        HI ionization rate due to fast secondary electrons from hydrogen or helium ionizations.  This is the second integral
-        in Eq. 4 in TZ07.
-        """
-        
-        if self.rs.DiscreteSpectrum == 0:
-            integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
-                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_th[0]   
+        return result, 'ElectronHeatingRate%i' % species    
             
-            return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-8)[0]
-            
-        else:
-            integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \
-                self.rs.Spectrum(self.rs.E) * np.exp(-self.OpticalDepth(self.rs.E, n)) \
-                / (self.rs.E * erg_per_ev) / E_th[0] 
-            
-            return max(np.sum(integral), tiny_number)
-            
-    def SecondaryIonizationRateHeI(self, n = [0.0, 0.0, 0.0], species = 0):
-        """                                                                                                                           
-        HeI ionization rate due to fast secondary electrons from hydrogen or helium ionizations.  This is the second integral                     
-        in Eq. 5 in TZ07.                                                                                                             
-        """                                                                                                                           
-                                                                                                                                      
-        if self.rs.DiscreteSpectrum == 0:                                                                                   
-            integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * (E - E_th[species]) * self.rs.Spectrum(E) * \
-                np.exp(-self.OpticalDepth(E, n)) / (E * erg_per_ev) / E_th[1]                                                           
-                                                                                                                                                                                                                                                                            
-            return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.SpectrumMaxEnergy, epsrel = 1e-16)[0]                                                 
-                                                                                                                                      
-        else:                                                                                     
-            integral = PhotoIonizationCrossSection(self.rs.E, species) * (self.rs.E - E_th[species]) * \
-                self.rs.Spectrum(self.rs.E) * np.exp(-self.OpticalDepth(self.rs.E, n)) \
-                / (self.rs.E * erg_per_ev) / E_th[1]                                                                  
-                                                                                                                                      
-            return np.sum(integral)                                                                                                   

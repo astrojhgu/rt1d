@@ -131,21 +131,22 @@ def Shine(pf, r = None, IsRestart = False):
             if pf['MultiSpecies'] > 0 and not pf['PhotonConserving']: 
                 indices = r.coeff.Interpolate.GetIndices3D(ncol)            
                                                 
-            if pf["PhotonConserving"]:
+            if itabs is None:
                 Gamma = 0
                 for i, E in enumerate(r.rs.E):
-                    Gamma += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.Qdot[i], ncol = ncol, 
-                            nabs = nabs, r = LengthUnits * StartRadius, 
+                    Gamma += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.IonizingPhotonLuminosity(i = i), \
+                            ncol = ncol, nabs = nabs, r = LengthUnits * StartRadius, \
                             dr = r.dx[0], species = 0, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))
             else:                    
                 Gamma = r.coeff.PhotoIonizationRate(species = 0, Lbol = r.rs.BolometricLuminosity(0), \
-                    indices = indices, r = LengthUnits * StartRadius, 
-                    nabs = [data['HIDensity'][0], 0, 0], ncol = ncol, tau = tau0)
+                    indices = indices, r = LengthUnits * StartRadius, dr = r.dx[0],
+                    nabs = nabs, ncol = ncol, tau = tau0)
                                                 
             dt = r.control.ComputePhotonTimestep(tau1, [Gamma, 0, 0], gamma, Beta, alpha, 
                 [data['HIDensity'][0], 0, 0], nion, ncol, 
                 data['HIDensity'][0] + data['HIIDensity'][0], 
-                data['HeIDensity'][0] + data['HeIIDensity'][0] + data['HeIIIDensity'][0], 0)
+                data['HeIDensity'][0] + data['HeIIDensity'][0] + data['HeIIIDensity'][0], 0,
+                3 * [True])
                                                                                                                              
             # Play it safe if helium is involved
             if pf["MultiSpecies"]: 
