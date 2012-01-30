@@ -127,6 +127,11 @@ class InitializeIntegralTables:
         ms = 'ms%i' % self.MultiSpecies
         pc = 'pc%i' % self.PhotonConserving        
         
+        if self.rs.DiscreteSpectrum:
+            sed = 'D'
+        else:
+            sed = 'C'
+        
         if self.SourceType == 0: 
             src = "mf"
             prop = "{0:g}phot".format(int(self.SpectrumPhotonLuminosity))
@@ -147,7 +152,17 @@ class InitializeIntegralTables:
             src = "apl"
             prop = "{0}_{0}n".format(self.SpectrumPowerLawIndex, self.SpectrumAbsorbingColumn)    
                     
-        return "{0}_{1}_{2}_{3}.h5".format(src, prop, pc, ms)
+        return "{0}_{1}_{2}_{3}_{4}.h5".format(src, prop, pc, ms, sed)
+            
+    def DatasetName(self, integral, species, donor_species = None):
+        """
+        Return name of table (as stored in HDF5 file).
+        """    
+        
+        if integral == 'SecondaryIonizationRate':
+            return "%s%i%i" % (integral, species, donor_species)
+        else:
+            return "%s%i" % (integral, species)        
             
     def ReadIntegralTable(self):
         """
@@ -240,6 +255,8 @@ class InitializeIntegralTables:
             # Loop over integrals                
             for h, integral in enumerate(IntegralList):
                 
+                name = self.DatasetName(integral, species = 0, donor_species = 0)
+                
                 # Print some info to the screen
                 if rank == 0 and self.ParallelizationMethod == 1: 
                         print "\nComputing value of {0}{1}...".format(integral, 0)
@@ -256,7 +273,7 @@ class InitializeIntegralTables:
                         pbar.update(i + 1)
                     
                     # Evaluate integral
-                    tab[i], name = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0, 0]))
+                    tab[i] = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0, 0]))
         
                 if size > 1 and self.ParallelizationMethod == 1: 
                     tab = MPI.COMM_WORLD.allreduce(tab, tab)
@@ -281,21 +298,45 @@ class InitializeIntegralTables:
                     if rank == 0 and self.ProgressBar: 
                         pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start()
                     
-                    tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
-                    for i, ncol_HI in enumerate(self.HIColumn):  
+                    # If secondary ionization, need to loop over species again
+                    if integral == 'SecondaryIonizationRate':
                         
-                        if self.ParallelizationMethod == 1 and (i % size != rank): 
-                            continue
+                        for donor_species in np.arange(3):
+                            
+                            name = self.DatasetName(integral, species = species, donor_species = donor_species)
+                            
+                            # Loop over column densities
+                            tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
+                            for i, ncol_HI in enumerate(self.HIColumn):  
+                                
+                                if self.ParallelizationMethod == 1 and (i % size != rank): 
+                                    continue
+                                
+                                for j, ncol_HeI in enumerate(self.HeIColumn):
+                                    for k, ncol_HeII in enumerate(self.HeIIColumn):
+                                        tab[i][j][k] = eval("self.{0}({1}, species = {2}, donor_species = {3})".format(integral, \
+                                            [ncol_HI, ncol_HeI, ncol_HeII], species, donor_species = donor_species))  
+                               
+                                if rank == 0 and self.ProgressBar:
+                                    pbar.update(i + 1)
+                    
+                    else:
                         
-                        for j, ncol_HeI in enumerate(self.HeIColumn):
-                            for k, ncol_HeII in enumerate(self.HeIIColumn):
-                                tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
-                       
-                        if rank == 0 and self.ProgressBar:
-                            try: 
-                                pbar.update(i + 1)
-                            except AssertionError: 
-                                pass
+                        name = self.DatasetName(integral, species = species)
+                    
+                        # Loop over column densities
+                        tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
+                        for i, ncol_HI in enumerate(self.HIColumn):  
+                            
+                            if self.ParallelizationMethod == 1 and (i % size != rank): 
+                                continue
+                            
+                            for j, ncol_HeI in enumerate(self.HeIColumn):
+                                for k, ncol_HeII in enumerate(self.HeIIColumn):
+                                    tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
+                           
+                            if rank == 0 and self.ProgressBar:
+                                pbar.update(i + 1)                            
                    
                     if size > 1 and self.ParallelizationMethod == 1: 
                         tab = MPI.COMM_WORLD.allreduce(tab, tab)
@@ -315,7 +356,7 @@ class InitializeIntegralTables:
         if size > 1 and self.ParallelizationMethod == 1: 
             MPI.COMM_WORLD.barrier()       
             
-        return itabs
+        return itabs    
             
     def TotalOpticalDepth(self, ncol = [0.0, 0.0, 0.0], species = 0):
         """
@@ -329,7 +370,7 @@ class InitializeIntegralTables:
         else:                                                                                                                                                                                
             result = np.sum(self.OpticalDepth(self.rs.E, ncol))
             
-        return result, 'TotalOpticalDepth%i' % species        
+        return result
             
     def OpticalDepth(self, E, ncol):
         """
@@ -388,7 +429,7 @@ class InitializeIntegralTables:
                                 
             result = np.sum(integral)
             
-        return result, 'PhotoIonizationRate%i' % species
+        return result
         
     def SecondaryIonizationRate(self, ncol = [0.0, 0.0, 0.0], species = 0, donor_species = 0):
         """
@@ -421,7 +462,7 @@ class InitializeIntegralTables:
                                 
             result = np.sum(integral)     
             
-        return result, 'SecondaryIonizationRate%i%i' % (species, donor_species)        
+        return result
         
     def ElectronHeatingRate(self, ncol = [0.0, 0.0, 0.0], species = 0):    
         """
@@ -459,5 +500,5 @@ class InitializeIntegralTables:
                 
             result = np.sum(integral)
             
-        return result, 'ElectronHeatingRate%i' % species    
+        return result
             
