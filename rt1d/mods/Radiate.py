@@ -75,9 +75,12 @@ class Radiate:
         self.MaxHIIChange = pf["MaxHIIChange"]
         self.MaxHeIIChange = pf["MaxHeIIChange"]
         self.MaxHeIIIChange = pf["MaxHeIIIChange"]
-        self.HIIRestrictedTimestep = pf["HIIRestrictedTimestep"]
+        self.HIRestrictedTimestep = pf["HIRestrictedTimestep"]
+        self.HeIRestrictedTimestep = pf["HeIRestrictedTimestep"]
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
-        self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
+        self.ElectronFractionRestrictedTimestep = pf["ElectronFractionRestrictedTimestep"]
+        self.AdaptiveGlobalStep = self.HIRestrictedTimestep or self.HeIRestrictedTimestep or self.HeIIRestrictedTimestep or self.ElectronFractionRestrictedTimestep
+        self.ForceAdapt = pf["ForceAdapt"]
         
         self.MultiSpecies = pf["MultiSpecies"]
         self.InfiniteSpeedOfLight = pf["InfiniteSpeedOfLight"]
@@ -224,15 +227,17 @@ class Radiate:
         # Compute optical depths
         tau_all_arr = np.zeros([3, self.GridDimensions])    
         if self.PhotonConserving:
-            sigma = PhotoIonizationCrossSection(self.rs.E, species = 0)
+            sigma0 = PhotoIonizationCrossSection(self.rs.E, species = 0)
             tmp_HI = np.transpose(len(self.rs.E) * [ncol_HI])            
-            tau_all_arr[0] = np.sum(tmp_HI * sigma, axis = 1)
+            tau_all_arr[0] = np.sum(tmp_HI * sigma0, axis = 1)
             
             if self.MultiSpecies:
+                sigma1 = PhotoIonizationCrossSection(self.rs.E, species = 1)
+                sigma2 = PhotoIonizationCrossSection(self.rs.E, species = 2)
                 tmp_HeI = np.transpose(len(self.rs.E) * [ncol_HeI])
                 tmp_HeII = np.transpose(len(self.rs.E) * [ncol_HeII])
-                tau_all_arr[1] = np.sum(tmp_HeI * sigma, axis = 1)
-                tau_all_arr[2] = np.sum(tmp_HeII * sigma, axis = 1)
+                tau_all_arr[1] = np.sum(tmp_HeI * sigma1, axis = 1)
+                tau_all_arr[2] = np.sum(tmp_HeII * sigma2, axis = 1)
             
         else:
             for i, col in enumerate(ncol_all):
@@ -243,16 +248,6 @@ class Radiate:
                     tau_all_arr[2][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth2", col)
 
         tau_all = zip(*tau_all_arr) 
-                
-        # If no cells are "outside" the I-front, force adaptive step
-        force_adapt = 3 * [False]
-        if np.all(tau_all_arr[0] < 0.5):
-            force_adapt[0] = True
-        if self.MultiSpecies:
-            if np.all(tau_all_arr[1] < 0.5):
-                force_adapt[1] = True
-            if np.all(tau_all_arr[2] < 0.5):
-                force_adapt[2] = True  
                                 
         # Print status, and update progress bar
         if rank == 0: 
@@ -270,8 +265,10 @@ class Radiate:
             # PhotonPackage guide: pack = [EmissionTime, EmissionTimeInterval, ncolHI, ncolHeI, ncolHeII, Energy]
             
             # Photon packages going from oldest to youngest - will have to create it on first timestep
-            try: packs = list(data['PhotonPackages']) 
-            except KeyError: packs = []            
+            try: 
+                packs = list(data['PhotonPackages']) 
+            except KeyError: 
+                packs = []            
             
             if packs and self.OnePhotonPackagePerCell:
                 t_packs = np.array(zip(*packs)[0])    # Birth times for all packages
@@ -283,10 +280,11 @@ class Radiate:
                 else:
                     # Launch new photon package - [t_birth, ncol_HI_0, ncol_HeI_0, ncol_HeII_0]                
                     packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
-            else: packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
+            else: 
+                packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
         
         # Initialize timestep array
-        if self.HIIRestrictedTimestep: 
+        if self.HIRestrictedTimestep: 
             if self.InfiniteSpeedOfLight:
                 dtphot = 1. * np.zeros_like(self.grid)
             else:
@@ -357,21 +355,8 @@ class Radiate:
                 args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, tau))
                 
                 # Unpack so we have everything by name
-                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args                           
-                            
-                # Adjust timestep based on maximum allowed neutral fraction change     
-                if self.HIIRestrictedTimestep: 
-                    dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
-                        Gamma, gamma, Beta, alpha, 
-                        nabs, nion, ncol, n_H, n_He, n_e,
-                        force_adapt)
-                            
-                #if Gamma[0] == 0:
-                #    for key in data.keys():
-                #        newdata[key][cell] = data[key][cell]
-                #    
-                #    continue                                         
-                                                              
+                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args       
+                                                                                                                      
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################                          
@@ -391,19 +376,21 @@ class Radiate:
                 
                 # Update quantities in 'data' -> 'newdata'                
                 newdata["HIDensity"][cell] = newHI                                                                                            
-                newdata["HIIDensity"][cell] = n_H - newHI
+                newdata["HIIDensity"][cell] = newHII
                 newdata["HeIDensity"][cell] = newHeI
                 newdata["HeIIDensity"][cell] = newHeII
                 newdata["HeIIIDensity"][cell] = newHeIII
-                newdata["ElectronDensity"][cell] = (n_H - newHI) + newHeIII + 2.0 * newHeIII
+                newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
                 newdata["Temperature"][cell] = newT
-                
-                #if newdata['HIDensity'][cell] > data['HIDensity'][cell]:
-                #    print cell, dx * nabs[0]
                                                                                                                         
                 ######################################
                 ################ DONE ################
                 ######################################
+                
+                # Adjust timestep based on maximum allowed neutral fraction change     
+                if self.AdaptiveGlobalStep:
+                    dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
+                        nabs, nion, n_H, n_He, n_e, n_B, qnew, dt)
                 
         ###
         ## SOLVE: c = finite
@@ -541,7 +528,7 @@ class Radiate:
                     ################ DONE ################     
                     ######################################                                   
                 
-            if self.HIIRestrictedTimestep or self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep:
+            if self.HIRestrictedTimestep or self.HeIRestrictedTimestep or self.HeIIRestrictedTimestep:
                 for cell in self.grid:
                     dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, self.rs.BolometricLuminosity(t), n_H_arr[0], n_He_arr[0])            
         
@@ -552,7 +539,7 @@ class Radiate:
                 
             dtphot = MPI.COMM_WORLD.allreduce(dtphot, dtphot) 
                                 
-        if self.HIIRestrictedTimestep or self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep: 
+        if self.AdaptiveGlobalStep: 
             newdt = min(np.min(dtphot), 2 * dt)
         else: 
             newdt = dt
@@ -574,8 +561,8 @@ class Radiate:
         if size > 1 and self.ParallelizationMethod == 1: 
             lb = self.control.LoadBalance(dtphot)   
         else: 
-            lb = None                                  
-                                                                                                                                                                            
+            lb = None      
+                                                                                                                                           
         return newdata, h, newdt, lb 
         
     def RateEquations(self, q, t, args):    
@@ -608,20 +595,20 @@ class Radiate:
         eta = args[11]
         psi = args[12]
         xi = args[13]
-        
+                                
         tmp = self.zeros
-        
+                
         # Always solve hydrogen rate equation
-        tmp[0] = (Gamma[0] + gamma[0] + Beta[0] * n_e) * (n_H - q[0]) - alpha[0] * self.C * n_e * q[0]
+        tmp[0] = (Gamma[0] + gamma[0] + Beta[0] * n_e) * nabs[0] - alpha[0] * self.C * n_e * q[0] 
                 
         # Helium rate equations        
-        if self.MultiSpecies:
-            tmp[1] = (Gamma[1] + gamma[1] + Beta[1] * n_e) * (n_He - q[1] - q[2]) + \
+        if self.MultiSpecies:                                           
+            tmp[1] = (Gamma[1] + gamma[1] + Beta[1] * n_e) * nabs[1] + \
                       alpha[2] * n_e * q[2] - \
-                     (Beta[2] + alpha[1]) * n_e * q[1] - \
+                     (Beta[1] + alpha[1]) * n_e * q[1] - \
                       xi[2] * n_e * q[2]
-                   
-            tmp[2] = (Gamma[2] + gamma[2] + Beta[2] * n_e) * q[1] - alpha[2] * n_e * q[2]
+                    
+            tmp[2] = (Gamma[2] + gamma[2] + Beta[2] * n_e) * nabs[1] - alpha[2] * n_e * q[2]
         
         # Temperature evolution - using np.sum is slow!
         if not self.Isothermal:

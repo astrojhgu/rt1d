@@ -53,6 +53,7 @@ class DataDump:
         self.ncol_HI = np.roll(np.cumsum(self.n_HI * self.dx), 1)
         self.ncol_HI[0] = neglible_column
         self.dtPhoton = dd["dtPhoton"].value / pf["TimeUnits"].value
+        self.n_B = self.n_H + self.n_e
         
         if pf["MultiSpecies"].value > 0:
             self.n_HeI = dd["HeIDensity"].value
@@ -65,7 +66,8 @@ class DataDump:
             self.ncol_HeI = np.roll(np.cumsum(self.n_HeI * self.dx), 1)
             self.ncol_HeII = np.roll(np.cumsum(self.n_HeII * self.dx), 1)
             self.ncol_e = np.roll(np.cumsum(self.n_e * self.dx), 1)
-            self.ncol_HeI[0] = self.ncol_HeII[0] = negligble_column
+            self.ncol_HeI[0] = self.ncol_HeII[0] = neglible_column
+            self.n_B += self.n_He
             
-            
+        self.f_e = self.n_e / self.n_B    
             

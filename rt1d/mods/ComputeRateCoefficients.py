@@ -147,14 +147,14 @@ class RateCoefficients:
                             if not self.MultiSpecies and k > 0:
                                 continue
                             
-                            # If these photo-electrons dont have enough energy to ionize species i, continue    
+                            # If these photo-electrons dont have enough energy to ionize species k, continue    
                             if (E - E_th[i]) <= E_th[k]:
                                 continue    
                             
-                            gamma[k] += ee * self.esec.DepositionFraction(E = E, xi = x_HII, channel = 1 + i) * \
+                            gamma[k] += ee * self.esec.DepositionFraction(E = E, xi = x_HII, channel = 1 + k) * \
                                 (nabs[i] / nabs[k]) / \
                                 (E_th[i] * erg_per_ev)
-                                                                        
+                                                                                                        
                     if self.Isothermal:
                         continue
                             
@@ -178,6 +178,7 @@ class RateCoefficients:
                 eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
                 psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)               
 
+        #print Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi
         return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi]
 
     def PhotoIonizationRate(self, species = None, E = None, Qdot = None, Lbol = None, 
@@ -264,17 +265,17 @@ class RateCoefficients:
         
     def CollisionalIonizationRate(self, species = None, n_e = None, T = None):
         """
-        Secondary ionization rate which we denote elsewhere as Beta (note little g).
+        Collisional ionization rate which we denote elsewhere as Beta.
         """    
         
         if species == 0:  
             return n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)    
           
         if species == 1:    
-            return 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T) 
+            return n_e * 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T) 
         
         if species == 2:
-            return 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)     
+            return n_e * 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)     
         
     def RadiativeRecombinationRate(self, species = 0, T = None):
         """
@@ -299,6 +300,7 @@ class RateCoefficients:
         """
         Dielectric recombination coefficient for Helium.
         """
+        
         return 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T)) 
         
     def PhotoElectricHeatingRate(self, species = None, E = None, Qdot = None, Lbol = None, 
@@ -321,7 +323,6 @@ class RateCoefficients:
                 outgoing = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, nout)
                 heat = incident - outgoing  
                     
-                
         else:
             A = Lbol / 4. / np.pi / r**2            
             heat = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
@@ -386,6 +387,7 @@ class RateCoefficients:
         """
         Return volume of shell at distance r, thickness dr.
         """
+        
         return 4. * np.pi * ((r + dr)**3 - r**3) / 3.    
         
           

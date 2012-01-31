@@ -43,7 +43,7 @@ class Analyze:
             self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions)
                 
         # Shift radii to cell-centered values
-        # (later)    
+        # (someday - it won't really matter)    
                                 
         # Store bins used for PDFs/CDFs
         self.bins = {}
@@ -98,8 +98,10 @@ class Analyze:
 
         self.ComputeIonizationFrontEvolution(T0 = T0)
 
-        if mp is not None: self.mp = mp    
-        else: self.mp = multiplot(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
+        if mp is not None: 
+            self.mp = mp    
+        else: 
+            self.mp = multiplot(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
 
         if anl: self.mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle = '-', color = 'k')
         

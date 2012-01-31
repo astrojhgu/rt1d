@@ -113,37 +113,56 @@ def Shine(pf, r = None, IsRestart = False):
         else:
             print '\nNo integral tabulation necessary!'
             itabs = None
+            if IsRestart:
+                print '\n'
                     
         # Initialize radiation and write data classes
         r = rtm.Radiate(pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
         w = rtm.WriteData(pf)
         
         # Compute initial timestep
-        if IsRestart or pf["HIIRestrictedTimestep"] == 0: 
+        if IsRestart or pf["HIRestrictedTimestep"] == 0: 
             dt = pf["CurrentTimestep"] * TimeUnits
         else:
             
             tau1 = ncol = np.array(3 * [1.0])
             tau0 = gamma = Beta = alpha = nion = np.array(3 * [0])
-            nabs = np.array([data['HIDensity'][0], 0, 0])
+            nabs = np.array([data['HIDensity'][0], data['HeIDensity'][0], data['HeIIDensity'][0]])
                         
             indices = None
             if pf['MultiSpecies'] > 0 and not pf['PhotonConserving']: 
                 indices = r.coeff.Interpolate.GetIndices3D(ncol)            
-                                                
+                
+            Gamma = np.zeros(3)                                    
             if itabs is None:
-                Gamma = 0
                 for i, E in enumerate(r.rs.E):
-                    Gamma += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.IonizingPhotonLuminosity(i = i), \
+                    Gamma[0] += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.IonizingPhotonLuminosity(i = i), \
+                        ncol = ncol, nabs = nabs, r = LengthUnits * StartRadius, \
+                        dr = r.dx[0], species = 0, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))
+                    
+                    if pf['MultiSpecies']:
+                        Gamma[1] += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.IonizingPhotonLuminosity(i = i), \
                             ncol = ncol, nabs = nabs, r = LengthUnits * StartRadius, \
-                            dr = r.dx[0], species = 0, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))
+                            dr = r.dx[0], species = 1, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))
+                        Gamma[2] += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.IonizingPhotonLuminosity(i = i), \
+                            ncol = ncol, nabs = nabs, r = LengthUnits * StartRadius, \
+                            dr = r.dx[0], species = 2, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))    
+                        
             else:                    
-                Gamma = r.coeff.PhotoIonizationRate(species = 0, Lbol = r.rs.BolometricLuminosity(0), \
+                Gamma[0] = r.coeff.PhotoIonizationRate(species = 0, Lbol = r.rs.BolometricLuminosity(0), \
                     indices = indices, r = LengthUnits * StartRadius, dr = r.dx[0],
                     nabs = nabs, ncol = ncol, tau = tau0)
+                    
+                if pf['MultiSpecies']:
+                    Gamma[1] = r.coeff.PhotoIonizationRate(species = 1, Lbol = r.rs.BolometricLuminosity(0), \
+                        indices = indices, r = LengthUnits * StartRadius, dr = r.dx[0],
+                        nabs = nabs, ncol = ncol, tau = tau0)
+                    Gamma[2] = r.coeff.PhotoIonizationRate(species = 2, Lbol = r.rs.BolometricLuminosity(0), \
+                        indices = indices, r = LengthUnits * StartRadius, dr = r.dx[0],
+                        nabs = nabs, ncol = ncol, tau = tau0)                            
                                                 
-            dt = r.control.ComputePhotonTimestep(tau1, [Gamma, 0, 0], gamma, Beta, alpha, 
-                [data['HIDensity'][0], 0, 0], nion, ncol, 
+            dt = r.control.ComputeInitialPhotonTimestep(tau1, Gamma, gamma, Beta, alpha, 
+                [data['HIDensity'][0], data['HeIDensity'][0], data['HeIIDensity'][0]], nion, ncol, 
                 data['HIDensity'][0] + data['HIIDensity'][0], 
                 data['HeIDensity'][0] + data['HeIIDensity'][0] + data['HeIIIDensity'][0], 0,
                 3 * [True])
@@ -217,8 +236,11 @@ def Shine(pf, r = None, IsRestart = False):
                     wrote = True
                 wct += 1
                 
-            if dt == 0: 
-                raise ValueError('dt = 0.  Exiting.')  
+            if dt <= 0: 
+                raise ValueError('ERROR: dt <= 0.  Exiting.')  
+                
+            if np.isnan(dt):  
+                raise ValueError('ERROR: dt -> inf.  Exiting.')    
                
             # Don't move on until root processor has written out data    
             if size > 1 and pf["ParallelizationMethod"] == 1: 

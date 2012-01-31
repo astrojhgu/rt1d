@@ -37,6 +37,7 @@ class SolveRateEquations:
         self.MultiSpecies = pf["MultiSpecies"]
         self.Isothermal = pf["Isothermal"]
         self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
+        self.CheckForGoofiness = pf["CheckForGoofiness"]
         
         self.stepper = stepper
         self.rtol = rtol
@@ -78,7 +79,7 @@ class SolveRateEquations:
         last_adaptation = 1
         while xnow < xf: 
             xnext = xnow + h
-                                                             
+                                                                                               
             # Ensure we end exactly at xf.        
             if xnext > xf: 
                 h = xf - xnow
@@ -88,42 +89,43 @@ class SolveRateEquations:
             ynext = self.solve(f, ynow, xnow, h, Dfun, args)
             
             # Check for goofiness
-            #everything_ok = self.SolutionCheck(ynext, args)
-            #if not np.all(everything_ok): 
-            #
-            #    if not everything_ok[0] and h > self.hmin:
-            #        h = max(self.hmin, h / 2.)
-            #        continue
-            #    elif not everything_ok[0] and h == self.hmin:
-            #        raise ValueError('NAN encountered on minimum ODE step. Exiting.')
-            #            
-            #    if not np.all(everything_ok[1:]):
-            #        ynext, ok = self.ApplyFloor(ynext, args)
-            #        
-            #        if not np.all(ok) and h > self.hmin:
-            #            h = max(self.hmin, h / 2.)
-            #            continue
-            #        elif not np.all(ok) and h == self.hmin:
-            #            raise ValueError('NAN encountered on minimum ODE step. Exiting.')    
-            #
-            ## IS THIS STUFF NECESSARY SINCE WE ALREADY RAN APPLYFLOOR?
-            #
-            ## If nothing is goofy but number densities are below our floor, change them
-            #if ynext[0] < (args[2] * self.MinimumSpeciesFraction):
-            #    ynext[0] = args[2] * self.MinimumSpeciesFraction
-            #if ynext[0] > (args[2] * (1. - self.MinimumSpeciesFraction)):
-            #    ynext[0] = args[2] * (1. - self.MinimumSpeciesFraction)
-            #    
-            ## Potential helium goofiness    
-            #if self.MultiSpecies:    
-            #    if ynext[1] < (args[3] * self.MinimumSpeciesFraction):
-            #        ynext[1] = args[3] * self.MinimumSpeciesFraction
-            #    if ynext[1] > (args[3] * (1. - self.MinimumSpeciesFraction)):
-            #        ynext[1] = args[3] * (1. - self.MinimumSpeciesFraction)
-            #    if ynext[2] < (args[3] * self.MinimumSpeciesFraction):
-            #        ynext[2] = args[3] * self.MinimumSpeciesFraction
-            #    if ynext[2] > (args[3] * (1. - self.MinimumSpeciesFraction)):
-            #        ynext[2] = args[3] * (1. - self.MinimumSpeciesFraction)    
+            if self.CheckForGoofiness:
+                everything_ok = self.SolutionCheck(ynext, args)
+                if not np.all(everything_ok): 
+                
+                    if not everything_ok[0] and h > self.hmin:
+                        h = max(self.hmin, h / 2.)
+                        continue
+                    elif not everything_ok[0] and h == self.hmin:
+                        raise ValueError('NAN encountered on minimum ODE step. Exiting.')
+                            
+                    if not np.all(everything_ok[1:]):
+                        ynext, ok = self.ApplyFloor(ynext, args)
+                        
+                        if not np.all(ok) and h > self.hmin:
+                            h = max(self.hmin, h / 2.)
+                            continue
+                        elif not np.all(ok) and h == self.hmin:
+                            raise ValueError('NAN encountered on minimum ODE step. Exiting.')    
+                
+                # IS THIS STUFF NECESSARY SINCE WE ALREADY RAN APPLYFLOOR?
+                
+                # If nothing is goofy but number densities are below our floor, change them
+                if ynext[0] < (args[2] * self.MinimumSpeciesFraction):
+                    ynext[0] = args[2] * self.MinimumSpeciesFraction
+                if ynext[0] > (args[2] * (1. - self.MinimumSpeciesFraction)):
+                    ynext[0] = args[2] * (1. - self.MinimumSpeciesFraction)
+                    
+                # Potential helium goofiness    
+                if self.MultiSpecies:    
+                    if ynext[1] < (args[3] * self.MinimumSpeciesFraction):
+                        ynext[1] = args[3] * self.MinimumSpeciesFraction
+                    if ynext[1] > (args[3] * (1. - self.MinimumSpeciesFraction)):
+                        ynext[1] = args[3] * (1. - self.MinimumSpeciesFraction)
+                    if ynext[2] < (args[3] * self.MinimumSpeciesFraction):
+                        ynext[2] = args[3] * self.MinimumSpeciesFraction
+                    if ynext[2] > (args[3] * (1. - self.MinimumSpeciesFraction)):
+                        ynext[2] = args[3] * (1. - self.MinimumSpeciesFraction)    
                                   
             # Adaptive time-stepping
             adapted = False

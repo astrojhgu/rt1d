@@ -27,13 +27,13 @@ class SecondaryElectrons:
         rt1d = os.environ.get("RT1D")
         f = h5py.File("{0}/input/secondary_electron_data.h5".format(rt1d), 'r')
         
-        # Read in Furlanetto & Stoever lookup tables
-        self.Energies = f["ElectronEnergy"].value
-        self.IonizedFractions = f["IonizedFraction"].value
-        self.Heat = f["Heat"].value
-        self.IonizationHI = f["IonizationHI"].value
-        self.IonizationHeI = f["IonizationHeI"].value
-        self.IonizationHeII = f["IonizationHeII"].value
+        # Read in Furlanetto & Stoever lookup tables (not yet implemented)
+        #self.Energies = f["ElectronEnergy"].value
+        #self.IonizedFractions = f["IonizedFraction"].value
+        #self.Heat = f["Heat"].value
+        #self.IonizationHI = f["IonizationHI"].value
+        #self.IonizationHeI = f["IonizationHeI"].value
+        #self.IonizationHeII = f["IonizationHeII"].value
         
         f.close()
         
@@ -45,7 +45,7 @@ class SecondaryElectrons:
             channel = 0: heat
             channel = 1: ionization of HI
             channel = 2: ionization of HeI
-            channel = 3: ionization of HeII
+            channel = 3: ionization of HeII (not implemented)
             
         and
         
@@ -76,7 +76,9 @@ class SecondaryElectrons:
             if channel == 1: 
                 return 0.3908 * pow(1 - pow(xi, 0.4092), 1.7592)
             if channel == 2: 
-                return 0.0554 * pow(1 - pow(xi, 0.4614), 1.6660)     
+                return 0.0554 * pow(1 - pow(xi, 0.4614), 1.6660) 
+            if channel == 3:
+                return 0.0    
             
         if self.Method == 2:
             

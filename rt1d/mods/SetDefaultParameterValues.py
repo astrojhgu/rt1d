@@ -5,13 +5,9 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on 2010-10-19.
 
-Description: Complete parameter list with default values.  Stored as a python dictionary, read in when we initialize
+Description: Complete parameter list with default values.  
+Stored as a python dictionary, read in when we initialize
 the parameter space.
-     
-To do: New naming convention:
-     -Source properties prefaced with "Source": SourceType, SourceMass, SourceTemperature, etc.
-     -Spectral properties labeled with "Spectrum", SpectrumMinEnergy, SpectrumPowerLawIndex, etc.
-     -Properties only applicabale for discretized spectra labeled with "DiscreteSpectrum", DiscreteSpectrumMinEnergy, DiscreteSpectrumBins, etc.
      
 """
 
@@ -35,6 +31,7 @@ def SetDefaultParameterValues():
         "ODEatol": 1e-5, \
         "ODEmaxiter": 1e4, \
         "RootFinder": 0, \
+        "CheckForGoofiness": 1, \
         
         "ParallelizationMethod": 1, \
         "Debug": 1, \
@@ -74,14 +71,18 @@ def SetDefaultParameterValues():
         "OutputTimestep": 0, \
         "ProgressBar": 0, \
         "CurrentTimestep": 1e-8, \
-        "HIIRestrictedTimestep": 1, \
+        "HIRestrictedTimestep": 1, \
+        "HeIRestrictedTimestep": 0, \
         "HeIIRestrictedTimestep": 0, \
-        "HeIIIRestrictedTimestep": 1, \
+        "OpticalDepthOfIFront": [0.5, 0.5, 0.5], \
+        "ElectronFractionRestrictedTimestep": 0, \
         "LightCrossingTimeRestrictedStep": 0, \
         "OnePhotonPackagePerCell": 0, \
         "MaxHIIChange": 0.05, \
         "MaxHeIIChange": 0.05, \
         "MaxHeIIIChange": 0.05, \
+        "MaxElectronChange": 0.05, \
+        "ForceAdapt": 1, \
         "MinimumSpeciesFraction": 1e-8, \
         
         # Physics

@@ -289,9 +289,6 @@ class InitializeIntegralTables:
                                                               
                 for species in np.arange(3):
                     
-                    if integral == 'TotalOpticalDepth' and species > 0: 
-                        continue
-                    
                     # This could take a while
                     if rank == 0: 
                         print "\nComputing value of {0}{1}...".format(integral, species)
@@ -360,7 +357,8 @@ class InitializeIntegralTables:
             
     def TotalOpticalDepth(self, ncol = [0.0, 0.0, 0.0], species = 0):
         """
-        Optical depth integrated over entire spectrum.
+        Optical depth integrated over entire spectrum for a given species at a 
+        given column density.
         """        
         
         if self.rs.DiscreteSpectrum == 0:
