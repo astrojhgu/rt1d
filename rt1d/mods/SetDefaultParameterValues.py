@@ -41,7 +41,7 @@ def SetDefaultParameterValues():
         # Integral tabulation
         "TabulateIntegrals": 1, \
         "AutoFallback": 1, \
-        "HIColumnMin": 1e16, \
+        "HIColumnMin": 1e15, \
         "HIColumnMax": 1e20, \
         "HeIColumnMin": 1e18, \
         "HeIColumnMax": 1e22, \
@@ -74,7 +74,7 @@ def SetDefaultParameterValues():
         "HIRestrictedTimestep": 1, \
         "HeIRestrictedTimestep": 0, \
         "HeIIRestrictedTimestep": 0, \
-        "OpticalDepthOfIFront": [0.5, 0.5, 0.5], \
+        "OpticalDepthDefiningIFront": [0.5, 0.5, 0.5], \
         "ElectronFractionRestrictedTimestep": 0, \
         "LightCrossingTimeRestrictedStep": 0, \
         "OnePhotonPackagePerCell": 0, \
@@ -83,7 +83,7 @@ def SetDefaultParameterValues():
         "MaxHeIIIChange": 0.05, \
         "MaxElectronChange": 0.05, \
         "ForceAdapt": 1, \
-        "MinimumSpeciesFraction": 1e-8, \
+        "MinimumSpeciesFraction": 1e-6, \
         
         # Physics
         "Isothermal": 1, \

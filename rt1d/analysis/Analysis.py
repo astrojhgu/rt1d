@@ -9,6 +9,7 @@ Description: Functions to calculate various quantities from our rt1d datasets.
      
 """
 
+import os
 import numpy as np
 import pylab as pl
 from Multiplot import *
@@ -150,7 +151,45 @@ class Analyze:
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Species Fraction')  
         pl.draw()
-                             
+        
+    def RadialProfileMovie(self, species = 'H', out = None):
+        """
+        Save time-series images of 'field' to 'out' directory.
+        """    
+        
+        if out is None:
+            out = './'
+        elif not os.path.exists(out):
+            os.mkdir(out)
+
+        mi, ma = (1e-5, 1.5)
+        ax = pl.subplot(111)    
+        ax.set_xscale('log')        
+        ax.set_yscale('log')  
+         
+        for dd in self.data.keys():
+            
+            if species == 'H':
+                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                    self.data[%i].x_HI, ls = \'-\', color = \'k\')' % (dd, dd))
+                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                    self.data[%i].x_HII, ls = \'--\', color = \'k\')' % (dd, dd))
+            else:
+                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                    self.data[%i].x_HeI, ls = \'-\', color = \'k\')' % (dd, dd))
+                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                    self.data[%i].x_HeII, ls = \'--\', color = \'k\')' % (dd, dd))   
+                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                    self.data[%i].x_HeIII, ls = \':\', color = \'k\')' % (dd, dd))            
+
+            ax.set_xlim(self.data[0].r[0] / self.pf['LengthUnits'], 1)        
+            ax.set_ylim(mi, ma)         
+                    
+            pl.savefig('%s/dd%s_x%s.png' % (out, str(dd).zfill(4), species))                        
+            ax.clear()
+            
+        pl.close()    
+                         
     def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):
         """
         Histogram all fields.

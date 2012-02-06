@@ -139,9 +139,9 @@ class Radiate:
         
         self.TotalHydrogen = data["HIDensity"][-1] + data["HIIDensity"][-1]
         self.TotalHelium = data["HeIDensity"][-1] + data["HeIIDensity"][-1] + data["HeIIIDensity"][-1]
-        guesses = [0.5 * self.TotalHydrogen, 
-                   0.5 * self.TotalHelium, 
-                   0.1 * self.TotalHelium, 
+        guesses = [self.TotalHydrogen, 
+                   self.TotalHelium, 
+                   self.TotalHelium, 
                    3 * self.InitialTemperature * k_B * (self.TotalHydrogen + self.TotalHelium) / 2.]
                 
         # Initialize solver        
@@ -224,7 +224,7 @@ class Radiate:
             else:
                 indices_all.append(None)
         
-        # Compute optical depths
+        # Compute optical depths *to* all cells
         tau_all_arr = np.zeros([3, self.GridDimensions])    
         if self.PhotonConserving:
             sigma0 = PhotoIonizationCrossSection(self.rs.E, species = 0)
@@ -241,11 +241,14 @@ class Radiate:
             
         else:
             for i, col in enumerate(ncol_all):
+                
                 tau_all_arr[0][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth0", col)
                 
                 if self.MultiSpecies:
                     tau_all_arr[1][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth1", col)
                     tau_all_arr[2][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth2", col)
+
+            tau_all_arr[0][0] = tau_all_arr[1][0] = tau_all_arr[2][0] = neglible_column    
 
         tau_all = zip(*tau_all_arr) 
                                 
@@ -352,10 +355,10 @@ class Radiate:
                                                 
                 # Retrieve coefficients and what not.
                 args = [nabs, nion, n_H, n_He, n_e]
-                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, tau))
+                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, tau, t))
                 
                 # Unpack so we have everything by name
-                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args       
+                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args               
                                                                                                                       
                 ######################################
                 ######## Solve Rate Equations ########
@@ -488,7 +491,7 @@ class Radiate:
                     
                     # Retrieve coefficients and what not.
                     args = [nabs, nion, n_H, n_He, n_e]
-                    args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, self.dx, dt))
+                    args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, self.dx, dt, t))
                     
                     # Unpack so we have everything by name
                     nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args
@@ -597,18 +600,29 @@ class Radiate:
         xi = args[13]
                                 
         tmp = self.zeros
-                
+        
+        #if q[0] > n_H:
+        #    norm = q[0] / n_H / (1. - self.pf["MinimumSpeciesFraction"])
+        #    q[0] /= norm
+        #
+        #equil = 0
+        #if np.sum(q[1:3]) > n_He:
+        #    #equil = 1
+        #    norm = np.sum(q[1:3]) / n_He / (1. - 2. * self.pf["MinimumSpeciesFraction"])
+        #    q[1] /= norm
+        #    q[2] /= norm
+                        
         # Always solve hydrogen rate equation
-        tmp[0] = (Gamma[0] + gamma[0] + Beta[0] * n_e) * nabs[0] - alpha[0] * self.C * n_e * q[0] 
+        tmp[0] = (Gamma[0] + gamma[0] + Beta[0] * n_e) * (n_H - q[0]) - alpha[0] * self.C * n_e * q[0]         
                 
         # Helium rate equations        
         if self.MultiSpecies:                                           
-            tmp[1] = (Gamma[1] + gamma[1] + Beta[1] * n_e) * nabs[1] + \
+            tmp[1] = (Gamma[1] + gamma[1] + Beta[1] * n_e) * (n_He - q[1] - q[2]) * (1. - equil) + \
                       alpha[2] * n_e * q[2] - \
                      (Beta[1] + alpha[1]) * n_e * q[1] - \
                       xi[2] * n_e * q[2]
-                    
-            tmp[2] = (Gamma[2] + gamma[2] + Beta[2] * n_e) * nabs[1] - alpha[2] * n_e * q[2]
+                        
+            tmp[2] = (Gamma[2] + gamma[2] + Beta[2] * n_e) * q[1] - alpha[2] * n_e * q[2]
         
         # Temperature evolution - using np.sum is slow!
         if not self.Isothermal:

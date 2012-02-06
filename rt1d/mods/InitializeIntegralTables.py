@@ -312,10 +312,15 @@ class InitializeIntegralTables:
                                 for j, ncol_HeI in enumerate(self.HeIColumn):
                                     for k, ncol_HeII in enumerate(self.HeIIColumn):
                                         tab[i][j][k] = eval("self.{0}({1}, species = {2}, donor_species = {3})".format(integral, \
-                                            [ncol_HI, ncol_HeI, ncol_HeII], species, donor_species = donor_species))  
+                                            [ncol_HI, ncol_HeI, ncol_HeII], species, donor_species))  
                                
                                 if rank == 0 and self.ProgressBar:
                                     pbar.update(i + 1)
+                            
+                            if size > 1 and self.ParallelizationMethod == 1: 
+                                tab = MPI.COMM_WORLD.allreduce(tab, tab)
+                                                                                     
+                            itabs[name] = tab                                        
                     
                     else:
                         
@@ -335,10 +340,11 @@ class InitializeIntegralTables:
                             if rank == 0 and self.ProgressBar:
                                 pbar.update(i + 1)                            
                    
-                    if size > 1 and self.ParallelizationMethod == 1: 
-                        tab = MPI.COMM_WORLD.allreduce(tab, tab)
+                        if size > 1 and self.ParallelizationMethod == 1: 
+                            tab = MPI.COMM_WORLD.allreduce(tab, tab)
+                        
+                        itabs[name] = tab
                     
-                    itabs["{0}{1}".format(integral, species)] = tab
                     del tab
                     
         if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 

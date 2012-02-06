@@ -130,7 +130,7 @@ def Shine(pf, r = None, IsRestart = False):
             nabs = np.array([data['HIDensity'][0], data['HeIDensity'][0], data['HeIIDensity'][0]])
                         
             indices = None
-            if pf['MultiSpecies'] > 0 and not pf['PhotonConserving']: 
+            if pf['MultiSpecies'] > 0 and pf['TabulateIntegrals']: 
                 indices = r.coeff.Interpolate.GetIndices3D(ncol)            
                 
             Gamma = np.zeros(3)                                    
@@ -160,7 +160,7 @@ def Shine(pf, r = None, IsRestart = False):
                     Gamma[2] = r.coeff.PhotoIonizationRate(species = 2, Lbol = r.rs.BolometricLuminosity(0), \
                         indices = indices, r = LengthUnits * StartRadius, dr = r.dx[0],
                         nabs = nabs, ncol = ncol, tau = tau0)                            
-                                                
+            
             dt = r.control.ComputeInitialPhotonTimestep(tau1, Gamma, gamma, Beta, alpha, 
                 [data['HIDensity'][0], data['HeIDensity'][0], data['HeIIDensity'][0]], nion, ncol, 
                 data['HIDensity'][0] + data['HIIDensity'][0], 

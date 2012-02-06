@@ -36,7 +36,7 @@ class ControlSimulation:
         self.HIRestrictedTimestep = pf["HIRestrictedTimestep"]
         self.HeIRestrictedTimestep = pf["HeIRestrictedTimestep"]
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
-        self.OpticalDepthOfIFront = pf["OpticalDepthOfIFront"]
+        self.OpticalDepthDefiningIFront = pf["OpticalDepthDefiningIFront"]
         self.ElectronFractionRestrictedTimestep = pf["ElectronFractionRestrictedTimestep"]
                 
     def ComputeInitialPhotonTimestep(self, tau, Gamma, gamma, Beta, alpha, nabs, nion, ncol, n_H, n_He, n_e, force):
@@ -82,19 +82,19 @@ class ControlSimulation:
         dtHI = 1e50        
         if self.HIRestrictedTimestep:
             dHIdt = np.abs(((n_H - qnew[0]) - nabs[0])) / dt
-            if tau[0] >= self.OpticalDepthOfIFront[0]:
+            if tau[0] >= self.OpticalDepthDefiningIFront[0]:
                 dtHI = self.MaxHIIChange * nabs[0] / dHIdt
         
         dtHeI = 1e50
         if self.MultiSpecies and self.HeIRestrictedTimestep:
             dHeIdt = np.abs(((n_He - qnew[1] - qnew[2]) - nabs[1])) / dt            
-            if tau[1] >= self.OpticalDepthOfIFront[1]:
+            if tau[1] >= self.OpticalDepthDefiningIFront[1]:
                 dtHeI = self.MaxHeIIChange * nabs[1] / dHeIdt
                 
         dtHeII = 1e50
         if self.MultiSpecies and self.HeIRestrictedTimestep:
             dHeIIdt = np.abs((qnew[1] - nabs[2]) / dt)        
-            if tau[2] >= self.OpticalDepthOfIFront[2]:                         
+            if tau[2] >= self.OpticalDepthDefiningIFront[2]:                         
                 dtHeII = self.MaxHeIIIChange * nabs[2] / dHeIIdt
             
         # Change in electron fraction (relative to all baryons)    

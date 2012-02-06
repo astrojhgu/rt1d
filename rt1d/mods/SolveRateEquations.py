@@ -79,12 +79,12 @@ class SolveRateEquations:
         last_adaptation = 1
         while xnow < xf: 
             xnext = xnow + h
-                                                                                               
+                                                                                                                            
             # Ensure we end exactly at xf.        
             if xnext > xf: 
                 h = xf - xnow
                 xnext = xf 
-                                            
+                                                                                        
             # Solve away
             ynext = self.solve(f, ynow, xnow, h, Dfun, args)
             
@@ -92,7 +92,7 @@ class SolveRateEquations:
             if self.CheckForGoofiness:
                 everything_ok = self.SolutionCheck(ynext, args)
                 if not np.all(everything_ok): 
-                
+                                                                                                                                
                     if not everything_ok[0] and h > self.hmin:
                         h = max(self.hmin, h / 2.)
                         continue
@@ -106,10 +106,8 @@ class SolveRateEquations:
                             h = max(self.hmin, h / 2.)
                             continue
                         elif not np.all(ok) and h == self.hmin:
-                            raise ValueError('NAN encountered on minimum ODE step. Exiting.')    
-                
-                # IS THIS STUFF NECESSARY SINCE WE ALREADY RAN APPLYFLOOR?
-                
+                            raise ValueError("xHII or xHeII or xHeIII < 0 or > 1, and we're on the minimum ODE step. Exiting.")    
+                                
                 # If nothing is goofy but number densities are below our floor, change them
                 if ynext[0] < (args[2] * self.MinimumSpeciesFraction):
                     ynext[0] = args[2] * self.MinimumSpeciesFraction
@@ -177,30 +175,35 @@ class SolveRateEquations:
                     if i == 3: return y - h * f([yi[0], yi[1], yi[2], y], xi + h, newargs)[i] - yi[i]
                 
                 # Guesses = 0 or for example a guess for n_HI > n_H will mess things up                
-                if yi[i] == 0. or (yi[i] > self.guesses[i] and i < 3): 
-                    guess = self.guesses[i]
+                if yi[i] == 0: 
+                    guess = 0.4999 * self.guesses[i]
+                elif (yi[i] > self.guesses[i] and i < 3):
+                    guess = 0.4999 * self.guesses[i]    
                 else: 
                     guess = yi[i]
-                      
-                yip1[i] = self.rootfinder(ynext, guess)
-                                                                                                              
+
+                yip1[i] = self.rootfinder(ynext, guess, i)
+                                                                                                                              
         rtn = yi + h * f(yip1, xi + h, args)
         if self.MultiSpecies == 0:
             rtn[1] = yip1[1]
             rtn[2] = yip1[2]
         if self.Isothermal:
             rtn[3] = yip1[3]
-            
+                            
         return rtn  
         
     def SolutionCheck(self, ynext, args):
         """
         Return four-element array representing things that could be wrong with
-        our solutions. [all_finite, all_positive, nHII < nH, (nHeII + nHeIII) < nHe]
+        our solutions. 
         
-            Remember, args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi)
+        everything_ok = [all_finite, all_positive, nHII <= nH, (nHeII + nHeIII) <= nHe]
+        
+            Remember, 
+            args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi, xi)
         """    
-        
+                
         nH = args[2]
         nHe = args[3]        
         nHII = ynext[0]
@@ -241,13 +244,14 @@ class SolveRateEquations:
                 
         # Hydrogen first        
         if nHII > nH:
-            if (nHII - nH) < self.atol:
+            if (nHII / nH - 1.) < self.MinimumSpeciesFraction:
                 ynext[0] = nH * (1. - self.MinimumSpeciesFraction)
             else:
                 ok[0] = 0
         
+        # This generally won't happen
         if nHII < 0:
-            if (1 - nH - nHII) < self.atol:
+            if abs(nHII) < self.atol:
                 ynext[0] = nH * self.MinimumSpeciesFraction
             else:
                 ok[0] = 0
@@ -268,7 +272,7 @@ class SolveRateEquations:
                     ok[2] = 0
                    
             if nHe_ions > nHe:
-                if (nHe_ions - nHe) < self.atol:
+                if (nHe_ions / nHe - 1.) < self.MinimumSpeciesFraction:
                     norm = nHe_ions / nHe / (1. - 2 * self.MinimumSpeciesFraction)
                     ynext[1] /= norm
                     ynext[2] /= norm 
@@ -292,7 +296,7 @@ class SolveRateEquations:
 
         return np.less_equal(err_abs, err_tol)
         
-    def Newton(self, f, y_guess):
+    def Newton(self, f, y_guess, j):
         """
         Find the roots of the function f using the Newton-Raphson method.
         
@@ -301,6 +305,7 @@ class SolveRateEquations:
         
         """    
 
+        ma = self.guesses[j]
         ynow = y_guess    
         
         i = 0
@@ -316,7 +321,7 @@ class SolveRateEquations:
             dy = fy1 / fp
             ypre = ynow
             ynow -= dy
-                                                                                 
+                                                                                                             
             # Calculate deviation between this estimate and last            
             err = abs(ypre - ynow) / ypre
                         
@@ -324,7 +329,8 @@ class SolveRateEquations:
             if i >= self.maxiter: 
                 print "Maximum number of iterations reached."
                 break
-            else: i += 1                       
+            
+            i += 1                       
         
         return ynow
 

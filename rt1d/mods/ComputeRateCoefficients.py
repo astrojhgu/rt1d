@@ -53,7 +53,7 @@ class RateCoefficients:
         else:
             self.donors = np.array([0])
         
-    def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dx, tau):
+    def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dx, tau, t):
         """
         Make list of rate coefficients that we'll pass to solver.
         
@@ -131,7 +131,7 @@ class RateCoefficients:
                 for j, E in enumerate(self.rs.E):
                 
                     # Photo-ionization by *this* energy group
-                    Gamma_E[j] = self.PhotoIonizationRate(E = E, Qdot = self.rs.IonizingPhotonLuminosity(i = j), \
+                    Gamma_E[j] = self.PhotoIonizationRate(E = E, Qdot = self.rs.IonizingPhotonLuminosity(t = t, i = j), \
                         ncol = ncol, nabs = nabs, r = r, dr = dx, species = i, tau = tau, Lbol = Lbol)
                         
                     # Total photo-ionization tally
@@ -178,7 +178,6 @@ class RateCoefficients:
                 eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
                 psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)               
 
-        #print Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi
         return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi]
 
     def PhotoIonizationRate(self, species = None, E = None, Qdot = None, Lbol = None, 
@@ -195,7 +194,7 @@ class RateCoefficients:
             Lbol = Bolometric luminosity of source (erg/s)
             
         """     
-           
+                           
         if self.TabulateIntegrals:
             if self.PhotonConserving:
                 nout = ncol + dr * nabs    # Column density up to and *including* this cell
@@ -217,12 +216,11 @@ class RateCoefficients:
             sigma = PhotoIonizationCrossSection(E, species = species)
             tau_E = ncol[species] * sigma       # Optical depth up until this cell
             tau_c = dr * nabs[species] * sigma  # Optical depth of this cell
-            Vcell = 4. * np.pi * ((r + dr)**3 - r**3) / 3.
             Q0 = Qdot * np.exp(-tau_E)          # number of photons entering cell per sec
             dQ = Q0 * (1. - np.exp(-tau_c))     # number of photons absorbed in cell per sec
             
-            A = 1.          
-            IonizationRate = dQ / nabs[species] / Vcell    # ionizations / sec / hydrogen atom
+            A = 1.
+            IonizationRate = dQ / nabs[species] / self.ShellVolume(r, dr)    # ionizations / sec / hydrogen atom
                                                                                                                         
         return A * IonizationRate
         

@@ -92,11 +92,14 @@ class RadiationSource:
             self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
             self.Qdot = self.Lbol * self.F / self.E / erg_per_ev 
-        else:
-            self.Qdot = self.BolometricLuminosity
-                                       
+        #else:
+        #    self.Qdot = self.BolometricLuminosity
+                                               
         # Normalize spectrum
-        self.LuminosityNormalization = self.NormalizeLuminosity()    
+        self.LuminosityNormalization = self.NormalizeLuminosity()   
+        
+        if self.SourceType in [3]:
+            self.Qdot = self.BolometricLuminosity(0) * self.F / self.E / erg_per_ev  
                         
         # Possibly override self.F - only makes sense for monochromatic sources
         if pf["ConserveIonizingPhotonLuminosity"]:
@@ -112,7 +115,7 @@ class RadiationSource:
         else: 
             return self.LuminosityNormalization * self.SpecificIntensity(E) / self.BolometricLuminosity()        
                 
-    def IonizingPhotonLuminosity(self, E = None, i = None):
+    def IonizingPhotonLuminosity(self, t = 0, E = None, i = None):
         """
         Return Qdot (photons / s) for this source at energy E.
         """
@@ -122,9 +125,9 @@ class RadiationSource:
         elif self.SourceType in [1, 2]:
             return self.Qdot[i]
         else:
-            
-            integrand = lambda E: self.Spectrum(E) / E / erg_per_ev
-            return self.BolometricLuminosity() * quad(integrand, self.Emin, self.Emax)[0]            
+            return self.BolometricLuminosity(t) * self.F[i] / self.E[i] / erg_per_ev  
+            #integrand = lambda E: self.Spectrum(E) / E / erg_per_ev
+            #return self.BolometricLuminosity() * quad(integrand, self.Emin, self.Emax)[0]            
                 
     def SpecificIntensity(self, E):    
         """ 
