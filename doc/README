@@ -1,18 +1,12 @@
 Eventually I'll put useful information here in case anyone but me ever uses this code.  Here are a few basic things though.
 
-If you're like me, you don't like to run calculations inside of the rt1d/src directory.  I prefer to move a copy of the driver script, rt1d.py, into a new directory.  To make this work, I set the environment variable $RT1D as follows:
+If you're like me, you don't like to run calculations inside of the rt1d/src directory.  I prefer to move a copy of the driver script, RT1D.py, into a new directory.  To make this work, I set the environment variable $RT1D 
 
 export RT1D=/users/jmirocha/Work/mods/rt1d
 
-I also set the following aliases:
+and set up an alias that allows me to copy the driver script into my current
+working directory,
 
-alias   rtpath='export PATH=/Users/jmirocha/Work/mods/rt1d/src:$PATH; 
-                export PATH=/Users/jmirocha/Work/mods/rt1d/anl:$PATH; 
-                export PYTHONPATH=$RT1D/src:$PYTHONPATH; 
-                export PYTHONPATH=$RT1D/anl:$PYTHONPATH'
-	
-which ensures we have access to everything we need from our current directory, and	
-	
-alias   xrt='cp $RT1D/bin/rt1d.py .'
+alias   xrt='cp $RT1D/bin/RT1D.py .'
 
-which copies what is hopefully the most up-do-date version of the main script into our current directory.
+

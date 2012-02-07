@@ -33,18 +33,18 @@ class Analyze:
         self.grid = np.arange(self.GridDimensions)
         
         # Deal with log-grid
-        if self.pf['LogarithmicGrid']:
+        if self.pf["LogarithmicGrid"]:
             self.r = np.logspace(np.log10(self.StartRadius * self.LengthUnits), \
-                np.log10(self.LengthUnits), self.GridDimensions)
-            r_tmp = np.concatenate([[0], self.r])
-            self.dx = np.diff(r_tmp)    
+                np.log10(self.LengthUnits), self.GridDimensions + 1)
         else:
-            self.dx = np.array([self.LengthUnits / self.GridDimensions] * self.GridDimensions)
             rmin = max(self.dx[0], self.StartRadius * self.LengthUnits)
-            self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions)
+            self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions + 1)
+        
+        self.dx = np.diff(self.r)   
+        self.r = self.r[0:-1] 
                 
         # Shift radii to cell-centered values
-        # (someday - it won't really matter)    
+        self.r += self.dx / 2.   
                                 
         # Store bins used for PDFs/CDFs
         self.bins = {}

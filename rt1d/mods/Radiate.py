@@ -76,11 +76,12 @@ class Radiate:
         self.MaxHeIIChange = pf["MaxHeIIChange"]
         self.MaxHeIIIChange = pf["MaxHeIIIChange"]
         self.HIRestrictedTimestep = pf["HIRestrictedTimestep"]
-        self.HeIRestrictedTimestep = pf["HeIRestrictedTimestep"]
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
+        self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
         self.ElectronFractionRestrictedTimestep = pf["ElectronFractionRestrictedTimestep"]
-        self.AdaptiveGlobalStep = self.HIRestrictedTimestep or self.HeIRestrictedTimestep or self.HeIIRestrictedTimestep or self.ElectronFractionRestrictedTimestep
-        self.ForceAdapt = pf["ForceAdapt"]
+        self.AdaptiveGlobalStep = self.HIRestrictedTimestep or self.HeIRestrictedTimestep \
+            or self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep or self.ElectronFractionRestrictedTimestep
+        self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
         
         self.MultiSpecies = pf["MultiSpecies"]
         self.InfiniteSpeedOfLight = pf["InfiniteSpeedOfLight"]
@@ -112,19 +113,18 @@ class Radiate:
         self.HeIColumn = n_col[1]
         self.HeIIColumn = n_col[2]
         
-        self.LogGrid = pf['LogarithmicGrid']
         self.grid = np.arange(self.GridDimensions)
             
-        # Deal with log-grid
-        if self.LogGrid:
+        # Deal with log-grid, compute dx
+        if pf['LogarithmicGrid']:
             self.r = np.logspace(np.log10(self.StartRadius * self.LengthUnits), \
-                np.log10(self.LengthUnits), self.GridDimensions)
-            r_tmp = np.concatenate([[0], self.r])
-            self.dx = np.diff(r_tmp)    
+                np.log10(self.LengthUnits), self.GridDimensions + 1)
         else:
-            self.dx = np.array([self.LengthUnits / self.GridDimensions] * self.GridDimensions)
             rmin = max(self.dx[0], self.StartRadius * self.LengthUnits)
-            self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions)
+            self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions + 1)
+        
+        self.dx = np.diff(self.r)   
+        self.r = self.r[0:-1] 
                     
         self.CellCrossingTime = self.dx / c
         self.OnePhotonPackagePerCell = pf["OnePhotonPackagePerCell"]
@@ -219,7 +219,7 @@ class Radiate:
         # Retrieve indices used for 1-3D interpolation
         indices_all = []
         for i, col in enumerate(ncol_all):
-            if self.MultiSpecies > 0 and not self.PhotonConserving: 
+            if self.MultiSpecies > 0: 
                 indices_all.append(self.coeff.Interpolate.GetIndices3D(col))
             else:
                 indices_all.append(None)
@@ -352,14 +352,14 @@ class Radiate:
                 
                 # Retrieve path length through this cell
                 dx = self.dx[cell]                  
-                                                
+                                                                                     
                 # Retrieve coefficients and what not.
                 args = [nabs, nion, n_H, n_He, n_e]
                 args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, tau, t))
                 
                 # Unpack so we have everything by name
                 nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args               
-                                                                                                                      
+                                                                                                                                                                                                                             
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################                          
@@ -377,6 +377,9 @@ class Radiate:
                 newHI = n_H - newHII
                 newHeI = n_He - newHeII - newHeIII
                 
+                if (newHeII + newHeIII) > n_He:
+                    print 'WAIT!' 
+                
                 # Update quantities in 'data' -> 'newdata'                
                 newdata["HIDensity"][cell] = newHI                                                                                            
                 newdata["HIIDensity"][cell] = newHII
@@ -393,8 +396,8 @@ class Radiate:
                 # Adjust timestep based on maximum allowed neutral fraction change     
                 if self.AdaptiveGlobalStep:
                     dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
-                        nabs, nion, n_H, n_He, n_e, n_B, qnew, dt)
-                
+                        nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi)    
+
         ###
         ## SOLVE: c = finite
         ###   
@@ -455,7 +458,6 @@ class Radiate:
                     x_HeIII = x_HeIII_arr[cell]
                     
                     # Compute mean molecular weight for this cell
-                    #mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
                     mu = mu_all[cell] 
                                             
                     # For convenience     
@@ -469,11 +471,8 @@ class Radiate:
                     T = newdata["Temperature"][cell]
                     E = 3. * k_B * T * n_B / mu / 2.
                     
-                    # Crossing time will depend on cell for logarithmic grids
-                    if self.LogGrid:
-                        dct = self.CellCrossingTime[cell]
-                    else:
-                        dct = self.CellCrossingTime
+                    # Crossing time
+                    dct = self.CellCrossingTime
                     
                     # Add columns of this cell
                     packs[j][2] += newdata['HIDensity'][cell] * dc * dct * c  
@@ -601,30 +600,19 @@ class Radiate:
                                 
         tmp = self.zeros
         
-        #if q[0] > n_H:
-        #    norm = q[0] / n_H / (1. - self.pf["MinimumSpeciesFraction"])
-        #    q[0] /= norm
-        #
-        #equil = 0
-        #if np.sum(q[1:3]) > n_He:
-        #    #equil = 1
-        #    norm = np.sum(q[1:3]) / n_He / (1. - 2. * self.pf["MinimumSpeciesFraction"])
-        #    q[1] /= norm
-        #    q[2] /= norm
-                        
         # Always solve hydrogen rate equation
         tmp[0] = (Gamma[0] + gamma[0] + Beta[0] * n_e) * (n_H - q[0]) - alpha[0] * self.C * n_e * q[0]         
                 
         # Helium rate equations        
         if self.MultiSpecies:                                           
-            tmp[1] = (Gamma[1] + gamma[1] + Beta[1] * n_e) * (n_He - q[1] - q[2]) * (1. - equil) + \
+            tmp[1] = (Gamma[1] + gamma[1] + Beta[1] * n_e) * (n_He - q[1] - q[2]) + \
                       alpha[2] * n_e * q[2] - \
                      (Beta[1] + alpha[1]) * n_e * q[1] - \
                       xi[2] * n_e * q[2]
                         
             tmp[2] = (Gamma[2] + gamma[2] + Beta[2] * n_e) * q[1] - alpha[2] * n_e * q[2]
         
-        # Temperature evolution - using np.sum is slow!
+        # Temperature evolution - using np.sum is slow :(
         if not self.Isothermal:
             tmp[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + np.sum(eta * nabs) + np.sum(psi * nabs))
                 

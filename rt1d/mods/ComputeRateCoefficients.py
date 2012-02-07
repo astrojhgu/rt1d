@@ -125,10 +125,12 @@ class RateCoefficients:
                 
                 if not self.MultiSpecies and i > 0:
                     continue
-                
+                                
                 # Loop over energy groups
                 Gamma_E = np.zeros_like(self.rs.E)
                 for j, E in enumerate(self.rs.E):
+                    
+                    #print E, i, j, self.rs.IonizingPhotonLuminosity(t = t, i = j), r, nabs, ncol, Lbol, tau, dx
                 
                     # Photo-ionization by *this* energy group
                     Gamma_E[j] = self.PhotoIonizationRate(E = E, Qdot = self.rs.IonizingPhotonLuminosity(t = t, i = j), \

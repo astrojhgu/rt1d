@@ -26,7 +26,8 @@ import rt1d.mods as rtm
     
 def Shine(pf, r = None, IsRestart = False):
     """
-    w00t.
+    Initialize grid, radiation source, integral tables (maybe), and evolve
+    radiation from CurrentTime to StopTime.
     """  
     
     # Convert parameter file to list of parameter files
@@ -123,11 +124,16 @@ def Shine(pf, r = None, IsRestart = False):
         # Compute initial timestep
         if IsRestart or pf["HIRestrictedTimestep"] == 0: 
             dt = pf["CurrentTimestep"] * TimeUnits
+        elif pf["InitialTimestep"] > 0:
+            dt = pf["InitialTimestep"] * TimeUnits
         else:
-            
+            # CONDENSE THIS
             tau1 = ncol = np.array(3 * [1.0])
-            tau0 = gamma = Beta = alpha = nion = np.array(3 * [0])
+            tau0 = gamma = Beta = alpha = nion = xi = np.array(3 * [0])
             nabs = np.array([data['HIDensity'][0], data['HeIDensity'][0], data['HeIIDensity'][0]])
+            n_H = data['HIDensity'][0] + data['HIIDensity'][0]
+            n_He = data['HeIDensity'][0] + data['HeIIDensity'][0] + data['HeIIIDensity'][0]
+            n_e = data['HIIDensity'][0] + data['HeIIDensity'][0] + 2. * data['HeIIIDensity'][0]            
                         
             indices = None
             if pf['MultiSpecies'] > 0 and pf['TabulateIntegrals']: 
@@ -160,21 +166,14 @@ def Shine(pf, r = None, IsRestart = False):
                     Gamma[2] = r.coeff.PhotoIonizationRate(species = 2, Lbol = r.rs.BolometricLuminosity(0), \
                         indices = indices, r = LengthUnits * StartRadius, dr = r.dx[0],
                         nabs = nabs, ncol = ncol, tau = tau0)                            
-            
-            dt = r.control.ComputeInitialPhotonTimestep(tau1, Gamma, gamma, Beta, alpha, 
-                [data['HIDensity'][0], data['HeIDensity'][0], data['HeIIDensity'][0]], nion, ncol, 
-                data['HIDensity'][0] + data['HIIDensity'][0], 
-                data['HeIDensity'][0] + data['HeIIDensity'][0] + data['HeIIIDensity'][0], 0,
-                3 * [True])
-                                                                                                                             
-            # Play it safe if helium is involved
-            if pf["MultiSpecies"]: 
-                dt *= 0.1   
-        
+                        
+            dt = r.control.ComputeInitialPhotonTimestep(tau1, nabs, nion, ncol, 
+                n_H, n_He, n_e, n_H + n_He + n_e, Gamma, gamma, Beta, alpha, xi)
+                                                                                                                              
         # If (probalby for testing purposes) we have StopTime << 1, make sure dt <= StopTime        
         dt = min(dt, StopTime)
                     
-        # Figure out data dump times, write out initial dataset (or not if this is a restart).
+        # Figure out data dump times, write out initial dataset (or not, if this is a restart).
         ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
         t = pf["CurrentTime"] * TimeUnits
         h = dt
@@ -204,7 +203,7 @@ def Shine(pf, r = None, IsRestart = False):
         else: 
             lb = None
         
-        # Solve radiative transfer                
+        # SOLVE RADIATIVE TRANSFER              
         while t < StopTime:
                                     
             if pf["OutputTimestep"]: 
@@ -221,12 +220,12 @@ def Shine(pf, r = None, IsRestart = False):
                 write_now = True
             else: 
                 write_now = False
-    
+                
             # Evolve photons
             data, h, newdt, lb = r.EvolvePhotons(data, t, dt, min(h, dt), lb)
             t += dt
             dt = newdt # dt for the next timestep
-                                                                  
+                                                                              
             # Write-out data                                        
             if write_now:
                 wrote = False
@@ -236,16 +235,19 @@ def Shine(pf, r = None, IsRestart = False):
                     wrote = True
                 wct += 1
                 
-            if dt <= 0: 
-                raise ValueError('ERROR: dt <= 0.  Exiting.')  
-                
-            if np.isnan(dt):  
+            # Raise error if funny stuff happening    
+            if dt < 0: 
+                raise ValueError('ERROR: dt < 0.  Exiting.') 
+            elif dt == 0:
+                raise ValueError('ERROR: dt = 0.  Exiting.')  
+            elif np.isnan(dt):  
                 raise ValueError('ERROR: dt -> inf.  Exiting.')    
                
             # Don't move on until root processor has written out data    
             if size > 1 and pf["ParallelizationMethod"] == 1: 
                 MPI.COMM_WORLD.barrier()    
         
+        # Close timestep file
         if pf["OutputTimestep"]: 
             print >> fdt, ""
             fdt.close()

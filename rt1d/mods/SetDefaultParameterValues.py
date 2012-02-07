@@ -71,16 +71,19 @@ def SetDefaultParameterValues():
         "OutputTimestep": 0, \
         "ProgressBar": 0, \
         "CurrentTimestep": 1e-8, \
+        "InitialTimestep": 0, \
         "HIRestrictedTimestep": 1, \
         "HeIRestrictedTimestep": 0, \
-        "HeIIRestrictedTimestep": 0, \
-        "OpticalDepthDefiningIFront": [0.5, 0.5, 0.5], \
+        "HeIIRestrictedTimestep": 1, \
+        "HeIIIRestrictedTimestep": 1, \
+        "OpticalDepthDefiningIFront": [0.5, 0.005], \
         "ElectronFractionRestrictedTimestep": 0, \
         "LightCrossingTimeRestrictedStep": 0, \
         "OnePhotonPackagePerCell": 0, \
         "MaxHIIChange": 0.05, \
-        "MaxHeIIChange": 0.05, \
-        "MaxHeIIIChange": 0.05, \
+        "MaxHeIChange": 0.05, \
+        "MaxHeIIChange": 0.005, \
+        "MaxHeIIIChange": 0.005, \
         "MaxElectronChange": 0.05, \
         "ForceAdapt": 1, \
         "MinimumSpeciesFraction": 1e-6, \
