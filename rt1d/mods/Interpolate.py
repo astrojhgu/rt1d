@@ -70,7 +70,7 @@ class Interpolate:
         
         w1 = i1 * (1 - y_d) + i2 * y_d
         w2 = j1 * (1 - y_d) + j2 * y_d
-                        
+                                                
         return w1 * (1 - x_d) + w2 * x_d
     
     def GetIndices3D(self, value):

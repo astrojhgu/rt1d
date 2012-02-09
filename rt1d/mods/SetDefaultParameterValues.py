@@ -27,11 +27,9 @@ def SetDefaultParameterValues():
         "ODEAdaptiveStep": 1, \
         "ODEMinStep": 1e-8, \
         "ODEMaxStep": 1e-1, \
-        "ODErtol": 1e-5, \
-        "ODEatol": 1e-5, \
-        "ODEmaxiter": 1e4, \
-        "RootFinder": 0, \
+        "ODEMaxIter": 1e4, \
         "CheckForGoofiness": 1, \
+        "MinimumSpeciesFraction": 1e-6, \
         
         "ParallelizationMethod": 1, \
         "Debug": 1, \
@@ -76,9 +74,9 @@ def SetDefaultParameterValues():
         "HeIRestrictedTimestep": 0, \
         "HeIIRestrictedTimestep": 1, \
         "HeIIIRestrictedTimestep": 1, \
-        "OpticalDepthDefiningIFront": [0.5, 0.005], \
+        "OpticalDepthDefiningIFront": [0.5, 0.05], \
         "ElectronFractionRestrictedTimestep": 0, \
-        "LightCrossingTimeRestrictedStep": 0, \
+        "LightCrossingTimeRestrictedTimestep": 0, \
         "OnePhotonPackagePerCell": 0, \
         "MaxHIIChange": 0.05, \
         "MaxHeIChange": 0.05, \
@@ -86,7 +84,6 @@ def SetDefaultParameterValues():
         "MaxHeIIIChange": 0.005, \
         "MaxElectronChange": 0.05, \
         "ForceAdapt": 1, \
-        "MinimumSpeciesFraction": 1e-6, \
         
         # Physics
         "Isothermal": 1, \

@@ -40,18 +40,13 @@ class SolveRateEquations:
         self.CheckForGoofiness = pf["CheckForGoofiness"]
         
         self.stepper = stepper
-        self.rtol = rtol
-        self.atol = atol
         self.hmax = hmax
         self.hmin = hmin    
         self.maxiter = maxiter    # Max number of iterations for root finding          
 
         self.solve = self.ImplicitEuler
+        self.rootfinder = self.Newton
 
-        if pf["RootFinder"] == 0: self.rootfinder = self.Newton
-        elif pf["RootFinder"] == 1: self.rootfinder = self.Bisection
-        elif pf["RootFinder"] == 2: self.rootfinder = self.FalsePosition
-        
         # Set adaptive timestepping method
         if self.stepper == 1: self.adapt = self.StepDoubling     
         
@@ -88,7 +83,7 @@ class SolveRateEquations:
             # Solve away
             ynext = self.solve(f, ynow, xnow, h, Dfun, args)
             
-            # Check for goofiness
+            # Check for goofiness - NaNs, negative number densities, etc.
             if self.CheckForGoofiness:
                 everything_ok = self.SolutionCheck(ynext, args)
                 if not np.all(everything_ok): 
@@ -251,7 +246,7 @@ class SolveRateEquations:
         
         # This generally won't happen
         if nHII < 0:
-            if abs(nHII) < self.atol:
+            if abs(nHII) < self.MinimumSpeciesFraction:
                 ynext[0] = nH * self.MinimumSpeciesFraction
             else:
                 ok[0] = 0
@@ -260,13 +255,13 @@ class SolveRateEquations:
         if self.MultiSpecies:
                         
             if nHeII < 0:
-                if (1 - nHe - nHeII) < self.atol:
+                if (1 - nHe - nHeII) < self.MinimumSpeciesFraction:
                     ynext[0] = nHe * self.MinimumSpeciesFraction
                 else:
                     ok[1] = 0
                         
             if nHeIII < 0:
-                if (1 - nHe - nHeIII) < self.atol:
+                if (1 - nHe - nHeIII) < self.MinimumSpeciesFraction:
                     ynext[0] = nHe * self.MinimumSpeciesFraction
                 else:
                     ok[2] = 0
@@ -292,7 +287,7 @@ class SolveRateEquations:
         ynp2_ts = self.solve(f, yip1, xip1, h, Dfun, args)  # y_n+2 using two steps
                 
         err_abs = np.abs(ynp2_ts - ynp2_os)        
-        err_tol = self.atol + self.rtol * ynp2_os
+        err_tol = self.MinimumSpeciesFraction + self.MinimumSpeciesFraction * ynp2_os
 
         return np.less_equal(err_abs, err_tol)
         
@@ -305,12 +300,12 @@ class SolveRateEquations:
         
         """    
 
-        ma = self.guesses[j]
         ynow = y_guess    
         
         i = 0
         err = 1
-        while err > self.rtol:
+        err_tol = 0
+        while err > err_tol:
             y1 = ynow
             y2 = max(ynow - 1e-3 * ynow, 0)
             fy1 = f(y1)
@@ -321,12 +316,14 @@ class SolveRateEquations:
             dy = fy1 / fp
             ypre = ynow
             ynow -= dy
-                                                                                                             
+                                                                                                                         
             # Calculate deviation between this estimate and last            
-            err = abs(ypre - ynow) / ypre
+            err = abs(ypre - ynow)
+            err_tol = self.MinimumSpeciesFraction + self.MinimumSpeciesFraction * ynow           
                         
             # If we've reached the maximum number of iterations, break
             if i >= self.maxiter: 
+                print y1, y2, fy1, fy2, fp
                 print "Maximum number of iterations reached."
                 break
             
@@ -334,94 +331,6 @@ class SolveRateEquations:
         
         return ynow
 
-    def Bisection(self, f, y_guess):
-        """
-        Find root of function using bisection method.
-        """
-
-        y1, y2 = self.Bracket(f, y_guess)
-    
-        # Narrow bracketed range with bisection until tolerance is met
-        i = 0
-        while abs(y2 - y1) > self.atol:
-            midpt = np.mean([y1, y2])
-            fmid = f(midpt)
-        
-            if np.sign(fmid) < 0: y1 = midpt
-            else: y2 = midpt            
-            
-            if fmid == 0.0: break
-            
-        return y2
-        
-    def FalsePosition(self, f, y_guess):
-        """
-        Find root using false position method.  Should converge faster than bisection.
-        Secand method might beat this, but not guaranteed to keep solution bracketed.
-        """ 
-        
-        # Find points that bracket root
-        y1, y2 = self.Bracket(f, y_guess)
-        
-        # Narrow bracketed range with bisection until tolerance is met
-        i = 0
-        broke = False
-        while abs(y2 - y1) > self.atol:
-            f1 = f(y1)
-            f2 = f(y2)
-                
-            midpt = np.interp(0, [f1, f2], [y1, y2])
-            fmid = f(midpt)
-            
-            if np.sign(fmid) < 0: y1 = midpt
-            else: y2 = midpt
-                        
-            if (y1 == midpt) or (y2 == midpt): 
-                broke = True
-                break
-                
-            if i >= self.maxiter: 
-                print "Maximum number of iterations reached."
-                break
-            else: i += 1    
-                                
-        if broke == True: y2 = self.Bisection(f, y_guess)
-            
-        return y2   # Don't want the negative function value (in general)
-        
-    def Bracket(self, f, y_guess):
-        """
-        Bracket root by finding points where function goes from positive to negative.
-        """
-        
-        f1 = f(y_guess)
-        f2 = f(y_guess + 0.01 * y_guess)
-        df = f2 - f1
-        
-        # Determine whether increasing or decreasing y_guess will lead us to zero
-        if (f1 > 0 and df < 0) or (f1 < 0 and df > 0): sign = 1
-        else: sign = -1
-        
-        # Find root bracketing points
-        ypre = y_guess
-        ynow = y_guess + sign * 0.01 * y_guess
-        fpre = f1
-        fnow = f(ynow)
-        while (np.sign(fnow) == np.sign(fpre)):
-            ypre = ynow
-            ynow += sign * 0.1 * ynow
-            fpre = f(ypre)
-            fnow = f(ynow)
-                    
-        y1 = min(ynow, ypre)
-        y2 = max(ynow, ypre)
-        
-        if not np.all([np.sign(fpre), np.sign(fnow)]): 
-            y1 -= self.atol
-            y2 += self.atol
-                                
-        return y1, y2
-    
         
         
         

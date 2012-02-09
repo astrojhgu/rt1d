@@ -37,7 +37,7 @@ class Analyze:
             self.r = np.logspace(np.log10(self.StartRadius * self.LengthUnits), \
                 np.log10(self.LengthUnits), self.GridDimensions + 1)
         else:
-            rmin = max(self.dx[0], self.StartRadius * self.LengthUnits)
+            rmin = self.StartRadius * self.LengthUnits
             self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions + 1)
         
         self.dx = np.diff(self.r)   

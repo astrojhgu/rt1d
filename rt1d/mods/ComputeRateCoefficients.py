@@ -52,6 +52,8 @@ class RateCoefficients:
             self.donors = np.arange(3)
         else:
             self.donors = np.array([0])
+            
+        self.mask = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])    
         
     def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dx, tau, t):
         """
@@ -86,7 +88,7 @@ class RateCoefficients:
                 
                 if not self.MultiSpecies and i > 0:
                     continue
-                
+                                
                 # Photo-Ionization
                 Gamma[i] = self.PhotoIonizationRate(species = i, indices = indices,  
                     Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, tau = tau, dr = dx)
@@ -129,9 +131,7 @@ class RateCoefficients:
                 # Loop over energy groups
                 Gamma_E = np.zeros_like(self.rs.E)
                 for j, E in enumerate(self.rs.E):
-                    
-                    #print E, i, j, self.rs.IonizingPhotonLuminosity(t = t, i = j), r, nabs, ncol, Lbol, tau, dx
-                
+                                    
                     # Photo-ionization by *this* energy group
                     Gamma_E[j] = self.PhotoIonizationRate(E = E, Qdot = self.rs.IonizingPhotonLuminosity(t = t, i = j), \
                         ncol = ncol, nabs = nabs, r = r, dr = dx, species = i, tau = tau, Lbol = Lbol)
@@ -196,20 +196,20 @@ class RateCoefficients:
             Lbol = Bolometric luminosity of source (erg/s)
             
         """     
-                           
+                                        
         if self.TabulateIntegrals:
             if self.PhotonConserving:
-                nout = ncol + dr * nabs    # Column density up to and *including* this cell
-                ncell = nout - ncol
-                if ncell[species] < self.Interpolate.MinimumColumns[species] and self.Fallback:
+                ncell = dr * nabs * self.mask[species]
+                nout = ncol + ncell # Column density up to and *including* this cell (for species)
+                if nout[species] < self.Interpolate.MinimumColumns[species] and self.Fallback:
                     A = Lbol / 4. / np.pi / r**2
                     IonizationRate = self.Interpolate_fback.interp(indices, "PhotoIonizationRate%i" % species, ncol)
                 else:
                     A = Lbol / nabs[species] / self.ShellVolume(r, dr)
                     incident = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)
-                    outgoing = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, nout)
+                    outgoing = self.Interpolate.interp(self.Interpolate.GetIndices3D(nout), "PhotoIonizationRate%i" % species, nout)
                     IonizationRate = incident - outgoing  
-                
+                    print species, incident, outgoing, ncol, ncell, nout                
             else:
                 A = Lbol / 4. / np.pi / r**2
                 IonizationRate = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)       
@@ -240,8 +240,8 @@ class RateCoefficients:
         """    
         
         if self.PhotonConserving:
-            nout = ncol + dr * nabs    # Column density up to and *including* this cell
-            ncell = nout - ncol
+            ncell = dr * nabs * self.mask[species]
+            nout = ncol + ncell # Column density up to and *including* this cell (for species)
             if ncell[species] < self.Interpolate.MinimumColumns[species] and self.Fallback:
                 A = Lbol / 4. / np.pi / r**2
                 IonizationRate = self.Interpolate_fback.interp(indices, 
@@ -250,7 +250,7 @@ class RateCoefficients:
                 A = Lbol / nabs[species] / self.ShellVolume(r, dr)
                 incident = self.Interpolate.interp(indices, \
                     "SecondaryIonizationRate%i%i" % (species, donor_species), ncol)
-                outgoing = self.Interpolate.interp(indices, \
+                outgoing = self.Interpolate.interp(self.Interpolate.GetIndices3D(nout), \
                     "SecondaryIonizationRate%i%i" % (species, donor_species), nout)
                 IonizationRate = incident - outgoing            
         else:
@@ -312,17 +312,16 @@ class RateCoefficients:
         """
         
         if self.PhotonConserving:
-            nout = ncol + dr * nabs    # Column density up to and *including* this cell
-            ncell = nout - ncol
+            ncell = dr * nabs * self.mask[species]
+            nout = ncol + ncell # Column density up to and *including* this cell (for species)
             if ncell[species] < self.Interpolate.MinimumColumns[species] and self.Fallback:
                 A = Lbol / 4. / np.pi / r**2            
                 heat = self.Interpolate_fback.interp(indices, "ElectronHeatingRate%i" % species, ncol)
             else:
                 A = Lbol / nabs[species] / self.ShellVolume(r, dr)  
                 incident = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
-                outgoing = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, nout)
+                outgoing = self.Interpolate.interp(self.Interpolate.GetIndices3D(nout), "ElectronHeatingRate%i" % species, nout)
                 heat = incident - outgoing  
-                    
         else:
             A = Lbol / 4. / np.pi / r**2            
             heat = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
