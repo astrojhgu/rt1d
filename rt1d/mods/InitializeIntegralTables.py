@@ -57,7 +57,7 @@ m_HeII = 2.0 * (m_p + m_n) + m_e
 tiny_number = 1e-30
 
 IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', \
-                'SecondaryIonizationRate', 'TotalOpticalDepth']
+                'SecondaryIonizationRate', 'TotalOpticalDepth', 'PartialOpticalDepth']
 
 class InitializeIntegralTables: 
     def __init__(self, pf, data):
@@ -320,8 +320,32 @@ class InitializeIntegralTables:
                             if size > 1 and self.ParallelizationMethod == 1: 
                                 tab = MPI.COMM_WORLD.allreduce(tab, tab)
                                                                                      
-                            itabs[name] = tab                                        
-                    
+                            itabs[name] = tab
+                            
+                    elif integral == 'PartialOpticalDepth':
+                        name = self.DatasetName(integral, species = species)
+                        
+                        if species == 0:
+                            tab = np.zeros(self.HINBins)
+                            cols = self.HIColumn
+                        elif species == 1:
+                            tab = np.zeros(self.HeINBins)
+                            cols = self.HeIColumn
+                        elif species == 2:
+                            tab = np.zeros(self.HeIINBins)    
+                            cols = self.HeIIColumn
+                            
+                        for i, col in enumerate(cols):
+                            if self.ParallelizationMethod == 1 and (i % size != rank): 
+                                continue
+                                
+                            tab[i] = eval("self.{0}({1}, {2})".format(integral, col, species))  
+                            
+                        if size > 1 and self.ParallelizationMethod == 1: 
+                            tab = MPI.COMM_WORLD.allreduce(tab, tab)
+                              
+                        itabs[name] = tab                                  
+                                             
                     else:
                         
                         name = self.DatasetName(integral, species = species)
@@ -363,20 +387,35 @@ class InitializeIntegralTables:
             
     def TotalOpticalDepth(self, ncol = [0.0, 0.0, 0.0], species = 0):
         """
-        Optical depth integrated over entire spectrum for a given species at a 
+        Optical depth integrated over entire spectrum and all species at a 
         given column density.
         """        
         
         if self.rs.DiscreteSpectrum == 0:
-            integrand = lambda E: self.OpticalDepth(E, ncol)                            
+            integrand = lambda E: self.SpecificOpticalDepth(E, ncol)                            
             result = integrate(integrand, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0]
                   
         else:                                                                                                                                                                                
-            result = np.sum(self.OpticalDepth(self.rs.E, ncol))
+            result = np.sum(self.SpecificOpticalDepth(self.rs.E, ncol))
             
         return result
+        
+    def PartialOpticalDepth(self, ncol = 0.0, species = 0):
+        """
+        Optical depth integrated over entire spectrum for a single species at
+        a given column density.
+        """
+        
+        if self.rs.DiscreteSpectrum == 0:
+            integrand = lambda E: PhotoIonizationCrossSection(E, species) * ncol                        
+            result = integrate(integrand, max(self.rs.Emin, E_th[species]), self.rs.Emax, epsrel = 1e-8)[0]
+                  
+        else:                                                                                                                                                                                
+            result = np.sum(PhotoIonizationCrossSection(self.rs.E, species) * ncol)
             
-    def OpticalDepth(self, E, ncol):
+        return result
+        
+    def SpecificOpticalDepth(self, E, ncol):
         """
         Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which
         are stored in the variable 'ncol' as a three element array.
@@ -410,12 +449,12 @@ class InitializeIntegralTables:
         if self.rs.DiscreteSpectrum == 0:
             if self.PhotonConserving:
                 integrand = lambda E: 1e10 * self.rs.Spectrum(E) * \
-                    np.exp(-self.OpticalDepth(E, ncol)) / \
+                    np.exp(-self.SpecificOpticalDepth(E, ncol)) / \
                     (E * erg_per_ev)
             else:
                 integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * \
                     self.rs.Spectrum(E) * \
-                    np.exp(-self.OpticalDepth(E, ncol)) / \
+                    np.exp(-self.SpecificOpticalDepth(E, ncol)) / \
                     (E * erg_per_ev)
             
             result = 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
@@ -423,12 +462,12 @@ class InitializeIntegralTables:
         else:
             if self.PhotonConserving:
                 integral = self.rs.Spectrum(self.rs.E) * \
-                    np.exp(-self.OpticalDepth(self.rs.E, ncol)) / \
+                    np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) / \
                     (self.rs.E * erg_per_ev)
             else:
                 integral = PhotoIonizationCrossSection(self.rs.E, species) * \
                     self.rs.Spectrum(self.rs.E) * \
-                    np.exp(-self.OpticalDepth(self.rs.E, ncol)) / \
+                    np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) / \
                     (self.rs.E * erg_per_ev)     
                                 
             result = np.sum(integral)
@@ -443,12 +482,12 @@ class InitializeIntegralTables:
         if self.rs.DiscreteSpectrum == 0:
             if self.PhotonConserving:
                 integrand = lambda E: 1e10 * self.rs.Spectrum(E) * \
-                    (E - E_th[donor_species]) * np.exp(-self.OpticalDepth(E, ncol)) / \
+                    (E - E_th[donor_species]) * np.exp(-self.SpecificOpticalDepth(E, ncol)) / \
                     (E * erg_per_ev) / E_th[species]
             else:
                 integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, donor_species) * \
                     (E - E_th[donor_species]) * self.rs.Spectrum(E) * \
-                    np.exp(-self.OpticalDepth(E, ncol)) / \
+                    np.exp(-self.SpecificOpticalDepth(E, ncol)) / \
                     (E * erg_per_ev) / E_th[species]
         
             result = 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
@@ -456,12 +495,12 @@ class InitializeIntegralTables:
         else:
             if self.PhotonConserving:
                 integral = self.rs.Spectrum(self.rs.E) * \
-                    (self.rs.E - E_th[donor_species]) * np.exp(-self.OpticalDepth(self.rs.E, ncol)) / \
+                    (self.rs.E - E_th[donor_species]) * np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) / \
                     (self.rs.E * erg_per_ev) / E_th[species]
             else:
                 integral = PhotoIonizationCrossSection(self.rs.E, donor_species) * \
                     (self.rs.E - E_th[donor_species]) * self.rs.Spectrum(self.rs.E) * \
-                    np.exp(-self.OpticalDepth(self.rs.E, ncol)) / \
+                    np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) / \
                     (self.rs.E * erg_per_ev) / E_th[species]     
                                 
             result = np.sum(integral)     
@@ -483,11 +522,11 @@ class InitializeIntegralTables:
             if self.PhotonConserving:
                 integrand = lambda E: 1e20 * self.rs.Spectrum(E) * \
                     (E - E_th[species]) * \
-                    np.exp(-self.OpticalDepth(E, ncol)) / E
+                    np.exp(-self.SpecificOpticalDepth(E, ncol)) / E
             else:
                 integrand = lambda E: 1e20 * PhotoIonizationCrossSection(E, species) * \
                     (E - E_th[species]) * self.rs.Spectrum(E) * \
-                    np.exp(-self.OpticalDepth(E, ncol)) / E
+                    np.exp(-self.SpecificOpticalDepth(E, ncol)) / E
         
             result = 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
         
@@ -495,12 +534,12 @@ class InitializeIntegralTables:
             if self.PhotonConserving:
                 integral = self.rs.Spectrum(self.rs.E) * \
                     (self.rs.E - E_th[species]) * \
-                    np.exp(-self.OpticalDepth(self.rs.E, ncol)) / self.rs.E
+                    np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) / self.rs.E
             else:
                 integral = PhotoIonizationCrossSection(self.rs.E, species) * \
                     (self.rs.E - E_th[species]) * \
                     self.rs.Spectrum(self.rs.E) * \
-                    np.exp(-self.OpticalDepth(self.rs.E, ncol)) / self.rs.E     
+                    np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) / self.rs.E     
                 
             result = np.sum(integral)
             

@@ -27,6 +27,8 @@ class Interpolate:
         self.dHeIColumn = np.diff(self.HeIColumn)[0]
         self.dHeIIColumn = np.diff(self.HeIIColumn)[0]
         
+        self.AllColumns = np.array([self.HIColumn, self.HeIColumn, self.HeIIColumn])
+        
         self.MinimumColumns = 10**np.array([self.HIColumnMin, self.HeIColumnMin, self.HeIIColumnMin])
         
         self.offsetHIColumn = self.HIColumnMin / self.dHIColumn
@@ -49,7 +51,9 @@ class Interpolate:
         should still be a 3-element list.  
         """    
         
-        return np.interp(np.log10(value[0]), self.HIColumn, self.itabs[integral])
+        # GENERALIZE THIS!
+                
+        return np.interp(np.log10(value[0]), self.AllColumns[int(integral[-1])], self.itabs[integral])
         
     def InterpolateTriLinear(self, indices, integral, value = None):
         """

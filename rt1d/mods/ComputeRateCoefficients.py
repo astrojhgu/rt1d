@@ -207,9 +207,11 @@ class RateCoefficients:
                 else:
                     A = Lbol / nabs[species] / self.ShellVolume(r, dr)
                     incident = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)
-                    outgoing = self.Interpolate.interp(self.Interpolate.GetIndices3D(nout), "PhotoIonizationRate%i" % species, nout)
-                    IonizationRate = incident - outgoing  
-                    print species, incident, outgoing, ncol, ncell, nout                
+                    #outgoing = self.Interpolate.interp(self.Interpolate.GetIndices3D(nout), "PhotoIonizationRate%i" % species, nout)
+                    IonizationRate = incident * \
+                        (1. - np.exp(-self.Interpolate.InterpolateLinear(None, "PartialOpticalDepth%i" % species, [ncell[species]])))
+                    #print A * IonizationRate, A, incident, outgoing
+                    #print species, incident, outgoing, ncol, ncell, nout                
             else:
                 A = Lbol / 4. / np.pi / r**2
                 IonizationRate = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)       

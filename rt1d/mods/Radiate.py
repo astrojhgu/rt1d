@@ -359,9 +359,7 @@ class Radiate:
                 
                 # Unpack so we have everything by name
                 nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args                                                          
-                                                      
-                print cell, Gamma
-                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                              
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################                          
@@ -563,7 +561,7 @@ class Radiate:
             lb = self.control.LoadBalance(dtphot)   
         else: 
             lb = None      
-                                                                                                                                           
+                                                                                                                                                                                 
         return newdata, h, newdt, lb 
         
     def RateEquations(self, q, t, args):    
