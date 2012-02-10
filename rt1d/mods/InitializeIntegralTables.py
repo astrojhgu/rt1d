@@ -339,9 +339,9 @@ class InitializeIntegralTables:
                         
                         if integral == 'PartialOpticalDepth':
                             tab = np.zeros(2)
-                            tab[0] = eval("self.{0}({1}, 0)".format(integral, self.npartial[0], species))                
-                            tab[1] = eval("self.{0}({1}, 0)".format(integral, self.npartial[1], species))
-                              
+                            tab[0] = eval("self.{0}({1}, {2})".format(integral, self.npartial[0], species))                
+                            tab[1] = eval("self.{0}({1}, {2})".format(integral, self.npartial[1], species))
+                                                          
                         itabs[name] = tab                                  
                                              
                     else:

@@ -53,7 +53,7 @@ class Interpolate:
         Tabulated in log-space.
         """            
              
-        return 10**np.interp(np.log10(value[0]), self.npartial, self.itabs['PartialOpticalDepth%i' % species])     
+        return np.interp(value, self.npartial, self.itabs['PartialOpticalDepth%i' % species])     
                 
     def InterpolateLinear(self, indices, integral, value = None):
         """

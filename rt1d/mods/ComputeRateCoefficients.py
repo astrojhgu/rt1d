@@ -209,6 +209,7 @@ class RateCoefficients:
                     incident = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)
                     IonizationRate = incident * \
                         (1. - np.exp(-self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species)))         
+                    #print species, np.log10(ncell[species]), self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species)  
             else:
                 A = Lbol / 4. / np.pi / r**2
                 IonizationRate = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)       
