@@ -56,8 +56,8 @@ m_HeII = 2.0 * (m_p + m_n) + m_e
 
 tiny_number = 1e-30
 
-IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', \
-                'SecondaryIonizationRate', 'TotalOpticalDepth', 'PartialOpticalDepth']
+IntegralList = ['PartialOpticalDepth', 'PhotoIonizationRate', 'ElectronHeatingRate', \
+                'SecondaryIonizationRate', 'TotalOpticalDepth']
 
 class InitializeIntegralTables: 
     def __init__(self, pf, data):
@@ -115,6 +115,9 @@ class InitializeIntegralTables:
             
         # Retrive rt1d environment - look for tables in rt1d/input
         self.rt1d = os.environ.get("RT1D")
+        
+        # For partial optical depths
+        self.npartial = np.array([1e5, 1e25])
                 
     def DetermineTableName(self):    
         """
@@ -194,10 +197,13 @@ class InitializeIntegralTables:
             itab[item] = f["IntegralTable"][item].value
         
         itab["HIColumnValues_x"] = f["ColumnVectors"]["HIColumnValues_x"].value
+        self.HIColumn = itab["HIColumnValues_x"]    # Override what's in parameter file if there is a preexisting table
         
         if self.MultiSpecies > 0:
             itab["HeIColumnValues_y"] = f["ColumnVectors"]["HeIColumnValues_y"].value
             itab["HeIIColumnValues_z"] = f["ColumnVectors"]["HeIIColumnValues_z"].value
+            self.HeIColumn = itab["HeIColumnValues_y"]
+            self.HeIIColumn = itab["HeIIColumnValues_z"]
             
         return itab
                     
@@ -263,20 +269,26 @@ class InitializeIntegralTables:
                 if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
                         pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start()
                                     
-                # Loop over column density                    
-                tab = np.zeros(self.HINBins)
-                for i, ncol_HI in enumerate(self.HIColumn):
-                    
-                    if self.ParallelizationMethod == 1 and (i % size != rank): 
-                        continue
-                    if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1:
-                        pbar.update(i + 1)
-                    
-                    # Evaluate integral
-                    tab[i] = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0, 0]))
+                if integral == 'PartialOpticalDepth':
+                    tab = np.zeros(2)
+                    tab[0] = eval("self.{0}({1}, 0)".format(integral, [self.npartial[0]]))                
+                    tab[1] = eval("self.{0}({1}, 0)".format(integral, [self.npartial[1]]))                
+                     
+                else:                    
+                    # Loop over column density                    
+                    tab = np.zeros(self.HINBins)
+                    for i, ncol_HI in enumerate(self.HIColumn):
+                        
+                        if self.ParallelizationMethod == 1 and (i % size != rank): 
+                            continue
+                        if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1:
+                            pbar.update(i + 1)
+                        
+                        # Evaluate integral
+                        tab[i] = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0, 0]))
         
-                if size > 1 and self.ParallelizationMethod == 1: 
-                    tab = MPI.COMM_WORLD.allreduce(tab, tab)
+                    if size > 1 and self.ParallelizationMethod == 1: 
+                        tab = MPI.COMM_WORLD.allreduce(tab, tab)
         
                 # Store table
                 itabs[name] = tab                    
@@ -325,24 +337,10 @@ class InitializeIntegralTables:
                     elif integral == 'PartialOpticalDepth':
                         name = self.DatasetName(integral, species = species)
                         
-                        if species == 0:
-                            tab = np.zeros(self.HINBins)
-                            cols = self.HIColumn
-                        elif species == 1:
-                            tab = np.zeros(self.HeINBins)
-                            cols = self.HeIColumn
-                        elif species == 2:
-                            tab = np.zeros(self.HeIINBins)    
-                            cols = self.HeIIColumn
-                            
-                        for i, col in enumerate(cols):
-                            if self.ParallelizationMethod == 1 and (i % size != rank): 
-                                continue
-                                
-                            tab[i] = eval("self.{0}({1}, {2})".format(integral, col, species))  
-                            
-                        if size > 1 and self.ParallelizationMethod == 1: 
-                            tab = MPI.COMM_WORLD.allreduce(tab, tab)
+                        if integral == 'PartialOpticalDepth':
+                            tab = np.zeros(2)
+                            tab[0] = eval("self.{0}({1}, 0)".format(integral, self.npartial[0], species))                
+                            tab[1] = eval("self.{0}({1}, 0)".format(integral, self.npartial[1], species))
                               
                         itabs[name] = tab                                  
                                              

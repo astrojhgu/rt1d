@@ -207,11 +207,8 @@ class RateCoefficients:
                 else:
                     A = Lbol / nabs[species] / self.ShellVolume(r, dr)
                     incident = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)
-                    #outgoing = self.Interpolate.interp(self.Interpolate.GetIndices3D(nout), "PhotoIonizationRate%i" % species, nout)
                     IonizationRate = incident * \
-                        (1. - np.exp(-self.Interpolate.InterpolateLinear(None, "PartialOpticalDepth%i" % species, [ncell[species]])))
-                    #print A * IonizationRate, A, incident, outgoing
-                    #print species, incident, outgoing, ncol, ncell, nout                
+                        (1. - np.exp(-self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species)))         
             else:
                 A = Lbol / 4. / np.pi / r**2
                 IonizationRate = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)       
@@ -252,9 +249,8 @@ class RateCoefficients:
                 A = Lbol / nabs[species] / self.ShellVolume(r, dr)
                 incident = self.Interpolate.interp(indices, \
                     "SecondaryIonizationRate%i%i" % (species, donor_species), ncol)
-                outgoing = self.Interpolate.interp(self.Interpolate.GetIndices3D(nout), \
-                    "SecondaryIonizationRate%i%i" % (species, donor_species), nout)
-                IonizationRate = incident - outgoing            
+                IonizationRate = incident * \
+                    (1. - np.exp(-self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species)))         
         else:
             A = Lbol / 4. / np.pi / r**2
             
@@ -322,8 +318,8 @@ class RateCoefficients:
             else:
                 A = Lbol / nabs[species] / self.ShellVolume(r, dr)  
                 incident = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
-                outgoing = self.Interpolate.interp(self.Interpolate.GetIndices3D(nout), "ElectronHeatingRate%i" % species, nout)
-                heat = incident - outgoing  
+                heat = incident * \
+                    (1. - np.exp(-self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species)))    
         else:
             A = Lbol / 4. / np.pi / r**2            
             heat = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)

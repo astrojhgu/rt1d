@@ -172,7 +172,7 @@ def ProblemType(pt):
     # X-ray source, helium included         
     if pt == 5:
         pf = {"ProblemType": 5, "InterpolationMethod": 0, \
-              "ColumnDensityBinsHI": 50, "ColumnDensityBinsHeI": 20, "ColumnDensityBinsHeII": 20, 
+              "ColumnDensityBinsHI": 50, "ColumnDensityBinsHeI": 30, "ColumnDensityBinsHeII": 30, 
               "HIColumnMin": 1e18, "HIColumnMax": 1e22, \
               "HeIColumnMin": 1e17, "HeIColumnMax": 1e22, \
               "HeIIColumnMin": 1e15, "HeIIColumnMax": 1e20, \

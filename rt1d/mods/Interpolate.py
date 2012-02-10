@@ -26,8 +26,8 @@ class Interpolate:
         self.dHIColumn = np.diff(self.HIColumn)[0]
         self.dHeIColumn = np.diff(self.HeIColumn)[0]
         self.dHeIIColumn = np.diff(self.HeIIColumn)[0]
-        
-        self.AllColumns = np.array([self.HIColumn, self.HeIColumn, self.HeIIColumn])
+                
+        self.AllColumns = [self.HIColumn, self.HeIColumn, self.HeIIColumn]
         
         self.MinimumColumns = 10**np.array([self.HIColumnMin, self.HeIColumnMin, self.HeIIColumnMin])
         
@@ -35,6 +35,9 @@ class Interpolate:
         self.offsetHeIColumn = self.HeIColumnMin / self.dHeIColumn
         self.offsetHeIIColumn = self.HeIIColumnMin / self.dHeIIColumn
         self.offsets = np.array([self.offsetHIColumn, self.offsetHeIColumn, self.offsetHeIIColumn])
+        
+        # For partial optical depths
+        self.npartial = np.array([5, 25])
         
         # This is a dictionary with all the lookup tables
         self.itabs = itabs
@@ -44,6 +47,13 @@ class Interpolate:
         else: 
             if self.pf["InterpolationMethod"] == 0: self.interp = self.InterpolateTriLinear
             if self.pf["InterpolationMethod"] == 1: self.interp = self.InterpolateNN
+                
+    def PartialOpticalDepth(self, value, species = 0):
+        """
+        Tabulated in log-space.
+        """            
+             
+        return 10**np.interp(np.log10(value[0]), self.npartial, self.itabs['PartialOpticalDepth%i' % species])     
                 
     def InterpolateLinear(self, indices, integral, value = None):
         """
