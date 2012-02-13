@@ -282,7 +282,7 @@ class InitializeIntegralTables:
                 if rank == 0 and self.ParallelizationMethod == 1: 
                         print "\nComputing value of {0}{1}...".format(integral, 0)
                 if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
-                        pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start()
+                        pbar = ProgressBar(widgets = widget, maxval = len(self.HIColumn)).start()
                                     
                 if integral == 'PartialOpticalDepth':
                     tab = np.zeros(2)
@@ -319,7 +319,7 @@ class InitializeIntegralTables:
                     if rank == 0: 
                         print "\nComputing value of {0}{1}...".format(integral, species)
                     if rank == 0 and self.ProgressBar: 
-                        pbar = ProgressBar(widgets = widget, maxval = self.HINBins).start()
+                        pbar = ProgressBar(widgets = widget, maxval = len(self.HIColumn)).start()
                     
                     # If secondary ionization, need to loop over species again
                     if integral == 'SecondaryIonizationRate':
