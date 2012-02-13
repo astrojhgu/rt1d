@@ -87,22 +87,31 @@ class InitializeIntegralTables:
         self.SpectrumAbsorbingColumn = pf["SpectrumAbsorbingColumn"]
         
         # Column densities
+        self.HICellColumnMin = pf["HICellColumnMin"]
         self.HIColumnMin = pf["HIColumnMin"]
         self.HIColumnMax =  pf["HIColumnMax"]
+        self.HeICellColumnMin = pf["HeICellColumnMin"]
         self.HeIColumnMin = pf["HeIColumnMin"]
         self.HeIColumnMax =  pf["HeIColumnMax"]
+        self.HeIICellColumnMin = pf["HeIICellColumnMin"]
         self.HeIIColumnMin = pf["HeIIColumnMin"]
         self.HeIIColumnMax =  pf["HeIIColumnMax"]
         self.HINBins = pf["ColumnDensityBinsHI"]
         self.HeINBins = pf["ColumnDensityBinsHeI"]
         self.HeIINBins = pf["ColumnDensityBinsHeII"]
                 
+        tmp = list(np.arange(np.log10(self.HICellColumnMin), np.log10(self.HIColumnMin)))
         self.HIColumn = np.logspace(np.log10(self.HIColumnMin), np.log10(self.HIColumnMax), self.HINBins)
+        self.HIColumn = np.array(tmp.extend(list(self.HIColumn)))        
                 
         # Set up column density vectors for each absorber
         if self.MultiSpecies > 0: 
+            tmp = list(np.arange(np.log10(self.HeICellColumnMin), np.log10(self.HeIColumnMin)))
             self.HeIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
+            self.HeIColumn = np.array(tmp.extend(list(self.HeIColumn)))        
+            tmp = list(np.arange(np.log10(self.HeIICellColumnMin), np.log10(self.HeIIColumnMin)))
             self.HeIIColumn = np.logspace(np.log10(self.HeIIColumnMin), np.log10(self.HeIIColumnMax), self.HeIINBins)
+            self.HeIIColumn = np.array(tmp.extend(list(self.HeIIColumn)))        
         else:
             self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
             self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number

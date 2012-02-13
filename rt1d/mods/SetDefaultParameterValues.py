@@ -38,11 +38,14 @@ def SetDefaultParameterValues():
           
         # Integral tabulation
         "TabulateIntegrals": 1, \
-        "AutoFallback": 1, \
+        "AutoFallback": 0, \
+        "HICellColumnMin": 1e10, \
         "HIColumnMin": 1e15, \
         "HIColumnMax": 1e20, \
+        "HeICellColumnMin": 1e10, \
         "HeIColumnMin": 1e18, \
         "HeIColumnMax": 1e22, \
+        "HeIICellColumnMin": 1e10, \
         "HeIIColumnMin": 1e16, \
         "HeIIColumnMax": 1e20, \
         "ColumnDensityBinsHI": 100, \
@@ -83,7 +86,6 @@ def SetDefaultParameterValues():
         "MaxHeIIChange": 0.005, \
         "MaxHeIIIChange": 0.005, \
         "MaxElectronChange": 0.05, \
-        "ForceAdapt": 1, \
         
         # Physics
         "Isothermal": 1, \
