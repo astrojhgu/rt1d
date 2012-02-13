@@ -271,9 +271,8 @@ class InitializeIntegralTables:
                                     
                 if integral == 'PartialOpticalDepth':
                     tab = np.zeros(2)
-                    tab[0] = eval("self.{0}({1}, 0)".format(integral, [self.npartial[0]]))                
-                    tab[1] = eval("self.{0}({1}, 0)".format(integral, [self.npartial[1]]))                
-                     
+                    tab[0] = eval("self.{0}({1}, 0)".format(integral, self.npartial[0]))                
+                    tab[1] = eval("self.{0}({1}, 0)".format(integral, self.npartial[1]))                
                 else:                    
                     # Loop over column density                    
                     tab = np.zeros(self.HINBins)

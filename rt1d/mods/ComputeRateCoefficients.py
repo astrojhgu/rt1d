@@ -207,9 +207,10 @@ class RateCoefficients:
                 else:
                     A = Lbol / nabs[species] / self.ShellVolume(r, dr)
                     incident = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)
-                    IonizationRate = incident * \
-                        (1. - np.exp(-self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species)))         
-                    #print species, np.log10(ncell[species]), self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species)  
+                    #IonizationRate = incident * \
+                    #    (1. - np.exp(-self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species)))         
+                    outgoing = self.Interpolate.interp(self.Interpolate.GetIndices3D(nout), "PhotoIonizationRate%i" % species, ncol + ncell)
+                    IonizationRate = incident - outgoing
             else:
                 A = Lbol / 4. / np.pi / r**2
                 IonizationRate = self.Interpolate.interp(indices, "PhotoIonizationRate%i" % species, ncol)       
@@ -223,7 +224,7 @@ class RateCoefficients:
             
             A = 1.
             IonizationRate = dQ / nabs[species] / self.ShellVolume(r, dr)    # ionizations / sec / hydrogen atom
-                                                                                                                        
+        
         return A * IonizationRate
         
     def SecondaryIonizationRate(self, species = 0, donor_species = 0, E = None, Qdot = None, Lbol = None, 
@@ -242,7 +243,7 @@ class RateCoefficients:
         if self.PhotonConserving:
             ncell = dr * nabs * self.mask[species]
             nout = ncol + ncell # Column density up to and *including* this cell (for species)
-            if ncell[species] < self.Interpolate.MinimumColumns[species] and self.Fallback:
+            if nout[species] < self.Interpolate.MinimumColumns[species] and self.Fallback:
                 A = Lbol / 4. / np.pi / r**2
                 IonizationRate = self.Interpolate_fback.interp(indices, 
                     "SecondaryIonizationRate%i%i" % (species, donor_species), ncol)
@@ -250,8 +251,11 @@ class RateCoefficients:
                 A = Lbol / nabs[species] / self.ShellVolume(r, dr)
                 incident = self.Interpolate.interp(indices, \
                     "SecondaryIonizationRate%i%i" % (species, donor_species), ncol)
-                IonizationRate = incident * \
-                    (1. - np.exp(-self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species)))         
+                #IonizationRate = incident * \
+                #    (1. - np.exp(-self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species)))
+                outgoing = self.Interpolate.interp(self.Interpolate.GetIndices3D(nout), \
+                    "SecondaryIonizationRate%i%i" % (species, donor_species), ncol + ncell)
+                IonizationRate = incident - outgoing         
         else:
             A = Lbol / 4. / np.pi / r**2
             
@@ -313,14 +317,17 @@ class RateCoefficients:
         if self.PhotonConserving:
             ncell = dr * nabs * self.mask[species]
             nout = ncol + ncell # Column density up to and *including* this cell (for species)
-            if ncell[species] < self.Interpolate.MinimumColumns[species] and self.Fallback:
+            if nout[species] < self.Interpolate.MinimumColumns[species] and self.Fallback:
                 A = Lbol / 4. / np.pi / r**2            
                 heat = self.Interpolate_fback.interp(indices, "ElectronHeatingRate%i" % species, ncol)
             else:
                 A = Lbol / nabs[species] / self.ShellVolume(r, dr)  
                 incident = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)
-                heat = incident * \
-                    (1. - np.exp(-self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species)))    
+                #heat = incident * \
+                #    (1. - np.exp(-self.Interpolate.PartialOpticalDepth(np.log10(ncell[species]), species))) 
+                outgoing = self.Interpolate.interp(self.Interpolate.GetIndices3D(nout), "ElectronHeatingRate%i" % species, ncol + ncell)
+                heat = incident - outgoing 
+                   
         else:
             A = Lbol / 4. / np.pi / r**2            
             heat = self.Interpolate.interp(indices, "ElectronHeatingRate%i" % species, ncol)

@@ -42,7 +42,9 @@ class Interpolate:
         # This is a dictionary with all the lookup tables
         self.itabs = itabs
         
-        if self.pf["MultiSpecies"] == 0: 
+        self.MultiSpecies = self.pf["MultiSpecies"]
+        
+        if self.MultiSpecies == 0: 
             self.interp = self.InterpolateLinear
         else: 
             if self.pf["InterpolationMethod"] == 0: self.interp = self.InterpolateTriLinear
@@ -93,6 +95,9 @@ class Interpolate:
         
         value = 3-element array: [ncol_HI, ncol_HeI, ncol_HeII]
         """
+        
+        if not self.MultiSpecies:
+            return None
         
         value = np.log10(value)
                                                 

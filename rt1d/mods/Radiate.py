@@ -254,8 +254,7 @@ class Radiate:
                                 
         # Print status, and update progress bar
         if rank == 0: 
-            print "rt1d: %s < t < %s" % (str(format(round(t / self.TimeUnits, 8), 'f').ljust(8, '0')), \
-                str(format(round((t + dt) / self.TimeUnits, 8), 'f')).ljust(8, '0'))            
+            print "rt1d: %g < t < %g" % (t / self.TimeUnits, (t + dt) / self.TimeUnits)
         if rank == 0 and self.ProgressBar: 
             pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
         
@@ -626,7 +625,7 @@ class Radiate:
         if not self.Isothermal:
             tmp[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + np.sum(eta * nabs) + np.sum(psi * nabs))
         
-        return tmp   
+        return tmp
 
     def UpdatePhotonPackages(self, packs, t_next, data):
         """

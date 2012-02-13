@@ -47,6 +47,7 @@ class SolveRateEquations:
         self.solve = self.ImplicitEuler
         self.rootfinder = self.Newton
 
+        
         # Set adaptive timestepping method
         if self.stepper == 1: self.adapt = self.StepDoubling     
         
@@ -186,7 +187,7 @@ class SolveRateEquations:
         if self.Isothermal:
             rtn[3] = yip1[3]
                             
-        return rtn  
+        return rtn
         
     def SolutionCheck(self, ynext, args):
         """
