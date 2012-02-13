@@ -121,10 +121,7 @@ class InitializeIntegralTables:
         else:
             self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
             self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
-            
-        # All columns
-        self.AllColumns = np.array([self.HIColumn, self.HeIColumn, self.HeIIColumn])    
-                  
+                              
         # Make output directory          
         try: 
             os.mkdir("{0}".format(self.OutputDirectory))
@@ -332,7 +329,7 @@ class InitializeIntegralTables:
                             name = self.DatasetName(integral, species = species, donor_species = donor_species)
                             
                             # Loop over column densities
-                            tab = np.zeros_like(self.AllColumns)#([self.HINBins, self.HeINBins, self.HeIINBins])
+                            tab = np.zeros([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
                             for i, ncol_HI in enumerate(self.HIColumn):  
                                 
                                 if self.ParallelizationMethod == 1 and (i % size != rank): 
@@ -366,7 +363,7 @@ class InitializeIntegralTables:
                         name = self.DatasetName(integral, species = species)
                     
                         # Loop over column densities
-                        tab = np.zeros_like(self.AllColumns)#([self.HINBins, self.HeINBins, self.HeIINBins])
+                        tab = np.zeros([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
                         for i, ncol_HI in enumerate(self.HIColumn):  
                             
                             if self.ParallelizationMethod == 1 and (i % size != rank): 
