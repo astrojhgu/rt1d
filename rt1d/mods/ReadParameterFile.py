@@ -110,7 +110,7 @@ def ProblemType(pt):
              "DensityProfile": 0, "InitialDensity": 1e-3, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
              "IonizationProfile": 0, "InitialHIIFraction": 1.2e-3, "SourceType": 1, "SourceLifetime": 1e10, \
              "SpectrumPhotonLuminosity": 5e48, "SpectrumMinEnergy": 13.6, "SpectrumMaxEnergy": 100., \
-             "SpectrumMinNormEnergy": 13.6, "SpectrumMaxNormEnergy": 100., "HIColumnMin": 1e16, \
+             "SpectrumMinNormEnergy": 13.6, "SpectrumMaxNormEnergy": 100., "HIColumnMin": 1e15, \
              "HIColumnMax": 1e20, "DiscreteSpectrum": 0
             }
             

@@ -30,7 +30,7 @@ class Interpolate:
         self.AllColumns = [self.HIColumn, self.HeIColumn, self.HeIIColumn]
         
         self.MinimumColumns = 10**np.array([self.HIColumnMin, self.HeIColumnMin, self.HeIIColumnMin])
-        
+                
         self.offsetHIColumn = self.HIColumnMin / self.dHIColumn
         self.offsetHeIColumn = self.HeIColumnMin / self.dHeIColumn
         self.offsetHeIIColumn = self.HeIIColumnMin / self.dHeIIColumn

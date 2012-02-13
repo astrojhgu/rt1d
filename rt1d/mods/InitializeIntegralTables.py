@@ -100,21 +100,30 @@ class InitializeIntegralTables:
         self.HeINBins = pf["ColumnDensityBinsHeI"]
         self.HeIINBins = pf["ColumnDensityBinsHeII"]
                 
-        tmp = list(np.arange(np.log10(self.HICellColumnMin), np.log10(self.HIColumnMin)))
+        tmp = list(10**np.linspace(np.log10(self.HICellColumnMin), np.log10(self.HIColumnMin), \
+            4 * (np.log10(self.HIColumnMin) - np.log10(self.HICellColumnMin)) + 1))
         self.HIColumn = np.logspace(np.log10(self.HIColumnMin), np.log10(self.HIColumnMax), self.HINBins)
-        self.HIColumn = np.array(tmp.extend(list(self.HIColumn)))        
-                
+        tmp.extend(list(self.HIColumn))
+        self.HIColumn = np.array(tmp)
+                        
         # Set up column density vectors for each absorber
         if self.MultiSpecies > 0: 
-            tmp = list(np.arange(np.log10(self.HeICellColumnMin), np.log10(self.HeIColumnMin)))
+            tmp = list(10**np.linspace(np.log10(self.HeICellColumnMin), np.log10(self.HeIColumnMin), \
+                4 * (np.log10(self.HeIColumnMin) - np.log10(self.HeICellColumnMin)) + 1))
             self.HeIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
-            self.HeIColumn = np.array(tmp.extend(list(self.HeIColumn)))        
-            tmp = list(np.arange(np.log10(self.HeIICellColumnMin), np.log10(self.HeIIColumnMin)))
+            tmp.extend(list(self.HeIColumn))
+            self.HeIColumn = np.array(tmp)        
+            tmp = list(10**np.linspace(np.log10(self.HeIICellColumnMin), np.log10(self.HeIIColumnMin), \
+                4 * (np.log10(self.HeIIColumnMin) - np.log10(self.HeIICellColumnMin)) + 1))
             self.HeIIColumn = np.logspace(np.log10(self.HeIIColumnMin), np.log10(self.HeIIColumnMax), self.HeIINBins)
-            self.HeIIColumn = np.array(tmp.extend(list(self.HeIIColumn)))        
+            tmp.extend(list(self.HeIIColumn))
+            self.HeIIColumn = np.array(tmp)        
         else:
             self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
             self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
+            
+        # All columns
+        self.AllColumns = np.array([self.HIColumn, self.HeIColumn, self.HeIIColumn])    
                   
         # Make output directory          
         try: 
@@ -284,7 +293,7 @@ class InitializeIntegralTables:
                     tab[1] = eval("self.{0}({1}, 0)".format(integral, self.npartial[1]))                
                 else:                    
                     # Loop over column density                    
-                    tab = np.zeros(self.HINBins)
+                    tab = np.zeros_like(self.HIColumn)
                     for i, ncol_HI in enumerate(self.HIColumn):
                         
                         if self.ParallelizationMethod == 1 and (i % size != rank): 
@@ -323,7 +332,7 @@ class InitializeIntegralTables:
                             name = self.DatasetName(integral, species = species, donor_species = donor_species)
                             
                             # Loop over column densities
-                            tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
+                            tab = np.zeros_like(self.AllColumns)#([self.HINBins, self.HeINBins, self.HeIINBins])
                             for i, ncol_HI in enumerate(self.HIColumn):  
                                 
                                 if self.ParallelizationMethod == 1 and (i % size != rank): 
@@ -357,7 +366,7 @@ class InitializeIntegralTables:
                         name = self.DatasetName(integral, species = species)
                     
                         # Loop over column densities
-                        tab = np.zeros([self.HINBins, self.HeINBins, self.HeIINBins])
+                        tab = np.zeros_like(self.AllColumns)#([self.HINBins, self.HeINBins, self.HeIINBins])
                         for i, ncol_HI in enumerate(self.HIColumn):  
                             
                             if self.ParallelizationMethod == 1 and (i % size != rank): 

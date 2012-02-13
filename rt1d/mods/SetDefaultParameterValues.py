@@ -39,13 +39,13 @@ def SetDefaultParameterValues():
         # Integral tabulation
         "TabulateIntegrals": 1, \
         "AutoFallback": 0, \
-        "HICellColumnMin": 1e10, \
+        "HICellColumnMin": 1e6, \
         "HIColumnMin": 1e15, \
         "HIColumnMax": 1e20, \
-        "HeICellColumnMin": 1e10, \
+        "HeICellColumnMin": 1e6, \
         "HeIColumnMin": 1e18, \
         "HeIColumnMax": 1e22, \
-        "HeIICellColumnMin": 1e10, \
+        "HeIICellColumnMin": 1e6, \
         "HeIIColumnMin": 1e16, \
         "HeIIColumnMax": 1e20, \
         "ColumnDensityBinsHI": 100, \
