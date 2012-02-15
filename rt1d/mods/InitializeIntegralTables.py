@@ -120,6 +120,8 @@ class InitializeIntegralTables:
         else:
             self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
             self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
+            
+        self.TableDims = np.array([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
                               
         # Make output directory          
         try: 
@@ -129,14 +131,13 @@ class InitializeIntegralTables:
             
         # Retrive rt1d environment - look for tables in rt1d/input
         self.rt1d = os.environ.get("RT1D")
-        
-        # For partial optical depths
-        self.npartial = np.array([1e5, 1e25])
-        
+
         if self.pf['DiscreteSpectrum']:
             self.zeros = np.zeros_like(self.rs.E)
         else:
             self.zeros = np.zeros(1)
+            
+        self.Lbol = self.rs.BolometricLuminosity(0.0)    
                 
     def DetermineTableName(self):    
         """
@@ -318,57 +319,28 @@ class InitializeIntegralTables:
                     if rank == 0: 
                         print "\nComputing value of {0}{1}...".format(integral, species)
                     if rank == 0 and self.ProgressBar: 
-                        pbar = ProgressBar(widgets = widget, maxval = len(self.HIColumn)).start()
+                        pbar = ProgressBar(widgets = widget, maxval = np.prod(self.TableDims)).start()
                     
-                    # If secondary ionization, need to loop over species again
-                    if integral == 'SecondaryIonizationRate':
+                    name = self.DatasetName(integral, species = species)
+                    
+                    # Loop over column densities
+                    tab = np.zeros([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
+                    for i, ncol_HI in enumerate(self.HIColumn):  
                         
-                        for donor_species in np.arange(3):
-                            
-                            name = self.DatasetName(integral, species = species, donor_species = donor_species)
-                            
-                            # Loop over column densities
-                            tab = np.zeros([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
-                            for i, ncol_HI in enumerate(self.HIColumn):  
+                        if self.ParallelizationMethod == 1 and (i % size != rank): 
+                            continue
+                        
+                        for j, ncol_HeI in enumerate(self.HeIColumn):
+                            for k, ncol_HeII in enumerate(self.HeIIColumn):
+                                tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
                                 
-                                if self.ParallelizationMethod == 1 and (i % size != rank): 
-                                    continue
-                                
-                                for j, ncol_HeI in enumerate(self.HeIColumn):
-                                    for k, ncol_HeII in enumerate(self.HeIIColumn):
-                                        tab[i][j][k] = eval("self.{0}({1}, species = {2}, donor_species = {3})".format(integral, \
-                                            [ncol_HI, ncol_HeI, ncol_HeII], species, donor_species))  
-                               
                                 if rank == 0 and self.ProgressBar:
-                                    pbar.update(i + 1)
-                            
-                            if size > 1 and self.ParallelizationMethod == 1: 
-                                tab = MPI.COMM_WORLD.allreduce(tab, tab)
-                                                                                     
-                            itabs[name] = tab                                 
-                                             
-                    else:
-                        
-                        name = self.DatasetName(integral, species = species)
+                                    pbar.update(i * (self.TableDims[1] * self.TableDims[2]) + j * self.TableDims[2] + k + 1)                            
                     
-                        # Loop over column densities
-                        tab = np.zeros([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
-                        for i, ncol_HI in enumerate(self.HIColumn):  
-                            
-                            if self.ParallelizationMethod == 1 and (i % size != rank): 
-                                continue
-                            
-                            for j, ncol_HeI in enumerate(self.HeIColumn):
-                                for k, ncol_HeII in enumerate(self.HeIIColumn):
-                                    tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
-                           
-                            if rank == 0 and self.ProgressBar:
-                                pbar.update(i + 1)                            
-                   
-                        if size > 1 and self.ParallelizationMethod == 1: 
-                            tab = MPI.COMM_WORLD.allreduce(tab, tab)
-                        
-                        itabs[name] = tab
+                    if size > 1 and self.ParallelizationMethod == 1: 
+                        tab = MPI.COMM_WORLD.allreduce(tab, tab)
+                    
+                    itabs[name] = tab
                     
                     del tab
                     
@@ -389,7 +361,9 @@ class InitializeIntegralTables:
     def TotalOpticalDepth(self, ncol = [0.0, 0.0, 0.0], species = 0):
         """
         Optical depth integrated over entire spectrum and all species at a 
-        given column density.
+        given column density.  We just use this to determine which cells
+        are inside/outside of an I-front (OpticalDepthDefiningIfront = 0.5
+        by default).
         """        
         
         if self.rs.DiscreteSpectrum == 0:
@@ -434,25 +408,25 @@ class InitializeIntegralTables:
         
         if self.rs.DiscreteSpectrum:
             if self.PhotonConserving:
-                integral = self.rs.Spectrum(self.rs.E) * \
+                integral = self.rs.Spectrum(self.rs.E, Lbol = self.Lbol) * \
                     np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) / \
                     (self.rs.E * erg_per_ev)
             else:
                 integral = PhotoIonizationCrossSection(self.rs.E, species) * \
-                    self.rs.Spectrum(self.rs.E) * \
+                    self.rs.Spectrum(self.rs.E, Lbol = self.Lbol) * \
                     np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) / \
                     (self.rs.E * erg_per_ev) 
                 
-            return np.sum(integral)    
+            return np.sum(integral)   
         
         # Otherwise, continuous spectrum                
         if self.PhotonConserving:
-            integrand = lambda E: 1e10 * self.rs.Spectrum(E) * \
+            integrand = lambda E: 1e10 * self.rs.Spectrum(E, Lbol = self.Lbol) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)) / \
                 (E * erg_per_ev)
         else:
             integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, Lbol = self.Lbol) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)) / \
                 (E * erg_per_ev)
             
@@ -471,22 +445,22 @@ class InitializeIntegralTables:
         
         if self.rs.DiscreteSpectrum:
             if self.PhotonConserving:
-                integral = self.rs.Spectrum(self.rs.E) * \
+                integral = self.rs.Spectrum(self.rs.E, Lbol = self.Lbol) * \
                     np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) 
             else:
                 integral = PhotoIonizationCrossSection(self.rs.E, species) * \
-                    self.rs.Spectrum(self.rs.E) * \
+                    self.rs.Spectrum(self.rs.E, Lbol = self.Lbol) * \
                     np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol))
                     
             return np.sum(integral)
             
         # Otherwise, continuous spectrum    
         if self.PhotonConserving:
-            integrand = lambda E: 1e20 * self.rs.Spectrum(E) * \
+            integrand = lambda E: 1e20 * self.rs.Spectrum(E, Lbol = self.Lbol) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol))
         else:
             integrand = lambda E: 1e20 * PhotoIonizationCrossSection(E, species) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, Lbol = self.Lbol) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol))
         
         return 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]

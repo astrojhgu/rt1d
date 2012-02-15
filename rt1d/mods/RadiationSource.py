@@ -105,15 +105,18 @@ class RadiationSource:
         if pf["ConserveIonizingPhotonLuminosity"]:
             self.F[0] = self.IonizingPhotonLuminosity() * self.E[0] * erg_per_ev / self.BolometricLuminosity()    
                                     
-    def Spectrum(self, E):
+    def Spectrum(self, E, Lbol = None):
         """
         Return the fraction of the bolometric luminosity emitted at this energy.  This quantity is dimensionless, and its integral should be 1.
         """
-                        
+        
         if self.DiscreteSpectrum == 1: 
             return self.F  
         else: 
-            return self.LuminosityNormalization * self.SpecificIntensity(E) / self.BolometricLuminosity()        
+            if not Lbol:
+                Lbol = self.BolometricLuminosity()                
+                        
+            return self.LuminosityNormalization * self.SpecificIntensity(E) / Lbol        
                 
     def IonizingPhotonLuminosity(self, t = 0, E = None, i = None):
         """
