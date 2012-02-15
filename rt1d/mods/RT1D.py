@@ -127,49 +127,8 @@ def Shine(pf, r = None, IsRestart = False):
         elif pf["InitialTimestep"] > 0:
             dt = pf["InitialTimestep"] * TimeUnits
         else:
-            # CONDENSE THIS
-            tau1 = ncol = np.array(3 * [1.0])
-            tau0 = gamma = Beta = alpha = nion = xi = np.array(3 * [0])
-            nabs = np.array([data['HIDensity'][0], data['HeIDensity'][0], data['HeIIDensity'][0]])
-            n_H = data['HIDensity'][0] + data['HIIDensity'][0]
-            n_He = data['HeIDensity'][0] + data['HeIIDensity'][0] + data['HeIIIDensity'][0]
-            n_e = data['HIIDensity'][0] + data['HeIIDensity'][0] + 2. * data['HeIIIDensity'][0]            
-                        
-            indices = None
-            if pf['MultiSpecies'] > 0 and pf['TabulateIntegrals']: 
-                indices = r.coeff.Interpolate.GetIndices3D(ncol)            
-                
-            Gamma = np.zeros(3)                                    
-            if itabs is None:
-                for i, E in enumerate(r.rs.E):
-                    Gamma[0] += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.IonizingPhotonLuminosity(i = i), \
-                        ncol = ncol, nabs = nabs, r = LengthUnits * StartRadius, \
-                        dr = r.dx[0], species = 0, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))
-                    
-                    if pf['MultiSpecies']:
-                        Gamma[1] += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.IonizingPhotonLuminosity(i = i), \
-                            ncol = ncol, nabs = nabs, r = LengthUnits * StartRadius, \
-                            dr = r.dx[0], species = 1, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))
-                        Gamma[2] += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.IonizingPhotonLuminosity(i = i), \
-                            ncol = ncol, nabs = nabs, r = LengthUnits * StartRadius, \
-                            dr = r.dx[0], species = 2, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))    
-                        
-            else:                    
-                Gamma[0] = r.coeff.PhotoIonizationRate(species = 0, Lbol = r.rs.BolometricLuminosity(0), \
-                    indices = indices, r = LengthUnits * StartRadius, dr = r.dx[0],
-                    nabs = nabs, ncol = ncol, tau = tau0)
-                    
-                if pf['MultiSpecies']:
-                    Gamma[1] = r.coeff.PhotoIonizationRate(species = 1, Lbol = r.rs.BolometricLuminosity(0), \
-                        indices = indices, r = LengthUnits * StartRadius, dr = r.dx[0],
-                        nabs = nabs, ncol = ncol, tau = tau0)
-                    Gamma[2] = r.coeff.PhotoIonizationRate(species = 2, Lbol = r.rs.BolometricLuminosity(0), \
-                        indices = indices, r = LengthUnits * StartRadius, dr = r.dx[0],
-                        nabs = nabs, ncol = ncol, tau = tau0)                            
-                        
-            dt = r.control.ComputeInitialPhotonTimestep(tau1, nabs, nion, ncol, 
-                n_H, n_He, n_e, n_H + n_He + n_e, Gamma, gamma, Beta, alpha, xi)
-                                                                                                                              
+            dt = r.control.ComputeInitialPhotonTimestep(data, r, itabs)
+                                                                                                                
         # If (probalby for testing purposes) we have StopTime << 1, make sure dt <= StopTime        
         dt = min(dt, StopTime)
                     

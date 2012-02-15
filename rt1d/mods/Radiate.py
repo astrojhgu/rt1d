@@ -358,7 +358,7 @@ class Radiate:
                 
                 # Unpack so we have everything by name
                 nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args                                                          
-                                                                                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                                                                                                        
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################                          
@@ -384,6 +384,8 @@ class Radiate:
                 newdata["HeIIIDensity"][cell] = newHeIII
                 newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
                 newdata["Temperature"][cell] = newT  
+                                                                 
+                                                                 
                                                                                                                         
                 ######################################
                 ################ DONE ################
@@ -487,6 +489,8 @@ class Radiate:
                     # Retrieve coefficients and what not.
                     args = [nabs, nion, n_H, n_He, n_e]
                     args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, self.dx, dt, t))
+                    
+                    # Compute indices2
                     
                     # Unpack so we have everything by name
                     nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args
