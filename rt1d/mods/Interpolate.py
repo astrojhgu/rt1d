@@ -105,6 +105,9 @@ class Interpolate:
             return None
         
         value = np.log10(value)
+        
+        print self.HeIIColumn
+        print value[2], self.dHeIIColumn, self.offsetHeIIColumn
                                                 
         # Smaller indices
         i_s = int((value[0] / self.dHIColumn) - self.offsetHIColumn)

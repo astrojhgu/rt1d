@@ -72,6 +72,7 @@ class ControlSimulation:
                                                                             
         indices_in = None
         indices_out = None
+        
         if self.pf['MultiSpecies'] > 0 and self.pf['TabulateIntegrals']: 
             indices_in = r.coeff.Interpolate.GetIndices3D(ncol)  
             indices_out = r.coeff.Interpolate.GetIndices3D(nout)
@@ -201,37 +202,4 @@ class ControlSimulation:
                     lb[i + 1] = entry + 1
                                                                                             
         return lb    
-        
-    def ComputePhotonTimestepOLD(self, tau, nabs, nion, n_H, n_He, n_e, n_B, qnew, dt):
-        """
-        Compute photon timestep based on maximum allowed fractional change
-        in hydrogen and helium neutral fractions (Shapiro et al. 2004).
-        """          
-        
-        dtHI = 1e50        
-        if self.HIRestrictedTimestep:
-            dHIdt = np.abs(((n_H - qnew[0]) - nabs[0])) / dt
-            if tau[0] >= self.OpticalDepthDefiningIFront[0]:
-                dtHI = self.MaxHIIChange * nabs[0] / dHIdt
-        
-        dtHeI = 1e50
-        if self.MultiSpecies and self.HeIRestrictedTimestep:
-            dHeIdt = np.abs(((n_He - qnew[1] - qnew[2]) - nabs[1])) / dt            
-            if tau[1] >= self.OpticalDepthDefiningIFront[1]:
-                dtHeI = self.MaxHeIIChange * nabs[1] / dHeIdt
-                
-        dtHeII = 1e50
-        if self.MultiSpecies and self.HeIRestrictedTimestep:
-            dHeIIdt = np.abs((qnew[1] - nabs[2]) / dt)        
-            if tau[2] >= self.OpticalDepthDefiningIFront[2]:                         
-                dtHeII = self.MaxHeIIIChange * nabs[2] / dHeIIdt
-            
-        # Change in electron fraction (relative to all baryons)    
-        dtef = 1e50  
-        if self.ElectronFractionRestrictedTimestep:
-            n_e_new = ((qnew[0]) + qnew[1] + 2.0 * qnew[2])
-            n_B_new = n_e_new + n_H + n_He
-            defdt = np.abs((n_e_new / n_B_new)  - (n_e / n_B)) / dt
-            dtef = self.MaxElectronChange * (n_e / n_B) / defdt 
-        
-        return min(dtHI, dtHeI, dtHeII, dtef)        
+         

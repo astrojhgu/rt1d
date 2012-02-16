@@ -96,28 +96,16 @@ class InitializeIntegralTables:
         self.HeINBins = pf["ColumnDensityBinsHeI"]
         self.HeIINBins = pf["ColumnDensityBinsHeII"]
                 
-        #tmp = list(10**np.linspace(np.log10(self.HICellColumnMin), np.log10(self.HIColumnMin), \
-        #    4 * (np.log10(self.HIColumnMin) - np.log10(self.HICellColumnMin)) + 1))
         self.HIColumn = np.logspace(np.log10(self.HIColumnMin), np.log10(self.HIColumnMax), self.HINBins)
-        #tmp.extend(list(self.HIColumn))
-        #self.HIColumn = np.array(tmp)
-                        
+
         # Set up column density vectors for each absorber
         if self.MultiSpecies > 0: 
-            #tmp = list(10**np.linspace(np.log10(self.HeICellColumnMin), np.log10(self.HeIColumnMin), \
-            #    4 * (np.log10(self.HeIColumnMin) - np.log10(self.HeICellColumnMin)) + 1))
             self.HeIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
-            #tmp.extend(list(self.HeIColumn))
-            #self.HeIColumn = np.array(tmp)        
-            #tmp = list(10**np.linspace(np.log10(self.HeIICellColumnMin), np.log10(self.HeIIColumnMin), \
-            #    4 * (np.log10(self.HeIIColumnMin) - np.log10(self.HeIICellColumnMin)) + 1))
-            self.HeIIColumn = np.logspace(np.log10(self.HeIIColumnMin), np.log10(self.HeIIColumnMax), self.HeIINBins)
-            #tmp.extend(list(self.HeIIColumn))
-            #self.HeIIColumn = np.array(tmp)        
+            self.HeIIColumn = np.logspace(np.log10(self.HeIIColumnMin), np.log10(self.HeIIColumnMax), self.HeIINBins)        
         else:
             self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
             self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
-            
+                        
         self.TableDims = np.array([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
                               
         # Make output directory          
