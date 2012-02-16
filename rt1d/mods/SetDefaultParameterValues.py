@@ -39,15 +39,15 @@ def SetDefaultParameterValues():
         # Integral tabulation
         "TabulateIntegrals": 1, \
         "AutoFallback": 0, \
-        "HIColumnMin": 1e15, \
-        "HIColumnMax": 1e20, \
-        "HeIColumnMin": 1e18, \
+        "HIColumnMin": 1e10, \
+        "HIColumnMax": 1e22, \
+        "HeIColumnMin": 1e10, \
         "HeIColumnMax": 1e22, \
-        "HeIIColumnMin": 1e16, \
+        "HeIIColumnMin": 1e10, \
         "HeIIColumnMax": 1e20, \
         "ColumnDensityBinsHI": 100, \
-        "ColumnDensityBinsHeI": 10, \
-        "ColumnDensityBinsHeII": 10, \
+        "ColumnDensityBinsHeI": 100, \
+        "ColumnDensityBinsHeII": 100, \
         "ExitAfterIntegralTabulation": 0, \
           
         # Grid parameters

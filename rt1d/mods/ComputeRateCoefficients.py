@@ -251,7 +251,7 @@ class RateCoefficients:
             
             IonizationRate = dQ / nabs[species] / self.ShellVolume(r, dr)    # ionizations / sec / hydrogen atom
     
-        print IonizationRate, ncol, nout
+        #print IonizationRate, ncol, nout
             
         return A * IonizationRate, Phi_N, Phi_N_dN
         

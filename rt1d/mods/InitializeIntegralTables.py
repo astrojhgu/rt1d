@@ -138,6 +138,11 @@ class InitializeIntegralTables:
         else:
             sed = 'C'
         
+        if self.MultiSpecies:
+            dims = '%ix%ix%i' % (self.HINBins, self.HeINBins, self.HeIINBins)
+        else:
+            dims = '%i' % self.HINBins
+        
         if self.SourceType == 0: 
             src = "mf"
             prop = "{0:g}phot".format(int(self.SpectrumPhotonLuminosity))
@@ -158,7 +163,7 @@ class InitializeIntegralTables:
             src = "apl"
             prop = "{0}_{0}n".format(self.SpectrumPowerLawIndex, self.SpectrumAbsorbingColumn)    
                     
-        return "{0}_{1}_{2}_{3}_{4}.h5".format(src, prop, pc, ms, sed)
+        return "{0}_{1}_{2}_{3}_{4}_{5}.h5".format(src, prop, pc, ms, sed, dims)
             
     def DatasetName(self, integral, species, donor_species = None):
         """
@@ -192,7 +197,7 @@ class InitializeIntegralTables:
             return None
         
         if rank == 0:
-            print "\nFound an integral table for this source.  Reading {0}/{1}".format(self.OutputDirectory, filename)
+            print "\nFound an integral table for this source.  Reading {0}{1}".format(self.OutputDirectory, filename)
         
         f = h5py.File("{0}/{1}".format(self.OutputDirectory, filename), 'r')
         

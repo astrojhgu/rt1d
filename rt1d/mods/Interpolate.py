@@ -48,14 +48,7 @@ class Interpolate:
             self.interp = self.InterpolateLinear
         else: 
             if self.pf["InterpolationMethod"] == 0: self.interp = self.InterpolateTriLinear
-            if self.pf["InterpolationMethod"] == 1: self.interp = self.InterpolateNN
-                
-    def PartialOpticalDepth(self, value, species = 0):
-        """
-        Tabulated in log-space.
-        """            
-             
-        return np.interp(value, self.npartial, self.itabs['PartialOpticalDepth%i' % species])     
+            if self.pf["InterpolationMethod"] == 1: self.interp = self.InterpolateNN    
                 
     def InterpolateLinear(self, indices, integral, value = None):
         """
@@ -106,8 +99,8 @@ class Interpolate:
         
         value = np.log10(value)
         
-        print self.HeIIColumn
-        print value[2], self.dHeIIColumn, self.offsetHeIIColumn
+        #print self.HeIIColumn
+        #print value[2], self.dHeIIColumn, self.offsetHeIIColumn
                                                 
         # Smaller indices
         i_s = int((value[0] / self.dHIColumn) - self.offsetHIColumn)
