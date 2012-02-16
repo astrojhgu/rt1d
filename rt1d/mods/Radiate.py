@@ -25,10 +25,11 @@ from Integrate import simpson as integrate
 try:
     from progressbar import *
     pb = True
+    widget = ["rt1d: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 except ImportError:
     print "Module progressbar not found."
     pb = False
-
+    
 try:
     from mpi4py import MPI
     rank = MPI.COMM_WORLD.rank
@@ -54,10 +55,6 @@ m_HeII = 2.0 * (m_p + m_n) + m_e
 E_th = [13.6, 24.6, 54.4]
 
 neglible_column = 1
-
-# Widget for progressbar.
-if pb: 
-    widget = ["Ray Casting: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 
 class Radiate:
     def __init__(self, pf, data, itabs, n_col): 

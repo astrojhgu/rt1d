@@ -22,6 +22,7 @@ import h5py, os, re
 try:
     from progressbar import *
     pb = True
+    widget = ["rt1d: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 except ImportError:
     "Module progressbar not found."
     pb = False
@@ -40,9 +41,6 @@ try:
 except ImportError:
     print 'Module scipy not found.  Replacement integration routines are much slower :('
     from Integrate import simpson as integrate    
-
-# Widget for progressbar.
-widget = ["rt1d: ", Percentage(), ' ', Bar(marker = RotatingMarker()), ' ', ETA(), ' ']
 
 E_th = [13.6, 24.6, 54.4]
 
@@ -314,17 +312,19 @@ class InitializeIntegralTables:
                     
                     # Loop over column densities
                     tab = np.zeros([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
-                    for i, ncol_HI in enumerate(self.HIColumn):  
-                        
-                        if self.ParallelizationMethod == 1 and (i % size != rank): 
-                            continue
-                        
+                    for i, ncol_HI in enumerate(self.HIColumn):                          
                         for j, ncol_HeI in enumerate(self.HeIColumn):
                             for k, ncol_HeII in enumerate(self.HeIIColumn):
-                                tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
                                 
+                                global_i = i * (self.TableDims[1] * self.TableDims[2]) + j * self.TableDims[2] + k + 1
+                                
+                                if self.ParallelizationMethod == 1 and (global_i % size != rank): 
+                                    continue
+                                
+                                tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
+                                                                
                                 if rank == 0 and self.ProgressBar:
-                                    pbar.update(i * (self.TableDims[1] * self.TableDims[2]) + j * self.TableDims[2] + k + 1)                            
+                                    pbar.update(global_i)                            
                     
                     if size > 1 and self.ParallelizationMethod == 1: 
                         tab = MPI.COMM_WORLD.allreduce(tab, tab)
