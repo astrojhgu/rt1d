@@ -359,7 +359,7 @@ class Radiate:
                 # Unpack so we have everything by name
                 nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args                                                          
                                                            
-                print 'CELL', cell, Gamma                                           
+                #print 'CELL', cell, Gamma                                           
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
                 ######################################
                 ######## Solve Rate Equations ########

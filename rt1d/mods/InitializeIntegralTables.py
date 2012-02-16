@@ -86,13 +86,10 @@ class InitializeIntegralTables:
         self.SpectrumAbsorbingColumn = pf["SpectrumAbsorbingColumn"]
         
         # Column densities
-        self.HICellColumnMin = pf["HICellColumnMin"]
         self.HIColumnMin = pf["HIColumnMin"]
         self.HIColumnMax =  pf["HIColumnMax"]
-        self.HeICellColumnMin = pf["HeICellColumnMin"]
         self.HeIColumnMin = pf["HeIColumnMin"]
         self.HeIColumnMax =  pf["HeIColumnMax"]
-        self.HeIICellColumnMin = pf["HeIICellColumnMin"]
         self.HeIIColumnMin = pf["HeIIColumnMin"]
         self.HeIIColumnMax =  pf["HeIIColumnMax"]
         self.HINBins = pf["ColumnDensityBinsHI"]
@@ -304,6 +301,10 @@ class InitializeIntegralTables:
                 if size > 1 and self.ParallelizationMethod == 1: 
                     tab = MPI.COMM_WORLD.allreduce(tab, tab)
         
+                MPI.COMM_WORLD.barrier()
+                if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
+                    pbar.finish()
+        
                 # Store table
                 itabs[name] = tab                    
                 del tab
@@ -344,8 +345,9 @@ class InitializeIntegralTables:
                     
                     del tab
                     
-        if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
-            pbar.finish()            
+                    MPI.COMM_WORLD.barrier()
+                    if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
+                        pbar.finish()            
                                     
         wrote = False                                         
         if rank == 0 or self.ParallelizationMethod == 2: 
