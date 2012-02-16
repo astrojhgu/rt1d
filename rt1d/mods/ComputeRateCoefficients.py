@@ -147,7 +147,7 @@ class RateCoefficients:
                             Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, tau = tau, dr = dr,
                             species = i, donor_species = j, x_HII = x_HII)
                                 
-                    gamma *= (A / E_th[i] / erg_per_ev)        
+                    gamma[i] *= (A / E_th[i] / erg_per_ev)        
                                     
         # Only the photon-conserving algorithm is capable of this                                                  
         else:
@@ -229,8 +229,6 @@ class RateCoefficients:
                         
             can calculate all shell volumes at once too
             
-            
-            
         """     
                   
         Phi_N = None
@@ -252,7 +250,9 @@ class RateCoefficients:
             dQ = Q0 * (1. - np.exp(-tau_c))                        # number of photons absorbed in cell per sec
             
             IonizationRate = dQ / nabs[species] / self.ShellVolume(r, dr)    # ionizations / sec / hydrogen atom
-        
+    
+        print IonizationRate, ncol, nout
+            
         return A * IonizationRate, Phi_N, Phi_N_dN
         
     def PhotoElectricHeatingRate(self, species = None, E = None, Qdot = None, Lbol = None, 

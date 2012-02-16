@@ -78,6 +78,11 @@ class Interpolate:
         i_b, j_b, k_b = ijk_b
         x_d, y_d, z_d = xyz_d 
                 
+        #if integral == 'PhotoIonizationRate0': print '\n', value, integral, self.itabs[integral][i_s][j_s][k_s], self.itabs[integral][i_s][j_s][k_b], \
+        #    self.itabs[integral][i_s][j_b][k_s], self.itabs[integral][i_s][j_b][k_b], \
+        #    self.itabs[integral][i_b][j_s][k_s], self.itabs[integral][i_b][j_s][k_b], \
+        #    self.itabs[integral][i_b][j_b][k_s], self.itabs[integral][i_b][j_b][k_b], '\n'
+                
         i1 = self.itabs[integral][i_s][j_s][k_s] * (1 - z_d) + self.itabs[integral][i_s][j_s][k_b] * z_d
         i2 = self.itabs[integral][i_s][j_b][k_s] * (1 - z_d) + self.itabs[integral][i_s][j_b][k_b] * z_d
                                                                                               
@@ -107,15 +112,24 @@ class Interpolate:
         k_s = int((value[2] / self.dHeIIColumn) - self.offsetHeIIColumn)
         
         # Bracketing coordinates
-        if i_s < 0: i_s = i_b = 0
-        elif i_s >= (self.HINbins - 1): i_s = i_b = -1
-        else: i_b = i_s + 1
-        if j_s < 0: j_s = j_b = 0
-        elif j_s >= (self.HeINbins - 1): j_s = j_b = -1
-        else: j_b = j_s + 1
-        if k_s < 0: k_s = k_b = 0
-        elif k_s >= (self.HeIINbins - 1): k_s = k_b = -1
-        else: k_b = k_s + 1        
+        if i_s < 0: 
+            i_s = i_b = 0
+        elif i_s >= (self.HINbins - 1): 
+            i_s = i_b = -1
+        else: 
+            i_b = i_s + 1
+        if j_s < 0: 
+            j_s = j_b = 0
+        elif j_s >= (self.HeINbins - 1): 
+            j_s = j_b = -1
+        else: 
+            j_b = j_s + 1
+        if k_s < 0: 
+            k_s = k_b = 0
+        elif k_s >= (self.HeIINbins - 1): 
+            k_s = k_b = -1
+        else: 
+            k_b = k_s + 1        
                 
         # Smaller values
         x_s = self.HIColumn[i_s]
