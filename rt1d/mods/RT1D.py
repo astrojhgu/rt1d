@@ -98,16 +98,9 @@ def Shine(pf, r = None, IsRestart = False):
                 MPI.COMM_WORLD.barrier()
     
         # Initialize integral tables
-        iits = rtm.InitializeIntegralTables(pf, data)
+        iits = rtm.InitializeIntegralTables(pf, data, g)
         if pf['TabulateIntegrals']:
             itabs = iits.TabulateRateIntegrals()        
-            
-            if pf['PhotonConserving'] and pf['AutoFallback']:
-                itabs = [itabs]
-                tmp_pf = copy.deepcopy(pf)
-                tmp_pf['PhotonConserving'] = 0
-                tmp_iits = rtm.InitializeIntegralTables(tmp_pf, data)
-                itabs.append(tmp_iits.TabulateRateIntegrals())
             
             if pf["ExitAfterIntegralTabulation"]: 
                 continue

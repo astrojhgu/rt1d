@@ -71,11 +71,6 @@ class Interpolate:
         i_b, j_b, k_b = ijk_b
         x_d, y_d, z_d = xyz_d 
                 
-        #if integral == 'PhotoIonizationRate0': print '\n', value, integral, self.itabs[integral][i_s][j_s][k_s], self.itabs[integral][i_s][j_s][k_b], \
-        #    self.itabs[integral][i_s][j_b][k_s], self.itabs[integral][i_s][j_b][k_b], \
-        #    self.itabs[integral][i_b][j_s][k_s], self.itabs[integral][i_b][j_s][k_b], \
-        #    self.itabs[integral][i_b][j_b][k_s], self.itabs[integral][i_b][j_b][k_b], '\n'
-                
         i1 = self.itabs[integral][i_s][j_s][k_s] * (1 - z_d) + self.itabs[integral][i_s][j_s][k_b] * z_d
         i2 = self.itabs[integral][i_s][j_b][k_s] * (1 - z_d) + self.itabs[integral][i_s][j_b][k_b] * z_d
                                                                                               
@@ -98,9 +93,6 @@ class Interpolate:
             return None
         
         value = np.log10(value)
-        
-        #print self.HeIIColumn
-        #print value[2], self.dHeIIColumn, self.offsetHeIIColumn
                                                 
         # Smaller indices
         i_s = int((value[0] / self.dHIColumn) - self.offsetHIColumn)

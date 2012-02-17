@@ -57,7 +57,7 @@ tiny_number = 1e-30
 IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', 'TotalOpticalDepth']
 
 class InitializeIntegralTables: 
-    def __init__(self, pf, data):
+    def __init__(self, pf, data = None, grid = None):
         self.pf = pf
         self.rs = RadiationSource(pf)
         self.esec = SecondaryElectrons(pf)
@@ -65,6 +65,7 @@ class InitializeIntegralTables:
         self.OutputDirectory = pf["OutputDirectory"]
         self.ProgressBar = pf["ProgressBar"] and pb   
         self.ParallelizationMethod = pf["ParallelizationMethod"]
+        self.IntegralTableName = pf["IntegralTableName"]
         
         # Physics, initial conditions, control parameters
         self.MultiSpecies = pf["MultiSpecies"]
@@ -83,17 +84,17 @@ class InitializeIntegralTables:
         self.SpectrumMaxEnergy = pf["SpectrumMaxEnergy"]
         self.SpectrumAbsorbingColumn = pf["SpectrumAbsorbingColumn"]
         
-        # Column densities
-        self.HIColumnMin = pf["HIColumnMin"]
-        self.HIColumnMax =  pf["HIColumnMax"]
-        self.HeIColumnMin = pf["HeIColumnMin"]
-        self.HeIColumnMax =  pf["HeIColumnMax"]
-        self.HeIIColumnMin = pf["HeIIColumnMin"]
-        self.HeIIColumnMax =  pf["HeIIColumnMax"]
+        # Column densities - determine automatically
+        self.n_H = data['HIDensity'] + data['HIIDensity']
+        self.n_He = data['HeIDensity'] + data['HeIIDensity'] + data['HeIIIDensity']
+        self.HIColumnMin = 10**np.floor(np.log10(0.5 * pf["MinimumSpeciesFraction"] * np.max(self.n_H * grid.dx)))
+        self.HIColumnMax = 10**np.ceil(np.log10(2.0 * pf["LengthUnits"] * np.sum(self.n_H)))
+        self.HeIColumnMin = self.HeIIColumnMin = 10**np.floor(np.log10(0.5 * pf["MinimumSpeciesFraction"] * np.max(self.n_He * grid.dx)))
+        self.HeIColumnMax = self.HeIIColumnMax = 10**np.ceil(np.log10(2.0 * pf["LengthUnits"] * np.sum(self.n_He)))
         self.HINBins = pf["ColumnDensityBinsHI"]
         self.HeINBins = pf["ColumnDensityBinsHeI"]
         self.HeIINBins = pf["ColumnDensityBinsHeII"]
-                
+                        
         self.HIColumn = np.logspace(np.log10(self.HIColumnMin), np.log10(self.HIColumnMax), self.HINBins)
 
         # Set up column density vectors for each absorber
@@ -126,9 +127,12 @@ class InitializeIntegralTables:
         """
         Returns the filename following the convention:
                 
-            filename = SourceType_<SourceTemperature>_{SourceType}.h5
+            filename = SourceType_<SourceTemperature>_{SourceType}.h5 # out of date
         
         """
+        
+        if self.IntegralTableName:
+            return self.IntegralTableName
               
         ms = 'ms%i' % self.MultiSpecies
         pc = 'pc%i' % self.PhotonConserving        
@@ -191,28 +195,46 @@ class InitializeIntegralTables:
             tabloc = "{0}/input/{1}".format(self.rt1d, filename)
         elif os.path.exists("{0}/{1}".format(self.OutputDirectory, filename)): 
             tabloc = "{0}/{1}".format(self.OutputDirectory, filename)
+        elif os.path.exists("%s" % self.IntegralTableName):
+            tabloc = "%s" % self.IntegralTableName
         else:
             if rank == 0:
                 print "\nDid not find a pre-existing integral table.  Generating {0}/{1} now...".format(self.OutputDirectory, filename)
+                print "%g < ncol_HI < %g" % (self.HIColumnMin, self.HIColumnMax)
+                print "%g < ncol_HeI and ncol_HeII < %g" % (self.HeIColumnMin, self.HeIColumnMax)
             return None
         
         if rank == 0:
-            print "\nFound an integral table for this source.  Reading {0}{1}".format(self.OutputDirectory, filename)
+            print "\nFound an integral table for this source.  Reading %s" % tabloc
         
-        f = h5py.File("{0}/{1}".format(self.OutputDirectory, filename), 'r')
+        f = h5py.File("%s" % tabloc, 'r')
         
         for item in f["IntegralTable"]: 
             itab[item] = f["IntegralTable"][item].value
         
         itab["HIColumnValues_x"] = f["ColumnVectors"]["HIColumnValues_x"].value
-        self.HIColumn = itab["HIColumnValues_x"]    # Override what's in parameter file if there is a preexisting table
+        if np.min(itab["HIColumnValues_x"]) < self.HIColumnMin or \
+            np.max(itab["HIColumnValues_x"]) > self.HIColumnMax:
+            print "The ncol_H bounds of the existing lookup table are inadequate for the requested simulation.  Re-creating now..."
+            return None
         
         if self.MultiSpecies > 0:
             itab["HeIColumnValues_y"] = f["ColumnVectors"]["HeIColumnValues_y"].value
             itab["HeIIColumnValues_z"] = f["ColumnVectors"]["HeIIColumnValues_z"].value
+        
+            if np.min(itab["HeIColumnValues_y"]) < self.HeIColumnMin or \
+                np.max(itab["HeIColumnValues_y"]) < self.HeIColumnMin or \
+                np.min(itab["HeIIColumnValues_z"]) < self.HeIIColumnMin or \
+                np.max(itab["HeIIColumnValues_z"]) < self.HeIIColumnMin:
+                print "The bounds of the ncol_He existing lookup table are inadequate for the requested simulation.  Re-creating now..."
+                return None
+        
+        self.HIColumn = itab["HIColumnValues_x"]    # Override what's in parameter file if there is a preexisting table
+        
+        if self.MultiSpecies > 0:
             self.HeIColumn = itab["HeIColumnValues_y"]
             self.HeIIColumn = itab["HeIIColumnValues_z"]
-            
+        
         return itab
                     
     def WriteIntegralTable(self, itabs):

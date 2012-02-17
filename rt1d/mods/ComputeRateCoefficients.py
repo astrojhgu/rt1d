@@ -26,15 +26,8 @@ class RateCoefficients:
         self.esec = SecondaryElectrons(pf)
         
         # Initialize integral tables
-        if type(itabs) is list:
-            self.itabs = itabs[0]
-            self.itabs_fback = itabs[1]
-            self.Interpolate = Interpolate(pf, n_col, self.itabs)
-            self.Interpolate_fback = Interpolate(pf, n_col, self.itabs_fback)
-        else:
-            self.itabs = itabs
-            self.itabs_fback = self.Interpolate_fback = None
-            self.Interpolate = Interpolate(pf, n_col, self.itabs)
+        self.itabs = itabs
+        self.Interpolate = Interpolate(pf, n_col, self.itabs)
             
         self.TabulateIntegrals = self.pf["TabulateIntegrals"]
         self.AutoFallback = self.pf['AutoFallback']

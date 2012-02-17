@@ -16,6 +16,8 @@ from Multiplot import *
 from rt1d.mods.Constants import *
 from rt1d.analysis.Dataset import Dataset
 from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
+from rt1d.mods.InitializeIntegralTables import InitializeIntegralTables
+from rt1d.mods.Interpolate import Interpolate
 
 fields = ['T', 'n_HI', 'n_HII', 'x_HI', 'x_HII']
 
@@ -24,6 +26,9 @@ class Analyze:
         self.ds = Dataset(pf)
         self.data = self.ds.data
         self.pf = self.ds.pf    # dictionary
+        self.iits = InitializeIntegralTables(self.pf)
+        self.interp = Interpolate(self.pf, [self.iits.HIColumn, self.iits.HeIColumn, self.iits.HeIIColumn], 
+            self.iits.TabulateRateIntegrals())
         
         # Convenience
         self.GridDimensions = int(self.pf['GridDimensions'])
@@ -48,6 +53,13 @@ class Analyze:
                                 
         # Store bins used for PDFs/CDFs
         self.bins = {}
+        
+        # Read integral table if it exists.
+        self.tname = self.iits.DetermineTableName()
+        if os.path.exists('%s' % self.tname):
+            self.itabs = self.iits.TabulateRateIntegrals()
+        else:
+            self.itabs = None
         
     def StromgrenSphere(self, t, sol = 0, T0 = None):
         """
@@ -189,7 +201,119 @@ class Analyze:
             ax.clear()
             
         pl.close()    
-                         
+        
+    def InspectIntegralTable(self, integral = 0, species = 0, nHI = None, nHeI = 0.0, nHeII = 0.0,
+        color = 'k', ls = '-', annotate = True):
+        """
+        Plot integral values...or something.
+        """ 
+        
+        if species == 0:
+            s = 'HI'
+        elif species == 1:
+            s = 'HeI'
+        else:
+            s = 'HeII'
+        
+        # Convert integral int to string
+        if integral == 0:
+            integral = 'PhotoIonizationRate%i' % species 
+            ylabel = r'$\Phi_{\mathrm{%s}}$' % s
+        elif integral == 1:
+            integral = 'ElectronHeatingRate%i' % species
+            ylabel = r'$\Psi_{\mathrm{%s}}$' % s
+        else:
+            integral = 'TotalOpticalDepth%i' % species 
+            ylabel = r'$\sum_i\int_{\nu} \tau_{i,\nu} d\nu$'
+            pl.rcParams['figure.subplot.left'] = 0.2
+        
+        # Figure out axes
+        if nHI is None:
+            x = self.itabs['HIColumnValues_x']
+            i1 = np.argmin(np.abs(self.itabs['HeIColumnValues_y'] - nHeI))
+            i2 = np.argmin(np.abs(self.itabs['HeIIColumnValues_z'] - nHeII))
+            y = self.itabs[integral][0:,i1,i2]
+            xlabel = r'$n_{\mathrm{HI}} \ (\mathrm{cm^{-2}})$'
+        elif nHeI is None:
+            x = self.itabs['HeIColumnValues_y']
+            i1 = np.argmin(np.abs(self.itabs['HIColumnValues_x'] - nHI))
+            i2 = np.argmin(np.abs(self.itabs['HeIIColumnValues_z'] - nHeII))
+            y = self.itabs[integral][i1,0:,i2]
+            xlabel = r'$n_{\mathrm{HeI}} \ (\mathrm{cm^{-2}})$'
+        else:
+            x = self.itabs['HeIIColumnValues_z']
+            i1 = np.argmin(np.abs(self.itabs['HIColumnValues_x'] - nHI))
+            i2 = np.argmin(np.abs(self.itabs['HeIColumnValues_y'] - nHeI))
+            y = self.itabs[integral][i1,i2,0:]
+            xlabel = r'$n_{\mathrm{HeII}} \ (\mathrm{cm^{-2}})$'
+            
+        if not hasattr(self, 'ax'):
+            self.ax = pl.subplot(111)
+            
+        self.ax.loglog(x, y, color = color, ls = '-')
+        self.ax.set_xlabel(xlabel)
+        self.ax.set_ylabel(ylabel)
+        
+        pl.draw()
+        
+    def InspectInterpolation(self, integral = 0, species = 0, nHI = np.logspace(15, 20, 50), nHeI = 1.0, nHeII = 1.0):
+        """
+        Now check how good our interpolation is...
+        
+        Give columns in log-space.
+        """   
+        
+        if species == 0:
+            s = 'HI'
+        elif species == 1:
+            s = 'HeI'
+        else:
+            s = 'HeII'
+        
+        # Convert integral int to string
+        if integral == 0:
+            integral = 'PhotoIonizationRate%i' % species 
+            ylabel = r'$\Phi_{\mathrm{%s}}$' % s
+        elif integral == 1:
+            integral = 'ElectronHeatingRate%i' % species
+            ylabel = r'$\Psi_{\mathrm{%s}}$' % s
+        else:
+            integral = 'TotalOpticalDepth%i' % species 
+            ylabel = r'$\sum_i\int_{\nu} \tau_{i,\nu} d\nu$'
+            pl.rcParams['figure.subplot.left'] = 0.2
+        
+        result = []
+        if type(nHI) is not float:
+            x = nHI
+            for col in nHI:
+                tmp = [col, nHeI, nHeII]
+                print tmp, integral, self.interp.GetIndices3D(tmp)
+                result.append(self.interp.InterpolateTriLinear(self.interp.GetIndices3D(tmp), 
+                    '%s' % integral))
+            
+        elif type(nHeI) is not float:
+            x = nHeI
+            for col in nHeI:
+                tmp = [nHI, col, nHeII]
+                result.append(self.interp.InterpolateTriLinear(self.interp.GetIndices3D(tmp), 
+                    '%s' % integral))    
+        
+        else:
+            x = nHeII
+            for col in nHeII:
+                tmp = [nHI, nHeI, col]
+                result.append(self.interp.InterpolateTriLinear(self.interp.GetIndices3D(tmp), 
+                    '%s' % integral))            
+            
+        self.ax = pl.subplot(111)
+        self.ax.loglog(x, result, color = 'k')
+        
+        
+        pl.draw()
+        
+        return result
+                    
+                                 
     def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):
         """
         Histogram all fields.

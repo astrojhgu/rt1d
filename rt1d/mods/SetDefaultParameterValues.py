@@ -38,6 +38,7 @@ def SetDefaultParameterValues():
           
         # Integral tabulation
         "TabulateIntegrals": 1, \
+        "IntegralTableName": None, \
         "AutoFallback": 0, \
         "HIColumnMin": 1e10, \
         "HIColumnMax": 1e22, \
