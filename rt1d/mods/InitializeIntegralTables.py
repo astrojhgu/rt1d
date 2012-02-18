@@ -250,6 +250,7 @@ class InitializeIntegralTables:
         col_grp = f.create_group("ColumnVectors")
         
         for par in self.pf: 
+            print par, self.pf[par]
             pf_grp.create_dataset(par, data = self.pf[par])
         for integral in itabs: 
             tab_grp.create_dataset(integral, data = itabs[integral])
