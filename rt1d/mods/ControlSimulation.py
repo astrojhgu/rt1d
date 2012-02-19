@@ -62,7 +62,7 @@ class ControlSimulation:
         tau0 = gamma = Beta = alpha = nion = xi = 1. * np.zeros(3)
         nabs = np.array([data['HIDensity'][0], data['HeIDensity'][0], data['HeIIDensity'][0]])
         ncell = r.dx[0] * nabs    
-        nout = ncell             
+        nout = np.log10(ncell)
         Vsh = r.coeff.ShellVolume(self.R0, r.dx[0])    
         
         if self.pf["PhotonConserving"]:                  

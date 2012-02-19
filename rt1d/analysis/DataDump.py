@@ -55,19 +55,39 @@ class DataDump:
         self.dtPhoton = dd["dtPhoton"].value / pf["TimeUnits"].value
         self.n_B = self.n_H + self.n_e
         
-        if pf["MultiSpecies"].value > 0:
-            self.n_HeI = dd["HeIDensity"].value
-            self.n_HeII = dd["HeIIDensity"].value
-            self.n_HeIII = dd["HeIIIDensity"].value
-            self.n_He = self.n_HeI + self.n_HeII + self.n_HeIII
-            self.x_HeI = self.n_HeI / self.n_He
-            self.x_HeII = self.n_HeII / self.n_He
-            self.x_HeIII = self.n_HeIII / self.n_He
-            self.ncol_HeI = np.roll(np.cumsum(self.n_HeI * self.dx), 1)
-            self.ncol_HeII = np.roll(np.cumsum(self.n_HeII * self.dx), 1)
-            self.ncol_e = np.roll(np.cumsum(self.n_e * self.dx), 1)
-            self.ncol_HeI[0] = self.ncol_HeII[0] = neglible_column
-            self.n_B += self.n_He
+        #if pf["MultiSpecies"].value > 0:
+        self.n_HeI = dd["HeIDensity"].value
+        self.n_HeII = dd["HeIIDensity"].value
+        self.n_HeIII = dd["HeIIIDensity"].value
+        self.n_He = self.n_HeI + self.n_HeII + self.n_HeIII
+        self.x_HeI = self.n_HeI / self.n_He
+        self.x_HeII = self.n_HeII / self.n_He
+        self.x_HeIII = self.n_HeIII / self.n_He
+        self.ncol_HeI = np.roll(np.cumsum(self.n_HeI * self.dx), 1)
+        self.ncol_HeII = np.roll(np.cumsum(self.n_HeII * self.dx), 1)
+        self.ncol_e = np.roll(np.cumsum(self.n_e * self.dx), 1)
+        self.ncol_HeI[0] = self.ncol_HeII[0] = neglible_column
+        self.n_B += self.n_He
             
         self.f_e = self.n_e / self.n_B    
+        
+    def __getitem__(self, name):
+        """
+        Get data by name we use in hdf5 storage.
+        """    
+        
+        if name == 'HIDensity':
+            return self.n_HI
+        elif name == 'HIIDensity':
+            return self.n_HII
+        elif name == 'HIIDensity':
+            return self.n_HII
+        elif name == 'HeIDensity':
+            return self.n_HeI
+        elif name == 'HeIIDensity':
+            return self.n_HeII
+        elif name == 'HeIIIDensity':
+            return self.n_HeIII
+                    
             
+                    

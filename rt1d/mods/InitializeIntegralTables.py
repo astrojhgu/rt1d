@@ -57,7 +57,7 @@ tiny_number = 1e-30
 IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', 'TotalOpticalDepth']
 
 class InitializeIntegralTables: 
-    def __init__(self, pf, data = None, grid = None):
+    def __init__(self, pf, data, grid):
         self.pf = pf
         self.rs = RadiationSource(pf)
         self.esec = SecondaryElectrons(pf)
@@ -87,20 +87,21 @@ class InitializeIntegralTables:
         # Column densities - determine automatically
         self.n_H = data['HIDensity'] + data['HIIDensity']
         self.n_He = data['HeIDensity'] + data['HeIIDensity'] + data['HeIIIDensity']
-        self.HIColumnMin = 10**np.floor(np.log10(0.5 * pf["MinimumSpeciesFraction"] * np.max(self.n_H * grid.dx)))
-        self.HIColumnMax = 10**np.ceil(np.log10(2.0 * pf["LengthUnits"] * np.sum(self.n_H)))
-        self.HeIColumnMin = self.HeIIColumnMin = 10**np.floor(np.log10(0.5 * pf["MinimumSpeciesFraction"] * np.max(self.n_He * grid.dx)))
-        self.HeIColumnMax = self.HeIIColumnMax = 10**np.ceil(np.log10(2.0 * pf["LengthUnits"] * np.sum(self.n_He)))
+        self.HIColumnMin = np.floor(np.log10(0.5 * pf["MinimumSpeciesFraction"] * np.max(self.n_H * grid.dx)))
+        self.HIColumnMax = np.ceil(np.log10(2.0 * pf["LengthUnits"] * np.sum(self.n_H)))
+        self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(0.5 * pf["MinimumSpeciesFraction"] * np.max(self.n_He * grid.dx)))
+        self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(2.0 * pf["LengthUnits"] * np.sum(self.n_He)))
+        
         self.HINBins = pf["ColumnDensityBinsHI"]
         self.HeINBins = pf["ColumnDensityBinsHeI"]
         self.HeIINBins = pf["ColumnDensityBinsHeII"]
                         
-        self.HIColumn = np.logspace(np.log10(self.HIColumnMin), np.log10(self.HIColumnMax), self.HINBins)
+        self.HIColumn = np.linspace(self.HIColumnMin, self.HIColumnMax, self.HINBins)
 
         # Set up column density vectors for each absorber
         if self.MultiSpecies > 0: 
-            self.HeIColumn = np.logspace(np.log10(self.HeIColumnMin), np.log10(self.HeIColumnMax), self.HeINBins)
-            self.HeIIColumn = np.logspace(np.log10(self.HeIIColumnMin), np.log10(self.HeIIColumnMax), self.HeIINBins)        
+            self.HeIColumn = np.linspace(self.HeIColumnMin, self.HeIColumnMax, self.HeINBins)
+            self.HeIIColumn = np.linspace(self.HeIIColumnMin, self.HeIIColumnMax, self.HeIINBins)        
         else:
             self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
             self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
@@ -250,10 +251,9 @@ class InitializeIntegralTables:
         col_grp = f.create_group("ColumnVectors")
         
         for par in self.pf: 
-            print par, self.pf[par]
             pf_grp.create_dataset(par, data = self.pf[par])
         for integral in itabs: 
-            tab_grp.create_dataset(integral, data = itabs[integral])
+            tab_grp.create_dataset(integral, data = np.log10(itabs[integral]))
     
         col_grp.create_dataset("HIColumnValues_x", data = self.HIColumn)
         
@@ -310,7 +310,7 @@ class InitializeIntegralTables:
                         pbar.update(i + 1)
                     
                     # Evaluate integral
-                    tab[i] = eval("self.{0}({1}, 0)".format(integral, [ncol_HI, 0, 0]))
+                    tab[i] = eval("self.{0}({1}, 0)".format(integral, [10**ncol_HI, 0, 0]))
                 
                 if size > 1 and self.ParallelizationMethod == 1: 
                     tab = MPI.COMM_WORLD.allreduce(tab, tab)
@@ -349,7 +349,7 @@ class InitializeIntegralTables:
                                 if self.ParallelizationMethod == 1 and (global_i % size != rank): 
                                     continue
                                 
-                                tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [ncol_HI, ncol_HeI, ncol_HeII], species))  
+                                tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [10**ncol_HI, 10**ncol_HeI, 10**ncol_HeII], species))  
                                                                 
                                 if rank == 0 and self.ProgressBar:
                                     pbar.update(global_i)                            

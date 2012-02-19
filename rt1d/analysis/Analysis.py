@@ -13,6 +13,7 @@ import os
 import numpy as np
 import pylab as pl
 from Multiplot import *
+import rt1d.mods as rtm
 from rt1d.mods.Constants import *
 from rt1d.analysis.Dataset import Dataset
 from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
@@ -26,16 +27,16 @@ class Analyze:
         self.ds = Dataset(pf)
         self.data = self.ds.data
         self.pf = self.ds.pf    # dictionary
-        self.iits = InitializeIntegralTables(self.pf)
-        self.interp = Interpolate(self.pf, [self.iits.HIColumn, self.iits.HeIColumn, self.iits.HeIIColumn], 
-            self.iits.TabulateRateIntegrals())
+        self.g = rtm.InitializeGrid(self.pf)   
+        self.iits = InitializeIntegralTables(self.pf, self.data[0], self.g)
+        
         
         # Convenience
         self.GridDimensions = int(self.pf['GridDimensions'])
         self.grid = np.arange(self.GridDimensions)
         self.LengthUnits = self.pf['LengthUnits']
         self.StartRadius = self.pf['StartRadius']
-        self.grid = np.arange(self.GridDimensions)
+        self.MultiSpecies = self.pf["MultiSpecies"]
         
         # Deal with log-grid
         if self.pf["LogarithmicGrid"]:
@@ -58,8 +59,10 @@ class Analyze:
         self.tname = self.iits.DetermineTableName()
         if os.path.exists('%s' % self.tname):
             self.itabs = self.iits.TabulateRateIntegrals()
+            self.interp = Interpolate(self.pf, [self.iits.HIColumn, self.iits.HeIColumn, self.iits.HeIIColumn], 
+                self.itabs)
         else:
-            self.itabs = None
+            self.itabs = self.interp = None
         
     def StromgrenSphere(self, t, sol = 0, T0 = None):
         """
@@ -202,7 +205,7 @@ class Analyze:
             
         pl.close()    
         
-    def InspectIntegralTable(self, integral = 0, species = 0, nHI = None, nHeI = 0.0, nHeII = 0.0,
+    def InspectIntegralTable(self, integral = 0, species = 0, nHI = None, nHeI = 1.0, nHeII = 1.0,
         color = 'k', ls = '-', annotate = True):
         """
         Plot integral values...or something.
@@ -230,9 +233,12 @@ class Analyze:
         # Figure out axes
         if nHI is None:
             x = self.itabs['HIColumnValues_x']
-            i1 = np.argmin(np.abs(self.itabs['HeIColumnValues_y'] - nHeI))
-            i2 = np.argmin(np.abs(self.itabs['HeIIColumnValues_z'] - nHeII))
-            y = self.itabs[integral][0:,i1,i2]
+            if self.MultiSpecies:
+                i1 = np.argmin(np.abs(self.itabs['HeIColumnValues_y'] - nHeI))
+                i2 = np.argmin(np.abs(self.itabs['HeIIColumnValues_z'] - nHeII))
+                y = self.itabs[integral][0:,i1,i2]
+            else:
+                y = self.itabs[integral]
             xlabel = r'$n_{\mathrm{HI}} \ (\mathrm{cm^{-2}})$'
         elif nHeI is None:
             x = self.itabs['HeIColumnValues_y']
@@ -250,13 +256,14 @@ class Analyze:
         if not hasattr(self, 'ax'):
             self.ax = pl.subplot(111)
             
-        self.ax.loglog(x, y, color = color, ls = '-')
+        self.ax.loglog(10**x, 10**y, color = color, ls = '-')
         self.ax.set_xlabel(xlabel)
         self.ax.set_ylabel(ylabel)
         
         pl.draw()
         
-    def InspectInterpolation(self, integral = 0, species = 0, nHI = np.logspace(15, 20, 50), nHeI = 1.0, nHeII = 1.0):
+    def InspectInterpolation(self, integral = 0, species = 0, nHI = np.linspace(12, 24, 1000), 
+        nHeI = 0.0, nHeII = 0.0, color = 'k', ls = '-'):
         """
         Now check how good our interpolation is...
         
@@ -287,33 +294,36 @@ class Analyze:
             x = nHI
             for col in nHI:
                 tmp = [col, nHeI, nHeII]
-                print tmp, integral, self.interp.GetIndices3D(tmp)
-                result.append(self.interp.InterpolateTriLinear(self.interp.GetIndices3D(tmp), 
-                    '%s' % integral))
+                                
+                if self.MultiSpecies:
+                    indices = self.interp.GetIndices3D(tmp)
+                else:
+                    indices = None
+                    
+                result.append(self.interp.interp(indices, 
+                    '%s' % integral, tmp))
             
         elif type(nHeI) is not float:
             x = nHeI
             for col in nHeI:
                 tmp = [nHI, col, nHeII]
-                result.append(self.interp.InterpolateTriLinear(self.interp.GetIndices3D(tmp), 
+                result.append(self.interp.interp(self.interp.GetIndices3D(tmp), 
                     '%s' % integral))    
         
         else:
             x = nHeII
             for col in nHeII:
                 tmp = [nHI, nHeI, col]
-                result.append(self.interp.InterpolateTriLinear(self.interp.GetIndices3D(tmp), 
+                result.append(self.interp.interp(self.interp.GetIndices3D(tmp), 
                     '%s' % integral))            
             
         self.ax = pl.subplot(111)
-        self.ax.loglog(x, result, color = 'k')
+        self.ax.loglog(10**np.array(x), result, color = color, ls = ls)
         
+        return x, result
         
-        pl.draw()
-        
-        return result
-                    
-                                 
+        pl.draw()                    
+                                         
     def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):
         """
         Histogram all fields.

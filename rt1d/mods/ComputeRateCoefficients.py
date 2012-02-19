@@ -58,6 +58,9 @@ class RateCoefficients:
         
             incoming args: [nabs, nion, n_H, n_He, n_e]
             outgoing args: [nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi]
+            
+            ***REMEMBER: ncol is really np.log10(ncol)!
+            
         """    
         
         nabs = args[0]
@@ -81,7 +84,6 @@ class RateCoefficients:
         Psi_N = np.zeros(3)
         Psi_N_dN = np.zeros(3)
         
-
         # Derived quantities we'll need
         Vsh = self.ShellVolume(r, dr)
                         
@@ -96,7 +98,7 @@ class RateCoefficients:
                 
                 # A few quantities that are better to just compute once
                 ncell = dr * nabs * self.mask[i]   
-                nout = ncol + ncell
+                nout = np.log10(10**ncol + ncell)
                 indices_out = self.Interpolate.GetIndices3D(nout)
                 
                 if self.PhotonConserving:
@@ -237,15 +239,13 @@ class RateCoefficients:
                 IonizationRate = Phi_N
             
         else:
-            tau_E = ncol[species] * self.sigma[species][bin]       # Optical depth up until this cell
+            tau_E = 10**ncol[species] * self.sigma[species][bin]       # Optical depth up until this cell
             tau_c = dr * nabs[species] * self.sigma[species][bin]  # Optical depth of this cell
             Q0 = Qdot * np.exp(-tau_E)                             # number of photons entering cell per sec
             dQ = Q0 * (1. - np.exp(-tau_c))                        # number of photons absorbed in cell per sec
             
             IonizationRate = dQ / nabs[species] / self.ShellVolume(r, dr)    # ionizations / sec / hydrogen atom
-    
-        #print IonizationRate, ncol, nout
-            
+                
         return A * IonizationRate, Phi_N, Phi_N_dN
         
     def PhotoElectricHeatingRate(self, species = None, E = None, Qdot = None, Lbol = None, 

@@ -54,6 +54,7 @@ m_HeII = 2.0 * (m_p + m_n) + m_e
 
 E_th = [13.6, 24.6, 54.4]
 
+neglible_tau = 1e-12
 neglible_column = 1
 
 class Radiate:
@@ -147,9 +148,6 @@ class Radiate:
 
         # For convenience 
         self.zeros = np.zeros(4)
-        self.HIColumn = n_col[0]
-        self.HeIColumn = n_col[1]
-        self.HeIIColumn = n_col[2]
 
     def EvolvePhotons(self, data, t, dt, h, lb):
         """
@@ -206,7 +204,7 @@ class Radiate:
         ncol_HI[0] = ncol_HeI[0] = ncol_HeII[0] = neglible_column
         
         # Convenience arrays for column, absorber, and ion densities, plus some others
-        ncol_all = np.transpose([ncol_HI, ncol_HeI, ncol_HeII])
+        ncol_all = np.transpose(np.log10([ncol_HI, ncol_HeI, ncol_HeII]))
         nabs_all = np.transpose([data["HIDensity"], data["HeIDensity"], data["HeIIDensity"]])
         nion_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"]])
         mu_all = 1. / (self.X * (1. + x_HII_arr) + self.Y * (1. + x_HeII_arr + x_HeIII_arr) / 4.)
@@ -223,29 +221,28 @@ class Radiate:
         
         # Compute optical depths *to* all cells
         tau_all_arr = np.zeros([3, self.GridDimensions])    
-        if self.PhotonConserving:
+        if not self.pf['TabulateIntegrals']:
             sigma0 = PhotoIonizationCrossSection(self.rs.E, species = 0)
             tmp_HI = np.transpose(len(self.rs.E) * [ncol_HI])            
-            tau_all_arr[0] = np.sum(tmp_HI * sigma0, axis = 1)
+            tau_all_arr[0] = 10**np.sum(tmp_HI * sigma0, axis = 1)
             
             if self.MultiSpecies:
                 sigma1 = PhotoIonizationCrossSection(self.rs.E, species = 1)
                 sigma2 = PhotoIonizationCrossSection(self.rs.E, species = 2)
                 tmp_HeI = np.transpose(len(self.rs.E) * [ncol_HeI])
                 tmp_HeII = np.transpose(len(self.rs.E) * [ncol_HeII])
-                tau_all_arr[1] = np.sum(tmp_HeI * sigma1, axis = 1)
-                tau_all_arr[2] = np.sum(tmp_HeII * sigma2, axis = 1)
+                tau_all_arr[1] = 10**np.sum(tmp_HeI * sigma1, axis = 1)
+                tau_all_arr[2] = 10**np.sum(tmp_HeII * sigma2, axis = 1)
             
-        else:
+        else: # CHECK ON THIS
             for i, col in enumerate(ncol_all):
-                
                 tau_all_arr[0][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth0", col)
                 
                 if self.MultiSpecies:
                     tau_all_arr[1][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth1", col)
                     tau_all_arr[2][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth2", col)
 
-            tau_all_arr[0][0] = tau_all_arr[1][0] = tau_all_arr[2][0] = neglible_column    
+            tau_all_arr[0][0] = tau_all_arr[1][0] = tau_all_arr[2][0] = neglible_tau 
 
         tau_all = zip(*tau_all_arr) 
                                 

@@ -14,9 +14,9 @@ import numpy as np
 class Interpolate:
     def __init__(self, pf, n_col, itabs):
         self.pf = pf
-        self.HIColumn = np.log10(n_col[0])
-        self.HeIColumn = np.log10(n_col[1])
-        self.HeIIColumn = np.log10(n_col[2])
+        self.HIColumn = n_col[0]
+        self.HeIColumn = n_col[1]
+        self.HeIIColumn = n_col[2]
         self.HINbins = len(self.HIColumn)
         self.HeINbins = len(self.HeIColumn)
         self.HeIINbins = len(self.HeIIColumn)
@@ -26,18 +26,11 @@ class Interpolate:
         self.dHIColumn = np.diff(self.HIColumn)[0]
         self.dHeIColumn = np.diff(self.HeIColumn)[0]
         self.dHeIIColumn = np.diff(self.HeIIColumn)[0]
-                
-        self.AllColumns = [self.HIColumn, self.HeIColumn, self.HeIIColumn]
-        
-        self.MinimumColumns = 10**np.array([self.HIColumnMin, self.HeIColumnMin, self.HeIIColumnMin])
-                
+                                        
         self.offsetHIColumn = self.HIColumnMin / self.dHIColumn
         self.offsetHeIColumn = self.HeIColumnMin / self.dHeIColumn
         self.offsetHeIIColumn = self.HeIIColumnMin / self.dHeIIColumn
         self.offsets = np.array([self.offsetHIColumn, self.offsetHeIColumn, self.offsetHeIIColumn])
-        
-        # For partial optical depths
-        self.npartial = np.array([5, 25])
         
         # This is a dictionary with all the lookup tables
         self.itabs = itabs
@@ -55,10 +48,8 @@ class Interpolate:
         Use this technique for hydrogen-only calculations.  For consistency with MultiSpecies > 0 methods, value 
         should still be a 3-element list.  
         """    
-        
-        # GENERALIZE THIS!
-                
-        return np.interp(np.log10(value[0]), self.AllColumns[int(integral[-1])], self.itabs[integral])
+                        
+        return 10**np.interp(value[0], self.HIColumn, self.itabs[integral])
         
     def InterpolateTriLinear(self, indices, integral, value = None):
         """
@@ -80,7 +71,7 @@ class Interpolate:
         w1 = i1 * (1 - y_d) + i2 * y_d
         w2 = j1 * (1 - y_d) + j2 * y_d
                                                 
-        return w1 * (1 - x_d) + w2 * x_d
+        return 10**(w1 * (1 - x_d) + w2 * x_d)
     
     def GetIndices3D(self, value):
         """
@@ -91,9 +82,7 @@ class Interpolate:
         
         if not self.MultiSpecies:
             return None
-        
-        value = np.log10(value)
-                                                
+                                                        
         # Smaller indices
         i_s = int((value[0] / self.dHIColumn) - self.offsetHIColumn)
         j_s = int((value[1] / self.dHeIColumn) - self.offsetHeIColumn)
@@ -139,9 +128,7 @@ class Interpolate:
         """
         3D nearest neighbor interpolation.
         """  
-        
-        value = np.log10(np.array(value))
-        
+                
         # Analytically solve for positions in the array
         i = int(round((value[0] / self.dHIColumn) - self.offsetHIColumn))
         j = int(round((value[1] / self.dHeIColumn) - self.offsetHeIColumn))
@@ -152,6 +139,6 @@ class Interpolate:
         j = min(self.HeINbins - 1, max(0, j))
         k = min(self.HeIINbins - 1, max(0, k))
                                                         
-        return self.itabs[integral][i][j][k]
+        return 10**self.itabs[integral][i][j][k]
                   
         
