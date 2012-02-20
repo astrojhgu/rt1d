@@ -201,8 +201,9 @@ class InitializeIntegralTables:
         else:
             if rank == 0:
                 print "\nDid not find a pre-existing integral table.  Generating {0}/{1} now...".format(self.OutputDirectory, filename)
-                print "%g < ncol_HI < %g" % (self.HIColumnMin, self.HIColumnMax)
-                print "%g < ncol_HeI and ncol_HeII < %g" % (self.HeIColumnMin, self.HeIColumnMax)
+                print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
+                if self.MultiSpecies:
+                    print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
             return None
         
         if rank == 0:
@@ -253,7 +254,7 @@ class InitializeIntegralTables:
         for par in self.pf: 
             pf_grp.create_dataset(par, data = self.pf[par])
         for integral in itabs: 
-            tab_grp.create_dataset(integral, data = np.log10(itabs[integral]))
+            tab_grp.create_dataset(integral, data = itabs[integral])
     
         col_grp.create_dataset("HIColumnValues_x", data = self.HIColumn)
         
@@ -310,7 +311,7 @@ class InitializeIntegralTables:
                         pbar.update(i + 1)
                     
                     # Evaluate integral
-                    tab[i] = eval("self.{0}({1}, 0)".format(integral, [10**ncol_HI, 0, 0]))
+                    tab[i] = eval("self.{0}({1}, 0)".format(integral, [10**ncol_HI, 1, 1]))
                 
                 if size > 1 and self.ParallelizationMethod == 1: 
                     tab = MPI.COMM_WORLD.allreduce(tab, tab)
@@ -320,7 +321,7 @@ class InitializeIntegralTables:
                     pbar.finish()
         
                 # Store table
-                itabs[name] = tab                    
+                itabs[name] = np.log10(tab)
                 del tab
                 
         # If we're including helium as well         
@@ -357,18 +358,15 @@ class InitializeIntegralTables:
                     if size > 1 and self.ParallelizationMethod == 1: 
                         tab = MPI.COMM_WORLD.allreduce(tab, tab)
                     
-                    itabs[name] = tab
-                    
+                    itabs[name] = np.log10(tab)
                     del tab
                     
                     MPI.COMM_WORLD.barrier()
                     if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
                         pbar.finish()            
                                     
-        wrote = False                                         
         if rank == 0 or self.ParallelizationMethod == 2: 
             self.WriteIntegralTable(itabs)
-            wrote = True
             
         # Don't move on until root processor has written out data    
         if size > 1 and self.ParallelizationMethod == 1: 

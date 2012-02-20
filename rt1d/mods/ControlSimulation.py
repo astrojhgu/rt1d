@@ -72,7 +72,6 @@ class ControlSimulation:
                                                                             
         indices_in = None
         indices_out = None
-        
         if self.pf['MultiSpecies'] > 0 and self.pf['TabulateIntegrals']: 
             indices_in = r.coeff.Interpolate.GetIndices3D(ncol)  
             indices_out = r.coeff.Interpolate.GetIndices3D(nout)

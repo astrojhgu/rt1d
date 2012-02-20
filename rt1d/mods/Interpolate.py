@@ -48,7 +48,7 @@ class Interpolate:
         Use this technique for hydrogen-only calculations.  For consistency with MultiSpecies > 0 methods, value 
         should still be a 3-element list.  
         """    
-                        
+                                
         return 10**np.interp(value[0], self.HIColumn, self.itabs[integral])
         
     def InterpolateTriLinear(self, indices, integral, value = None):
@@ -68,9 +68,9 @@ class Interpolate:
         j1 = self.itabs[integral][i_b][j_s][k_s] * (1 - z_d) + self.itabs[integral][i_b][j_s][k_b] * z_d
         j2 = self.itabs[integral][i_b][j_b][k_s] * (1 - z_d) + self.itabs[integral][i_b][j_b][k_b] * z_d
         
-        w1 = i1 * (1 - y_d) + i2 * y_d
-        w2 = j1 * (1 - y_d) + j2 * y_d
-                                                
+        w1 = i1 * (1. - y_d) + i2 * y_d
+        w2 = j1 * (1. - y_d) + j2 * y_d
+                                                        
         return 10**(w1 * (1 - x_d) + w2 * x_d)
     
     def GetIndices3D(self, value):
@@ -114,10 +114,11 @@ class Interpolate:
         z_s = self.HeIIColumn[k_s]
         
         # Bigger values
-        x_b = self.HIColumn[i_b]
-        y_b = self.HeIColumn[j_b]
-        z_b = self.HeIIColumn[k_b]
+        #x_b = self.HIColumn[i_b]
+        #y_b = self.HeIColumn[j_b]
+        #z_b = self.HeIIColumn[k_b]
                 
+        # Distance between supplied value and smallest value in table        
         x_d = value[0] - x_s
         y_d = value[1] - y_s
         z_d = value[2] - z_s

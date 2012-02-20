@@ -220,10 +220,7 @@ class RateCoefficients:
             E = Energy of photons in ray (eV)
             Qdot = Photon luminosity of source for this ray (s^-1)
             Lbol = Bolometric luminosity of source (erg/s)
-            
                         
-            can calculate all shell volumes at once too
-            
         """     
                   
         Phi_N = None

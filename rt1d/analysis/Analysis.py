@@ -205,7 +205,7 @@ class Analyze:
             
         pl.close()    
         
-    def InspectIntegralTable(self, integral = 0, species = 0, nHI = None, nHeI = 1.0, nHeII = 1.0,
+    def InspectIntegralTable(self, integral = 0, species = 0, nHI = None, nHeI = 0.0, nHeII = 0.0,
         color = 'k', ls = '-', annotate = True):
         """
         Plot integral values...or something.
@@ -263,7 +263,7 @@ class Analyze:
         pl.draw()
         
     def InspectInterpolation(self, integral = 0, species = 0, nHI = np.linspace(12, 24, 1000), 
-        nHeI = 0.0, nHeII = 0.0, color = 'k', ls = '-'):
+        nHeI = 0.0, nHeII = 0.0, color = 'b', ls = '-'):
         """
         Now check how good our interpolation is...
         
@@ -319,9 +319,7 @@ class Analyze:
             
         self.ax = pl.subplot(111)
         self.ax.loglog(10**np.array(x), result, color = color, ls = ls)
-        
-        return x, result
-        
+                
         pl.draw()                    
                                          
     def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):
