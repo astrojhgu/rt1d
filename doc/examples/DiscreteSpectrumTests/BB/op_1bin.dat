@@ -1,7 +1,7 @@
 ProblemType = 2.1
 GridDimensions = 200
 LengthUnits = 3.08568e22
-OutputDirectory = op_4bin
+OutputDirectory = op_1bin
 TabulateIntegrals = 0
-DiscreteSpectrumSED = [16.71054689,  29.37813382,  48.05047076,  75.28666047]
-DiscreteSpectrumRelLum =  [0.17715518,  0.38398108,  0.25746319,  0.06792246]
+DiscreteSpectrumSED = [29.61102195]
+DiscreteSpectrumRelLum =  [0.89321102]

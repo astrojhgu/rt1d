@@ -87,10 +87,10 @@ class InitializeIntegralTables:
         # Column densities - determine automatically
         self.n_H = data['HIDensity'] + data['HIIDensity']
         self.n_He = data['HeIDensity'] + data['HeIIDensity'] + data['HeIIIDensity']
-        self.HIColumnMin = np.floor(np.log10(0.5 * pf["MinimumSpeciesFraction"] * np.max(self.n_H * grid.dx)))
-        self.HIColumnMax = np.ceil(np.log10(2.0 * pf["LengthUnits"] * np.sum(self.n_H)))
-        self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(0.5 * pf["MinimumSpeciesFraction"] * np.max(self.n_He * grid.dx)))
-        self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(2.0 * pf["LengthUnits"] * np.sum(self.n_He)))
+        self.HIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.max(self.n_H * grid.dx)))
+        self.HIColumnMax = np.ceil(np.log10(pf["LengthUnits"] * np.max(self.n_H)))
+        self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.max(self.n_He * grid.dx)))
+        self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(pf["LengthUnits"] * np.max(self.n_He)))
         
         self.HINBins = pf["ColumnDensityBinsHI"]
         self.HeINBins = pf["ColumnDensityBinsHeI"]
@@ -218,6 +218,8 @@ class InitializeIntegralTables:
         if np.min(itab["HIColumnValues_x"]) < self.HIColumnMin or \
             np.max(itab["HIColumnValues_x"]) > self.HIColumnMax:
             print "The ncol_H bounds of the existing lookup table are inadequate for the requested simulation.  Re-creating now..."
+            print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
+            print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
             return None
         
         if self.MultiSpecies > 0:
@@ -229,6 +231,9 @@ class InitializeIntegralTables:
                 np.min(itab["HeIIColumnValues_z"]) < self.HeIIColumnMin or \
                 np.max(itab["HeIIColumnValues_z"]) < self.HeIIColumnMin:
                 print "The bounds of the ncol_He existing lookup table are inadequate for the requested simulation.  Re-creating now..."
+                print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
+                print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
+                
                 return None
         
         self.HIColumn = itab["HIColumnValues_x"]    # Override what's in parameter file if there is a preexisting table

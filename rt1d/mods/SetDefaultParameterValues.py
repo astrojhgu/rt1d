@@ -40,15 +40,12 @@ def SetDefaultParameterValues():
         "TabulateIntegrals": 1, \
         "IntegralTableName": '', \
         "AutoFallback": 0, \
-        "HIColumnMin": 1e10, \
-        "HIColumnMax": 1e22, \
-        "HeIColumnMin": 1e10, \
-        "HeIColumnMax": 1e22, \
-        "HeIIColumnMin": 1e10, \
-        "HeIIColumnMax": 1e20, \
+        "LogHIColumnSpacing": 0.2, \
+        "LogHeIColumnSpacing": 0.2, \
+        "LogHeIIColumnSpacing": 0.2, \
         "ColumnDensityBinsHI": 100, \
-        "ColumnDensityBinsHeI": 100, \
-        "ColumnDensityBinsHeII": 100, \
+        "ColumnDensityBinsHeI": 50, \
+        "ColumnDensityBinsHeII": 50, \
         "ExitAfterIntegralTabulation": 0, \
           
         # Grid parameters

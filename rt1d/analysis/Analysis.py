@@ -20,16 +20,13 @@ from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
 from rt1d.mods.InitializeIntegralTables import InitializeIntegralTables
 from rt1d.mods.Interpolate import Interpolate
 
-fields = ['T', 'n_HI', 'n_HII', 'x_HI', 'x_HII']
-
 class Analyze:
-    def __init__(self, pf):
+    def __init__(self, pf, retabulate = True):
         self.ds = Dataset(pf)
         self.data = self.ds.data
         self.pf = self.ds.pf    # dictionary
         self.g = rtm.InitializeGrid(self.pf)   
-        self.iits = InitializeIntegralTables(self.pf, self.data[0], self.g)
-        
+        self.iits = rtm.InitializeIntegralTables(self.pf, self.data[0], self.g)        
         
         # Convenience
         self.GridDimensions = int(self.pf['GridDimensions'])
@@ -57,7 +54,7 @@ class Analyze:
         
         # Read integral table if it exists.
         self.tname = self.iits.DetermineTableName()
-        if os.path.exists('%s' % self.tname):
+        if os.path.exists('%s' % self.tname) and retabulate:
             self.itabs = self.iits.TabulateRateIntegrals()
             self.interp = Interpolate(self.pf, [self.iits.HIColumn, self.iits.HeIColumn, self.iits.HeIIColumn], 
                 self.itabs)
@@ -134,10 +131,32 @@ class Analyze:
         self.mp.grid[1].xaxis.set_ticks(np.linspace(0, 4, 5))
         
         if mp is None: self.mp.fix_ticks()  
-        
-    def PlotRadialProfiles(self, species = 'H', t = [1, 10, 100], color = 'k'):
+     
+    def TemperatureProfile(self, t = 10, color = 'k', ls = '-'):
         """
-        Plot radial profiles of species = [H, He] at times t (Myr).
+        Plot radial profiles of temperature (for H or He) at times t (Myr).
+        """  
+        
+        if not hasattr(self, 'ax'):
+            self.ax = pl.subplot(111)
+        
+        self.ax.set_xscale('log')
+        self.ax.set_yscale('log')
+        
+        for dd in self.data.keys():
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
+                continue
+            
+            exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                self.data[%i].T, ls = \'%s\', color = \'%s\')' % (dd, dd, '-', color))                
+            
+        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
+        self.ax.set_ylabel(r'Temperature $(K)$')  
+        pl.draw()        
+        
+    def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k'):
+        """
+        Plot radial profiles of species fraction (for H or He) at times t (Myr).
         """      
         
         if not hasattr(self, 'ax'):
@@ -319,7 +338,7 @@ class Analyze:
             
         self.ax = pl.subplot(111)
         self.ax.loglog(10**np.array(x), result, color = color, ls = ls)
-                
+                                
         pl.draw()                    
                                          
     def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):
