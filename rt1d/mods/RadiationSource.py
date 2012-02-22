@@ -92,14 +92,16 @@ class RadiationSource:
             self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
             self.Qdot = self.Lbol * self.F / self.E / erg_per_ev 
-        #else:
-        #    self.Qdot = self.BolometricLuminosity
-                                               
+
         # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()   
         
-        if self.SourceType in [3]:
-            self.Qdot = self.BolometricLuminosity(0) * self.F / self.E / erg_per_ev  
+        # This is just for sanity checks
+        if self.DiscreteSpectrum and self.SourceType in [3]:
+            self.Qdot0 = self.BolometricLuminosity(0) * self.F / self.E / erg_per_ev  
+        elif self.SourceType in [3]:
+            self.Qdot0 = self.BolometricLuminosity(0) * quad(lambda E: self.Spectrum(E) / E,
+                100., 1e4)[0] / erg_per_ev                        
                         
         # Possibly override self.F - only makes sense for monochromatic sources
         if pf["ConserveIonizingPhotonLuminosity"]:
@@ -118,7 +120,7 @@ class RadiationSource:
                         
             return self.LuminosityNormalization * self.SpecificIntensity(E) / Lbol        
                 
-    def IonizingPhotonLuminosity(self, t = 0, E = None, i = None):
+    def IonizingPhotonLuminosity(self, t = 0, bin = None):
         """
         Return Qdot (photons / s) for this source at energy E.
         """
@@ -126,11 +128,9 @@ class RadiationSource:
         if self.SourceType == 0:
             return self.Qdot[0]
         elif self.SourceType in [1, 2]:
-            return self.Qdot[i]
+            return self.Qdot[bin]
         else:
-            return self.BolometricLuminosity(t) * self.F[i] / self.E[i] / erg_per_ev  
-            #integrand = lambda E: self.Spectrum(E) / E / erg_per_ev
-            #return self.BolometricLuminosity() * quad(integrand, self.Emin, self.Emax)[0]            
+            return self.BolometricLuminosity(t) * self.F[bin] / self.E[bin] / erg_per_ev          
                 
     def SpecificIntensity(self, E):    
         """ 

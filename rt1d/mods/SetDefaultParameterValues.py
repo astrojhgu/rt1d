@@ -64,7 +64,8 @@ def SetDefaultParameterValues():
         "DataDumpName": 'dd', \
         "OutputDirectory": './', \
         "OutputFormat": 1, \
-        "OutputTimestep": 0, \
+        "OutputTimestep": 1, \
+        "OutputRates": 1, \
         "ProgressBar": 0, \
         "CurrentTimestep": 1e-8, \
         "InitialTimestep": 0, \
@@ -78,8 +79,8 @@ def SetDefaultParameterValues():
         "OnePhotonPackagePerCell": 0, \
         "MaxHIIChange": 0.05, \
         "MaxHeIChange": 0.05, \
-        "MaxHeIIChange": 0.005, \
-        "MaxHeIIIChange": 0.005, \
+        "MaxHeIIChange": 0.05, \
+        "MaxHeIIIChange": 0.05, \
         "MaxElectronChange": 0.05, \
         
         # Physics

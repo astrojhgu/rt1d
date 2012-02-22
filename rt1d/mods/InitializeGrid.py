@@ -41,6 +41,7 @@ class InitializeGrid:
         self.MultiSpecies = pf["MultiSpecies"]
         self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
         self.LengthUnits = pf["LengthUnits"]
+        self.OutputRates = pf["OutputRates"]
         
         self.Clump = pf["Clump"]
         if self.Clump:
@@ -80,6 +81,12 @@ class InitializeGrid:
         
         # Additional fields
         fields['dtPhoton'] = np.ones_like(fields[fields.keys()[0]])
+        
+        if self.OutputRates:
+            for i in xrange(3):
+                fields['PhotoIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                fields['PhotoHeatingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                fields['SecondaryIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
         
         return fields                
                         

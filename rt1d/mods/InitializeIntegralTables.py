@@ -177,6 +177,8 @@ class InitializeIntegralTables:
         
         if integral == 'SecondaryIonizationRate':
             return "%s%i%i" % (integral, species, donor_species)
+        elif integral == 'TotalOpticalDepth':
+            return 
         else:
             return "%s%i" % (integral, species)        
             
@@ -215,25 +217,28 @@ class InitializeIntegralTables:
             itab[item] = f["IntegralTable"][item].value
         
         itab["HIColumnValues_x"] = f["ColumnVectors"]["HIColumnValues_x"].value
-        if np.min(itab["HIColumnValues_x"]) < self.HIColumnMin or \
-            np.max(itab["HIColumnValues_x"]) > self.HIColumnMax:
-            print "The ncol_H bounds of the existing lookup table are inadequate for the requested simulation.  Re-creating now..."
-            print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
-            print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
+        if np.min(itab["HIColumnValues_x"]) > self.HIColumnMin or \
+            np.max(itab["HIColumnValues_x"]) < self.HIColumnMax:
+            
+            if rank == 0:
+                print "The ncol_H bounds of the existing lookup table are inadequate for the requested simulation.  Re-creating now..."
+                print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
+                print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
             return None
         
         if self.MultiSpecies > 0:
             itab["HeIColumnValues_y"] = f["ColumnVectors"]["HeIColumnValues_y"].value
             itab["HeIIColumnValues_z"] = f["ColumnVectors"]["HeIIColumnValues_z"].value
         
-            if np.min(itab["HeIColumnValues_y"]) < self.HeIColumnMin or \
+            if np.min(itab["HeIColumnValues_y"]) > self.HeIColumnMin or \
                 np.max(itab["HeIColumnValues_y"]) < self.HeIColumnMin or \
-                np.min(itab["HeIIColumnValues_z"]) < self.HeIIColumnMin or \
+                np.min(itab["HeIIColumnValues_z"]) > self.HeIIColumnMin or \
                 np.max(itab["HeIIColumnValues_z"]) < self.HeIIColumnMin:
-                print "The bounds of the ncol_He existing lookup table are inadequate for the requested simulation.  Re-creating now..."
-                print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
-                print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
                 
+                if rank == 0:
+                    print "The bounds of the ncol_He existing lookup table are inadequate for the requested simulation.  Re-creating now..."
+                    print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
+                    print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
                 return None
         
         self.HIColumn = itab["HIColumnValues_x"]    # Override what's in parameter file if there is a preexisting table
@@ -336,6 +341,9 @@ class InitializeIntegralTables:
                                                               
                 for species in np.arange(3):
                     
+                    if integral == 'TotalOpticalDepth' and species > 0:
+                        continue
+                    
                     # This could take a while
                     if rank == 0: 
                         print "\nComputing value of {0}{1}...".format(integral, species)
@@ -377,24 +385,40 @@ class InitializeIntegralTables:
         if size > 1 and self.ParallelizationMethod == 1: 
             MPI.COMM_WORLD.barrier()       
             
-        return itabs    
-            
-    def TotalOpticalDepth(self, ncol = [0.0, 0.0, 0.0], species = 0):
+        return itabs 
+        
+    def TotalOpticalDepth(self, ncol):
         """
-        Optical depth integrated over entire spectrum and all species at a 
+        Optical depth due to all absorbing species at given column density.
+        Assumes ncol is a 3-element array.
+        """
+    
+        return self.OpticalDepth(ncol[0], 0) + self.OpticalDepth(ncol[1], 1) + \
+            self.OpticalDepth(ncol[2], 2)
+               
+    def OpticalDepth(self, ncol, species = 0):
+        """
+        Optical depth of species integrated over entire spectrum at a 
         given column density.  We just use this to determine which cells
         are inside/outside of an I-front (OpticalDepthDefiningIfront = 0.5
         by default).
         """        
         
         if self.rs.DiscreteSpectrum == 0:
-            integrand = lambda E: self.SpecificOpticalDepth(E, ncol)                            
-            result = integrate(integrand, self.rs.Emin, self.rs.Emax, epsrel = 1e-8)[0]
+            integrand = lambda E: self.PartialOpticalDepth(E, ncol, species)                           
+            result = integrate(integrand, max(self.rs.Emin, E_th[species]), self.rs.Emax, epsrel = 1e-8)[0]
                   
         else:                                                                                                                                                                                
-            result = np.sum(self.SpecificOpticalDepth(self.rs.E, ncol))
+            result = np.sum(self.PartialOpticalDepth(self.rs.E, ncol, species)[self.rs.E > E_th[species]])
             
         return result
+        
+    def PartialOpticalDepth(self, E, ncol, species = 0):
+        """
+        Returns the optical depth at energy E due to column density of species.
+        """
+                        
+        return PhotoIonizationCrossSection(E, species) * ncol   
         
     def SpecificOpticalDepth(self, E, ncol):
         """
@@ -410,11 +434,11 @@ class InitializeIntegralTables:
             tmp = 0
             
             if energy >= E_th[0]:
-                tmp += PhotoIonizationCrossSection(energy, 0) * ncol[0]
+                tmp += self.PartialOpticalDepth(energy, ncol[0], 0)
             if energy >= E_th[1]:
-                tmp += PhotoIonizationCrossSection(energy, 1) * ncol[1]
+                tmp += self.PartialOpticalDepth(energy, ncol[1], 1)
             if energy >= E_th[2]:
-                tmp += PhotoIonizationCrossSection(energy, 2) * ncol[2]
+                tmp += self.PartialOpticalDepth(energy, ncol[2], 2)
                  
             tau[i] = tmp     
                         
@@ -443,12 +467,12 @@ class InitializeIntegralTables:
         # Otherwise, continuous spectrum                
         if self.PhotonConserving:
             integrand = lambda E: 1e10 * self.rs.Spectrum(E, Lbol = self.Lbol) * \
-                np.exp(-self.SpecificOpticalDepth(E, ncol)) / \
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
         else:
             integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * \
                 self.rs.Spectrum(E, Lbol = self.Lbol) * \
-                np.exp(-self.SpecificOpticalDepth(E, ncol)) / \
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
             
         return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
@@ -478,11 +502,11 @@ class InitializeIntegralTables:
         # Otherwise, continuous spectrum    
         if self.PhotonConserving:
             integrand = lambda E: 1e20 * self.rs.Spectrum(E, Lbol = self.Lbol) * \
-                np.exp(-self.SpecificOpticalDepth(E, ncol))
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
         else:
             integrand = lambda E: 1e20 * PhotoIonizationCrossSection(E, species) * \
                 self.rs.Spectrum(E, Lbol = self.Lbol) * \
-                np.exp(-self.SpecificOpticalDepth(E, ncol))
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
         
         return 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
         

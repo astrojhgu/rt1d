@@ -30,15 +30,18 @@ class DataDump:
         self.grid = np.arange(self.GridDimensions)
         
         # Deal with log-grid
-        if pf['LogarithmicGrid'].value:
+        if pf["LogarithmicGrid"].value:
             self.r = np.logspace(np.log10(self.StartRadius * self.LengthUnits), \
-                np.log10(self.LengthUnits), self.GridDimensions)
-            r_tmp = np.concatenate([[0], self.r])
-            self.dx = np.diff(r_tmp)    
+                np.log10(self.LengthUnits), self.GridDimensions + 1)
         else:
-            self.dx = self.LengthUnits / self.GridDimensions
-            rmin = max(self.dx, self.StartRadius * self.LengthUnits)
-            self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions)
+            rmin = self.StartRadius * self.LengthUnits
+            self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions + 1)
+        
+        self.dx = np.diff(self.r)   
+        self.r = self.r[0:-1] 
+                
+        # Shift radii to cell-centered values
+        self.r += self.dx / 2.   
                             
         self.t = pf["CurrentTime"].value * pf["TimeUnits"].value
         
@@ -55,7 +58,6 @@ class DataDump:
         self.dtPhoton = dd["dtPhoton"].value / pf["TimeUnits"].value
         self.n_B = self.n_H + self.n_e
         
-        #if pf["MultiSpecies"].value > 0:
         self.n_HeI = dd["HeIDensity"].value
         self.n_HeII = dd["HeIIDensity"].value
         self.n_HeIII = dd["HeIIIDensity"].value
@@ -68,8 +70,18 @@ class DataDump:
         self.ncol_e = np.roll(np.cumsum(self.n_e * self.dx), 1)
         self.ncol_HeI[0] = self.ncol_HeII[0] = neglible_column
         self.n_B += self.n_He
-            
         self.f_e = self.n_e / self.n_B    
+        
+        self.Gamma = np.zeros([3, self.GridDimensions])
+        self.k_H = np.zeros([3, self.GridDimensions])
+        self.gamma = np.zeros([3, self.GridDimensions])
+        
+        if pf["OutputRates"].value:
+            for i in xrange(3):
+                self.Gamma[i] = dd['PhotoIonizationRate%i' % i].value
+                self.k_H[i] = dd['PhotoHeatingRate%i' % i].value
+                self.gamma[i] = dd['SecondaryIonizationRate%i' % i].value
+                
         
     def __getitem__(self, name):
         """

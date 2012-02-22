@@ -124,9 +124,9 @@ class Interpolate:
         z_b = self.HeIIColumn[k_b]
                 
         # Distance between supplied value and smallest value in table        
-        x_d = max(value[0] - x_s, 0) / self.dHIColumn
-        y_d = max(value[1] - y_s, 0) / self.dHeIColumn
-        z_d = max(value[2] - z_s, 0) / self.dHeIIColumn
+        x_d = (value[0] - x_s) / self.dHIColumn
+        y_d = (value[1] - y_s) / self.dHeIColumn
+        z_d = (value[2] - z_s) / self.dHeIIColumn
                 
         return [i_s, j_s, k_s], [i_b, j_b, k_b], [x_d, y_d, z_d]
         

@@ -73,6 +73,8 @@ class Radiate:
         self.ParallelizationMethod = pf["ParallelizationMethod"]        
         self.InterpolationMethod = pf["InterpolationMethod"]
         
+        self.OutputRates = pf["OutputRates"]
+        
         # Grid/units/etc
         self.GridDimensions = int(pf["GridDimensions"])
         self.grid = np.arange(self.GridDimensions)
@@ -147,7 +149,8 @@ class Radiate:
         self.X = 1. - self.Y
 
         # For convenience 
-        self.zeros = np.zeros(4)
+        self.zeros_tmp = np.zeros(4)
+        self.zeros_eq = np.zeros(4)
 
     def EvolvePhotons(self, data, t, dt, h, lb):
         """
@@ -223,24 +226,24 @@ class Radiate:
         tau_all_arr = np.zeros([3, self.GridDimensions])    
         if not self.pf['TabulateIntegrals']:
             sigma0 = PhotoIonizationCrossSection(self.rs.E, species = 0)
-            tmp_HI = np.transpose(len(self.rs.E) * [ncol_HI])            
-            tau_all_arr[0] = 10**np.sum(tmp_HI * sigma0, axis = 1)
-            
+            tmp_nHI = np.transpose(len(self.rs.E) * [ncol_HI])            
+            tau_all_arr[0] = np.sum(tmp_nHI * sigma0, axis = 1)
+                        
             if self.MultiSpecies:
                 sigma1 = PhotoIonizationCrossSection(self.rs.E, species = 1)
                 sigma2 = PhotoIonizationCrossSection(self.rs.E, species = 2)
-                tmp_HeI = np.transpose(len(self.rs.E) * [ncol_HeI])
-                tmp_HeII = np.transpose(len(self.rs.E) * [ncol_HeII])
-                tau_all_arr[1] = 10**np.sum(tmp_HeI * sigma1, axis = 1)
-                tau_all_arr[2] = 10**np.sum(tmp_HeII * sigma2, axis = 1)
+                tmp_nHeI = np.transpose(len(self.rs.E) * [ncol_HeI])
+                tmp_nHeII = np.transpose(len(self.rs.E) * [ncol_HeII])
+                tau_all_arr[1] = np.sum(tmp_nHeI * sigma1, axis = 1)
+                tau_all_arr[2] = np.sum(tmp_nHeII * sigma2, axis = 1)
             
-        else: # CHECK ON THIS
+        else:
             for i, col in enumerate(ncol_all):
-                tau_all_arr[0][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth0", col)
+                tau_all_arr[0][i] = 10**self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth0", col)
                 
                 if self.MultiSpecies:
-                    tau_all_arr[1][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth1", col)
-                    tau_all_arr[2][i] = self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth2", col)
+                    tau_all_arr[1][i] = 10**self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth1", col)
+                    tau_all_arr[2][i] = 10**self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth2", col)
 
             tau_all_arr[0][0] = tau_all_arr[1][0] = tau_all_arr[2][0] = neglible_tau 
 
@@ -320,7 +323,7 @@ class Radiate:
                 x_HeIII = x_HeIII_arr[cell]
                                         
                 # Convenience arrays for column, absorber, and ion densities plus a few others
-                ncol = ncol_all[cell]
+                ncol = ncol_all[cell]   # actully log10(ncol)
                 nabs = nabs_all[cell]
                 nion = nion_all[cell]
                 n_H = n_HI + n_HII
@@ -348,13 +351,11 @@ class Radiate:
                                                                                      
                 # Retrieve coefficients and what not.
                 args = [nabs, nion, n_H, n_He, n_e]
-                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, tau, t))
+                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, t))
                 
                 # Unpack so we have everything by name
                 nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args                                                          
-                                                           
-                #print 'CELL', cell, Gamma                                           
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################                          
@@ -379,10 +380,14 @@ class Radiate:
                 newdata["HeIIDensity"][cell] = newHeII
                 newdata["HeIIIDensity"][cell] = newHeIII
                 newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
-                newdata["Temperature"][cell] = newT  
-                                                                 
-                                                                 
-                                                                                                                        
+                newdata["Temperature"][cell] = newT    
+                
+                if self.OutputRates:
+                    for i in xrange(3):
+                        newdata['PhotoIonizationRate%i' % i][cell] = Gamma[i]
+                        newdata['PhotoHeatingRate%i' % i][cell] = k_H[i]
+                        newdata['SecondaryIonizationRate%i' % i][cell] = gamma[i] 
+                                                                          
                 ######################################
                 ################ DONE ################
                 ######################################
@@ -597,8 +602,8 @@ class Radiate:
         nHI = (n_H - q[0])
         nHeI = (n_He - q[1] - q[2])  
                                 
-        tmp = self.zeros
-        equil = self.zeros
+        tmp = self.zeros_tmp
+        equil = self.zeros_eq
         
         # Enforce equilibrium for highly ionized (to a fault) cells
         if nHI < 0:

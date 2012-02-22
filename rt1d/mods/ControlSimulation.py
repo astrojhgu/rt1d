@@ -57,53 +57,23 @@ class ControlSimulation:
         n_H = data['HIDensity'][0] + data['HIIDensity'][0]
         n_He = data['HeIDensity'][0] + data['HeIIDensity'][0] + data['HeIIIDensity'][0]
         n_e = data['HIIDensity'][0] + data['HeIIDensity'][0] + 2. * data['HeIIIDensity'][0]
-        
-        tau1 = ncol = 1. * np.ones(3)
-        tau0 = gamma = Beta = alpha = nion = xi = 1. * np.zeros(3)
         nabs = np.array([data['HIDensity'][0], data['HeIDensity'][0], data['HeIIDensity'][0]])
+        nion = np.array([data['HIIDensity'][0], data['HeIIDensity'][0], data['HeIIIDensity'][0]])
+        T = data['Temperature'][0]
+        
+        ncol = 1. * np.zeros(3)
         ncell = r.dx[0] * nabs    
         nout = np.log10(ncell)
         Vsh = r.coeff.ShellVolume(self.R0, r.dx[0])    
-        
-        if self.pf["PhotonConserving"]:                  
-            A = r.rs.BolometricLuminosity(0) / nabs / Vsh
-        else:
-            A = 3 * [r.rs.BolometricLuminosity(0) / 4. / np.pi / self.R0**2]
-                                                                            
+        Lbol = r.rs.BolometricLuminosity(0)
+                                                                    
         indices_in = None
-        indices_out = None
         if self.pf['MultiSpecies'] > 0 and self.pf['TabulateIntegrals']: 
             indices_in = r.coeff.Interpolate.GetIndices3D(ncol)  
-            indices_out = r.coeff.Interpolate.GetIndices3D(nout)
-            
-        Gamma = np.zeros(3)                                    
-        if itabs is None:
-            for i, E in enumerate(r.rs.E):
-                Gamma[0] += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.IonizingPhotonLuminosity(i = i),
-                    ncol = ncol, nout = nout * self.mask[0], nabs = nabs, r = self.R0,
-                    dr = r.dx[0], species = 0, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))[0]
-                
-                if self.pf['MultiSpecies']:
-                    Gamma[1] += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.IonizingPhotonLuminosity(i = i),
-                        ncol = ncol, nout = nout * self.mask[0], nabs = nabs, r = self.R0,
-                        dr = r.dx[0], species = 1, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))[0]
-                    Gamma[2] += r.coeff.PhotoIonizationRate(E = E, Qdot = r.rs.IonizingPhotonLuminosity(i = i),
-                        ncol = ncol, nout = nout * self.mask[0], nabs = nabs, r = self.R0,
-                        dr = r.dx[0], species = 2, tau = tau0, Lbol = r.rs.BolometricLuminosity(0))[0]
-                    
-        else:                     
-            Gamma[0] = r.coeff.PhotoIonizationRate(species = 0, Lbol = r.rs.BolometricLuminosity(0),
-                indices_in = indices_in, indices_out = indices_out, r = self.R0, dr = r.dx[0],
-                nabs = nabs, ncol = ncol, tau = tau0, nout = nout * self.mask[0], A = A[0])[0]
-                
-            if self.pf['MultiSpecies']:
-                Gamma[1] = r.coeff.PhotoIonizationRate(species = 1, Lbol = r.rs.BolometricLuminosity(0),
-                    indices_in = indices_in, indices_out = indices_out, r = self.R0, dr = r.dx[0],
-                    nabs = nabs, ncol = ncol, tau = tau0, nout = nout * self.mask[1], A = A[1])[0]
-                Gamma[2] = r.coeff.PhotoIonizationRate(species = 2, Lbol = r.rs.BolometricLuminosity(0),
-                    indices_in = indices_in, indices_out = indices_out, r = self.R0, dr = r.dx[0],
-                    nabs = nabs, ncol = ncol, tau = tau0, nout = nout * self.mask[2], A = A[2])[0] 
-        
+
+        Gamma = r.coeff.ConstructArgs([nabs, nion, n_H, n_He, n_e], 
+            indices_in, Lbol, self.R0, ncol, T, r.dx[0], 0.)[0]        
+                                                                                            
         # START TIMESTEP CALCULATION
         dtHI = 1e50   
         dHIdt = 1e-50   

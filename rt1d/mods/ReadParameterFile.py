@@ -89,7 +89,7 @@ def ProblemType(pt):
     
     # RT06-1, RT1: Pure hydrogen, isothermal HII region expansion, monochromatic spectrum at 13.6 eV
     if pt == 1:
-        pf = {"ProblemType": 1, "InterpolationMethod": 0, "PhotonConserving": 1, "TabulateIntegrals": 0, \
+        pf = {"ProblemType": 1, "InterpolationMethod": 0, "TabulateIntegrals": 0, \
               "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
               "StartRadius": 0.01, "dtDataDump": 10.0, "DataDumpName": 'dd', \
@@ -102,7 +102,7 @@ def ProblemType(pt):
             
     # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, *continuous spectrum*
     if pt == 2:
-       pf = {"ProblemType": 2, "InterpolationMethod": 0, "PhotonConserving": 1, "TabulateIntegrals": 1, \
+       pf = {"ProblemType": 2, "InterpolationMethod": 0, "TabulateIntegrals": 1, \
              "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
              "StartRadius": 0.01, "dtDataDump": 10.0, "DataDumpName": 'dd', \

@@ -51,8 +51,12 @@ class RateCoefficients:
         self.sigma = np.zeros([3, len(self.rs.E)])
         for i in xrange(3):
             self.sigma[i] = PhotoIonizationCrossSection(self.rs.E, species = i)
+            
+        self.zeros_like_E = np.zeros_like(self.rs.E)
+        self.zeros_like_Q = np.zeros_like(self.rs.E)
+        self.zeros_like_tau = np.zeros([len(self.zeros_like_E), 3])
         
-    def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dr, tau, t):
+    def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dr, t):
         """
         Make list of rate coefficients that we'll pass to solver.
         
@@ -86,19 +90,21 @@ class RateCoefficients:
         
         # Derived quantities we'll need
         Vsh = self.ShellVolume(r, dr)
+        ncell = dr * nabs                        
                         
         # Standard - integral tabulation
         if self.TabulateIntegrals:
-            
+                       
+            test = self.Interpolate.interp(indices, "TotalOpticalDepth%i" % 0, ncol)         
+                        
             # Loop over species   
             for i in xrange(3):
-                
+                                
                 if not self.MultiSpecies and i > 0:
                     continue
                 
-                # A few quantities that are better to just compute once
-                ncell = dr * nabs * self.mask[i]   
-                nout = np.log10(10**ncol + ncell)
+                # A few quantities that are better to just compute once   
+                nout = np.log10(10**ncol + ncell * self.mask[i])
                 indices_out = self.Interpolate.GetIndices3D(nout)
                 
                 if self.PhotonConserving:
@@ -108,7 +114,7 @@ class RateCoefficients:
                                                            
                 # Photo-Ionization - keep integral values too to be used in heating/secondary ionization
                 Gamma[i], Phi_N[i], Phi_N_dN[i] = self.PhotoIonizationRate(species = i, indices_in = indices,  
-                    Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, tau = tau, dr = dr,
+                    Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr,
                     Vsh = Vsh, ncell = ncell, indices_out = indices_out, A = A, nout = nout)
                 
                 if self.CollisionalIonization:
@@ -139,27 +145,43 @@ class RateCoefficients:
                     for j in self.donors:
                         gamma[i] += self.SecondaryIonizationRate(Psi_N = Psi_N[j], Psi_N_dN = Psi_N_dN[j],
                             Phi_N = Phi_N[j], Phi_N_dN = Phi_N_dN[j], 
-                            Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, tau = tau, dr = dr,
+                            Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr,
                             species = i, donor_species = j, x_HII = x_HII)
                                 
                     gamma[i] *= (A / E_th[i] / erg_per_ev)        
                                     
-        # Only the photon-conserving algorithm is capable of this                                                  
+        # Only the photon-conserving algorithm is capable of this - though in
+        # the future, the discrete NPC solver could do this if we wanted.                                         
         else:
-               
+                        
+            test = 0
+            for i in xrange(4):
+                test += np.sum(10**ncol * self.sigma[0:,i])
+                                        
+            Qdot = self.zeros_like_Q
+            tau_c = self.zeros_like_tau
+            for i in xrange(len(self.rs.E)):
+                Qdot[i] = self.rs.IonizingPhotonLuminosity(t = t, bin = i)
+                for j in xrange(3):            
+                    tau_c[i][j] = dr * nabs[j] * self.sigma[j][i]
+                                                     
             # Loop over species   
             for i in xrange(3):
                 
                 if not self.MultiSpecies and i > 0:
                     continue
-                                
+                                                    
                 # Loop over energy groups
-                Gamma_E = np.zeros_like(self.rs.E)
+                Gamma_E = self.zeros_like_E
                 for j, E in enumerate(self.rs.E):
+                    
+                    # Optical depth up to this cell at energy E
+                    tau_E = np.sum(10**ncol * self.sigma[0:,j])
                                     
                     # Photo-ionization by *this* energy group
-                    Gamma_E[j], tmp, tmp = self.PhotoIonizationRate(E = E, Qdot = self.rs.IonizingPhotonLuminosity(t = t, i = j), \
-                        ncol = ncol, nabs = nabs, r = r, dr = dr, species = i, tau = tau, Lbol = Lbol, bin = j)
+                    Gamma_E[j], tmp, tmp = self.PhotoIonizationRate(E = E, 
+                        Qdot = Qdot[j], nabs = nabs, dr = dr, species = i,
+                        Vsh = Vsh, tau_E = tau_E, tau_c = tau_c[j][i])
                         
                     # Total photo-ionization tally
                     Gamma[i] += Gamma_E[j]
@@ -203,14 +225,16 @@ class RateCoefficients:
                 
                 zeta[i] += self.CollisionalIonizationCoolingRate(species = i, T = T)  
                 eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
-                psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)               
-
+                psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)
+        
+        print test, ncol
+        
         return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi]
 
     def PhotoIonizationRate(self, species = None, E = None, Qdot = None, Lbol = None, 
         ncol = None, n_e = None, nabs = None, x_HII = None, indices_out = None,
         T = None, r = None, dr = None, indices_in = None, Vsh = None, ncell = None, nout = None,
-        A = 1.0, tau = None, bin = 0):
+        A = 1.0, tau_E = None, tau_c = None):
         """
         Returns photo-ionization rate coefficient which we denote elsewhere as Gamma.  
         
@@ -222,9 +246,9 @@ class RateCoefficients:
             Lbol = Bolometric luminosity of source (erg/s)
                         
         """     
-                  
+                          
         Phi_N = None
-        Phi_N_dN = None
+        Phi_N_dN = None 
                                         
         if self.TabulateIntegrals:
             if self.PhotonConserving:
@@ -234,15 +258,11 @@ class RateCoefficients:
             else:                
                 Phi_N = self.Interpolate.interp(indices_in, "PhotoIonizationRate%i" % species, ncol)       
                 IonizationRate = Phi_N
-            
         else:
-            tau_E = 10**ncol[species] * self.sigma[species][bin]       # Optical depth up until this cell
-            tau_c = dr * nabs[species] * self.sigma[species][bin]  # Optical depth of this cell
-            Q0 = Qdot * np.exp(-tau_E)                             # number of photons entering cell per sec
-            dQ = Q0 * (1. - np.exp(-tau_c))                        # number of photons absorbed in cell per sec
-            
-            IonizationRate = dQ / nabs[species] / self.ShellVolume(r, dr)    # ionizations / sec / hydrogen atom
-                
+            Q0 = Qdot * np.exp(-tau_E)                              # number of photons entering cell per sec
+            dQ = Q0 * (1. - np.exp(-tau_c))                         # number of photons absorbed in cell per sec
+            IonizationRate = dQ / nabs[species] / Vsh               # ionizations / sec / atom
+        
         return A * IonizationRate, Phi_N, Phi_N_dN
         
     def PhotoElectricHeatingRate(self, species = None, E = None, Qdot = None, Lbol = None, 
@@ -260,9 +280,7 @@ class RateCoefficients:
         if self.PhotonConserving:
             Psi_N = self.Interpolate.interp(indices_in, "ElectronHeatingRate%i" % species, ncol)
             Psi_N_dN = self.Interpolate.interp(indices_out, "ElectronHeatingRate%i" % species, nout)
-                        
-            heat = (Psi_N - Psi_N_dN - E_th[species] * erg_per_ev * (Phi_N - Phi_N_dN))
-                   
+            heat = (Psi_N - Psi_N_dN - E_th[species] * erg_per_ev * (Phi_N - Phi_N_dN))                   
         else:
             Psi_N = self.Interpolate.interp(indices_in, "ElectronHeatingRate%i" % species, ncol)
             heat = Psi_N

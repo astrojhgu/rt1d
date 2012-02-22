@@ -21,7 +21,7 @@ from rt1d.mods.InitializeIntegralTables import InitializeIntegralTables
 from rt1d.mods.Interpolate import Interpolate
 
 class Analyze:
-    def __init__(self, pf, retabulate = True):
+    def __init__(self, pf, retabulate = False):
         self.ds = Dataset(pf)
         self.data = self.ds.data
         self.pf = self.ds.pf    # dictionary
@@ -34,7 +34,7 @@ class Analyze:
         self.LengthUnits = self.pf['LengthUnits']
         self.StartRadius = self.pf['StartRadius']
         self.MultiSpecies = self.pf["MultiSpecies"]
-        
+                
         # Deal with log-grid
         if self.pf["LogarithmicGrid"]:
             self.r = np.logspace(np.log10(self.StartRadius * self.LengthUnits), \
@@ -44,7 +44,7 @@ class Analyze:
             self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions + 1)
         
         self.dx = np.diff(self.r)   
-        self.r = self.r[0:-1] 
+        self.r = self.r[0:-1]
                 
         # Shift radii to cell-centered values
         self.r += self.dx / 2.   
@@ -116,7 +116,8 @@ class Analyze:
         else: 
             self.mp = multiplot(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
 
-        if anl: self.mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle = '-', color = 'k')
+        if anl: 
+            self.mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle = '-', color = 'k')
         
         self.mp.grid[0].plot(self.t / self.trec, self.rIF, color = color, ls = ls)
         self.mp.grid[0].set_xlim(0, max(self.t / self.trec))
@@ -130,11 +131,12 @@ class Analyze:
         self.mp.grid[0].xaxis.set_ticks(np.linspace(0, 4, 5))
         self.mp.grid[1].xaxis.set_ticks(np.linspace(0, 4, 5))
         
-        if mp is None: self.mp.fix_ticks()  
+        if mp is None: 
+            self.mp.fix_ticks()  
      
     def TemperatureProfile(self, t = 10, color = 'k', ls = '-'):
         """
-        Plot radial profiles of temperature (for H or He) at times t (Myr).
+        Plot radial profiles of temperature at times t (Myr).
         """  
         
         if not hasattr(self, 'ax'):
