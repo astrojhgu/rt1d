@@ -94,7 +94,10 @@ class RateCoefficients:
                         
         # Standard - integral tabulation
         if self.TabulateIntegrals:
-                                               
+            
+            print r / self.pf["LengthUnits"], self.Interpolate.OpticalDepth(ncol[0], 0) + self.Interpolate.OpticalDepth(ncol[1], 1) + \
+                self.Interpolate.OpticalDepth(ncol[2], 2)
+                
             # Loop over species   
             for i in xrange(3):
                                 
@@ -151,6 +154,12 @@ class RateCoefficients:
         # Only the photon-conserving algorithm is capable of this - though in
         # the future, the discrete NPC solver could do this if we wanted.                                         
         else:
+            
+            test = 0
+            for i in xrange(len(self.rs.E)):
+                test += np.sum(10**ncol * self.sigma[0:,i])
+              
+            print r / self.pf["LengthUnits"], test    
                                     
             Qdot = self.zeros_like_Q
             tau_c = self.zeros_like_tau
@@ -220,7 +229,7 @@ class RateCoefficients:
                 zeta[i] += self.CollisionalIonizationCoolingRate(species = i, T = T)  
                 eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
                 psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)
-                
+                                
         return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi]
 
     def PhotoIonizationRate(self, species = None, E = None, Qdot = None, Lbol = None, 
@@ -230,7 +239,7 @@ class RateCoefficients:
         """
         Returns photo-ionization rate coefficient which we denote elsewhere as Gamma.  
         
-            returns IonizationRate: [IonizationRate] = 1 / s
+            [IonizationRate] = 1 / s
             
             Inputs:
             E = Energy of photons in ray (eV)

@@ -396,7 +396,7 @@ class InitializeIntegralTables:
                 if self.ParallelizationMethod == 1 and (j % size != rank): 
                     continue
                 
-                tab[j] = self.OpticalDepth(col, species = i)
+                tab[j] = self.OpticalDepth(10**col, species = i)
                 
                 if rank == 0 and self.ProgressBar:
                     pbar.update(j)   
@@ -433,13 +433,13 @@ class InitializeIntegralTables:
         are inside/outside of an I-front (OpticalDepthDefiningIfront = 0.5
         by default).
         """        
-        
+                
         if self.rs.DiscreteSpectrum == 0:
             integrand = lambda E: self.PartialOpticalDepth(E, ncol, species)                           
             result = integrate(integrand, max(self.rs.Emin, E_th[species]), self.rs.Emax, epsrel = 1e-8)[0]
                   
         else:                                                                                                                                                                                
-            result = np.sum(self.PartialOpticalDepth(self.rs.E, ncol, species)[self.rs.E > E_th[species]])
+            result = np.sum(self.PartialOpticalDepth(self.rs.E, 10**ncol, species)[self.rs.E > E_th[species]])
             
         return result
         
@@ -455,7 +455,7 @@ class InitializeIntegralTables:
         Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which
         are stored in the variable 'ncol' as a three element array.
         """
-                
+                        
         if type(E) is float:
             E = [E]
                                
