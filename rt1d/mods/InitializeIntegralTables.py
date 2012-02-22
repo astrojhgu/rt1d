@@ -105,7 +105,8 @@ class InitializeIntegralTables:
         else:
             self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
             self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
-                        
+                    
+        self.AllColumns = [self.HIColumn, self.HeIColumn, self.HeIIColumn]                
         self.TableDims = np.array([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
                               
         # Make output directory          
@@ -178,7 +179,7 @@ class InitializeIntegralTables:
         if integral == 'SecondaryIonizationRate':
             return "%s%i%i" % (integral, species, donor_species)
         elif integral == 'TotalOpticalDepth':
-            return 
+            return integral
         else:
             return "%s%i" % (integral, species)        
             
@@ -344,14 +345,14 @@ class InitializeIntegralTables:
                     if integral == 'TotalOpticalDepth' and species > 0:
                         continue
                     
-                    # This could take a while
-                    if rank == 0: 
-                        print "\nComputing value of {0}{1}...".format(integral, species)
-                    if rank == 0 and self.ProgressBar: 
-                        pbar = ProgressBar(widgets = widget, maxval = np.prod(self.TableDims)).start()
-                    
                     name = self.DatasetName(integral, species = species)
                     
+                    # This could take a while
+                    if rank == 0: 
+                        print "\nComputing value of %s..." % name
+                    if rank == 0 and self.ProgressBar: 
+                        pbar = ProgressBar(widgets = widget, maxval = np.prod(self.TableDims)).start()
+                                        
                     # Loop over column densities
                     tab = np.zeros([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
                     for i, ncol_HI in enumerate(self.HIColumn):                          
@@ -376,8 +377,37 @@ class InitializeIntegralTables:
                     
                     MPI.COMM_WORLD.barrier()
                     if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
-                        pbar.finish()            
-                                    
+                        pbar.finish() 
+                        
+        # Optical depths for individual species
+        for i in xrange(3):
+            
+            if i > 0 and not self.MultiSpecies:
+                continue
+                
+            if rank == 0: 
+                print "\nComputing value of OpticalDepth%i..." % i
+            if rank == 0:     
+                pbar = ProgressBar(widgets = widget, maxval = self.TableDims[i]).start()
+            
+            tab = np.zeros(self.TableDims[i])
+            for j, col in enumerate(self.AllColumns[i]): 
+                        
+                if self.ParallelizationMethod == 1 and (j % size != rank): 
+                    continue
+                
+                tab[j] = self.OpticalDepth(col, species = i)
+                
+                if rank == 0 and self.ProgressBar:
+                    pbar.update(j)   
+            
+            if size > 1 and self.ParallelizationMethod == 1: 
+                tab = MPI.COMM_WORLD.allreduce(tab, tab)
+            
+            itabs['OpticalDepth%i' % i] = np.log10(tab) 
+            del tab
+
+        # Write-out data
         if rank == 0 or self.ParallelizationMethod == 2: 
             self.WriteIntegralTable(itabs)
             
@@ -387,7 +417,7 @@ class InitializeIntegralTables:
             
         return itabs 
         
-    def TotalOpticalDepth(self, ncol):
+    def TotalOpticalDepth(self, ncol, species = None):
         """
         Optical depth due to all absorbing species at given column density.
         Assumes ncol is a 3-element array.

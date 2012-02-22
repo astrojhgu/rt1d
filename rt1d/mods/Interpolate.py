@@ -35,6 +35,8 @@ class Interpolate:
         self.offsetHeIColumn = self.HeIColumnMin / self.dHeIColumn
         self.offsetHeIIColumn = self.HeIIColumnMin / self.dHeIIColumn
         
+        self.AllColumns = [self.HIColumn, self.HeIColumn, self.HeIIColumn]
+        
         # This is a dictionary with all the lookup tables
         self.itabs = itabs
         
@@ -47,6 +49,9 @@ class Interpolate:
                 self.interp = self.InterpolateTriLinear
             if self.pf["InterpolationMethod"] == 1: 
                 self.interp = self.InterpolateNN    
+            
+    def OpticalDepth(self, value, species):
+        return 10**np.interp(value, self.AllColumns[species], self.itabs['OpticalDepth%i' % species])
                 
     def InterpolateLinear(self, indices, integral, value = None):
         """

@@ -238,12 +238,12 @@ class Radiate:
                 tau_all_arr[2] = np.sum(tmp_nHeII * sigma2, axis = 1)
             
         else:
-            for i, col in enumerate(ncol_all):
-                tau_all_arr[0][i] = 10**self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth0", col)
+            for i, col in enumerate(ncol_HI):
+                tau_all_arr[0][i] = self.coeff.Interpolate.OpticalDepth(col, 0)
                 
                 if self.MultiSpecies:
-                    tau_all_arr[1][i] = 10**self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth1", col)
-                    tau_all_arr[2][i] = 10**self.coeff.Interpolate.interp(indices_all[-1], "TotalOpticalDepth2", col)
+                    tau_all_arr[1][i] = self.coeff.Interpolate.OpticalDepth(ncol_HeI[i], 1)
+                    tau_all_arr[2][i] = self.coeff.Interpolate.OpticalDepth(ncol_HeII[i], 2)
 
             tau_all_arr[0][0] = tau_all_arr[1][0] = tau_all_arr[2][0] = neglible_tau 
 

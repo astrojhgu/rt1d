@@ -94,9 +94,7 @@ class RateCoefficients:
                         
         # Standard - integral tabulation
         if self.TabulateIntegrals:
-                       
-            test = self.Interpolate.interp(indices, "TotalOpticalDepth%i" % 0, ncol)         
-                        
+                                               
             # Loop over species   
             for i in xrange(3):
                                 
@@ -153,11 +151,7 @@ class RateCoefficients:
         # Only the photon-conserving algorithm is capable of this - though in
         # the future, the discrete NPC solver could do this if we wanted.                                         
         else:
-                        
-            test = 0
-            for i in xrange(4):
-                test += np.sum(10**ncol * self.sigma[0:,i])
-                                        
+                                    
             Qdot = self.zeros_like_Q
             tau_c = self.zeros_like_tau
             for i in xrange(len(self.rs.E)):
@@ -226,9 +220,7 @@ class RateCoefficients:
                 zeta[i] += self.CollisionalIonizationCoolingRate(species = i, T = T)  
                 eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
                 psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)
-        
-        print test, ncol
-        
+                
         return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi]
 
     def PhotoIonizationRate(self, species = None, E = None, Qdot = None, Lbol = None, 
