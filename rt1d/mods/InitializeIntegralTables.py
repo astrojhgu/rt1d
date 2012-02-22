@@ -439,7 +439,7 @@ class InitializeIntegralTables:
             result = integrate(integrand, max(self.rs.Emin, E_th[species]), self.rs.Emax, epsrel = 1e-8)[0]
                   
         else:                                                                                                                                                                                
-            result = np.sum(self.PartialOpticalDepth(self.rs.E, 10**ncol, species)[self.rs.E > E_th[species]])
+            result = np.sum(self.PartialOpticalDepth(self.rs.E, ncol, species)[self.rs.E > E_th[species]])
             
         return result
         

@@ -95,7 +95,7 @@ class RateCoefficients:
         # Standard - integral tabulation
         if self.TabulateIntegrals:
             
-            print r / self.pf["LengthUnits"], self.Interpolate.OpticalDepth(ncol[0], 0) + self.Interpolate.OpticalDepth(ncol[1], 1) + \
+            print r / self.pf["LengthUnits"], ncol, self.Interpolate.OpticalDepth(ncol[0], 0) + self.Interpolate.OpticalDepth(ncol[1], 1) + \
                 self.Interpolate.OpticalDepth(ncol[2], 2)
                 
             # Loop over species   
@@ -159,7 +159,7 @@ class RateCoefficients:
             for i in xrange(len(self.rs.E)):
                 test += np.sum(10**ncol * self.sigma[0:,i])
               
-            print r / self.pf["LengthUnits"], test    
+            print r / self.pf["LengthUnits"], ncol, test    
                                     
             Qdot = self.zeros_like_Q
             tau_c = self.zeros_like_tau
