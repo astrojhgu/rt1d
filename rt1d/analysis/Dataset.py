@@ -6,11 +6,6 @@ Affiliation: University of Colorado at Boulder
 Created on 2010-12-01.
 
 Description: General module for command line analysis of rt1d data.
-    
-Tutorial:
-import rt1d.analysis as rta
-ds = rta.Dataset('./pf.dat')
-pl.loglog(ds.data[10].r / cm_per_kpc, ds[10].T)  # Plot the temperature profile!
      
 """
 

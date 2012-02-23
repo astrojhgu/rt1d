@@ -66,6 +66,7 @@ class InitializeIntegralTables:
         self.ProgressBar = pf["ProgressBar"] and pb   
         self.ParallelizationMethod = pf["ParallelizationMethod"]
         self.IntegralTableName = pf["IntegralTableName"]
+        self.RegenerateTable = pf["RegenerateTable"]
         
         # Physics, initial conditions, control parameters
         self.MultiSpecies = pf["MultiSpecies"]
@@ -222,10 +223,15 @@ class InitializeIntegralTables:
             np.max(itab["HIColumnValues_x"]) < self.HIColumnMax:
             
             if rank == 0:
-                print "The ncol_H bounds of the existing lookup table are inadequate for the requested simulation.  Re-creating now..."
+                print "The ncol_H bounds of the existing lookup table are inadequate for the requested simulation."
                 print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
                 print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
-            return None
+            
+            if self.RegenerateTable:
+                print "Recreating now...\n"
+                return None
+            else:
+                    print "Set RegenerateTable = 1 to recreate this table.\n"    
         
         if self.MultiSpecies > 0:
             itab["HeIColumnValues_y"] = f["ColumnVectors"]["HeIColumnValues_y"].value
@@ -237,10 +243,15 @@ class InitializeIntegralTables:
                 np.max(itab["HeIIColumnValues_z"]) < self.HeIIColumnMin:
                 
                 if rank == 0:
-                    print "The bounds of the ncol_He existing lookup table are inadequate for the requested simulation.  Re-creating now..."
+                    print "The bounds of the ncol_He existing lookup table are inadequate for the requested simulation."
                     print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
                     print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
-                return None
+                
+                if self.RegenerateTable:
+                    print "Recreating now...\n"
+                    return None
+                else:
+                    print "Set RegenerateTable = 1 to recreate this table.\n"    
         
         self.HIColumn = itab["HIColumnValues_x"]    # Override what's in parameter file if there is a preexisting table
         

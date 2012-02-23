@@ -53,8 +53,8 @@ class SecondaryElectrons:
             Method = 1: Empirical fits of Shull & vanSteenberg 1985
             Method = 2: Lookup tables of Furlanetto & Stoever 2010
             
-                NOTE: Method 2 is not yet implemented because it requires 4D lookup tables for the 
-                integrals!
+            NOTE: Method 2 is not yet implemented because it requires 4D lookup tables for the 
+            integrals!
         
         """
         

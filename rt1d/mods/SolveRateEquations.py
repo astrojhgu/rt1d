@@ -46,7 +46,8 @@ class SolveRateEquations:
 
         self.solve = self.ImplicitEuler
         self.rootfinder = self.Newton
-
+        
+        self.xmin = self.MinimumSpeciesFraction # shorthand
         
         # Set adaptive timestepping method
         if self.stepper == 1: self.adapt = self.StepDoubling     
@@ -95,14 +96,14 @@ class SolveRateEquations:
                     elif not everything_ok[0] and h == self.hmin:
                         raise ValueError('NAN encountered on minimum ODE step. Exiting.')
                             
-                    if not np.all(everything_ok[1:]):
-                        ynext, ok = self.ApplyFloor(ynext, args)
-                        
-                        if not np.all(ok) and h > self.hmin:
+                    if not np.all(everything_ok[1:]):                        
+                        if h > self.hmin:
                             h = max(self.hmin, h / 2.)
                             continue
-                        elif not np.all(ok) and h == self.hmin:
-                            raise ValueError("xHII or xHeII or xHeIII < 0 or > 1, and we're on the minimum ODE step. Exiting.")    
+                        elif h == self.hmin:
+                            ynext, ok = self.ApplyFloor(ynext, args)
+                            if not np.all(ok):
+                                raise ValueError("xHII or xHeII or xHeIII < 0 or > 1, and we're on the minimum ODE step. Exiting.")    
                                 
                 # If nothing is goofy but number densities are below our floor, change them
                 if ynext[0] < (args[2] * self.MinimumSpeciesFraction):
@@ -129,7 +130,7 @@ class SolveRateEquations:
                 
                 if not np.all(tol_met):                 
                     if h == self.hmin: 
-                        raise ValueError('Tolerance not met on minimum ODE step.  Exiting.')
+                        raise ValueError('ERROR: Tolerance not met on minimum ODE step.  Exiting.')
                                                 
                     # Make step smaller
                     h = max(self.hmin, h / 2.)
@@ -201,7 +202,7 @@ class SolveRateEquations:
         """    
                 
         nH = args[2]
-        nHe = args[3]        
+        nHe = args[3]
         nHII = ynext[0]
         nHeII = ynext[1] 
         nHeIII = ynext[2] 
@@ -226,7 +227,7 @@ class SolveRateEquations:
                                                         
     def ApplyFloor(self, ynext, args):
         """
-        Apply floors in ionization (and potentially, but not yet implemented) internal energy.
+        Apply floors in ionization (and potentially, but not implemented) internal energy.
         """   
                         
         nH = args[2]
@@ -240,15 +241,15 @@ class SolveRateEquations:
                 
         # Hydrogen first        
         if nHII > nH:
-            if (nHII / nH - 1.) < self.MinimumSpeciesFraction:
-                ynext[0] = nH * (1. - self.MinimumSpeciesFraction)
+            if np.allclose(nHII, nH, rtol = self.xmin, atol = self.xmin):
+                ynext[0] = nH * (1. - self.xmin)
             else:
                 ok[0] = 0
         
         # This generally won't happen
         if nHII < 0:
-            if abs(nHII) < self.MinimumSpeciesFraction:
-                ynext[0] = nH * self.MinimumSpeciesFraction
+            if abs(nHII) < self.xmin:
+                ynext[0] = nH * self.xmin
             else:
                 ok[0] = 0
                     
@@ -256,20 +257,20 @@ class SolveRateEquations:
         if self.MultiSpecies:
                         
             if nHeII < 0:
-                if (1 - nHe - nHeII) < self.MinimumSpeciesFraction:
-                    ynext[0] = nHe * self.MinimumSpeciesFraction
+                if (1 - nHe - nHeII) < self.xmin:
+                    ynext[0] = nHe * self.xmin
                 else:
                     ok[1] = 0
                         
             if nHeIII < 0:
-                if (1 - nHe - nHeIII) < self.MinimumSpeciesFraction:
-                    ynext[0] = nHe * self.MinimumSpeciesFraction
+                if (1 - nHe - nHeIII) < self.xmin:
+                    ynext[0] = nHe * self.xmin
                 else:
                     ok[2] = 0
                    
             if nHe_ions > nHe:
-                if (nHe_ions / nHe - 1.) < self.MinimumSpeciesFraction:
-                    norm = nHe_ions / nHe / (1. - 2 * self.MinimumSpeciesFraction)
+                if np.allclose(nHe_ions, nHe, rtol = self.xmin, atol = self.xmin):
+                    norm = nHe_ions / nHe / (1. - 2 * self.xmin)
                     ynext[1] /= norm
                     ynext[2] /= norm 
                 else:

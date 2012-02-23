@@ -81,6 +81,7 @@ def Shine(pf, r = None, IsRestart = False):
         # Initialize grid and file system
         if IsRestart: 
             data = ICs
+            g = rtm.InitializeGrid(pf)
         else:
             g = rtm.InitializeGrid(pf)   
             data = g.InitializeFields()

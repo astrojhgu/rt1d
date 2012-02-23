@@ -26,7 +26,8 @@ class Analyze:
         self.data = self.ds.data
         self.pf = self.ds.pf    # dictionary
         self.g = rtm.InitializeGrid(self.pf)   
-        self.iits = rtm.InitializeIntegralTables(self.pf, self.data[0], self.g)        
+        self.iits = rtm.InitializeIntegralTables(self.pf, self.data[0], self.g)      
+        self.esec = rtm.SecondaryElectrons(self.pf)  
         
         # Convenience
         self.GridDimensions = int(self.pf['GridDimensions'])
@@ -311,7 +312,7 @@ class Analyze:
             pl.rcParams['figure.subplot.left'] = 0.2
         
         result = []
-        if type(nHI) is not float:
+        if type(nHI) not in [int, float]:
             x = nHI
             for col in nHI:
                 tmp = [col, nHeI, nHeII]
@@ -324,7 +325,7 @@ class Analyze:
                 result.append(self.interp.interp(indices, 
                     '%s' % integral, tmp))
             
-        elif type(nHeI) is not float:
+        elif type(nHeI) not in [int, float]:
             x = nHeI
             for col in nHeI:
                 tmp = [nHI, col, nHeII]
@@ -342,7 +343,117 @@ class Analyze:
         self.ax.loglog(10**np.array(x), result, color = color, ls = ls)
                                 
         pl.draw()                    
-                                         
+        
+    def InspectRateCoefficients(self, t = 1, coeff = 'Gamma', species = 0, color = 'k', ls = '-'):
+        """
+        Plot given rate coefficient as function of r.
+        """
+        
+        if species == 0:
+            s = 'HI'
+        elif species == 1:
+            s = 'HeI'
+        else:
+            s = 'HeII'
+            
+        if coeff == 'Gamma':
+            ylabel = r'$\Gamma_{\mathrm{%s}}$' % s
+        elif coeff == 'gamma':
+            ylabel = r'$\gamma_{\mathrm{%s}}$' % s
+        elif coeff == 'Beta':
+            ylabel = r'$\beta_{\mathrm{%s}}$' % s    
+        elif coeff == 'k_H':
+            ylabel = r'$\mathcal{H}_{\mathrm{%s}}$' % s
+        elif coeff == 'zeta':
+            ylabel = r'$\zeta_{\mathrm{%s}}$' % s
+        elif coeff == 'eta':
+            ylabel = r'$\eta_{\mathrm{%s}}$' % s 
+        elif coeff == 'psi':
+            ylabel = r'$\psi_{\mathrm{%s}}$' % s       
+        elif coeff == 'omega':
+            ylabel = r'$\omega_{\mathrm{HeIII}}$'           
+        
+        self.ax = pl.subplot(111)
+        for dd in self.data.keys():
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
+                continue
+            
+            exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                self.data[%i].%s[%i], ls = \'%s\', color = \'%s\')' % (dd, dd, coeff, species, ls, color))                
+            
+        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
+        self.ax.set_ylabel(ylabel)         
+                                
+        pl.draw()      
+        
+    def InspectIonizationRate(self, t = 1, species = 0, color = 'k', legend = False):
+        """
+        Plot total ionization rate, and lines for primary, secondary, and collisional.
+        """ 
+        
+        for dd in self.data.keys():
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
+                continue
+            
+            Gamma = self.data[dd].Gamma[species]
+            gamma = self.data[dd].gamma[species]
+            Beta = self.data[dd].Beta[species]
+            tot = Gamma + gamma + Beta
+                
+        self.ax = pl.subplot(111)
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], tot, color = color, ls = '-', label = 'Total')        
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Gamma, color = color, ls = '--', label = r'$\Gamma$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], gamma, color = color, ls = ':', label = r'$\gamma$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Beta, color = color, ls = '-.', label = r'$\beta$')
+        
+        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
+        self.ax.set_ylabel(r'Ionization Rate')
+        self.ax.set_ylim(0.01 * 10**np.floor(np.log10(np.min(tot))), 10**np.ceil(np.log10(np.max(tot))))
+        
+        if legend:
+            self.ax.legend(frameon = False, ncol = 2)
+        
+        pl.draw()
+        
+    def InspectHeatingRate(self, t = 1, color = 'k', legend = False):
+        """
+        Plot total ionization rate, and lines for primary, secondary, and collisional.
+        """ 
+        
+        for dd in self.data.keys():
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
+                continue
+            
+            x_HII = self.data[dd].x_HII
+            fheat = np.zeros(self.GridDimensions)
+            for i in xrange(self.GridDimensions):
+                fheat[i] = self.esec.DepositionFraction(None, x_HII[i], 0)            
+            
+            heat = fheat * np.sum(self.data[dd].k_H * self.data[dd].nabs, axis = 0)
+            zeta = np.sum(self.data[dd].zeta * self.data[dd].nabs, axis = 0)
+            eta = np.sum(self.data[dd].eta * self.data[dd].nabs, axis = 0)
+            omega = np.sum(self.data[dd].omega * self.data[dd].nabs, axis = 0)
+            cool = self.data[dd].n_e * (zeta + eta + omega)
+            
+        self.ax = pl.subplot(111)
+        #self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], heat - cool, color = color, ls = '-')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], heat, color = color, ls = '--', label = r'$\mathcal{H}$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], zeta, color = color, ls = ':', label = r'$\zeta$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], eta, color = color, ls = '-.', label = r'$\eta$')
+                
+        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
+        self.ax.set_ylabel(r'Heating Rate')
+        self.ax.set_ylim(0.01 * 10**np.floor(np.log10(np.min(heat - cool))), 10**np.ceil(np.log10(np.max(heat - cool))))
+        
+        if legend:
+            self.ax.legend(frameon = False, ncol = 2)
+        
+        pl.draw()    
+        
+        # Save heating and cooling rates
+        self.heat = heat
+        self.cool = cool
+        
     def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):
         """
         Histogram all fields.

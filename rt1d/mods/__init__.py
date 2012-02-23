@@ -8,3 +8,4 @@ from rt1d.mods.Radiate import Radiate
 from rt1d.mods.ReadParameterFile import *
 from rt1d.mods.CheckForParameterConflicts import *
 from rt1d.mods.WriteData import WriteData
+from rt1d.mods.SecondaryElectrons import SecondaryElectrons

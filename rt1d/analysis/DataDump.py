@@ -71,18 +71,35 @@ class DataDump:
         self.ncol_HeI[0] = self.ncol_HeII[0] = neglible_column
         self.n_B += self.n_He
         self.f_e = self.n_e / self.n_B    
+        self.nabs = np.array([self.n_HI, self.n_HeI, self.n_HeII])
+        self.nion = np.array([self.n_HII, self.n_HeII, self.n_HeIII])
         
         self.Gamma = np.zeros([3, self.GridDimensions])
         self.k_H = np.zeros([3, self.GridDimensions])
         self.gamma = np.zeros([3, self.GridDimensions])
+        self.Beta = np.zeros([3, self.GridDimensions])
+        self.alpha = np.zeros([3, self.GridDimensions])
+        self.xi = np.zeros([3, self.GridDimensions])
+        self.zeta = np.zeros([3, self.GridDimensions])
+        self.eta = np.zeros([3, self.GridDimensions])
+        self.psi = np.zeros([3, self.GridDimensions])
+        self.omega = np.zeros([3, self.GridDimensions])
         
         if pf["OutputRates"].value:
             for i in xrange(3):
                 self.Gamma[i] = dd['PhotoIonizationRate%i' % i].value
                 self.k_H[i] = dd['PhotoHeatingRate%i' % i].value
                 self.gamma[i] = dd['SecondaryIonizationRate%i' % i].value
+                self.Beta[i] = dd['CollisionalIonizationRate%i' % i].value
+                self.alpha[i] = dd['RadiativeRecombinationRate%i' % i].value
+                self.zeta[i] = dd['CollisionalIonzationCoolingRate%i' % i].value
+                self.eta[i] = dd['RecombinationCoolingRate%i' % i].value
+                self.psi[i] = dd['CollisionalExcitationCoolingRate%i' % i].value
                 
-        
+                if i == 2:
+                    self.xi[i] = dd['DielectricRecombinationRate'].value
+                    self.omega[i] = dd['DielectricRecombinationCoolingRate'].value
+
     def __getitem__(self, name):
         """
         Get data by name we use in hdf5 storage.

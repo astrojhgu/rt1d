@@ -87,7 +87,17 @@ class InitializeGrid:
                 fields['PhotoIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['PhotoHeatingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['SecondaryIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
-        
+                fields['CollisionalIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                fields['RadiativeRecombinationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                fields['CollisionalIonzationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                fields['RecombinationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                                
+                if i == 2:
+                    fields['DielectricRecombinationRate'] = np.zeros_like(fields[fields.keys()[0]])
+                    fields['DielectricRecombinationCoolingRate'] = np.zeros_like(fields[fields.keys()[0]])
+                
         return fields                
                         
     def InitializeDensity(self, cell):

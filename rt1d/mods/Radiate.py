@@ -354,7 +354,7 @@ class Radiate:
                 args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, t))
                 
                 # Unpack so we have everything by name
-                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args                                                          
+                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega = args                                                          
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
                 ######################################
                 ######## Solve Rate Equations ########
@@ -387,7 +387,16 @@ class Radiate:
                         newdata['PhotoIonizationRate%i' % i][cell] = Gamma[i]
                         newdata['PhotoHeatingRate%i' % i][cell] = k_H[i]
                         newdata['SecondaryIonizationRate%i' % i][cell] = gamma[i] 
-                                                                          
+                        newdata['CollisionalIonizationRate%i' % i][cell] = Beta[i] 
+                        newdata['RadiativeRecombinationRate%i' % i][cell] = alpha[i] 
+                        newdata['CollisionalIonzationCoolingRate%i' % i][cell] = zeta[i] 
+                        newdata['RecombinationCoolingRate%i' % i][cell] = eta[i] 
+                        newdata['CollisionalExcitationCoolingRate%i' % i][cell] = psi[i]
+                        
+                        if i == 2:
+                            newdata['DielectricRecombinationRate'][cell] = xi[i]
+                            newdata['DielectricRecombinationCoolingRate'][cell] = omega[i]
+                                                                                                  
                 ######################################
                 ################ DONE ################
                 ######################################
@@ -574,7 +583,7 @@ class Radiate:
 
         q = [n_HII, n_HeII, n_HeIII, E] - our four coupled equations. q = generalized quantity I guess.
         
-        args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi)
+        args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega)
         
         where nabs, nion, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = 3 element arrays 
             (one entry per species)
@@ -598,6 +607,7 @@ class Radiate:
         eta = args[11]
         psi = args[12]
         xi = args[13]
+        omega = args[14]
         
         nHI = (n_H - q[0])
         nHeI = (n_He - q[1] - q[2])  
@@ -628,7 +638,8 @@ class Radiate:
         
         # Temperature evolution - using np.sum is slow :(
         if not self.Isothermal:
-            tmp[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + np.sum(eta * nabs) + np.sum(psi * nabs))
+            tmp[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) \
+                + np.sum(eta * nabs) + np.sum(psi * nabs) + q[2] * omega[2])
         
         return tmp
 
