@@ -185,7 +185,7 @@ def ProblemType(pt):
              
     # X-ray source, helium included, discrete spectrum         
     if pt == 5.1:
-        pf = {"ProblemType": 5.1, "InterpolationMethod": 0, \
+        pf = {"ProblemType": 5.1, "InterpolationMethod": 0, "TabulateIntegrals": 0, \
               "ColumnDensityBinsHI": 100, "ColumnDensityBinsHeI": 50, "ColumnDensityBinsHeII": 50, 
               "GridDimensions": 100, "LengthUnits": 1000 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 

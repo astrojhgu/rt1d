@@ -1,0 +1,6 @@
+ProblemType = 5
+LengthUnits = 3.08568e25
+GridDimensions = 200
+LogarithmicGrid = 1
+StopTime = 50
+OutputDirectory = continuous

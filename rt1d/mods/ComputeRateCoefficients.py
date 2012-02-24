@@ -346,7 +346,7 @@ class RateCoefficients:
         Dielectric recombination coefficient for Helium.
         """
         
-        return 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T)) 
+        return 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
         
     def CollisionalIonizationCoolingRate(self, species = 0, T = None):
         """
