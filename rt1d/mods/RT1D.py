@@ -123,7 +123,7 @@ def Shine(pf, r = None, IsRestart = False):
         else:
             dt = r.control.ComputeInitialPhotonTimestep(data, r, itabs)
                                                                                                                 
-        # If (probalby for testing purposes) we have StopTime << 1, make sure dt <= StopTime        
+        # If (probably for testing purposes) we have StopTime << 1, make sure dt <= StopTime        
         dt = min(dt, StopTime)
                     
         # Figure out data dump times, write out initial dataset (or not, if this is a restart).
