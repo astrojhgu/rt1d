@@ -38,7 +38,7 @@ def SetDefaultParameterValues():
           
         # Integral tabulation
         "TabulateIntegrals": 1, \
-        "IntegralTableName": 'n/a', \
+        "IntegralTableName": 'None', \
         "RegenerateTable": 0, \
         "AutoFallback": 0, \
         "LogHIColumnSpacing": 0.2, \

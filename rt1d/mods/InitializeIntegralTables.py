@@ -134,7 +134,7 @@ class InitializeIntegralTables:
         
         """
         
-        if self.IntegralTableName:
+        if self.IntegralTableName != 'None':
             return self.IntegralTableName
               
         ms = 'ms%i' % self.MultiSpecies
