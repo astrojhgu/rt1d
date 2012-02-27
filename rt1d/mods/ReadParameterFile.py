@@ -42,7 +42,7 @@ def ReadParameterFile(pf):
         
         # Read in the parameter name and the parameter value(s).
         parname, eq, parval = line.partition("=")
-                
+                        
         # ProblemType option
         if parname.strip() == 'ProblemType' and float(parval) > 0:
             pf_new = ProblemType(float(parval))
@@ -174,7 +174,7 @@ def ProblemType(pt):
         pf = {"ProblemType": 5, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 100, "ColumnDensityBinsHeI": 50, "ColumnDensityBinsHeII": 50, 
               "GridDimensions": 100, "LengthUnits": 1000 * cm_per_kpc, \
-              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
+              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 45.0, 
               "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 1, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
               "DensityProfile": 1, "InitialRedshift": 10, "TemperatureProfile": 0, "InitialTemperature": 1e2, \
@@ -188,7 +188,7 @@ def ProblemType(pt):
         pf = {"ProblemType": 5.1, "InterpolationMethod": 0, "TabulateIntegrals": 0, \
               "ColumnDensityBinsHI": 100, "ColumnDensityBinsHeI": 50, "ColumnDensityBinsHeII": 50, 
               "GridDimensions": 100, "LengthUnits": 1000 * cm_per_kpc, \
-              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
+              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 45.0, 
               "StartRadius": 0.01, "dtDataDump": 1, "DataDumpName": 'dd', \
               "Isothermal": 0, "MultiSpecies": 1, "SecondaryIonization": 1, "CosmologicalExpansion": 0, \
               "DensityProfile": 1, "InitialRedshift": 10, "TemperatureProfile": 0, "InitialTemperature": 1e2, \

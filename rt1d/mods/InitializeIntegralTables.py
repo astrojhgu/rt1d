@@ -228,9 +228,11 @@ class InitializeIntegralTables:
                 print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
             
             if self.RegenerateTable:
-                print "Recreating now...\n"
+                if rank == 0:
+                    print "Recreating now...\n"
                 return None
             else:
+                if rank == 0:
                     print "Set RegenerateTable = 1 to recreate this table.\n"    
         
         if self.MultiSpecies > 0:
@@ -248,10 +250,12 @@ class InitializeIntegralTables:
                     print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
                 
                 if self.RegenerateTable:
-                    print "Recreating now...\n"
+                    if rank == 0:
+                        print "Recreating now...\n"
                     return None
                 else:
-                    print "Set RegenerateTable = 1 to recreate this table.\n"    
+                    if rank == 0:
+                        print "Set RegenerateTable = 1 to recreate this table.\n"    
         
         self.HIColumn = itab["HIColumnValues_x"]    # Override what's in parameter file if there is a preexisting table
         
