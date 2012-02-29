@@ -88,9 +88,9 @@ class InitializeIntegralTables:
         # Column densities - determine automatically
         self.n_H = data['HIDensity'] + data['HIIDensity']
         self.n_He = data['HeIDensity'] + data['HeIIDensity'] + data['HeIIIDensity']
-        self.HIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.max(self.n_H * grid.dx)))
+        self.HIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.min(self.n_H * grid.dx)))
         self.HIColumnMax = np.ceil(np.log10(pf["LengthUnits"] * np.max(self.n_H)))
-        self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.max(self.n_He * grid.dx)))
+        self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.min(self.n_He * grid.dx)))
         self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(pf["LengthUnits"] * np.max(self.n_He)))
         
         self.HINBins = pf["ColumnDensityBinsHI"]

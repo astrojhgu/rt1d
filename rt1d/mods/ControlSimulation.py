@@ -140,7 +140,7 @@ class ControlSimulation:
             defdt = np.abs(dHIIdt + dHeIIdt + 2. * dHeIIIdt)
             dtef = self.MaxElectronChange * (n_e / n_B) / defdt 
         
-        return min(dtHI, dtHeI, dtHeII, dtHeIII, dtef)        
+        return min(dtHI, dtHeII, dtHeIII, dtef)        
         
     def LoadBalance(self, dtphot):
         """
