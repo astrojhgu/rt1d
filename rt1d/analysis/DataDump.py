@@ -85,6 +85,8 @@ class DataDump:
         self.psi = np.zeros([3, self.GridDimensions])
         self.omega = np.zeros([3, self.GridDimensions])
         
+        self.tau = dd['OpticalDepth'].value
+        
         if pf["OutputRates"].value:
             for i in xrange(3):
                 self.Gamma[i] = dd['PhotoIonizationRate%i' % i].value

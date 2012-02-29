@@ -38,7 +38,7 @@ class ControlSimulation:
         self.MaxHeIIIChange = pf["MaxHeIIIChange"]
         self.MaxElectronChange = pf["MaxElectronChange"]
         self.HIRestrictedTimestep = pf["HIRestrictedTimestep"]
-        self.HeIRestrictedTimestep = pf["HeIRestrictedTimestep"]
+        #self.HeIRestrictedTimestep = pf["HeIRestrictedTimestep"]
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
         self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
         self.OpticalDepthDefiningIFront = pf["OpticalDepthDefiningIFront"]
@@ -100,20 +100,20 @@ class ControlSimulation:
         
         return min(dtHI, dtHeII, dtHeIII, dtef)
     
-    def ComputePhotonTimestep(self, tau, nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi):
+    def ComputePhotonTimestep(self, tau, nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi, dt):
         """
         Compute photon timestep based on maximum allowed fractional change
         in hydrogen and helium neutral fractions (Shapiro et al. 2004).
         """          
                 
-        dtHI = 1e50        
+        dtHI = 10. * dt        
         if self.HIRestrictedTimestep:
             dHIIdt = nabs[0] * (Gamma[0] + gamma[0] + Beta[0] * n_e) \
                 - nion[0] * n_e * alpha[0]
             if tau[0] >= self.OpticalDepthDefiningIFront[0]:
                 dtHI = self.MaxHIIChange * nabs[0] / abs(dHIIdt)
         
-        dtHeII = 1e50
+        dtHeII = 10. * dt    
         if self.MultiSpecies and self.HeIIRestrictedTimestep:
             dHeIIdt = nabs[1] * (Gamma[1] + gamma[1] + Beta[1] * n_e) \
                 + alpha[2] * n_e * nion[2] \
@@ -122,20 +122,20 @@ class ControlSimulation:
             if tau[1] >= self.OpticalDepthDefiningIFront[1]:
                 dtHeII = self.MaxHeIIChange * nabs[2] / abs(dHeIIdt)
                 
-        dtHeIII = 1e50
+        dtHeIII = 10. * dt    
         if self.MultiSpecies and self.HeIIIRestrictedTimestep:
             dHeIIIdt = nabs[2] * (Gamma[2] + gamma[2] + Beta[2] * n_e) \
                 - nion[2] * n_e * alpha[2]
-            if tau[1] >= self.OpticalDepthDefiningIFront[1]:                         
+            if tau[2] >= self.OpticalDepthDefiningIFront[2]:                         
                 dtHeIII = self.MaxHeIIIChange * nion[2] / abs(dHeIIIdt)
               
-        dtHeI = 1e50        
-        if self.MultiSpecies and self.HeIRestrictedTimestep and (nabs[1] / n_He) > self.MinimumSpeciesFraction:
-            if tau[1] <= self.OpticalDepthDefiningIFront[1]:
-                dHeIdt = -(dHeIIdt + dHeIIIdt)
-                dtHeI = self.MaxHeIChange * nabs[1] / abs(dHeIdt)        
+        #dtHeI = 10. * dt            
+        #if self.MultiSpecies and self.HeIRestrictedTimestep and (nabs[1] / n_He) > self.MinimumSpeciesFraction:
+        #    if tau[1] <= self.OpticalDepthDefiningIFront[1]:
+        #        dHeIdt = -(dHeIIdt + dHeIIIdt)
+        #        dtHeI = self.MaxHeIChange * nabs[1] / abs(dHeIdt)        
             
-        dtef = 1e50  
+        dtef = 10. * dt   
         if self.ElectronFractionRestrictedTimestep:
             defdt = np.abs(dHIIdt + dHeIIdt + 2. * dHeIIIdt)
             dtef = self.MaxElectronChange * (n_e / n_B) / defdt 

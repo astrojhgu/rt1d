@@ -170,7 +170,11 @@ class InitializeIntegralTables:
             src = "apl"
             prop = "{0}_{0}n".format(self.SpectrumPowerLawIndex, self.SpectrumAbsorbingColumn)    
                     
-        return "{0}_{1}_{2}_{3}_{4}_{5}.h5".format(src, prop, pc, ms, sed, dims)
+        # Limits
+        Hlim = '%i%i' % (self.HIColumn[0], self.HIColumn[-1])
+        Helim = '%i%i' % (self.HeIColumn[0], self.HeIColumn[-1])        
+                    
+        return "{0}_{1}_{2}_{3}_{4}_{5}_{6}_{7}.h5".format(src, prop, pc, ms, sed, dims, Hlim, Helim)
             
     def DatasetName(self, integral, species, donor_species = None):
         """
@@ -195,13 +199,15 @@ class InitializeIntegralTables:
         
         filename = self.DetermineTableName()
         itab = {}
-                                
+        
+        table_from_pf = False                        
         if os.path.exists("{0}/input/{1}".format(self.rt1d, filename)): 
             tabloc = "{0}/input/{1}".format(self.rt1d, filename)
         elif os.path.exists("{0}/{1}".format(self.OutputDirectory, filename)): 
             tabloc = "{0}/{1}".format(self.OutputDirectory, filename)
         elif os.path.exists("%s" % self.IntegralTableName):
             tabloc = "%s" % self.IntegralTableName
+            table_from_pf = True
         else:
             if rank == 0:
                 print "\nDid not find a pre-existing integral table.  Generating {0}/{1} now...".format(self.OutputDirectory, filename)
@@ -210,8 +216,10 @@ class InitializeIntegralTables:
                     print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
             return None
         
-        if rank == 0:
-            print "\nFound an integral table for this source.  Reading %s" % tabloc
+        if rank == 0 and table_from_pf:
+            print "\nFound table supplied in parameter file.  Reading %s\n" % tabloc
+        elif rank == 0:
+            print "\nFound an integral table for this source.  Reading %s\n" % tabloc
         
         f = h5py.File("%s" % tabloc, 'r')
         
@@ -223,9 +231,9 @@ class InitializeIntegralTables:
             np.max(itab["HIColumnValues_x"]) < self.HIColumnMax:
             
             if rank == 0:
-                print "The ncol_H bounds of the existing lookup table are inadequate for the requested simulation."
-                print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
-                print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
+                print "The hydrogen column bounds of the existing lookup table are inadequate for this simulation."
+                print "We require: 10^%g < ncol_H < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
+                print "            10^%g < ncol_He < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
             
             if self.RegenerateTable:
                 if rank == 0:
@@ -245,10 +253,10 @@ class InitializeIntegralTables:
                 np.max(itab["HeIIColumnValues_z"]) < self.HeIIColumnMin:
                 
                 if rank == 0:
-                    print "The bounds of the ncol_He existing lookup table are inadequate for the requested simulation."
-                    print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
-                    print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
-                
+                    print "The helium column bounds of the existing lookup table are inadequate for this simulation."
+                    print "We require: 10^%g < ncol_H < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
+                    print "            10^%g < ncol_He < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
+            
                 if self.RegenerateTable:
                     if rank == 0:
                         print "Recreating now...\n"
@@ -257,7 +265,9 @@ class InitializeIntegralTables:
                     if rank == 0:
                         print "Set RegenerateTable = 1 to recreate this table.\n"    
         
-        self.HIColumn = itab["HIColumnValues_x"]    # Override what's in parameter file if there is a preexisting table
+        # Override what's in parameter file if there is a preexisting table and
+        # all the bounds are OK
+        self.HIColumn = itab["HIColumnValues_x"]    
         
         if self.MultiSpecies > 0:
             self.HeIColumn = itab["HeIColumnValues_y"]

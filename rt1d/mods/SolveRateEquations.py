@@ -85,45 +85,17 @@ class SolveRateEquations:
             # Solve away
             ynext = self.solve(f, ynow, xnow, h, Dfun, args)
             
-            # Check for goofiness - NaNs, negative number densities, etc.
+            # Check for NaNs, reduce timestep or raise exception if h == hmin
             if self.CheckForGoofiness:
                 everything_ok = self.SolutionCheck(ynext, args)
-                if not np.all(everything_ok): 
-                                                                                                                                
-                    if not everything_ok[0] and h > self.hmin:
-                        h = max(self.hmin, h / 2.)
-                        continue
-                    elif not everything_ok[0] and h == self.hmin:
-                        raise ValueError('NAN encountered on minimum ODE step. Exiting.')
-                            
-                    if not np.all(everything_ok[1:]):                        
-                        if h > self.hmin:
-                            h = max(self.hmin, h / 2.)
-                            continue
-                        elif h == self.hmin:
-                            ynext, ok = self.ApplyFloor(ynext, args)
-                            if not np.all(ok):
-                                raise ValueError("xHII or xHeII or xHeIII < 0 or > 1, and we're on the minimum ODE step. Exiting.")    
-                                
-                # If nothing is goofy but number densities are below our floor, change them
-                if ynext[0] < (args[2] * self.MinimumSpeciesFraction):
-                    ynext[0] = args[2] * self.MinimumSpeciesFraction
-                if ynext[0] > (args[2] * (1. - self.MinimumSpeciesFraction)):
-                    ynext[0] = args[2] * (1. - self.MinimumSpeciesFraction)
                     
-                # Potential helium goofiness    
-                if self.MultiSpecies:    
-                    if ynext[1] < (args[3] * self.MinimumSpeciesFraction):
-                        ynext[1] = args[3] * self.MinimumSpeciesFraction
-                    if ynext[1] > (args[3] * (1. - self.MinimumSpeciesFraction)):
-                        ynext[1] = args[3] * (1. - self.MinimumSpeciesFraction)
-                    if ynext[2] < (args[3] * self.MinimumSpeciesFraction):
-                        ynext[2] = args[3] * self.MinimumSpeciesFraction
-                    if ynext[2] > (args[3] * (1. - self.MinimumSpeciesFraction)):
-                        ynext[2] = args[3] * (1. - self.MinimumSpeciesFraction)    
+                if not everything_ok[0] and h > self.hmin:
+                    h = max(self.hmin, h / 2.)
+                    continue
+                elif not everything_ok[0] and h == self.hmin:
+                    raise ValueError('NAN encountered on minimum ODE step. Exiting.') 
                                   
             # Adaptive time-stepping
-            adapted = False
             if self.stepper:       
                       
                 tol_met = self.adapt(f, ynow, xnow, ynext, xnext, h, Dfun, args)
@@ -134,13 +106,24 @@ class SolveRateEquations:
                                                 
                     # Make step smaller
                     h = max(self.hmin, h / 2.)
-                    adapted = True
-                                                                                                
-            # If we've gotten this far without adaptively stepping, increase h
-            if adapted is False: 
-                h = min(self.hmax, 2. * h)
-            else: 
-                continue 
+                    continue
+                    
+            # Check to see if number densities are all physically reasonable
+            # (i.e. positive, species fractions <= 1)        
+            if self.CheckForGoofiness:
+                if not np.all(everything_ok[1:]):
+                                        
+                    ynext, ok = self.ApplyFloor(ynext, args)
+                                    
+                    if not np.all(ok):
+                        if h > self.hmin:
+                            h = max(self.hmin, h / 2.)
+                            continue
+                        elif h == self.hmin:
+                            raise ValueError("xHII or xHeII or xHeIII < 0 or > 1, and we're on the minimum ODE step. Exiting.")
+                                                                 
+            # If we've gotten this far, increase h
+            h = min(self.hmax, 2. * h)                 
                                                                                                     
             xnow = xnext        
             ynow = ynext            
@@ -220,7 +203,7 @@ class SolveRateEquations:
             everything_ok[1] = 0 
         if not np.all(feasible_H):
             everything_ok[2] = 0 
-        if not np.all(feasible_He): 
+        if not np.all(feasible_He):
             everything_ok[3] = 0 
                  
         return everything_ok                      
@@ -239,15 +222,15 @@ class SolveRateEquations:
         
         ok = [1, 1, 1, 1]
                 
-        # Hydrogen first        
+        # Hydrogen first - overionization     
         if nHII > nH:
             if np.allclose(nHII, nH, rtol = self.xmin, atol = self.xmin):
                 ynext[0] = nH * (1. - self.xmin)
             else:
                 ok[0] = 0
         
-        # This generally won't happen
-        if nHII < 0:
+        # Hitting MinimumSpeciesFraction
+        if np.allclose(nHII, self.xmin):
             if abs(nHII) < self.xmin:
                 ynext[0] = nH * self.xmin
             else:
@@ -256,15 +239,15 @@ class SolveRateEquations:
         # Helium if necessary
         if self.MultiSpecies:
                         
-            if nHeII < 0:
+            if np.allclose(nHeII, self.xmin):
                 if (1 - nHe - nHeII) < self.xmin:
-                    ynext[0] = nHe * self.xmin
+                    ynext[1] = nHe * self.xmin
                 else:
                     ok[1] = 0
                         
-            if nHeIII < 0:
+            if np.allclose(nHeIII, self.xmin):
                 if (1 - nHe - nHeIII) < self.xmin:
-                    ynext[0] = nHe * self.xmin
+                    ynext[2] = nHe * self.xmin
                 else:
                     ok[2] = 0
                    
@@ -289,7 +272,7 @@ class SolveRateEquations:
         ynp2_ts = self.solve(f, yip1, xip1, h, Dfun, args)  # y_n+2 using two steps
                 
         err_abs = np.abs(ynp2_ts - ynp2_os)        
-        err_tol = self.MinimumSpeciesFraction + self.MinimumSpeciesFraction * ynp2_os
+        err_tol = self.xmin + self.xmin * ynp2_os
 
         return np.less_equal(err_abs, err_tol)
         

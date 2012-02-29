@@ -71,10 +71,9 @@ def SetDefaultParameterValues():
         "CurrentTimestep": 1e-8, \
         "InitialTimestep": 0, \
         "HIRestrictedTimestep": 1, \
-        "HeIRestrictedTimestep": 0, \
         "HeIIRestrictedTimestep": 1, \
         "HeIIIRestrictedTimestep": 1, \
-        "OpticalDepthDefiningIFront": [0.5, 0.05], \
+        "OpticalDepthDefiningIFront": [0.5, 0.5, 0.5], \
         "ElectronFractionRestrictedTimestep": 0, \
         "LightCrossingTimeRestrictedTimestep": 0, \
         "OnePhotonPackagePerCell": 0, \

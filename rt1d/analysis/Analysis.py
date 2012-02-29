@@ -47,6 +47,8 @@ class Analyze:
         self.dx = np.diff(self.r)   
         self.r = self.r[0:-1]
                 
+        self.Vsh = 4. * np.pi * ((self.r + self.dx)**3 - self.r**3) / 3. / cm_per_mpc**3        
+                
         # Shift radii to cell-centered values
         self.r += self.dx / 2.   
                                 
@@ -60,7 +62,7 @@ class Analyze:
             self.interp = Interpolate(self.pf, [self.iits.HIColumn, self.iits.HeIColumn, self.iits.HeIIColumn], 
                 self.itabs)
         else:
-            self.itabs = self.interp = None
+            self.itabs = self.interp = None    
         
     def StromgrenSphere(self, t, sol = 0, T0 = None):
         """
@@ -189,7 +191,7 @@ class Analyze:
         self.ax.set_ylabel(r'Species Fraction')  
         pl.draw()
         
-    def RadialProfileMovie(self, species = 'H', out = None):
+    def RadialProfileMovie(self, species = 'H', out = 'frames'):
         """
         Save time-series images of 'field' to 'out' directory.
         """    
@@ -248,7 +250,7 @@ class Analyze:
             integral = 'ElectronHeatingRate%i' % species
             ylabel = r'$\Psi_{\mathrm{%s}}$' % s
         else:
-            integral = 'TotalOpticalDepth%i' % species 
+            integral = 'TotalOpticalDepth' 
             ylabel = r'$\sum_i\int_{\nu} \tau_{i,\nu} d\nu$'
             pl.rcParams['figure.subplot.left'] = 0.2
         
@@ -371,7 +373,9 @@ class Analyze:
         elif coeff == 'psi':
             ylabel = r'$\psi_{\mathrm{%s}}$' % s       
         elif coeff == 'omega':
-            ylabel = r'$\omega_{\mathrm{HeIII}}$'           
+            ylabel = r'$\omega_{\mathrm{HeIII}}$'   
+        elif coeff == 'alpha':
+            ylabel = r'$\alpha_{\mathrm{%s}}$' % s               
         
         self.ax = pl.subplot(111)
         for dd in self.data.keys():
@@ -454,6 +458,69 @@ class Analyze:
         self.heat = heat
         self.cool = cool
         
+    def InspectTimestepEvolution(self, t = 1):
+        """
+        Plot timestep as a function of radius.
+        """    
+        
+        self.dt = np.zeros([3, self.GridDimensions])
+        for dd in self.data.keys():
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
+                continue
+        
+            dHIIdt = self.data[dd].n_HI * \
+                (self.data[dd].Gamma[0] + self.data[dd].gamma[0] + self.data[dd].Beta[0] * self.data[dd].n_e) \
+                - self.data[dd].n_HII * self.data[dd].n_e * self.data[dd].alpha[0]
+                
+            dHeIIdt = self.data[dd].n_HeI * \
+                (self.data[dd].Gamma[1] + self.data[dd].gamma[1] + self.data[dd].Beta[1] * self.data[dd].n_e) \
+                + self.data[dd].alpha[2] * self.data[dd].n_e * self.data[dd].n_HeIII \
+                - self.data[dd].n_HeII * self.data[dd].n_e * (self.data[dd].alpha[1] + self.data[dd].Beta[2]) \
+                - self.data[dd].xi[1] * self.data[dd].n_e * self.data[dd].n_HeIII
+                
+            dHeIIIdt = self.data[dd].n_HeII * \
+                (self.data[dd].Gamma[2] + self.data[dd].gamma[2] + self.data[dd].Beta[2] * self.data[dd].n_e) \
+                - self.data[dd].n_HeIII * self.data[dd].n_e * self.data[dd].alpha[2]
+                
+            self.dt[0] = self.pf['MaxHIIChange'] * self.data[dd].n_HI / abs(dHIIdt) / self.pf['TimeUnits']
+            self.dt[1] = self.pf['MaxHeIIChange'] * self.data[dd].n_HeII / abs(dHeIIdt) / self.pf['TimeUnits']
+            self.dt[2] = self.pf['MaxHeIIIChange'] * self.data[dd].n_HeIII / abs(dHeIIIdt) / self.pf['TimeUnits']
+            
+            break
+            
+        mi = 10**np.floor(np.log10(np.min(self.dt)))
+        ma = 10**np.ceil(np.log10(np.max(self.dt)))
+                        
+        self.ax = pl.subplot(111)
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[0], color = 'k', label = r'$\Delta t_{\mathrm{HII}}$')
+        i1 = np.argmin(np.abs(self.data[dd].tau[0] - self.pf["OpticalDepthDefiningIFront"][0]))
+        self.ax.loglog([self.data[dd].r[i1] / self.pf['LengthUnits']] * 2, [mi, ma], color = 'b', ls = '-')
+        
+        if self.pf["MultiSpecies"]:
+            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[1], color = 'k', ls = '--', label = r'$\Delta t_{\mathrm{HeII}}$')
+            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[2], color = 'k', ls = ':', label = r'$\Delta t_{\mathrm{HeIII}}$')
+            i2 = np.argmin(np.abs(self.data[dd].tau[1] - self.pf["OpticalDepthDefiningIFront"][1]))
+            i3 = np.argmin(np.abs(self.data[dd].tau[2] - self.pf["OpticalDepthDefiningIFront"][2]))
+            self.ax.loglog([self.data[dd].r[i2] / self.pf['LengthUnits']] * 2, [mi, ma], color = 'b', ls = '--')
+            self.ax.loglog([self.data[dd].r[i3] / self.pf['LengthUnits']] * 2, [mi, ma], color = 'b', ls = ':')
+         
+        # Minimum dtphot    
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.data[dd].dtPhoton, color = 'g', ls = '-', label = r'$\Delta t_{\mathrm{min}}$')
+        
+        # Timestep chosen for next step   
+        self.ax.loglog([self.data[dd].r[0] / self.pf['LengthUnits'], self.data[dd].r[-1] / self.pf['LengthUnits']], 
+            [np.min(self.data[dd].dtPhoton)] * 2, color = 'r', ls = '-')        
+        
+        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
+        self.ax.set_ylabel(r'$\Delta t_{\mathrm{phot}} / \mathrm{TimeUnits}$') 
+        self.ax.legend(loc = 'lower right', ncol = 2, frameon = False)
+        self.ax.annotate(r'$\Delta t_{\mathrm{next}}$', 
+            (self.data[dd].r[self.data[dd].dtPhoton == np.min(self.data[dd].dtPhoton)] / self.pf['LengthUnits'],
+             0.85 * np.min(self.data[dd].dtPhoton)),
+            va = 'top', ha = 'center')
+        
+        pl.draw()    
+                    
     def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):
         """
         Histogram all fields.

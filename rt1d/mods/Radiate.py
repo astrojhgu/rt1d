@@ -91,7 +91,7 @@ class Radiate:
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
         self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
         self.ElectronFractionRestrictedTimestep = pf["ElectronFractionRestrictedTimestep"]
-        self.AdaptiveGlobalStep = self.HIRestrictedTimestep or self.HeIRestrictedTimestep \
+        self.AdaptiveGlobalStep = self.HIRestrictedTimestep \
             or self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep or self.ElectronFractionRestrictedTimestep
         self.LightCrossingTimeRestrictedTimestep = pf["LightCrossingTimeRestrictedTimestep"]
         self.AdaptiveStep = pf["ODEAdaptiveStep"]
@@ -223,6 +223,7 @@ class Radiate:
                 indices_all.append(None)
         
         # Compute optical depths *to* all cells
+        # Only use this for timestep calculation?
         tau_all_arr = np.zeros([3, self.GridDimensions])    
         if not self.pf['TabulateIntegrals']:
             sigma0 = PhotoIonizationCrossSection(self.rs.E, species = 0)
@@ -238,13 +239,13 @@ class Radiate:
                 tau_all_arr[2] = np.sum(tmp_nHeII * sigma2, axis = 1)
             
         else:
-            for i, col in enumerate(ncol_HI):
+            for i, col in enumerate(np.log10(ncol_HI)):
                 tau_all_arr[0][i] = self.coeff.Interpolate.OpticalDepth(col, 0)
                 
                 if self.MultiSpecies:
-                    tau_all_arr[1][i] = self.coeff.Interpolate.OpticalDepth(ncol_HeI[i], 1)
-                    tau_all_arr[2][i] = self.coeff.Interpolate.OpticalDepth(ncol_HeII[i], 2)
-
+                    tau_all_arr[1][i] = self.coeff.Interpolate.OpticalDepth(np.log10(ncol_HeI[i]), 1)
+                    tau_all_arr[2][i] = self.coeff.Interpolate.OpticalDepth(np.log10(ncol_HeII[i]), 2)
+                    
             tau_all_arr[0][0] = tau_all_arr[1][0] = tau_all_arr[2][0] = neglible_tau 
 
         tau_all = zip(*tau_all_arr) 
@@ -283,7 +284,7 @@ class Radiate:
                 packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
         
         # Initialize timestep array
-        if self.HIRestrictedTimestep: 
+        if self.AdaptiveGlobalStep: 
             if self.InfiniteSpeedOfLight:
                 dtphot = 1. * np.zeros_like(self.grid)
             else:
@@ -345,7 +346,7 @@ class Radiate:
                 
                 # Retrieve optical depth to this cell
                 tau = tau_all[cell]
-                
+                                
                 # Retrieve path length through this cell
                 dx = self.dx[cell]                  
                                                                                      
@@ -355,6 +356,12 @@ class Radiate:
                 
                 # Unpack so we have everything by name
                 nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega = args                                                          
+                
+                #if cell > 0:
+                #    if newdata['PhotoIonizationRate0'][cell - 1] < Gamma[0]:                                  
+                #       print cell, newdata['PhotoIonizationRate0'][cell - 1], Gamma[0], \
+                #           np.array(tau) - newdata['OpticalDepth'][cell - 1], \
+                #           newdata['HIIDensity'][cell - 1] - q_all[cell][0]
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
                 ######################################
                 ######## Solve Rate Equations ########
@@ -381,6 +388,7 @@ class Radiate:
                 newdata["HeIIIDensity"][cell] = newHeIII
                 newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
                 newdata["Temperature"][cell] = newT    
+                newdata["OpticalDepth"][cell] = tau
                 
                 if self.OutputRates:
                     for i in xrange(3):
@@ -404,7 +412,8 @@ class Radiate:
                 # Adjust timestep based on maximum allowed neutral fraction change     
                 if self.AdaptiveGlobalStep:
                     dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
-                        nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi)    
+                        nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi, dt) 
+                    #print cell, dtphot[cell]   
 
         ###
         ## SOLVE: c = finite
