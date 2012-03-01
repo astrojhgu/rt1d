@@ -390,10 +390,13 @@ class Analyze:
                                 
         pl.draw()      
         
-    def InspectIonizationRate(self, t = 1, species = 0, color = 'k', legend = False):
+    def InspectIonizationRate(self, t = 1, species = 0, color = 'k', legend = True):
         """
         Plot total ionization rate, and lines for primary, secondary, and collisional.
         """ 
+        
+        if legend and hasattr(self, 'ax'):
+            legend = False
         
         for dd in self.data.keys():
             if self.data[dd].t / self.pf['TimeUnits'] != t: 
@@ -419,10 +422,13 @@ class Analyze:
         
         pl.draw()
         
-    def InspectHeatingRate(self, t = 1, color = 'k', legend = False):
+    def InspectHeatingRate(self, t = 1, color = 'k', legend = True):
         """
         Plot total ionization rate, and lines for primary, secondary, and collisional.
         """ 
+        
+        if legend and hasattr(self, 'ax'):
+            legend = False
         
         for dd in self.data.keys():
             if self.data[dd].t / self.pf['TimeUnits'] != t: 
@@ -434,23 +440,29 @@ class Analyze:
                 fheat[i] = self.esec.DepositionFraction(None, x_HII[i], 0)            
             
             heat = fheat * np.sum(self.data[dd].k_H * self.data[dd].nabs, axis = 0)
-            zeta = np.sum(self.data[dd].zeta * self.data[dd].nabs, axis = 0)
-            eta = np.sum(self.data[dd].eta * self.data[dd].nabs, axis = 0)
-            omega = np.sum(self.data[dd].omega * self.data[dd].nabs, axis = 0)
-            cool = self.data[dd].n_e * (zeta + eta + omega)
+            zeta = np.sum(self.data[dd].zeta * self.data[dd].nabs, axis = 0) * self.data[dd].n_e # collisional ionization
+            eta = np.sum(self.data[dd].eta * self.data[dd].nabs, axis = 0) * self.data[dd].n_e  # recombination
+            psi = np.sum(self.data[dd].psi * self.data[dd].nabs, axis = 0) * self.data[dd].n_e  # collisional excitation
+            omega = np.sum(self.data[dd].omega * self.data[dd].nabs, axis = 0) * self.data[dd].n_e # dielectric
+            cool = (zeta + eta + psi + omega)
+            
+        mi = min(np.min(heat), np.min(cool))    
+        ma = max(np.max(heat), np.max(cool))    
             
         self.ax = pl.subplot(111)
-        #self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], heat - cool, color = color, ls = '-')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], heat, color = color, ls = '--', label = r'$\mathcal{H}$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], zeta, color = color, ls = ':', label = r'$\zeta$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], eta, color = color, ls = '-.', label = r'$\eta$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], heat, color = 'r', ls = '-', label = r'$\mathcal{H}_{\mathrm{tot}}$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], cool, color = 'b', ls = '-', label = r'$\mathcal{C}_{\mathrm{tot}}$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], zeta, color = 'g', ls = '--', label = r'$\zeta$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], psi, color = 'g', ls = ':', label = r'$\psi$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], eta, color = 'c', ls = '--', label = r'$\eta$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], omega, color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
                 
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
-        self.ax.set_ylabel(r'Heating Rate')
-        self.ax.set_ylim(0.01 * 10**np.floor(np.log10(np.min(heat - cool))), 10**np.ceil(np.log10(np.max(heat - cool))))
+        self.ax.set_ylabel(r'Heating/Cooling Rate')
+        self.ax.set_ylim(0.001 * 10**np.floor(np.log10(mi)), 10**np.ceil(np.log10(ma)))
         
         if legend:
-            self.ax.legend(frameon = False, ncol = 2)
+            self.ax.legend(frameon = False, ncol = 3, loc = 'lower right')
         
         pl.draw()    
         
@@ -489,7 +501,7 @@ class Analyze:
             break
             
         mi = 10**np.floor(np.log10(np.min(self.dt)))
-        ma = 10**np.ceil(np.log10(np.max(self.dt)))
+        ma = 1e2
                         
         self.ax = pl.subplot(111)
         self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[0], color = 'k', label = r'$\Delta t_{\mathrm{HII}}$')
@@ -518,7 +530,28 @@ class Analyze:
             (self.data[dd].r[self.data[dd].dtPhoton == np.min(self.data[dd].dtPhoton)] / self.pf['LengthUnits'],
              0.85 * np.min(self.data[dd].dtPhoton)),
             va = 'top', ha = 'center')
+            
+        self.ax.set_ylim(mi, ma)    
         
+        pl.draw()    
+        
+    def InspectSolverSpeed(self, t = 1, color = 'k', ls = '-'):
+        """
+        Plot ODE step as a function of radius.
+        """    
+        
+        for dd in self.data.keys():
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
+                continue
+        
+            self.ax = pl.subplot(111)
+            self.ax.loglog(self.data[dd].r / self.pf["LengthUnits"], self.data[dd].odestep, color = color, ls = ls)
+            
+            self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
+            self.ax.set_ylabel(r'$\Delta t_{\mathrm{ODE}}$') 
+            
+            break
+            
         pl.draw()    
                     
     def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):

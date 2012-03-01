@@ -86,6 +86,7 @@ class DataDump:
         self.omega = np.zeros([3, self.GridDimensions])
         
         self.tau = dd['OpticalDepth'].value
+        self.odestep = dd['ODEstep'].value / pf["TimeUnits"].value
         
         if pf["OutputRates"].value:
             for i in xrange(3):

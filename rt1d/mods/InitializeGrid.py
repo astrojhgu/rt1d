@@ -81,6 +81,7 @@ class InitializeGrid:
         
         # Additional fields
         fields['dtPhoton'] = np.ones_like(fields[fields.keys()[0]])
+        fields['ODEstep'] = np.zeros_like(fields[fields.keys()[0]])
         fields['OpticalDepth'] = np.zeros([len(fields[fields.keys()[0]]), 3])
         
         if self.OutputRates:

@@ -124,7 +124,7 @@ class RateCoefficients:
                 alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
                 
                 # Dielectric recombination
-                if i == 2:
+                if i == 1:
                     xi[i] = self.DielectricRecombinationRate(T = T)
                     omega[i] = self.DielectricRecombinationCoolingRate(T = T)
                     
@@ -148,9 +148,9 @@ class RateCoefficients:
                         gamma[i] += self.SecondaryIonizationRate(Psi_N = Psi_N[j], Psi_N_dN = Psi_N_dN[j],
                             Phi_N = Phi_N[j], Phi_N_dN = Phi_N_dN[j], 
                             Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr,
-                            species = i, donor_species = j, x_HII = x_HII)
-                                
-                    gamma[i] *= (A[i] / E_th[i] / erg_per_ev)        
+                            species = i, donor_species = j, x_HII = x_HII, A = A[j])
+                                    
+                    gamma[i] /= (E_th[i] * erg_per_ev)
                                     
         # Only the photon-conserving algorithm is capable of this - though in
         # the future, the discrete NPC solver could do this if we wanted.                                         
@@ -213,7 +213,7 @@ class RateCoefficients:
                 alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
                 
                 # Dielectric recombination
-                if i == 2:
+                if i == 1:
                     xi[i] = self.DielectricRecombinationRate(T = T)
                     omega[i] = self.DielectricRecombinationCoolingRate(T = T)
                 
@@ -288,7 +288,7 @@ class RateCoefficients:
     def SecondaryIonizationRate(self, species = 0, donor_species = 0, E = None, Qdot = None, Lbol = None, 
         ncol = None, n_e = None, nabs = None, x_HII = None, tau = None,
         T = None, r = None, dr = None, dt = None, Psi_N = None, Psi_N_dN = None,
-        Phi_N = None, Phi_N_dN = None):
+        Phi_N = None, Phi_N_dN = None, A = None):
         """
         Secondary ionization rate which we denote elsewhere as gamma (note little g).
         
@@ -297,14 +297,14 @@ class RateCoefficients:
             
         If this routine is called, it means TabulateIntegrals = 1.    
         """    
-        
+            
         if self.PhotonConserving:
             IonizationRate = (Psi_N - Psi_N_dN - E_th[donor_species] * erg_per_ev * (Phi_N - Phi_N_dN))        
         else:            
             IonizationRate = (Psi_N - E_th[donor_species] * erg_per_ev * Phi_N)   
-                          
+                                        
         # Normalization will be applied in ConstructArgs                                                                                                                      
-        return IonizationRate * \
+        return A * IonizationRate * \
             self.esec.DepositionFraction(E = E, xi = x_HII, channel = species + 1) * \
             (nabs[donor_species] / nabs[species])
         

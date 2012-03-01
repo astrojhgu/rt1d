@@ -88,10 +88,11 @@ class Radiate:
         # Timestepping
         self.AdaptiveTimestep = pf["ODEAdaptiveStep"]
         self.HIRestrictedTimestep = pf["HIRestrictedTimestep"]
+        self.HeIRestrictedTimestep = pf["HeIRestrictedTimestep"]
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
         self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
         self.ElectronFractionRestrictedTimestep = pf["ElectronFractionRestrictedTimestep"]
-        self.AdaptiveGlobalStep = self.HIRestrictedTimestep \
+        self.AdaptiveGlobalStep = self.HIRestrictedTimestep or self.HeIRestrictedTimestep \
             or self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep or self.ElectronFractionRestrictedTimestep
         self.LightCrossingTimeRestrictedTimestep = pf["LightCrossingTimeRestrictedTimestep"]
         self.AdaptiveStep = pf["ODEAdaptiveStep"]
@@ -248,7 +249,7 @@ class Radiate:
                     
             tau_all_arr[0][0] = tau_all_arr[1][0] = tau_all_arr[2][0] = neglible_tau 
 
-        tau_all = zip(*tau_all_arr) 
+        tau_all = zip(*tau_all_arr)         
                                 
         # Print status, and update progress bar
         if rank == 0: 
@@ -389,6 +390,7 @@ class Radiate:
                 newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
                 newdata["Temperature"][cell] = newT    
                 newdata["OpticalDepth"][cell] = tau
+                newdata["ODEstep"][cell] = h
                 
                 if self.OutputRates:
                     for i in xrange(3):
@@ -413,7 +415,6 @@ class Radiate:
                 if self.AdaptiveGlobalStep:
                     dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
                         nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi, dt) 
-                    #print cell, dtphot[cell]   
 
         ###
         ## SOLVE: c = finite
@@ -617,39 +618,48 @@ class Radiate:
         psi = args[12]
         xi = args[13]
         omega = args[14]
+                
+        tmp = self.zeros_tmp
         
         nHI = (n_H - q[0])
-        nHeI = (n_He - q[1] - q[2])  
-                                
-        tmp = self.zeros_tmp
-        equil = self.zeros_eq
-        
-        # Enforce equilibrium for highly ionized (to a fault) cells
-        if nHI < 0:
-            equil[0] = 1
-        if nHeI < 0:
-            equil[1] = 1
+        nHeI = (n_He - q[1] - q[2])
+        xHI = nHI / n_H
+        xHeI = nHeI / n_He
+                
+        #if nHI < 0:
+        #    if not np.allclose(xHI, 0, atol = self.MinimumSpeciesFraction, rtol = self.MinimumSpeciesFraction):
+        #        tmp[0] = np.inf 
+        #        return tmp
+        #    else:
+        #        nHI = self.MinimumSpeciesFraction * n_H
+        #        print 'hey1'
+        #    
+        #if nHeI < 0:
+        #    print 'RateEquations:', q[1], q[2], np.sum(q[1:3]) / n_He
+        #    if not np.allclose(xHeI, 0, atol = self.MinimumSpeciesFraction, rtol = self.MinimumSpeciesFraction):
+        #        tmp[1] = np.inf 
+        #        return tmp
+        #    else:
+        #        nHeI = self.MinimumSpeciesFraction * n_He
+        #        print 'hey2'
                 
         # Always solve hydrogen rate equation
-        tmp[0] = (1. - equil[0]) * \
-            ((Gamma[0] + gamma[0] + Beta[0] * n_e) * nHI - \
-            alpha[0] * self.C * n_e * q[0])        
+        tmp[0] = ((Gamma[0] + gamma[0] + Beta[0] * n_e) * nHI - \
+                   alpha[0] * self.C * n_e * q[0])        
                 
         # Helium rate equations  
         if self.MultiSpecies:                                         
-            tmp[1] = (1. - equil[1]) * \
-                    ((Gamma[1] + gamma[1] + Beta[1] * n_e) * nHeI + \
-                    alpha[2] * n_e * q[2] - \
-                    (Beta[1] + alpha[1]) * n_e * q[1] - \
-                    xi[2] * n_e * q[2])
-                        
+            tmp[1] = ((Gamma[1] + gamma[1] + Beta[1] * n_e) * nHeI) + \
+                       alpha[2] * n_e * q[2] - \
+                      (Beta[1] + alpha[1] + xi[1]) * n_e * q[1]
+                                            
             tmp[2] = (Gamma[2] + gamma[2] + Beta[2] * n_e) * q[1] - alpha[2] * n_e * q[2]
         
         # Temperature evolution - using np.sum is slow :(
         if not self.Isothermal:
             tmp[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) \
-                + np.sum(eta * nabs) + np.sum(psi * nabs) + q[2] * omega[2])
-        
+                + np.sum(eta * nabs) + np.sum(psi * nabs) + q[2] * omega[1])
+
         return tmp
 
     def UpdatePhotonPackages(self, packs, t_next, data):
