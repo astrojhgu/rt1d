@@ -82,13 +82,13 @@ def ReadRestartFile(rf):
             
     return pf, data       
     
-def ProblemType(pt):
+def ProblemType(ptype):
     """
     Storage bin for predefined problem types, 'pt's, like those used in the radiative transfer comparison project ('RT06').
     """
     
     # RT06-1, RT1: Pure hydrogen, isothermal HII region expansion, monochromatic spectrum at 13.6 eV
-    if pt == 1:
+    if ptype == 1:
         pf = {"ProblemType": 1, "InterpolationMethod": 0, "TabulateIntegrals": 0, \
               "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
@@ -101,7 +101,7 @@ def ProblemType(pt):
              }        
             
     # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, *continuous spectrum*
-    if pt == 2:
+    if ptype == 2:
        pf = {"ProblemType": 2, "InterpolationMethod": 0, "TabulateIntegrals": 1, \
              "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
@@ -115,7 +115,7 @@ def ProblemType(pt):
             }
             
     # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum of Wise & Abel (2011)
-    if pt == 2.1:
+    if ptype == 2.1:
        pf = {"ProblemType": 2.1, "InterpolationMethod": 0, \
              "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
              "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 500.0, \
@@ -128,7 +128,7 @@ def ProblemType(pt):
             }         
     
     # RT06-3: I-front trapping in a dense clump and the formation of a shadow
-    if pt == 3.1:
+    if ptype == 3.1:
         pf = {"ProblemType": 3, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 6.6 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 15.0, 
@@ -144,7 +144,7 @@ def ProblemType(pt):
              }   
     
     # X-ray source, hydrogen only       
-    if pt == 4:
+    if ptype == 4:
         pf = {"ProblemType": 4, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 500, "ColumnDensityBinsHeI": 0, "ColumnDensityBinsHeII": 0, 
               "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
@@ -157,7 +157,7 @@ def ProblemType(pt):
              }      
              
     # X-ray source, hydrogen only, discrete spectrum         
-    if pt == 4.1:
+    if ptype == 4.1:
         pf = {"ProblemType": 4.1, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 500, "GridDimensions": 100, "LengthUnits": 100 * cm_per_kpc, \
               "TimeUnits": s_per_myr, "CurrentTime": 0.0, "StopTime": 10.0, 
@@ -169,8 +169,8 @@ def ProblemType(pt):
               "SourceMass": 1e6, "SourceRadiativeEfficiency": 0.1, "SpectrumPowerLawIndex": 1.5
              }                    
     
-    # X-ray source, helium included         
-    if pt == 5:
+    # X-ray source, helium included, continuous spectrum       
+    if ptype == 5:
         pf = {"ProblemType": 5, "InterpolationMethod": 0, \
               "ColumnDensityBinsHI": 100, "ColumnDensityBinsHeI": 50, "ColumnDensityBinsHeII": 50, 
               "GridDimensions": 100, "LengthUnits": 1000 * cm_per_kpc, \
@@ -184,7 +184,7 @@ def ProblemType(pt):
              }      
              
     # X-ray source, helium included, discrete spectrum         
-    if pt == 5.1:
+    if ptype == 5.1:
         pf = {"ProblemType": 5.1, "InterpolationMethod": 0, "TabulateIntegrals": 0, \
               "ColumnDensityBinsHI": 100, "ColumnDensityBinsHeI": 50, "ColumnDensityBinsHeII": 50, 
               "GridDimensions": 100, "LengthUnits": 1000 * cm_per_kpc, \

@@ -1,0 +1,7 @@
+ProblemType = 5.1
+GridDimensions = 400
+LogarithmicGrid = 0
+StopTime = 45
+OutputDirectory = op_multifreq
+DiscreteSpectrumSED = [135.79187845, 308.63473721, 848.90483021, 4891.51696006]
+DiscreteSpectrumRelLum = [0.04663425, 0.08191109, 0.21862156, 0.6528331]

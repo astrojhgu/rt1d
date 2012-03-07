@@ -183,9 +183,8 @@ class RateCoefficients:
                     # Total photo-ionization tally
                     Gamma[i] += Gamma_E[j]
                     
-                    # Energy deposition rate per atom i via photo-electrons due to 
-                    # ionizations by *this* energy group. No fion or fheat
-                    # applied yet.
+                    # Total energy deposition rate per atom i via photo-electrons 
+                    # due to ionizations by *this* energy group. 
                     ee = Gamma_E[j] * (E - E_th[i]) * erg_per_ev 
                         
                     if self.SecondaryIonization:
@@ -195,11 +194,11 @@ class RateCoefficients:
                             if not self.MultiSpecies and k > 0:
                                 continue
                             
-                            fion = self.esec.DepositionFraction(E = E, xi = x_HII, channel = k + 1)
-                            
                             # If these photo-electrons dont have enough energy to ionize species k, continue    
                             if (E - E_th[i]) < E_th[k]:
                                 continue    
+                            
+                            fion = self.esec.DepositionFraction(E = E, xi = x_HII, channel = k + 1)
                             
                             # (This k) = i from paper, and (this i) = j from paper
                             gamma[k][i] += ee * fion / (E_th[k] * erg_per_ev)
@@ -246,8 +245,7 @@ class RateCoefficients:
                         
         """     
                           
-        Phi_N = None
-        Phi_N_dN = None 
+        Phi_N = Phi_N_dN = None
                                         
         if self.TabulateIntegrals:
             if self.PhotonConserving:
@@ -273,8 +271,7 @@ class RateCoefficients:
         bound to `species.'  If this method is called, it means TabulateIntegrals = 1.
         """
         
-        Psi_N = None
-        Psi_N_dN = None
+        Psi_N = Psi_N_dN = None
         
         if self.PhotonConserving:
             Psi_N = self.Interpolate.interp(indices_in, "ElectronHeatingRate%i" % species, ncol)
@@ -306,8 +303,7 @@ class RateCoefficients:
                                         
         # Normalization will be applied in ConstructArgs                                                                                                                      
         return A * IonizationRate * \
-            self.esec.DepositionFraction(E = E, xi = x_HII, channel = species + 1) #* \
-            #(nabs[donor_species] / nabs[species])
+            self.esec.DepositionFraction(E = E, xi = x_HII, channel = species + 1)
         
     def CollisionalIonizationRate(self, species = None, n_e = None, T = None):
         """

@@ -160,7 +160,7 @@ class Analyze:
         pl.draw()        
         
     def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k', 
-        annotate = True):
+        annotate = False):
         """
         Plot radial profiles of species fraction (for H or He) at times t (Myr).
         """      
