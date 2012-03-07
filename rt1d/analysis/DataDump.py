@@ -76,7 +76,7 @@ class DataDump:
         
         self.Gamma = np.zeros([3, self.GridDimensions])
         self.k_H = np.zeros([3, self.GridDimensions])
-        self.gamma = np.zeros([3, self.GridDimensions])
+        self.gamma = np.zeros([3, 3, self.GridDimensions])
         self.Beta = np.zeros([3, self.GridDimensions])
         self.alpha = np.zeros([3, self.GridDimensions])
         self.xi = np.zeros([3, self.GridDimensions])
@@ -86,18 +86,25 @@ class DataDump:
         self.omega = np.zeros([3, self.GridDimensions])
         
         self.tau = dd['OpticalDepth'].value
-        self.odestep = dd['ODEstep'].value / pf["TimeUnits"].value
+        self.odeit = dd['ODEIterations'].value
+        self.odeitrate = dd['ODEIterationRate'].value
+        
+        # This is total in a given ODE step - the ratio of this to 
+        # odeit is more interesting than rootit alone.
+        self.rootit = dd['RootFinderIterations'].value
         
         if pf["OutputRates"].value:
             for i in xrange(3):
                 self.Gamma[i] = dd['PhotoIonizationRate%i' % i].value
                 self.k_H[i] = dd['PhotoHeatingRate%i' % i].value
-                self.gamma[i] = dd['SecondaryIonizationRate%i' % i].value
                 self.Beta[i] = dd['CollisionalIonizationRate%i' % i].value
                 self.alpha[i] = dd['RadiativeRecombinationRate%i' % i].value
                 self.zeta[i] = dd['CollisionalIonzationCoolingRate%i' % i].value
                 self.eta[i] = dd['RecombinationCoolingRate%i' % i].value
                 self.psi[i] = dd['CollisionalExcitationCoolingRate%i' % i].value
+                
+                for j in xrange(3):
+                    self.gamma[i][j] = dd['SecondaryIonizationRate%i' % i].value[0:,j]
                 
                 if i == 2:
                     self.xi[i] = dd['DielectricRecombinationRate'].value

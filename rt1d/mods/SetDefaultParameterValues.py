@@ -20,16 +20,17 @@ def SetDefaultParameterValues():
         # Override
         "ProblemType": 1, \
           
-        # Integration
+        # Interpolation
         "InterpolationMethod": 0, \
         
         # ODE Solver
         "ODEAdaptiveStep": 1, \
         "ODEMinStep": 1e-8, \
         "ODEMaxStep": 1e-1, \
-        "ODEMaxIter": 1e4, \
+        "ODEMaxIter": 1e2, \
         "CheckForGoofiness": 1, \
-        "MinimumSpeciesFraction": 1e-6, \
+        "MinimumSpeciesFraction": 1e-5, \
+        "MaximumGlobalTimestep": 500, \
         
         "ParallelizationMethod": 1, \
         "Debug": 1, \
@@ -40,10 +41,6 @@ def SetDefaultParameterValues():
         "TabulateIntegrals": 1, \
         "IntegralTableName": 'None', \
         "RegenerateTable": 0, \
-        "AutoFallback": 0, \
-        "LogHIColumnSpacing": 0.2, \
-        "LogHeIColumnSpacing": 0.2, \
-        "LogHeIIColumnSpacing": 0.2, \
         "ColumnDensityBinsHI": 100, \
         "ColumnDensityBinsHeI": 50, \
         "ColumnDensityBinsHeII": 50, \
@@ -52,6 +49,7 @@ def SetDefaultParameterValues():
         # Grid parameters
         "GridDimensions": 100, \
         "LogarithmicGrid": 0, \
+        "StartRadius": 0.01, \
           
         # Units
         "LengthUnits": cm_per_kpc, \
@@ -60,7 +58,6 @@ def SetDefaultParameterValues():
         # Control parameters
         "CurrentTime": 0.0, \
         "StopTime": 50.0, \
-        "StartRadius": 0.01, \
         "dtDataDump": 5.0, \
         "DataDumpName": 'dd', \
         "OutputDirectory": './', \
@@ -114,9 +111,7 @@ def SetDefaultParameterValues():
         # Source parameters
         "SourceType": 0, \
         "SourceTemperature": 1e5, \
-        "SourceRadius": 1.0, \
         "SourceMass": 1e3, \
-        "FixedSourceMass": 0, \
         "SourceLifetime": 1e10, \
         "SourceRadiativeEfficiency": 0.1, \
           
@@ -133,11 +128,8 @@ def SetDefaultParameterValues():
         # Set discrete spectrum manually  
         "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], \
         "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], \
-        
-        # Or, conserve bolometric (default) or ionizing luminosity of continuous source
-        "ConserveIonizingPhotonLuminosity": 0, \
           
-        # Cosmological Parameters (WMAP 7)
+        # Cosmological Parameters (WMAP7+BAO+SNIa)
         "InitialRedshift": 20.0, \
         "OmegaMatterNow": 0.272, \
         "OmegaBaryonNow": 0.044, \

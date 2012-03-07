@@ -27,6 +27,7 @@ tiny_number = 1e-12
 
 class InitializeGrid:
     def __init__(self, pf):
+        self.pf = pf
         self.Cosmology = Cosmology(pf)
         self.GridDimensions = int(pf["GridDimensions"])
         self.LogGrid = pf["LogarithmicGrid"]
@@ -81,24 +82,29 @@ class InitializeGrid:
         
         # Additional fields
         fields['dtPhoton'] = np.ones_like(fields[fields.keys()[0]])
-        fields['ODEstep'] = np.zeros_like(fields[fields.keys()[0]])
-        fields['OpticalDepth'] = np.zeros([len(fields[fields.keys()[0]]), 3])
+        
         
         if self.OutputRates:
             for i in xrange(3):
                 fields['PhotoIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['PhotoHeatingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
-                fields['SecondaryIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['CollisionalIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['RadiativeRecombinationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['CollisionalIonzationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['RecombinationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                    
+                fields['SecondaryIonizationRate%i' % i] = np.zeros([len(fields[fields.keys()[0]]), 3])    
                                 
                 if i == 2:
                     fields['DielectricRecombinationRate'] = np.zeros_like(fields[fields.keys()[0]])
                     fields['DielectricRecombinationCoolingRate'] = np.zeros_like(fields[fields.keys()[0]])
+        
+        fields["ODEIterations"] = np.zeros_like(fields[fields.keys()[0]])        
+        fields['ODEIterationRate'] = np.zeros_like(fields[fields.keys()[0]])        
+        fields['RootFinderIterations'] = np.zeros([len(fields[fields.keys()[0]]), 4])
+        fields['OpticalDepth'] = np.zeros([len(fields[fields.keys()[0]]), 3])        
                 
         return fields                
                         
@@ -111,8 +117,10 @@ class InitializeGrid:
                 1: Uniform density given by cosmic mean at z = InitialRedshift.
         """        
                 
-        if self.DensityProfile == 0: density = self.InitialDensity * m_H
-        if self.DensityProfile == 1: density = self.Cosmology.MeanBaryonDensity(self.InitialRedshift)
+        if self.DensityProfile == 0: 
+            density = self.InitialDensity * m_H
+        if self.DensityProfile == 1: 
+            density = self.Cosmology.MeanBaryonDensity(self.InitialRedshift)
         
         if self.Clump: 
             if self.ClumpDensityProfile == 0:

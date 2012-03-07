@@ -95,7 +95,7 @@ class Radiate:
         self.AdaptiveGlobalStep = self.HIRestrictedTimestep or self.HeIRestrictedTimestep \
             or self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep or self.ElectronFractionRestrictedTimestep
         self.LightCrossingTimeRestrictedTimestep = pf["LightCrossingTimeRestrictedTimestep"]
-        self.AdaptiveStep = pf["ODEAdaptiveStep"]
+        self.AdaptiveODEStep = pf["ODEAdaptiveStep"]
         self.MaxStep = pf["ODEMaxStep"] * self.TimeUnits
         self.MinStep = pf["ODEMinStep"] * self.TimeUnits
         
@@ -142,7 +142,7 @@ class Radiate:
                    3 * self.pf["InitialTemperature"] * k_B * (self.TotalHydrogen + self.TotalHelium) / 2.]
                 
         # Initialize solver        
-        self.solver = SolveRateEquations(pf, guesses = guesses, stepper = self.AdaptiveStep, 
+        self.solver = SolveRateEquations(pf, guesses = guesses, AdaptiveODEStep = self.AdaptiveODEStep, 
             hmin = self.MinStep, hmax = self.MaxStep, Dfun = None, maxiter = pf["ODEMaxIter"])                 
         
         # Initialize helium abundance                        
@@ -349,26 +349,20 @@ class Radiate:
                 tau = tau_all[cell]
                                 
                 # Retrieve path length through this cell
-                dx = self.dx[cell]                  
-                                                                                     
+                dx = self.dx[cell]     
+                                                                             
                 # Retrieve coefficients and what not.
                 args = [nabs, nion, n_H, n_He, n_e]
                 args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, t))
                 
                 # Unpack so we have everything by name
                 nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega = args                                                          
-                
-                #if cell > 0:
-                #    if newdata['PhotoIonizationRate0'][cell - 1] < Gamma[0]:                                  
-                #       print cell, newdata['PhotoIonizationRate0'][cell - 1], Gamma[0], \
-                #           np.array(tau) - newdata['OpticalDepth'][cell - 1], \
-                #           newdata['HIIDensity'][cell - 1] - q_all[cell][0]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
                 ######################################
                 ######## Solve Rate Equations ########
-                ######################################                          
+                ######################################        
                                                               
-                tarr, qnew, h = self.solver.integrate(self.RateEquations, q_all[cell], t, t + dt, 
+                tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, q_all[cell], t, t + dt, 
                     None, h, *args)
                                                                                                                                            
                 # Unpack results of coupled equations
@@ -390,18 +384,21 @@ class Radiate:
                 newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
                 newdata["Temperature"][cell] = newT    
                 newdata["OpticalDepth"][cell] = tau
-                newdata["ODEstep"][cell] = h
+                newdata["ODEIterations"][cell] = odeitr
+                newdata["ODEIterationRate"][cell] = odeitr / (h / self.TimeUnits)
+                newdata["RootFinderIterations"][cell] = rootitr
                 
                 if self.OutputRates:
                     for i in xrange(3):
                         newdata['PhotoIonizationRate%i' % i][cell] = Gamma[i]
                         newdata['PhotoHeatingRate%i' % i][cell] = k_H[i]
-                        newdata['SecondaryIonizationRate%i' % i][cell] = gamma[i] 
                         newdata['CollisionalIonizationRate%i' % i][cell] = Beta[i] 
                         newdata['RadiativeRecombinationRate%i' % i][cell] = alpha[i] 
                         newdata['CollisionalIonzationCoolingRate%i' % i][cell] = zeta[i] 
                         newdata['RecombinationCoolingRate%i' % i][cell] = eta[i] 
                         newdata['CollisionalExcitationCoolingRate%i' % i][cell] = psi[i]
+                        
+                        newdata['SecondaryIonizationRate%i' % i][cell] = gamma[i] 
                         
                         if i == 2:
                             newdata['DielectricRecombinationRate'][cell] = xi[i]
@@ -619,48 +616,33 @@ class Radiate:
         xi = args[13]
         omega = args[14]
                 
-        tmp = self.zeros_tmp
+        dqdt = self.zeros_tmp
         
-        nHI = (n_H - q[0])
-        nHeI = (n_He - q[1] - q[2])
-        xHI = nHI / n_H
-        xHeI = nHeI / n_He
-                
-        #if nHI < 0:
-        #    if not np.allclose(xHI, 0, atol = self.MinimumSpeciesFraction, rtol = self.MinimumSpeciesFraction):
-        #        tmp[0] = np.inf 
-        #        return tmp
-        #    else:
-        #        nHI = self.MinimumSpeciesFraction * n_H
-        #        print 'hey1'
-        #    
-        #if nHeI < 0:
-        #    print 'RateEquations:', q[1], q[2], np.sum(q[1:3]) / n_He
-        #    if not np.allclose(xHeI, 0, atol = self.MinimumSpeciesFraction, rtol = self.MinimumSpeciesFraction):
-        #        tmp[1] = np.inf 
-        #        return tmp
-        #    else:
-        #        nHeI = self.MinimumSpeciesFraction * n_He
-        #        print 'hey2'
+        # Neutrals (current)
+        nHI = n_H - q[0]
+        nHeI = n_He - q[1] - q[2]
+        nHeII = q[1]
                 
         # Always solve hydrogen rate equation
-        tmp[0] = ((Gamma[0] + gamma[0] + Beta[0] * n_e) * nHI - \
-                   alpha[0] * self.C * n_e * q[0])        
+        dqdt[0] = (Gamma[0] + Beta[0] * n_e) * nHI + \
+                  (gamma[0][0] * nHI + gamma[0][1] * nHeI + gamma[0][2] * nHeII) - \
+                   alpha[0] * self.C * n_e * q[0]        
                 
         # Helium rate equations  
-        if self.MultiSpecies:                                         
-            tmp[1] = ((Gamma[1] + gamma[1] + Beta[1] * n_e) * nHeI) + \
+        if self.MultiSpecies:       
+            dqdt[1] = (Gamma[1] + Beta[1] * n_e) * nHeI + \
+                      (gamma[1][0] * nHI + gamma[1][1] * nHeI + gamma[1][2] * nHeII)  + \
                        alpha[2] * n_e * q[2] - \
                       (Beta[1] + alpha[1] + xi[1]) * n_e * q[1]
-                                            
-            tmp[2] = (Gamma[2] + gamma[2] + Beta[2] * n_e) * q[1] - alpha[2] * n_e * q[2]
+                              
+            dqdt[2] = (Gamma[2] + Beta[2] * n_e) * q[1] - alpha[2] * n_e * q[2]
         
         # Temperature evolution - using np.sum is slow :(
         if not self.Isothermal:
-            tmp[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) \
+            dqdt[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) \
                 + np.sum(eta * nabs) + np.sum(psi * nabs) + q[2] * omega[1])
 
-        return tmp
+        return dqdt
 
     def UpdatePhotonPackages(self, packs, t_next, data):
         """
@@ -669,10 +651,12 @@ class Radiate:
                 
         to_eliminate = []
         for i, pack in enumerate(packs):
-            if (t_next - pack[0]) > (self.LengthUnits / c): to_eliminate.append(i)
+            if (t_next - pack[0]) > (self.LengthUnits / c): 
+                to_eliminate.append(i)
             
         to_eliminate.reverse()    
-        for element in to_eliminate: packs.pop(element)
+        for element in to_eliminate: 
+            packs.pop(element)
                 
         return packs
         

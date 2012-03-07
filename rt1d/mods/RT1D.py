@@ -70,6 +70,7 @@ def Shine(pf, r = None, IsRestart = False):
         GridDimensions = pf["GridDimensions"]
         StopTime = pf["StopTime"] * TimeUnits
         dtDataDump = pf["dtDataDump"] * TimeUnits
+        MaximumGlobalTimestep = pf["MaximumGlobalTimestep"] * TimeUnits
         
         # Print out cell-crossing and box-crossing times for convenience
         if rank == 0:
@@ -177,7 +178,7 @@ def Shine(pf, r = None, IsRestart = False):
             # Evolve photons
             data, h, newdt, lb = r.EvolvePhotons(data, t, dt, min(h, dt), lb)
             t += dt
-            dt = newdt # dt for the next timestep
+            dt = min(newdt, MaximumGlobalTimestep) # dt for the next timestep
                                                                               
             # Write-out data                                        
             if write_now:

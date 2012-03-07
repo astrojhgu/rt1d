@@ -11,9 +11,10 @@ Description: Subset of my homemade odeint routine made special for rt1d.
 
 import copy
 import numpy as np
+import pylab as pl
 
 class SolveRateEquations:
-    def __init__(self, pf, guesses, stepper = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
+    def __init__(self, pf, guesses, AdaptiveODEStep = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
         Dfun = None, maxiter = 1000):
         """
         This 'odeint' class is the driver for ODE integration via the implicit Euler
@@ -39,7 +40,7 @@ class SolveRateEquations:
         self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
         self.CheckForGoofiness = pf["CheckForGoofiness"]
         
-        self.stepper = stepper
+        self.AdaptiveODEStep = AdaptiveODEStep
         self.hmax = hmax
         self.hmin = hmin    
         self.maxiter = maxiter    # Max number of iterations for root finding          
@@ -50,7 +51,8 @@ class SolveRateEquations:
         self.xmin = self.MinimumSpeciesFraction # shorthand
         
         # Set adaptive timestepping method
-        if self.stepper == 1: self.adapt = self.StepDoubling     
+        if self.AdaptiveODEStep == 1: 
+            self.stepper = self.StepDoubling     
         
         # Guesses
         self.guesses = np.array(guesses)
@@ -72,7 +74,12 @@ class SolveRateEquations:
         else: 
             h = hpre
                         
+        tmp_y = []
+        tmp_t = []   
+        tmp_h = []             
         i = 1
+        ct = 0
+        itr = np.zeros(4)
         while xnow < xf: 
             xnext = xnow + h
                                                                                                                                         
@@ -80,11 +87,9 @@ class SolveRateEquations:
             if xnext > xf: 
                 h = xf - xnow
                 xnext = xf 
-                                                                                        
+                                                                                            
             # Solve away
-            print 'SOLVER1', ynow, np.sum(ynow[1:3]) / args[3]
-            ynext = self.solve(f, ynow, xnow, h, Dfun, args)
-            print 'SOLVER2', np.sum(ynext[1:3]) / args[3]
+            ynext, tmp = self.solve(f, ynow, xnow, h, Dfun, args)    
             
             # Check for NaNs, reduce timestep or raise exception if h == hmin
             if self.CheckForGoofiness:
@@ -99,28 +104,25 @@ class SolveRateEquations:
                 # Check to see if number densities are all physically reasonable
                 # (i.e. positive, species fractions <= 1)        
                 if not np.all(everything_ok[1:]):
-                    
-                    
-                                                            
+                                        
                     ynext, ok = self.ApplyFloor(ynext, args)
-                    
-                    print i, everything_ok, ok, 'EVERYTHING NOT OK'
-                                                        
+                                                                                            
                     if not np.all(ok):
                         if h > self.hmin:
                             h = max(self.hmin, h / 2.)
+                            #print 'w00t', np.sum(ynow[1:3]) - self.guesses[1], np.sum(ynext[1:3]) - self.guesses[1]
                             continue
                         elif h == self.hmin:
                             raise ValueError("xHII or xHeII or xHeIII < 0 or > 1, and we're on the minimum ODE step. Exiting.")
+                    #else:
+                    #    print 'double woot', np.sum(ynow[1:3]) - self.guesses[1], np.sum(ynext[1:3]) - self.guesses[1]           
                                
             # Adaptive time-stepping
             if self.stepper:       
-                      
-                print i, 'ADAPT1'      
-                tol_met = self.adapt(f, ynow, xnow, ynext, xnext, h, Dfun, args)
-                print i, 'ADAPT2', tol_met      
+                                      
+                tol_met, ok = self.stepper(f, ynow, xnow, ynext, xnext, h, Dfun, args)
                 
-                if not np.all(tol_met):                 
+                if not np.all(tol_met):  
                     if h == self.hmin: 
                         raise ValueError('ERROR: Tolerance not met on minimum ODE step.  Exiting.')
                                                 
@@ -130,12 +132,34 @@ class SolveRateEquations:
                                        
             # If we've gotten this far, increase h 
             h = min(self.hmax, 2. * h)        
+            
+            tmp_t.append(xnow)
+            tmp_y.append(ynow)
+            tmp_h.append(h)
                                                                                
             xnow = xnext        
             ynow = ynext            
-            i += 1 
+            i += 1
+            itr += tmp
+            ct = 0
+            
+        #if i > 10:    
+        #    tmp = np.array(zip(*tmp_y))
+        #                  
+        #    ax = pl.subplot(111)          
+        #    ax.scatter(np.arange(i - 1), np.array(tmp_h) / self.pf["TimeUnits"], color = 'k')            
+        #    ax.set_xscale('log')
+        #    ax.set_yscale('log')     
+        #    ax.set_xlim(1, 1e4)
+        #    ax.set_ylim(1e-6, 1e-5)       
+        #    #pl.semilogy(np.arange(i - 1), tmp[0], color = 'k')
+        #    #pl.semilogy(np.arange(i - 1), tmp[1], color = 'b')
+        #    #pl.semilogy(np.arange(i - 1), tmp[2], color = 'g')
+        #    #pl.xlim(min(tmp_t), max(tmp_t))
+        #    pl.draw()
+        #    raw_input('done')    
                 
-        return xnow, ynow, h  
+        return xnow, ynow, h, i, itr
            
     def ImplicitEuler(self, f, yi, xi, h, Dfun, args):
         """
@@ -143,10 +167,9 @@ class SolveRateEquations:
         minimization technique separately for each yi, hence the odd array
         manipulation and loop.
         """                
-
-        print 'INITIAL GUESS:', yi
         
         yip1 = copy.copy(yi)
+        itr = [0] * len(yi)
         for i, element in enumerate(yi):
 
             # If isothermal or Hydrogen only, do not change temperature or helium values
@@ -157,21 +180,24 @@ class SolveRateEquations:
                 newargs.append(i)
                 
                 def ynext(y):
-                    if i == 0: return y - h * f([y, yi[1], yi[2], yi[3]], xi + h, newargs)[i] - yi[i]
-                    if i == 1: return y - h * f([yi[0], y, yi[2], yi[3]], xi + h, newargs)[i] - yi[i]
-                    if i == 2: return y - h * f([yi[0], yi[1], y, yi[3]], xi + h, newargs)[i] - yi[i]
-                    if i == 3: return y - h * f([yi[0], yi[1], yi[2], y], xi + h, newargs)[i] - yi[i]
+                    if i == 0: 
+                        return y - h * f([y, yi[1], yi[2], yi[3]], xi + h, newargs)[i] - yi[i]
+                    if i == 1: 
+                        return y - h * f([yi[0], y, yi[2], yi[3]], xi + h, newargs)[i] - yi[i]
+                    if i == 2: 
+                        return y - h * f([yi[0], yi[1], y, yi[3]], xi + h, newargs)[i] - yi[i]
+                    if i == 3: 
+                        return y - h * f([yi[0], yi[1], yi[2], y], xi + h, newargs)[i] - yi[i]
                 
                 # Guesses = 0 or for example a guess for n_HI > n_H will mess things up                
-                if yi[i] == 0: 
+                if yi[i] <= 0: 
                     guess = 0.4999 * self.guesses[i]
                 elif (yi[i] > self.guesses[i] and i < 3):
                     guess = 0.4999 * self.guesses[i]    
                 else: 
                     guess = yi[i]
-                    print 'GUESS', i, yi[i]
 
-                yip1[i] = self.rootfinder(ynext, guess, i)
+                yip1[i], itr[i] = self.rootfinder(ynext, guess, i)
                                                                                                                               
         rtn = yi + h * f(yip1, xi + h, args)
         if self.MultiSpecies == 0:
@@ -180,7 +206,7 @@ class SolveRateEquations:
         if self.Isothermal:
             rtn[3] = yip1[3]
                             
-        return rtn
+        return rtn, itr
         
     def SolutionCheck(self, ynext, args):
         """
@@ -250,28 +276,28 @@ class SolveRateEquations:
         # Helium if necessary
         if self.MultiSpecies:
                         
-            if nHeII > nHe:
-                if np.allclose(nHeII / nHe, 1.0, rtol = self.xmin, atol = self.xmin):
-                    ynext[1] = nHe * (1. - self.xmin)            
-                else:
-                    ok[1] = 0     
-            elif np.allclose(nHeII / nHe, self.xmin, rtol = self.xmin, atol = self.xmin):
-                ynext[1] = nHe * self.xmin         
-            
-            if nHeIII > nHe:
-                if np.allclose(nHeIII / nHe, 1.0, rtol = self.xmin, atol = self.xmin):
-                    ynext[1] = nHe * (1. - self.xmin)            
-                else:
-                    ok[2] = 0         
-            elif np.allclose(nHeIII / nHe, self.xmin, rtol = self.xmin, atol = self.xmin):
-                ynext[2] = nHe * self.xmin
-                                    
-            xHeI = (nHe - ynext[1] - ynext[2]) / nHe        
-            xHeII = ynext[1] / nHe
-            xHeIII = ynext[2] / nHe                     
+            #if nHeII > nHe:
+            #    if np.allclose(nHeII / nHe, 1.0, rtol = self.xmin, atol = self.xmin):
+            #        ynext[1] = nHe * (1. - self.xmin)            
+            #    else:
+            #        ok[1] = 0     
+            #elif np.allclose(nHeII / nHe, self.xmin, rtol = self.xmin, atol = self.xmin):
+            #    ynext[1] = nHe * self.xmin         
+            #
+            #if nHeIII > nHe:
+            #    if np.allclose(nHeIII / nHe, 1.0, rtol = self.xmin, atol = self.xmin):
+            #        ynext[1] = nHe * (1. - self.xmin)            
+            #    else:
+            #        ok[2] = 0         
+            #elif np.allclose(nHeIII / nHe, self.xmin, rtol = self.xmin, atol = self.xmin):
+            #    ynext[2] = nHe * self.xmin
+            #                        
+            #xHeI = (nHe - ynext[1] - ynext[2]) / nHe        
+            #xHeII = ynext[1] / nHe
+            #xHeIII = ynext[2] / nHe                     
                                       
             if nHe_ions > nHe:
-                if np.allclose(nHe_ions / nHe, 1.0, rtol = self.xmin, atol = self.xmin):
+                if np.allclose(nHe_ions / nHe, 1.0, rtol = 0, atol = 2. * self.xmin):
                     if xHeIII == self.xmin and xHeII != self.xmin:
                         norm = nHeII / nHe / (1. - 2. * self.xmin)
                         ynext[1] /= norm
@@ -285,10 +311,6 @@ class SolveRateEquations:
                 else:
                     ok[3] = 0
                     
-            xHeI = (nHe - ynext[1] - ynext[2]) / nHe        
-            xHeII = ynext[1] / nHe
-            xHeIII = ynext[2] / nHe
-                    
         return ynext, ok
         
     def StepDoubling(self, f, yi, xi, yip1, xip1, h, Dfun, args):    
@@ -298,16 +320,15 @@ class SolveRateEquations:
         truncation error, which we can use to adapt our step size in self.integrate.
         """
                 
-        ynp2_os = self.solve(f, yi, xi, 2. * h, Dfun, args) # y_n+2 using one step        
-        ynp2_ts = self.solve(f, yip1, xip1, h, Dfun, args)  # y_n+2 using two steps
+        ynp2_os, tmp = self.solve(f, yi, xi, 2. * h, Dfun, args) # y_n+2 using one step        
+        ynp2_ts, tmp = self.solve(f, yip1, xip1, h, Dfun, args)  # y_n+2 using two steps
             
-        ynp2_os, ok = self.ApplyFloor(ynp2_os, args)    
-        ynp2_ts, ok = self.ApplyFloor(ynp2_ts, args)  
+        ynp2_os, ok = self.ApplyFloor(ynp2_os, args)  
                 
         err_abs = np.abs(ynp2_ts - ynp2_os)        
-        err_tol = self.xmin + self.xmin * ynp2_os
+        err_tol = self.xmin + self.xmin * ynp2_ts
 
-        return np.less_equal(err_abs, err_tol)
+        return np.less_equal(err_abs, err_tol), ok
         
     def Newton(self, f, y_guess, j):
         """
@@ -318,7 +339,14 @@ class SolveRateEquations:
         
         """    
 
-        ynow = y_guess    
+        ynow = y_guess
+        
+        if j < 3:
+            this_atol = 1e-8
+            this_rtol = 0.1 * self.MinimumSpeciesFraction
+        else:
+            this_atol = 1e-24
+            this_rtol = 1e-5
         
         i = 0
         err = 1
@@ -337,17 +365,16 @@ class SolveRateEquations:
                                                                                                                          
             # Calculate deviation between this estimate and last            
             err = abs(ypre - ynow)
-            err_tol = self.MinimumSpeciesFraction + self.MinimumSpeciesFraction * ynow           
+            err_tol = this_atol + this_rtol * ynow
                         
             # If we've reached the maximum number of iterations, break
             if i >= self.maxiter: 
-                print y1, y2, fy1, fy2, fp
-                print "Maximum number of iterations reached."
-                break
+                print "Maximum number of iterations (%i) reached." % self.maxiter
+                break 
             
             i += 1                       
         
-        return ynow
+        return ynow, i
 
         
         

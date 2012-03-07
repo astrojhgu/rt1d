@@ -28,10 +28,7 @@ class RateCoefficients:
         # Initialize integral tables
         self.itabs = itabs
         self.Interpolate = Interpolate(pf, n_col, self.itabs)
-            
         self.TabulateIntegrals = self.pf["TabulateIntegrals"]
-        self.AutoFallback = self.pf['AutoFallback']
-        self.Fallback = self.pf["PhotonConserving"] and self.pf['AutoFallback']
         
         # Physics parameters
         self.MultiSpecies = pf["MultiSpecies"]
@@ -75,7 +72,7 @@ class RateCoefficients:
         n_e = args[4]
         
         Gamma = np.zeros(3)
-        gamma = np.zeros(3)
+        gamma = np.zeros([3, 3])
         alpha = np.zeros(3)
         Beta = np.zeros(3)
         k_H = np.zeros(3)
@@ -145,13 +142,13 @@ class RateCoefficients:
                     
                     # Ionizing species i with electrons from species j                        
                     for j in self.donors:
-                        gamma[i] += self.SecondaryIonizationRate(Psi_N = Psi_N[j], Psi_N_dN = Psi_N_dN[j],
+                        gamma[i][j] += self.SecondaryIonizationRate(Psi_N = Psi_N[j], Psi_N_dN = Psi_N_dN[j],
                             Phi_N = Phi_N[j], Phi_N_dN = Phi_N_dN[j], 
                             Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr,
                             species = i, donor_species = j, x_HII = x_HII, A = A[j])
                                     
                     gamma[i] /= (E_th[i] * erg_per_ev)
-                                    
+                                                        
         # Only the photon-conserving algorithm is capable of this - though in
         # the future, the discrete NPC solver could do this if we wanted.                                         
         else:
@@ -173,6 +170,8 @@ class RateCoefficients:
                 Gamma_E = self.zeros_like_E
                 for j, E in enumerate(self.rs.E):
                     
+                    fheat = self.esec.DepositionFraction(E = E, xi = x_HII, channel = 0)
+                    
                     # Optical depth up to this cell at energy E
                     tau_E = np.sum(10**ncol * self.sigma[0:,j])
                                     
@@ -184,7 +183,9 @@ class RateCoefficients:
                     # Total photo-ionization tally
                     Gamma[i] += Gamma_E[j]
                     
-                    # Energy in photo-electrons due to ionizations by *this* energy group
+                    # Energy deposition rate per atom i via photo-electrons due to 
+                    # ionizations by *this* energy group. No fion or fheat
+                    # applied yet.
                     ee = Gamma_E[j] * (E - E_th[i]) * erg_per_ev 
                         
                     if self.SecondaryIonization:
@@ -194,20 +195,20 @@ class RateCoefficients:
                             if not self.MultiSpecies and k > 0:
                                 continue
                             
+                            fion = self.esec.DepositionFraction(E = E, xi = x_HII, channel = k + 1)
+                            
                             # If these photo-electrons dont have enough energy to ionize species k, continue    
                             if (E - E_th[i]) < E_th[k]:
                                 continue    
                             
                             # (This k) = i from paper, and (this i) = j from paper
-                            gamma[k] += ee * self.esec.DepositionFraction(E = E, xi = x_HII, channel = k + 1) * \
-                                (nabs[i] / nabs[k]) / \
-                                (E_th[k] * erg_per_ev)
+                            gamma[k][i] += ee * fion / (E_th[k] * erg_per_ev)
                                                                                                           
                     if self.Isothermal:
                         continue
                                                         
                     # Heating rate coefficient        
-                    k_H[i] += ee * self.esec.DepositionFraction(E = E, xi = x_HII, channel = 0)    
+                    k_H[i] += ee * fheat
                                                     
                 # Recombination
                 alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
@@ -305,8 +306,8 @@ class RateCoefficients:
                                         
         # Normalization will be applied in ConstructArgs                                                                                                                      
         return A * IonizationRate * \
-            self.esec.DepositionFraction(E = E, xi = x_HII, channel = species + 1) * \
-            (nabs[donor_species] / nabs[species])
+            self.esec.DepositionFraction(E = E, xi = x_HII, channel = species + 1) #* \
+            #(nabs[donor_species] / nabs[species])
         
     def CollisionalIonizationRate(self, species = None, n_e = None, T = None):
         """

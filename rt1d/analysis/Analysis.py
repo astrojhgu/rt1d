@@ -159,7 +159,8 @@ class Analyze:
         self.ax.set_ylabel(r'Temperature $(K)$')  
         pl.draw()        
         
-    def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k'):
+    def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k', 
+        annotate = True):
         """
         Plot radial profiles of species fraction (for H or He) at times t (Myr).
         """      
@@ -176,19 +177,26 @@ class Analyze:
             
             if species == 'H':
                 exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, 'x_HI', '-', color))
+                    self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HI}}$\')' % (dd, dd, 'x_HI', '-', color))
                 exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, 'x_HII', '--', color))    
+                    self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HII}}$\')' % (dd, dd, 'x_HII', '--', color))
             if species == 'He':
                 exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, 'x_HeI', '-', color))
+                    self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeI}}$\')' % (dd, dd, 'x_HeI', '-', color))
                 exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, 'x_HeII', '--', color))
+                    self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeII}}$\')' % (dd, dd, 'x_HeII', '--', color))
                 exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                    self.data[%i].%s, ls = \'%s\', color = \'%s\')' % (dd, dd, 'x_HeIII', ':', color))                
+                    self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeIII}}$\')' % (dd, dd, 'x_HeIII', ':', color))                
             
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Species Fraction')  
+        
+        if annotate:
+            if species == 'H':
+                self.ax.legend(loc = 'lower right', ncol = 2, frameon = False)
+            if species == 'He':
+                self.ax.legend(loc = 'lower right', ncol = 3, frameon = False)    
+        
         pl.draw()
         
     def RadialProfileMovie(self, species = 'H', out = 'frames'):
@@ -390,7 +398,7 @@ class Analyze:
                                 
         pl.draw()      
         
-    def InspectIonizationRate(self, t = 1, species = 0, color = 'k', legend = True):
+    def InspectIonizationRate(self, t = 1, species = 0, color = 'k', legend = True, plot_recomb = False):
         """
         Plot total ionization rate, and lines for primary, secondary, and collisional.
         """ 
@@ -402,25 +410,34 @@ class Analyze:
             if self.data[dd].t / self.pf['TimeUnits'] != t: 
                 continue
             
-            Gamma = self.data[dd].Gamma[species]
-            gamma = self.data[dd].gamma[species]
-            Beta = self.data[dd].Beta[species]
-            tot = Gamma + gamma + Beta
+            Gamma = self.data[dd].Gamma[species] * self.data[dd].nabs[species]
+            gamma = np.sum(self.data[dd].gamma[species] * self.data[dd].nabs, axis = 0)
+            Beta = self.data[dd].Beta[species] * self.data[dd].nabs[species] * self.data[dd].n_e
+            ion = Gamma + gamma + Beta
+            
+            alpha = self.data[dd].alpha[species] * self.data[dd].nion[species] * self.data[dd].n_e
+            xi = self.data[dd].xi[species] * self.data[dd].nion[species] * self.data[dd].n_e
+            recomb = alpha + xi    
                 
         self.ax = pl.subplot(111)
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], tot, color = color, ls = '-', label = 'Total')        
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], ion, color = color, ls = '-', label = 'Ioniz.')        
         self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Gamma, color = color, ls = '--', label = r'$\Gamma$')
         self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], gamma, color = color, ls = ':', label = r'$\gamma$')
         self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Beta, color = color, ls = '-.', label = r'$\beta$')
         
+        if plot_recomb:
+            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], recomb, color = 'b', ls = '-', label = 'Recomb.')
+            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], alpha, color = 'b', ls = '--', label = r'$\alpha$')
+            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], alpha, color = 'b', ls = ':', label = r'$\xi$')
+        
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Ionization Rate')
-        self.ax.set_ylim(0.01 * 10**np.floor(np.log10(np.min(tot))), 10**np.ceil(np.log10(np.max(tot))))
+        self.ax.set_ylim(0.01 * 10**np.floor(np.log10(np.min(ion))), 10**np.ceil(np.log10(np.max(ion))))
         
         if legend:
             self.ax.legend(frameon = False, ncol = 2)
         
-        pl.draw()
+        pl.draw()    
         
     def InspectHeatingRate(self, t = 1, color = 'k', legend = True):
         """
@@ -470,37 +487,52 @@ class Analyze:
         self.heat = heat
         self.cool = cool
         
-    def InspectTimestepEvolution(self, t = 1):
+    def InspectTimestepEvolution(self, t = 1, legend = True):
         """
         Plot timestep as a function of radius.
         """    
         
-        self.dt = np.zeros([3, self.GridDimensions])
+        if legend and hasattr(self, 'ax'):
+            legend = False
+        
+        self.dt = np.zeros([5, self.GridDimensions])
         for dd in self.data.keys():
             if self.data[dd].t / self.pf['TimeUnits'] != t: 
                 continue
         
             dHIIdt = self.data[dd].n_HI * \
-                (self.data[dd].Gamma[0] + self.data[dd].gamma[0] + self.data[dd].Beta[0] * self.data[dd].n_e) \
+                (self.data[dd].Gamma[0] + self.data[dd].Beta[0] * self.data[dd].n_e) \
+                + np.sum(self.data[dd].gamma[0] * self.data[dd].nabs) \
                 - self.data[dd].n_HII * self.data[dd].n_e * self.data[dd].alpha[0]
                 
+            dHeIdt = self.data[dd].n_HeII * \
+                (self.data[dd].alpha[1] + self.data[dd].xi[1]) * self.data[dd].n_e \
+                - self.data[dd].n_HeI * (self.data[dd].Gamma[1] + self.data[dd].Beta[1]) \
+                - np.sum(self.data[dd].gamma[1] * self.data[dd].nabs) \
+                * self.data[dd].n_e     
+                
             dHeIIdt = self.data[dd].n_HeI * \
-                (self.data[dd].Gamma[1] + self.data[dd].gamma[1] + self.data[dd].Beta[1] * self.data[dd].n_e) \
-                + self.data[dd].alpha[2] * self.data[dd].n_e * self.data[dd].n_HeIII \
-                - self.data[dd].n_HeII * self.data[dd].n_e * (self.data[dd].alpha[1] + self.data[dd].Beta[2]) \
-                - self.data[dd].xi[1] * self.data[dd].n_e * self.data[dd].n_HeIII
+                (self.data[dd].Gamma[1] + self.data[dd].Beta[1] * self.data[dd].n_e) \
+                + np.sum(self.data[dd].gamma[1] * self.data[dd].nabs) \
+                + self.data[dd].alpha[2] * self.data[dd].n_HeIII * self.data[dd].n_e \
+                - self.data[dd].n_HeII * self.data[dd].n_e * \
+                (self.data[dd].alpha[1] + self.data[dd].Beta[2] + self.data[dd].xi[1]) 
                 
             dHeIIIdt = self.data[dd].n_HeII * \
-                (self.data[dd].Gamma[2] + self.data[dd].gamma[2] + self.data[dd].Beta[2] * self.data[dd].n_e) \
+                (self.data[dd].Gamma[2] + self.data[dd].Beta[2] * self.data[dd].n_e) \
                 - self.data[dd].n_HeIII * self.data[dd].n_e * self.data[dd].alpha[2]
                 
-            self.dt[0] = self.pf['MaxHIIChange'] * self.data[dd].n_HI / abs(dHIIdt) / self.pf['TimeUnits']
-            self.dt[1] = self.pf['MaxHeIIChange'] * self.data[dd].n_HeII / abs(dHeIIdt) / self.pf['TimeUnits']
-            self.dt[2] = self.pf['MaxHeIIIChange'] * self.data[dd].n_HeIII / abs(dHeIIIdt) / self.pf['TimeUnits']
+            defdt = dHIIdt + dHeIIdt + 2. * dHeIIIdt
+                                        
+            self.dt[0] = self.pf['MaxHIIChange'] * self.data[dd].n_HI / np.abs(dHIIdt) / self.pf['TimeUnits']
+            self.dt[1] = self.pf['MaxHeIChange'] * self.data[dd].n_HeI / np.abs(dHeIdt) / self.pf['TimeUnits']
+            self.dt[2] = self.pf['MaxHeIIChange'] * self.data[dd].n_HeII / np.abs(dHeIIdt) / self.pf['TimeUnits']
+            self.dt[3] = self.pf['MaxHeIIIChange'] * self.data[dd].n_HeIII / np.abs(dHeIIIdt) / self.pf['TimeUnits']
+            self.dt[4] = self.pf["MaxElectronChange"] * (self.data[dd].n_e / self.data[dd].n_B) / np.abs(defdt) / self.pf['TimeUnits']  
             
             break
             
-        mi = 10**np.floor(np.log10(np.min(self.dt)))
+        mi = 0.01 * 10**np.floor(np.log10(np.min(self.dt)))
         ma = 1e2
                         
         self.ax = pl.subplot(111)
@@ -509,8 +541,20 @@ class Analyze:
         self.ax.loglog([self.data[dd].r[i1] / self.pf['LengthUnits']] * 2, [mi, ma], color = 'b', ls = '-')
         
         if self.pf["MultiSpecies"]:
-            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[1], color = 'k', ls = '--', label = r'$\Delta t_{\mathrm{HeII}}$')
-            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[2], color = 'k', ls = ':', label = r'$\Delta t_{\mathrm{HeIII}}$')
+            
+            if self.pf["HeIRestrictedTimestep"]:
+                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[1], color = 'k', ls = '-.', label = r'$\Delta t_{\mathrm{HeI}}$')
+            
+            if self.pf["HeIIRestrictedTimestep"]:
+                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[2], color = 'k', ls = '--', label = r'$\Delta t_{\mathrm{HeII}}$')
+            
+            if self.pf["HeIIIRestrictedTimestep"]:
+                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[3], color = 'k', ls = ':', label = r'$\Delta t_{\mathrm{HeIII}}$')
+            
+            if self.pf["ElectronFractionRestrictedTimestep"]:
+                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[4], color = 'k', ls = '-.', label = r'$\Delta t_{e^-}$')
+            
+            
             i2 = np.argmin(np.abs(self.data[dd].tau[1] - self.pf["OpticalDepthDefiningIFront"][1]))
             i3 = np.argmin(np.abs(self.data[dd].tau[2] - self.pf["OpticalDepthDefiningIFront"][2]))
             self.ax.loglog([self.data[dd].r[i2] / self.pf['LengthUnits']] * 2, [mi, ma], color = 'b', ls = '--')
@@ -525,32 +569,55 @@ class Analyze:
         
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'$\Delta t_{\mathrm{phot}} / \mathrm{TimeUnits}$') 
-        self.ax.legend(loc = 'lower right', ncol = 2, frameon = False)
         self.ax.annotate(r'$\Delta t_{\mathrm{next}}$', 
             (self.data[dd].r[self.data[dd].dtPhoton == np.min(self.data[dd].dtPhoton)] / self.pf['LengthUnits'],
              0.85 * np.min(self.data[dd].dtPhoton)),
             va = 'top', ha = 'center')
             
-        self.ax.set_ylim(mi, ma)    
+        self.ax.set_ylim(mi, ma) 
+        
+        if legend:
+            self.ax.legend(loc = 'lower right', ncol = 3, frameon = False)   
         
         pl.draw()    
         
-    def InspectSolverSpeed(self, t = 1, color = 'k', ls = '-'):
+    def InspectSolverSpeed(self, t = 1, color = 'k', ls = '-', legend = True, 
+        ode = True, equation = -1, norm = True):
         """
         Plot ODE step as a function of radius.
+        
+        Options: odeit, odeitrate, rootit.
         """    
+        
+        if legend and hasattr(self, 'ax'):
+            legend = False
         
         for dd in self.data.keys():
             if self.data[dd].t / self.pf['TimeUnits'] != t: 
                 continue
         
             self.ax = pl.subplot(111)
-            self.ax.loglog(self.data[dd].r / self.pf["LengthUnits"], self.data[dd].odestep, color = color, ls = ls)
+            
+            if ode:
+                self.ax.loglog(self.data[dd].r / self.pf["LengthUnits"], self.data[dd].odeit, color = color, ls = ls, label = r'$N_{\mathrm{ODE}}$')
+            
+            if equation >= 0:
+                if norm:
+                    self.ax.loglog(self.data[dd].r / self.pf["LengthUnits"], 
+                        self.data[dd].rootit[0:,equation] / self.data[dd].odeit, 
+                        color = color, ls = ls, label = r'$N_{\mathrm{NR}}/N_{\mathrm{ODE}}$')
+                else:
+                    self.ax.loglog(self.data[dd].r / self.pf["LengthUnits"], 
+                        self.data[dd].rootit[0:,equation], 
+                        color = color, ls = ls, label = r'$N_{\mathrm{NR}}$')        
             
             self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
-            self.ax.set_ylabel(r'$\Delta t_{\mathrm{ODE}}$') 
+            self.ax.set_ylabel(r'$N_{\mathrm{iter}}$') 
             
             break
+            
+        if legend:
+            self.ax.legend(loc = 'upper right', ncol = 2, frameon = False)       
             
         pl.draw()    
                     
