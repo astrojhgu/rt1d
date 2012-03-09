@@ -170,6 +170,9 @@ class RateCoefficients:
                 Gamma_E = self.zeros_like_E
                 for j, E in enumerate(self.rs.E):
                     
+                    if E < E_th[i]:
+                        continue
+                    
                     fheat = self.esec.DepositionFraction(E = E, xi = x_HII, channel = 0)
                     
                     # Optical depth up to this cell at energy E

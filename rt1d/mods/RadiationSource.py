@@ -135,10 +135,14 @@ class RadiationSource:
             Units: erg / s / cm^2
             
         """       
-        if self.SourceType == 0: return self.F[0]
-        if self.SourceType == 1 or self.SourceType == 2: return self.BlackBody(E)
-        if self.SourceType == 3: return self.PowerLaw(E)
-        if self.SourceType == 4: return self.AbsorbedPowerLaw(E)
+        if self.SourceType == 0: 
+            return self.F[0]
+        if self.SourceType == 1 or self.SourceType == 2: 
+            return self.BlackBody(E)
+        if self.SourceType == 3: 
+            return self.PowerLaw(E)
+        if self.SourceType == 4: 
+            return self.AbsorbedPowerLaw(E)
         
     def BlackBody(self, E):
         """
@@ -216,4 +220,31 @@ class RadiationSource:
         """    
         
         return integrate(self.Spectrum, small_number, E)[0] 
+    
+    def SpectrumMedian(self, energies = None):
+        """
+        Compute median emission energy from spectrum CDF.
+        """
+        
+        if energies is None:
+            energies = np.linspace(self.EminNorm, self.EmaxNorm, 200)
+        
+        if not hasattr('self', 'cdf'):
+            cdf = []
+            for energy in energies:
+                cdf.append(self.SpectrumCDF(energy))
+                
+            self.cdf = np.array(cdf)
+            
+        return np.interp(0.5, self.cdf, energies)
+    
+    def SpectrumMean(self):
+        """
+        Mean emission energy.
+        """        
+        
+        integrand = lambda E: self.Spectrum(E) * E
+        
+        return integrate(integrand, self.EminNorm, self.EmaxNorm)[0] 
+        
             

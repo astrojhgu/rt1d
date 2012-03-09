@@ -107,7 +107,8 @@ def Shine(pf, r = None, IsRestart = False):
             if pf["ExitAfterIntegralTabulation"]: 
                 continue
         else:
-            print '\nNo integral tabulation necessary!'
+            if i % size == rank:
+                print '\nNo integral tabulation necessary!'
             itabs = None
             if IsRestart:
                 print '\n'
