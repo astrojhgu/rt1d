@@ -26,11 +26,11 @@ def SetDefaultParameterValues():
         # ODE Solver
         "ODEMinStep": 1e-8,  
         "ODEMaxStep": 1e-1,  
-        "ODEMaxIter": 1e2,  
+        "ODEMaxIter": 1e3,  
         "ODEAdaptiveStep": 1,  
         "CheckForGoofiness": 1,  
         "MaximumGlobalTimestep": 500,  
-        "MinimumSpeciesFraction": 1e-5,  
+        "MinimumSpeciesFraction": 1e-8,  
 
         # Control
         "ParallelizationMethod": 1,  

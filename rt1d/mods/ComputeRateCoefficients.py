@@ -91,10 +91,16 @@ class RateCoefficients:
         ncell = dr * nabs          
         
         # Set normalization constant for each species
-        if self.PhotonConserving:
-            A = Lbol / nabs / Vsh
-        else:
-            A = 3 * [Lbol / 4. / np.pi / r**2]
+        if self.PlaneParallelField:
+            if self.PhotonConserving:
+                A = Lbol / ncell
+            else:
+                A = 3 * [Lbol]
+        else:    
+            if self.PhotonConserving:
+                A = Lbol / nabs / Vsh
+            else:
+                A = 3 * [Lbol / 4. / np.pi / r**2]
                                 
         # Standard - integral tabulation
         if self.TabulateIntegrals:

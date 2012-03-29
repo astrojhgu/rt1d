@@ -249,15 +249,11 @@ class Radiate:
         if rank == 0 and self.ProgressBar: 
             self.pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()        
                 
-        ###
-        ## SOLVE: c -> inf
-        ###        
+        # SOLVE: c -> inf
         if self.InfiniteSpeedOfLight: 
             newdata, dtphot = self.EvolvePhotonsAtInfiniteSpeed(newdata, t, dt, h)
                 
-        ###
-        ## SOLVE: c = finite
-        ###   
+        # SOLVE: c = finite   
         else:
             newdata, dtphot = self.EvolvePhotonsAtFiniteSpeed(newdata, t, dt, h)
                             
@@ -365,7 +361,7 @@ class Radiate:
             
             # Unpack so we have everything by name
             nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega = args                                                          
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
             ######################################
             ######## Solve Rate Equations ########
             ######################################        
@@ -623,19 +619,19 @@ class Radiate:
         
         if self.OutputRates:
             for i in xrange(3):
-                newdata['PhotoIonizationRate%i' % i][cell] += Gamma[i]
-                newdata['PhotoHeatingRate%i' % i][cell] += k_H[i]
-                newdata['CollisionalIonizationRate%i' % i][cell] += Beta[i] 
-                newdata['RadiativeRecombinationRate%i' % i][cell] += alpha[i] 
-                newdata['CollisionalIonzationCoolingRate%i' % i][cell] += zeta[i] 
-                newdata['RecombinationCoolingRate%i' % i][cell] += eta[i] 
-                newdata['CollisionalExcitationCoolingRate%i' % i][cell] += psi[i]
+                newdata['PhotoIonizationRate%i' % i][cell] = Gamma[i]
+                newdata['PhotoHeatingRate%i' % i][cell] = k_H[i]
+                newdata['CollisionalIonizationRate%i' % i][cell] = Beta[i] 
+                newdata['RadiativeRecombinationRate%i' % i][cell] = alpha[i] 
+                newdata['CollisionalIonzationCoolingRate%i' % i][cell] = zeta[i] 
+                newdata['RecombinationCoolingRate%i' % i][cell] = eta[i] 
+                newdata['CollisionalExcitationCoolingRate%i' % i][cell] = psi[i]
                 
-                newdata['SecondaryIonizationRate%i' % i][cell] += gamma[i] 
+                newdata['SecondaryIonizationRate%i' % i][cell] = gamma[i] 
                 
                 if i == 2:
-                    newdata['DielectricRecombinationRate'][cell] += xi[i]
-                    newdata['DielectricRecombinationCoolingRate'][cell] += omega[i]           
+                    newdata['DielectricRecombinationRate'][cell] = xi[i]
+                    newdata['DielectricRecombinationCoolingRate'][cell] = omega[i]           
                     
         return newdata            
         

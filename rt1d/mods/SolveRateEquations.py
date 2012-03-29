@@ -81,12 +81,12 @@ class SolveRateEquations:
                 xnext = xf 
                                                                                             
             # Solve away
-            ynext, tmp = self.solve(f, ynow, xnow, h, Dfun, args)    
+            ynext, tmp = self.solve(f, ynow, xnow, h, Dfun, args)  
             
             # Check for NaNs, reduce timestep or raise exception if h == hmin
             if self.CheckForGoofiness:
                 everything_ok = self.SolutionCheck(ynext, args)                
-                    
+                                        
                 if not everything_ok[0] and h > self.hmin:
                     h = max(self.hmin, h / 2.)
                     continue

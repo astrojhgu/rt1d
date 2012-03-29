@@ -12,7 +12,7 @@ Description: Functions to calculate various quantities from our rt1d datasets.
 import os
 import numpy as np
 import pylab as pl
-from Multiplot import *
+from .Multiplot import *
 from .Dataset import Dataset
 from .Inspection import Inspect
 from ..mods.Constants import *
@@ -142,7 +142,7 @@ class Analyze:
         if mp is None: 
             self.mp.fix_ticks()  
      
-    def TemperatureProfile(self, t = 10, color = 'k', ls = '-'):
+    def TemperatureProfile(self, t = 10, color = 'k', ls = '-', xscale = 'linear'):
         """
         Plot radial profiles of temperature at times t (Myr).
         """  
@@ -160,6 +160,7 @@ class Analyze:
             exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
                 self.data[%i].T, ls = \'%s\', color = \'%s\')' % (dd, dd, '-', color))                
             
+        self.ax.set_xscale(xscale)    
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Temperature $(K)$')  
         pl.draw()        
@@ -241,6 +242,41 @@ class Analyze:
             
         pl.close()    
         
+    def AnalyzeClump(self):
+        """
+        RT06 Problem #3.
+        """
+        
+        self.mp = multiplot(dims = (2, 1), useAxesGrid = False)
+        
+        ct = 0
+        t = [1, 3, 15]
+        ls = ['-', ':', '--', '-.']
+        for dd in self.data.keys():
+            if self.data[dd].t / self.pf['TimeUnits'] not in t: 
+                continue
+                
+            this_t = int(self.data[dd].t / self.pf['TimeUnits'])
+        
+            self.mp.grid[0].semilogy(self.data[dd].r / self.LengthUnits, self.data[dd].x_HI, color = 'k', ls = ls[ct], 
+                label = r'$t = %i \ \mathrm{Myr}$' % this_t)
+            self.mp.grid[1].semilogy(self.data[dd].r / self.LengthUnits, self.data[dd].T, color = 'k', ls = ls[ct])
+            ct += 1
+        
+        self.mp.grid[0].set_ylim(1e-3, 1.5)
+        self.mp.grid[1].set_ylim(10, 5e4)
+                                                
+        for i in xrange(2):
+            self.mp.grid[i].set_xlim(0.6, 1.0)
+                                    
+        self.mp.grid[1].set_xlabel(r'$x / L_{\mathrm{box}}$')    
+        self.mp.grid[0].set_ylabel('Neutral Fraction')
+        self.mp.grid[1].set_ylabel(r'Temperature $(K)$')    
+        self.mp.grid[0].legend(loc = 'lower right', frameon = False)    
+        self.mp.grid[0].set_xticklabels([])    
+                        
+        pl.draw()        
+            
     def ColumnDensityContours(self):
         """
         Construct a 2D histogram of column density vs. time.

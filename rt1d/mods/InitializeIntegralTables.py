@@ -61,7 +61,7 @@ class InitializeIntegralTables:
         self.pf = pf
         self.rs = RadiationSource(pf)
         self.esec = SecondaryElectrons(pf)
-        
+                
         self.OutputDirectory = pf["OutputDirectory"]
         self.ProgressBar = pf["ProgressBar"] and pb   
         self.ParallelizationMethod = pf["ParallelizationMethod"]
@@ -412,7 +412,7 @@ class InitializeIntegralTables:
                 
             if rank == 0: 
                 print "\nComputing value of OpticalDepth%i..." % i
-            if rank == 0:     
+            if rank == 0 and self.ProgressBar:     
                 pbar = ProgressBar(widgets = widget, maxval = self.TableDims[i]).start()
             
             tab = np.zeros(self.TableDims[i])
@@ -431,6 +431,9 @@ class InitializeIntegralTables:
             
             itabs['OpticalDepth%i' % i] = np.log10(tab) 
             del tab
+            
+            if rank == 0 and self.ProgressBar:
+                pbar.finish()
 
         # Write-out data
         if rank == 0 or self.ParallelizationMethod == 2: 

@@ -96,17 +96,21 @@ class multiplot:
             dx = np.diff(xticks)[0]
             limits = self.grid[i].get_xlim()
             
-            if xticks[-1] > limits[1]: xticks.pop(-1)
+            if xticks[-1] > limits[1]: 
+                xticks.pop(-1)
             
-            if (limits[1] - xticks[-1]) < dx / 2.: loc = -1
-            else: loc = None
+            if (limits[1] - xticks[-1]) < dx / 2.: 
+                loc = -1
+            else: 
+                loc = None
                       
             if i == self.lowerright:
                 self.grid[i].set_xticks(xticks)                                
             else:                 
                 self.grid[i].set_xticks(xticks[0:loc])
                 
-            if style is not None: self.grid[i].ticklabel_format(style = style)   
+            if style is not None: 
+                self.grid[i].ticklabel_format(style = style)   
                 
         # Make sure we don't double up on yticks
         for i in self.yaxes:
@@ -125,7 +129,8 @@ class multiplot:
             else:                 
                 self.grid[i].set_yticks(yticks[0:loc])        
     
-            if style is not None: self.grid[i].ticklabel_format(style = style)
+            if style is not None: 
+                self.grid[i].ticklabel_format(style = style)
             
         # Remove ticks from non-edge axes     
         for i in xrange(self.Naxes):
