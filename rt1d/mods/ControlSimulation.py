@@ -11,6 +11,7 @@ load-balancing, etc.)
 
 """
 
+import copy
 import numpy as np
 
 try:
@@ -30,6 +31,8 @@ class ControlSimulation:
         self.LengthUnits = pf["LengthUnits"]
         self.StartRadius = pf["StartRadius"]
         self.R0 = self.LengthUnits * self.StartRadius
+        
+        self.ParallelizationMethod = pf["ParallelizationMethod"]
         
         self.MultiSpecies = pf["MultiSpecies"]
         self.MaxHIIChange = pf["MaxHIIChange"]
@@ -173,4 +176,31 @@ class ControlSimulation:
                     lb[i + 1] = entry + 1
                                                                                             
         return lb    
+    
+    def DistributeDataAcrossProcessors(self, data, lb):
+        """
+        Setup array marking which processors solve which cells.
+        """    
+        
+        # If parallelizing over grid, do this so an MPI all-reduce doesn't 
+        # add field values together
+        if self.ParallelizationMethod == 1 and size > 1:
+            proc_mask = np.zeros(self.GridDimensions)
+            solve_arr = np.arange(self.GridDimensions)
+            condition = (solve_arr >= lb[rank]) & (solve_arr < lb[rank + 1])
+            proc_mask[condition] = 1
+            solve_arr = solve_arr[proc_mask == 1]
+        else:
+            solve_arr = np.ones(self.GridDimensions)
+            
+        # Set up newdata dictionary                                
+        newdata = {}
+        for key in data.keys(): 
+            newdata[key] = copy.deepcopy(data[key])
+            
+            if self.ParallelizationMethod == 1 and size > 1:
+                newdata[key][proc_mask == 0] = 0        
+            
+        return solve_arr, newdata        
+        
          

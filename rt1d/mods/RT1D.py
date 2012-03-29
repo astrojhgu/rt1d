@@ -134,7 +134,8 @@ def Shine(pf, r = None, IsRestart = False):
         h = dt
         wct = int(t / dtDataDump) + 1
         if not IsRestart: 
-            if (pf["ParallelizationMethod"] == 1 and rank == 0) or \
+            if  pf["ParallelizationMethod"] == 0 or \
+               (pf["ParallelizationMethod"] == 1 and rank == 0) or \
                (pf["ParallelizationMethod"] == 2): 
                 w.WriteAllData(data, 0, t, dt)
         
@@ -184,7 +185,8 @@ def Shine(pf, r = None, IsRestart = False):
             # Write-out data                                        
             if write_now:
                 wrote = False
-                if (pf["ParallelizationMethod"] == 1 and rank == 0) or \
+                if  pf["ParallelizationMethod"] == 0 or \
+                   (pf["ParallelizationMethod"] == 1 and rank == 0) or \
                    (pf["ParallelizationMethod"] == 2): 
                     w.WriteAllData(data, wct, tnow, dt)
                     wrote = True

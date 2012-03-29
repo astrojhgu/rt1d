@@ -85,6 +85,8 @@ class Radiate:
         self.StartCell = self.StartRadius * self.GridDimensions
         self.R0 = self.StartRadius * self.LengthUnits
         
+        self.MultiSpecies = pf["MultiSpecies"]
+        
         # Timestepping
         self.AdaptiveTimestep = pf["ODEAdaptiveStep"]
         self.HIRestrictedTimestep = pf["HIRestrictedTimestep"]
@@ -92,12 +94,15 @@ class Radiate:
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
         self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
         self.ElectronFractionRestrictedTimestep = pf["ElectronFractionRestrictedTimestep"]
-        self.AdaptiveGlobalStep = self.HIRestrictedTimestep or self.HeIRestrictedTimestep \
-            or self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep or self.ElectronFractionRestrictedTimestep
         self.LightCrossingTimeRestrictedTimestep = pf["LightCrossingTimeRestrictedTimestep"]
         self.AdaptiveODEStep = pf["ODEAdaptiveStep"]
         self.MaxStep = pf["ODEMaxStep"] * self.TimeUnits
         self.MinStep = pf["ODEMinStep"] * self.TimeUnits
+        
+        self.AdaptiveGlobalStep = self.HIRestrictedTimestep or self.ElectronFractionRestrictedTimestep
+        if self.MultiSpecies:
+            self.AdaptiveGlobalStep |= (self.HeIRestrictedTimestep or \
+                self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep)
         
         # Tolerance
         self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
@@ -152,413 +157,114 @@ class Radiate:
         # For convenience 
         self.zeros_tmp = np.zeros(4)
         self.zeros_eq = np.zeros(4)
-        
-    def EvolvePhotonsAtFiniteSpeed(self):
-        pass
-    def EvolvePhotonsAtInfiniteSpeed(self):
-        pass        
 
     def EvolvePhotons(self, data, t, dt, h, lb):
         """
-        This routine calls our solvers and updates 'data'.
+        This routine calls our solvers and updates 'data' -> 'newdata'
         """
         
-        # Do this so an MPI all-reduce doesn't add stuff together
-        if self.ParallelizationMethod == 1 and size > 1:
-            solve_arr = np.arange(self.GridDimensions)
-            proc_mask = np.zeros_like(solve_arr)
-            condition = (solve_arr >= lb[rank]) & (solve_arr < lb[rank + 1])
-            proc_mask[condition] = 1
-            solve_arr = solve_arr[proc_mask == 1]  
-                          
-        # Set up newdata dictionary                                
-        newdata = {}
-        for key in data.keys(): 
-            newdata[key] = copy.deepcopy(data[key])
-            
-            if self.ParallelizationMethod == 1 and size > 1:
-                newdata[key][proc_mask == 0] = 0        
-             
-        # Convert time to redshift     
-        z = self.cosmo.TimeToRedshiftConverter(0., t, self.InitialRedshift)
+        # Make data globally accessible
+        self.data = data
         
-        # Nice names for ionized fractions
-        n_H_arr = data["HIDensity"] + data["HIIDensity"]
-        x_HI_arr = data["HIDensity"] / n_H_arr
-        x_HII_arr = data["HIIDensity"] / n_H_arr
+        # Figure out which processors will solve which cells and create newdata dict
+        self.solve_arr, newdata = self.control.DistributeDataAcrossProcessors(data, lb)
+                          
+        # Nice names for densities, ionized fractions
+        self.n_H_arr = data["HIDensity"] + data["HIIDensity"]
+        self.x_HI_arr = data["HIDensity"] / self.n_H_arr
+        self.x_HII_arr = data["HIIDensity"] / self.n_H_arr
         
         if self.MultiSpecies:
-            n_He_arr = data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"]
-            x_HeI_arr = data["HeIDensity"] / n_He_arr
-            x_HeII_arr = data["HeIIDensity"] / n_He_arr
-            x_HeIII_arr = data["HeIIIDensity"] / n_He_arr
-        
-        # This is not a good idea in general, but in this case they'll never be touched again.
+            self.n_He_arr = data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"]
+            self.x_HeI_arr = data["HeIDensity"] / self.n_He_arr
+            self.x_HeII_arr = data["HeIIDensity"] / self.n_He_arr
+            self.x_HeIII_arr = data["HeIIIDensity"] / self.n_He_arr
         else: 
-            n_He_arr = x_HeI_arr = x_HeII_arr = x_HeIII_arr = np.zeros_like(x_HI_arr)
+            self.n_He_arr = self.x_HeI_arr = self.x_HeII_arr = self.x_HeIII_arr = np.zeros_like(self.x_HI_arr)
                                                         
         # If we're in an expanding universe, dilute densities by (1 + z)**3    
         if self.CosmologicalExpansion: 
-            data["HIDensity"] = x_HI * self.InitialHydrogenDensity * (1. + z)**3
-            data["HIIDensity"] = x_HII * self.InitialHydrogenDensity * (1. + z)**3
-            data["HeIDensity"] = x_HeI * self.InitialHeliumDensity * (1. + z)**3
-            data["HeIIDensity"] = x_HeII * self.InitialHeliumDensity * (1. + z)**3
-            data["HeIIIDensity"] = x_HeIII * self.InitialHeliumDensity * (1. + z)**3    
-            data["ElectronDensity"] = data["HIIDensity"] + data["HeIIDensity"] + 2. * data["HeIIIDensity"]
+            z = self.cosmo.TimeToRedshiftConverter(0., t, self.InitialRedshift)
+            self.data["HIDensity"] = self.x_HI_arr * self.InitialHydrogenDensity * (1. + z)**3
+            self.data["HIIDensity"] = self.x_HII_arr * self.InitialHydrogenDensity * (1. + z)**3
+            self.data["HeIDensity"] = self.x_HeI_arr * self.InitialHeliumDensity * (1. + z)**3
+            self.data["HeIIDensity"] = self.x_HeII_arr * self.InitialHeliumDensity * (1. + z)**3
+            self.data["HeIIIDensity"] = self.x_HeIII_arr * self.InitialHeliumDensity * (1. + z)**3    
+            self.data["ElectronDensity"] = self.data["HIIDensity"] + self.data["HeIIDensity"] + 2. * self.data["HeIIIDensity"]
 
-        # Compute column densities - meaning column density *between source and cell*
-        ncol_HI = np.roll(np.cumsum(data["HIDensity"] * self.dx), 1)
-        ncol_HeI = np.roll(np.cumsum(data["HeIDensity"] * self.dx), 1)
-        ncol_HeII = np.roll(np.cumsum(data["HeIIDensity"] * self.dx), 1)
-        ncol_HI[0] = ncol_HeI[0] = ncol_HeII[0] = neglible_column
+        # Compute column densities - meaning column density *between* source and cell
+        self.ncol_HI = np.roll(np.cumsum(data["HIDensity"] * self.dx), 1)
+        self.ncol_HeI = np.roll(np.cumsum(data["HeIDensity"] * self.dx), 1)
+        self.ncol_HeII = np.roll(np.cumsum(data["HeIIDensity"] * self.dx), 1)
+        self.ncol_HI[0] = self.ncol_HeI[0] = self.ncol_HeII[0] = neglible_column
         
-        # Convenience arrays for column, absorber, and ion densities, plus some others
-        ncol_all = np.transpose(np.log10([ncol_HI, ncol_HeI, ncol_HeII]))
-        nabs_all = np.transpose([data["HIDensity"], data["HeIDensity"], data["HeIIDensity"]])
-        nion_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"]])
-        mu_all = 1. / (self.X * (1. + x_HII_arr) + self.Y * (1. + x_HeII_arr + x_HeIII_arr) / 4.)
-        nB_all = n_H_arr + n_He_arr + data["ElectronDensity"]
-        q_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"], 3. * k_B * data["Temperature"] * nB_all / mu_all / 2.])
+        # Convenience arrays for column densities, absorbers, ion densities, and some others
+        self.ncol_all = np.transpose(np.log10([self.ncol_HI, self.ncol_HeI, self.ncol_HeII]))
+        self.nabs_all = np.transpose([data["HIDensity"], data["HeIDensity"], data["HeIIDensity"]])
+        self.nion_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"]])
+        self.mu_all = 1. / (self.X * (1. + self.x_HII_arr) + self.Y * (1. + self.x_HeII_arr + self.x_HeIII_arr) / 4.)
+        self.ne_all = data["ElectronDensity"]
+        self.nB_all = self.n_H_arr + self.n_He_arr + self.ne_all
+        self.q_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"], 
+            3. * k_B * data["Temperature"] * self.nB_all / self.mu_all / 2.])
         
-        # Retrieve indices used for 1-3D interpolation
-        indices_all = []
-        for i, col in enumerate(ncol_all):
-            if self.MultiSpecies > 0: 
-                indices_all.append(self.coeff.Interpolate.GetIndices3D(col))
-            else:
-                indices_all.append(None)
-        
-        # Compute optical depths *to* all cells
-        # Only use this for timestep calculation?
-        tau_all_arr = np.zeros([3, self.GridDimensions])    
+        # Retrieve indices used for N-D interpolation
+        self.indices_all = []
+        for i, col in enumerate(self.ncol_all):
+            if self.MultiSpecies == 0: 
+                self.indices_all.append(None)
+            else:    
+                self.indices_all.append(self.coeff.Interpolate.GetIndices3D(col))
+                        
+        # Compute optical depths *between* source and all cells. Do we only use this for timestep calculation?
+        self.tau_all_arr = np.zeros([3, self.GridDimensions])    
         if not self.pf['TabulateIntegrals']:
             sigma0 = PhotoIonizationCrossSection(self.rs.E, species = 0)
-            tmp_nHI = np.transpose(len(self.rs.E) * [ncol_HI])            
-            tau_all_arr[0] = np.sum(tmp_nHI * sigma0, axis = 1)
+            tmp_nHI = np.transpose(len(self.rs.E) * [self.ncol_HI])            
+            self.tau_all_arr[0] = np.sum(tmp_nHI * sigma0, axis = 1)
                         
             if self.MultiSpecies:
                 sigma1 = PhotoIonizationCrossSection(self.rs.E, species = 1)
                 sigma2 = PhotoIonizationCrossSection(self.rs.E, species = 2)
-                tmp_nHeI = np.transpose(len(self.rs.E) * [ncol_HeI])
-                tmp_nHeII = np.transpose(len(self.rs.E) * [ncol_HeII])
-                tau_all_arr[1] = np.sum(tmp_nHeI * sigma1, axis = 1)
-                tau_all_arr[2] = np.sum(tmp_nHeII * sigma2, axis = 1)
+                tmp_nHeI = np.transpose(len(self.rs.E) * [self.ncol_HeI])
+                tmp_nHeII = np.transpose(len(self.rs.E) * [self.ncol_HeII])
+                self.tau_all_arr[1] = np.sum(tmp_nHeI * sigma1, axis = 1)
+                self.tau_all_arr[2] = np.sum(tmp_nHeII * sigma2, axis = 1)
             
         else:
-            for i, col in enumerate(np.log10(ncol_HI)):
-                tau_all_arr[0][i] = self.coeff.Interpolate.OpticalDepth(col, 0)
+            for i, col in enumerate(np.log10(self.ncol_HI)):
+                self.tau_all_arr[0][i] = self.coeff.Interpolate.OpticalDepth(col, 0)
                 
                 if self.MultiSpecies:
-                    tau_all_arr[1][i] = self.coeff.Interpolate.OpticalDepth(np.log10(ncol_HeI[i]), 1)
-                    tau_all_arr[2][i] = self.coeff.Interpolate.OpticalDepth(np.log10(ncol_HeII[i]), 2)
+                    self.tau_all_arr[1][i] = self.coeff.Interpolate.OpticalDepth(np.log10(self.ncol_HeI[i]), 1)
+                    self.tau_all_arr[2][i] = self.coeff.Interpolate.OpticalDepth(np.log10(self.ncol_HeII[i]), 2)
                     
-            tau_all_arr[0][0] = tau_all_arr[1][0] = tau_all_arr[2][0] = neglible_tau 
+            self.tau_all_arr[0][0] = self.tau_all_arr[1][0] = self.tau_all_arr[2][0] = neglible_tau 
 
-        tau_all = zip(*tau_all_arr)         
+        self.tau_all = zip(*self.tau_all_arr)         
                                 
         # Print status, and update progress bar
         if rank == 0: 
             print "rt1d: %g < t < %g" % (t / self.TimeUnits, (t + dt) / self.TimeUnits)
         if rank == 0 and self.ProgressBar: 
-            pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()
-        
-        # If accreting black hole, luminosity will change with time.
-        Lbol = self.rs.BolometricLuminosity(t)
-        
-        # Set up 'packs' structure for c < infinity runs
-        if not self.InfiniteSpeedOfLight: 
-            
-            # PhotonPackage guide: pack = [EmissionTime, EmissionTimeInterval, ncolHI, ncolHeI, ncolHeII, Energy]
-            
-            # Photon packages going from oldest to youngest - will have to create it on first timestep
-            try: 
-                packs = list(data['PhotonPackages']) 
-            except KeyError: 
-                packs = []            
-            
-            if packs and self.OnePhotonPackagePerCell:
-                t_packs = np.array(zip(*packs)[0])    # Birth times for all packages
-                r_packs = (t - t_packs) * c
-                
-                # If there are already photon packages in the first cell, add energy in would-be packet to preexisting one
-                if r_packs[-1] < (self.StartRadius * self.LengthUnits):
-                    packs[-1][-1] += Lbol * dt
-                else:
-                    # Launch new photon package - [t_birth, ncol_HI_0, ncol_HeI_0, ncol_HeII_0]                
-                    packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
-            else: 
-                packs.append(np.array([t, dt, 0., 0., 0., Lbol * dt]))
-        
-        # Initialize timestep array
-        if self.AdaptiveGlobalStep: 
-            if self.InfiniteSpeedOfLight:
-                dtphot = 1. * np.zeros_like(self.grid)
-            else:
-                dtphot = 1.e50 * np.ones_like(self.grid)
-        else:
-            dtphot = dt                
+            self.pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()        
                 
         ###
         ## SOLVE: c -> inf
         ###        
-        if self.InfiniteSpeedOfLight:
-            
-            # Loop over cells radially, solve rate equations, update values in data -> newdata
-            for cell in self.grid:   
-                            
-                # If this cell belongs to another processor, continue
-                if self.ParallelizationMethod == 1 and size > 1:
-                    if cell not in solve_arr: continue
-                        
-                # Update progressbar        
-                if rank == 0 and self.ProgressBar: 
-                    pbar.update(cell * size)
-                                                                
-                # Read in densities for this cell
-                n_e = data["ElectronDensity"][cell]
-                n_HI = data["HIDensity"][cell]
-                n_HII = data["HIIDensity"][cell]
-                n_HeI = data["HeIDensity"][cell]
-                n_HeII = data["HeIIDensity"][cell]
-                n_HeIII = data["HeIIIDensity"][cell] 
-            
-                # Read in ionized fractions for this cell
-                x_HI = x_HI_arr[cell]
-                x_HII = x_HII_arr[cell]
-                x_HeI = x_HeI_arr[cell]
-                x_HeII = x_HeII_arr[cell]
-                x_HeIII = x_HeIII_arr[cell]
-                                        
-                # Convenience arrays for column, absorber, and ion densities plus a few others
-                ncol = ncol_all[cell]   # actully log10(ncol)
-                nabs = nabs_all[cell]
-                nion = nion_all[cell]
-                n_H = n_HI + n_HII
-                n_He = n_HeI + n_HeII + n_HeIII                
-                n_B = n_H + n_He + n_e
+        if self.InfiniteSpeedOfLight: 
+            newdata, dtphot = self.EvolvePhotonsAtInfiniteSpeed(newdata, t, dt, h)
                 
-                # Read in mean molecular weight for this cell
-                mu = mu_all[cell] 
-                                                                              
-                # Read in temperature and internal energy for this cell
-                T = data["Temperature"][cell]
-                E = q_all[cell] 
-                        
-                # Read radius
-                r = self.r[cell]
-                                
-                # Retrieve indices used for 3D interpolation
-                indices = indices_all[cell]
-                
-                # Retrieve optical depth to this cell
-                tau = tau_all[cell]
-                                
-                # Retrieve path length through this cell
-                dx = self.dx[cell]     
-                                                                             
-                # Retrieve coefficients and what not.
-                args = [nabs, nion, n_H, n_He, n_e]
-                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, t))
-                
-                # Unpack so we have everything by name
-                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega = args                                                          
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
-                ######################################
-                ######## Solve Rate Equations ########
-                ######################################        
-                                                              
-                tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, q_all[cell], t, t + dt, 
-                    None, h, *args)
-                                                                                                                                           
-                # Unpack results of coupled equations
-                newHII, newHeII, newHeIII, newE = qnew 
-                                                
-                # Convert from internal energy back to temperature
-                newT = newE * 2. * mu / 3. / k_B / n_B   
-                
-                # Calculate neutral fractions
-                newHI = n_H - newHII
-                newHeI = n_He - newHeII - newHeIII 
-                
-                # Update quantities in 'data' -> 'newdata'                
-                newdata["HIDensity"][cell] = newHI                                                                                            
-                newdata["HIIDensity"][cell] = newHII
-                newdata["HeIDensity"][cell] = newHeI
-                newdata["HeIIDensity"][cell] = newHeII
-                newdata["HeIIIDensity"][cell] = newHeIII
-                newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
-                newdata["Temperature"][cell] = newT    
-                newdata["OpticalDepth"][cell] = tau
-                newdata["ODEIterations"][cell] = odeitr
-                newdata["ODEIterationRate"][cell] = odeitr / (h / self.TimeUnits)
-                newdata["RootFinderIterations"][cell] = rootitr
-                
-                if self.OutputRates:
-                    for i in xrange(3):
-                        newdata['PhotoIonizationRate%i' % i][cell] = Gamma[i]
-                        newdata['PhotoHeatingRate%i' % i][cell] = k_H[i]
-                        newdata['CollisionalIonizationRate%i' % i][cell] = Beta[i] 
-                        newdata['RadiativeRecombinationRate%i' % i][cell] = alpha[i] 
-                        newdata['CollisionalIonzationCoolingRate%i' % i][cell] = zeta[i] 
-                        newdata['RecombinationCoolingRate%i' % i][cell] = eta[i] 
-                        newdata['CollisionalExcitationCoolingRate%i' % i][cell] = psi[i]
-                        
-                        newdata['SecondaryIonizationRate%i' % i][cell] = gamma[i] 
-                        
-                        if i == 2:
-                            newdata['DielectricRecombinationRate'][cell] = xi[i]
-                            newdata['DielectricRecombinationCoolingRate'][cell] = omega[i]
-                                                                                                  
-                ######################################
-                ################ DONE ################
-                ######################################
-                    
-                # Adjust timestep based on maximum allowed neutral fraction change     
-                if self.AdaptiveGlobalStep:
-                    dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
-                        nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi, dt) 
-
         ###
         ## SOLVE: c = finite
         ###   
-        else:                
-       
-            # Loop over photon packages, updating values in cells: data -> newdata
-            for j, pack in enumerate(packs):
-                t_birth = pack[0]
-                r_pack = (t - t_birth) * c        # Position of package before evolving photons
-                r_max = r_pack + dt * c           # Furthest this package will get this timestep
-                                                                                 
-                # Cells we need to know about - not necessarily integer
-                cell_pack = r_pack * self.GridDimensions / self.LengthUnits
-                cell_pack_max = r_max * self.GridDimensions / self.LengthUnits
-                              
-                Lbol = pack[-1] / pack[1]          
-                                                
-                # Advance this photon package as far as it will go on this global timestep  
-                while cell_pack < cell_pack_max:
-                                                            
-                    # What cell are we in
-                    cell = int(round(cell_pack))
-                    
-                    if cell >= self.GridDimensions: 
-                        break
-                    
-                    # Compute dc (like dx but in fractional cell units)
-                    if cell_pack % 1 == 0: 
-                        dc = min(cell_pack_max - cell_pack, 1)
-                    else: 
-                        dc = min(math.ceil(cell_pack) - cell_pack, cell_pack_max - cell_pack)        
-                                                         
-                    # We really need to evolve this cell until the next photon package arrives, which
-                    # is probably longer than a cell crossing time unless the global dt is vv small.
-                    if (len(packs) > 1) and ((j + 1) < len(packs)): 
-                        subdt = min(dt, packs[j + 1][0] - pack[0])
-                    else: 
-                        subdt = dt
-                                                                                                                                                                                                                                                                                                                                              
-                    r = cell_pack * self.LengthUnits / self.GridDimensions
-                    
-                    if r < (self.StartRadius / self.LengthUnits): 
-                        cell_pack += dc
-                        continue
-                    
-                    n_e = newdata["ElectronDensity"][cell]
-                    n_HI = newdata["HIDensity"][cell]
-                    n_HII = newdata["HIIDensity"][cell]
-                    n_HeI = newdata["HeIDensity"][cell]
-                    n_HeII = newdata["HeIIDensity"][cell]
-                    n_HeIII = newdata["HeIIIDensity"][cell] 
-                    
-                    # Read in ionized fractions for this cell
-                    x_HI = x_HI_arr[cell]
-                    x_HII = x_HII_arr[cell]
-                    x_HeI = x_HeI_arr[cell]
-                    x_HeII = x_HeII_arr[cell]
-                    x_HeIII = x_HeIII_arr[cell]
-                    
-                    # Compute mean molecular weight for this cell
-                    mu = mu_all[cell] 
-                    
-                    # Retrieve path length through this cell
-                    dx = self.dx[cell]     
-                                            
-                    # For convenience     
-                    nabs = [n_HI, n_HeI, n_HeII]
-                    nion = [n_HII, n_HeII, n_HeIII]
-                    n_H = n_HI + n_HII
-                    n_He = n_HeI + n_HeII + n_HeIII
-                    n_B = n_H + n_He + n_e
-                    
-                    # Compute internal energy for this cell
-                    T = newdata["Temperature"][cell]
-                    E = 3. * k_B * T * n_B / mu / 2.
-                    
-                    q_cell = [n_HII, n_HeII, n_HeIII, E]
-                    
-                    # Crossing time
-                    dct = self.CellCrossingTime
-                    
-                    # Add columns of this cell
-                    packs[j][2] += newdata['HIDensity'][cell] * dc * dct * c  
-                    packs[j][3] += newdata['HeIDensity'][cell] * dc * dct * c 
-                    packs[j][4] += newdata['HeIIDensity'][cell] * dc * dct * c
-                    ncol = packs[j][2:5]
-                    
-                    ######################################
-                    ######## Solve Rate Equations ########
-                    ######################################
-                    
-                    # Retrieve indices used for 3D interpolation
-                    indices = None
-                    if self.MultiSpecies > 0: 
-                        indices = self.coeff.Interpolate.GetIndices3D(ncol)
-                    
-                    # Retrieve coefficients and what not.
-                    args = [nabs, nion, n_H, n_He, n_e]
-                    args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, dt, t))                    
-                    
-                    # Unpack so we have everything by name
-                    nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args
-                                                                                                             
-                    ######################################
-                    ######## Solve Rate Equations ########
-                    ######################################                          
-                                    
-                    tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, q_cell, t, t + dt, 
-                        None, h, *args)
-                                        
-                    # Unpack results of coupled equations - Remember: these are lists and we only need the last entry 
-                    newHII, newHeII, newHeIII, newE = qnew
-
-                    # Convert from internal energy back to temperature
-                    newT = newE * 2. * mu / 3. / k_B / n_B
-                    
-                    # Calculate neutral fractions
-                    newHI = n_H - newHII
-                    newHeI = n_He - newHeII - newHeIII
-                             
-                    # Update quantities in 'data' -> 'newdata'                
-                    newdata["HIDensity"][cell] = newHI                                                                                            
-                    newdata["HIIDensity"][cell] = n_H - newHI
-                    newdata["HeIDensity"][cell] = newHeI
-                    newdata["HeIIDensity"][cell] = newHeII
-                    newdata["HeIIIDensity"][cell] = newHeIII
-                    newdata["ElectronDensity"][cell] = (n_H - newHI) + newHeIII + 2.0 * newHeIII
-                    newdata["Temperature"][cell] = newT                   
-                                                                                
-                    cell_pack += dc
-                                                    
-                    ######################################
-                    ################ DONE ################     
-                    ######################################                                   
-                
-            # Adjust timestep based on maximum allowed neutral fraction change     
-            if self.AdaptiveGlobalStep:
-                for cell in self.grid:
-                    dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
-                        nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi, dt) 
-    
+        else:
+            newdata, dtphot = self.EvolvePhotonsAtFiniteSpeed(newdata, t, dt, h)
+                            
+        ### 
+        ## Tidy up a bit
+        ###
+        
         # If multiple processors at work, communicate data and timestep                                                                                          
         if (size > 1) and (self.ParallelizationMethod == 1):
             for key in newdata.keys(): 
@@ -566,31 +272,372 @@ class Radiate:
                 
             dtphot = MPI.COMM_WORLD.allreduce(dtphot, dtphot) 
                                 
+        # Compute timestep for next cycle based on minimum dt required over entire grid                        
         if self.AdaptiveGlobalStep: 
             newdt = min(np.min(dtphot), 2 * dt)
         else: 
             newdt = dt
         
-        if self.LightCrossingTimeRestrictedTimestep: 
-            newdt = min(newdt, self.LightCrossingTimeRestrictedTimestep * self.LengthUnits / self.GridDimensions / c)
-        
-        if rank == 0 and self.ProgressBar: 
-            pbar.finish()
-        
-        # Update photon packages        
-        if not self.InfiniteSpeedOfLight: 
-            newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt, newdata)  # t + newdt?            
-                                
         # Store timestep information
         newdata['dtPhoton'] = dtphot
                                 
-        # Load balance grid                        
+        # Load balance grid for next timestep                     
         if size > 1 and self.ParallelizationMethod == 1: 
             lb = self.control.LoadBalance(dtphot)   
         else: 
             lb = None      
+            
+        if rank == 0 and self.ProgressBar: 
+            self.pbar.finish()    
                                                                                                                                                                                  
-        return newdata, h, newdt, lb 
+        return newdata, h, newdt, lb
+        
+    def EvolvePhotonsAtInfiniteSpeed(self, newdata, t, dt, h):
+        """
+        Solver for InfiniteSpeedOfLight = 1.
+        """        
+        
+        # Set up timestep array for use on next cycle
+        if self.AdaptiveGlobalStep:
+            dtphot = 1. * np.zeros_like(self.grid)
+        else:
+            dtphot = dt
+        
+        # Could change with time for accreting black holes
+        Lbol = self.rs.BolometricLuminosity(t)
+                
+        # Loop over cells radially, solve rate equations, update values in data -> newdata
+        for cell in self.grid:   
+                        
+            # If this cell belongs to another processor, continue
+            if self.ParallelizationMethod == 1 and size > 1:
+                if cell not in self.solve_arr: continue
+                    
+            # Update progressbar        
+            if rank == 0 and self.ProgressBar: 
+                self.pbar.update(cell * size)
+                                                            
+            # Read in densities for this cell
+            n_e = self.data["ElectronDensity"][cell]
+            n_HI = self.data["HIDensity"][cell]
+            n_HII = self.data["HIIDensity"][cell]
+            n_HeI = self.data["HeIDensity"][cell]
+            n_HeII = self.data["HeIIDensity"][cell]
+            n_HeIII = self.data["HeIIIDensity"][cell] 
+        
+            # Read in ionized fractions for this cell
+            x_HI = self.x_HI_arr[cell]
+            x_HII = self.x_HII_arr[cell]
+            x_HeI = self.x_HeI_arr[cell]
+            x_HeII = self.x_HeII_arr[cell]
+            x_HeIII = self.x_HeIII_arr[cell]
+                                    
+            # Convenience arrays for column, absorber, and ion densities plus a few others
+            ncol = self.ncol_all[cell]   # actaully log10(ncol)
+            nabs = self.nabs_all[cell]
+            nion = self.nion_all[cell]
+            n_H = n_HI + n_HII
+            n_He = n_HeI + n_HeII + n_HeIII                
+            n_B = n_H + n_He + n_e
+            
+            # Read in mean molecular weight for this cell
+            mu = self.mu_all[cell] 
+                                                                          
+            # Read in temperature and internal energy for this cell
+            T = self.data["Temperature"][cell]
+            E = self.q_all[cell] 
+                    
+            # Read radius
+            r = self.r[cell]
+                            
+            # Retrieve indices used for 3D interpolation
+            indices = self.indices_all[cell]
+            
+            # Retrieve optical depth to this cell
+            tau = self.tau_all[cell]
+                            
+            # Retrieve path length through this cell
+            dx = self.dx[cell]     
+                                                                         
+            # Retrieve coefficients and what not.
+            args = [nabs, nion, n_H, n_He, n_e]
+            args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, t))
+            
+            # Unpack so we have everything by name
+            nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega = args                                                          
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+            ######################################
+            ######## Solve Rate Equations ########
+            ######################################        
+                                                          
+            tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, self.q_all[cell], t, t + dt, 
+                None, h, *args)
+                                                                                                                                       
+            # Unpack results of coupled equations
+            newHII, newHeII, newHeIII, newE = qnew 
+                                            
+            # Convert from internal energy back to temperature
+            newT = newE * 2. * mu / 3. / k_B / n_B   
+            
+            # Calculate neutral fractions
+            newHI = n_H - newHII
+            newHeI = n_He - newHeII - newHeIII 
+            
+            # Store data
+            newdata = self.StoreData(newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
+                tau, odeitr, h, rootitr, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, omega)
+                                                                                              
+            ######################################
+            ################ DONE ################
+            ######################################
+                
+            # Adjust timestep based on maximum allowed neutral fraction change     
+            if self.AdaptiveGlobalStep:
+                dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
+                    nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi, dt) 
+        
+        return newdata, dtphot
+        
+    def EvolvePhotonsAtFiniteSpeed(self, newdata, t, dt, h):
+        """
+        Solver for InfiniteSpeedOfLight = 0.
+        
+        PhotonPackage guide: 
+            pack = [EmissionTime, EmissionTimeInterval, ncolHI, ncolHeI, ncolHeII, Energy]
+        """ 
+        
+        # Set up timestep array for use on next cycle
+        if self.AdaptiveGlobalStep:
+            dtphot = 1.e50 * np.ones_like(self.grid)
+        else:
+            dtphot = dt
+            
+        # Could change with time for accreting black holes
+        Lbol = self.rs.BolometricLuminosity(t)  
+            
+        # Photon packages going from oldest to youngest - will have to create it on first timestep
+        if t == 0: 
+            packs = []
+        else: 
+            packs = list(self.data['PhotonPackages']) 
+        
+        if packs and self.OnePhotonPackagePerCell:
+            t_packs = np.array(zip(*packs)[0])    # Birth times for all packages
+            r_packs = (t - t_packs) * c
+            
+            # If there are already photon packages in the first cell, add energy in would-be packet to preexisting one
+            if r_packs[-1] < (self.StartRadius * self.LengthUnits):
+                packs[-1][-1] += Lbol * dt
+            # Launch new photon package
+            else:
+                packs.append(np.array([t, dt, neglible_column, neglible_column, neglible_column, Lbol * dt]))
+        else: 
+            packs.append(np.array([t, dt, neglible_column, neglible_column, neglible_column, Lbol * dt]))
+            
+        # Loop over photon packages, updating values in cells: data -> newdata
+        for j, pack in enumerate(packs):
+            t_birth = pack[0]
+            r_pack = (t - t_birth) * c        # Position of package before evolving photons
+            r_max = r_pack + dt * c           # Furthest this package will get this timestep
+                                                                             
+            # Cells we need to know about - not necessarily integer
+            cell_pack = r_pack * self.GridDimensions / self.LengthUnits
+            cell_pack_max = r_max * self.GridDimensions / self.LengthUnits
+                          
+            Lbol = pack[-1] / pack[1]          
+                                            
+            # Advance this photon package as far as it will go on this global timestep  
+            while cell_pack < cell_pack_max:
+                                                        
+                # What cell are we in
+                cell = int(round(cell_pack))
+                
+                if cell >= self.GridDimensions: 
+                    break
+                
+                # Compute dc (like dx but in fractional cell units)
+                if cell_pack % 1 == 0: 
+                    dc = min(cell_pack_max - cell_pack, 1)
+                else: 
+                    dc = min(math.ceil(cell_pack) - cell_pack, cell_pack_max - cell_pack)        
+                                                     
+                # We really need to evolve this cell until the next photon package arrives, which
+                # is probably longer than a cell crossing time unless the global dt is vv small.
+                if (len(packs) > 1) and ((j + 1) < len(packs)): 
+                    subdt = min(dt, packs[j + 1][0] - pack[0])
+                else: 
+                    subdt = dt
+                                                                                                                                                                                                                                                                                                                                          
+                r = cell_pack * self.LengthUnits / self.GridDimensions
+                
+                if r < (self.StartRadius / self.LengthUnits): 
+                    cell_pack += dc
+                    continue
+                
+                # These quantities will be different (in general) for each step
+                # of the while loop
+                n_e = newdata["ElectronDensity"][cell]
+                n_HI = newdata["HIDensity"][cell]
+                n_HII = newdata["HIIDensity"][cell]
+                n_HeI = newdata["HeIDensity"][cell]
+                n_HeII = newdata["HeIIDensity"][cell]
+                n_HeIII = newdata["HeIIIDensity"][cell] 
+                n_H = n_HI + n_HII
+                n_He = n_HeI + n_HeII + n_HeIII
+                
+                # Read in ionized fractions for this cell
+                x_HI = n_HI / n_H
+                x_HII = n_HII / n_H
+                x_HeI = n_HeI / n_He
+                x_HeII = n_HeII = n_He
+                x_HeIII = n_HeIII = n_He
+                
+                # Compute mean molecular weight for this cell
+                mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
+                
+                # Retrieve path length through this cell
+                dx = self.dx[cell]     
+                                        
+                # Crossing time
+                dct = self.CellCrossingTime[cell]                        
+                                        
+                # For convenience     
+                nabs = np.array([n_HI, n_HeI, n_HeII])
+                nion = np.array([n_HII, n_HeII, n_HeIII])
+                n_H = n_HI + n_HII
+                n_He = n_HeI + n_HeII + n_HeIII
+                n_B = n_H + n_He + n_e
+                
+                # Compute internal energy for this cell
+                T = newdata["Temperature"][cell]
+                E = 3. * k_B * T * n_B / mu / 2.
+                
+                q_cell = [n_HII, n_HeII, n_HeIII, E]
+                                
+                # Add columns of this cell
+                packs[j][2] += newdata['HIDensity'][cell] * dc * dct * c  
+                packs[j][3] += newdata['HeIDensity'][cell] * dc * dct * c 
+                packs[j][4] += newdata['HeIIDensity'][cell] * dc * dct * c
+                ncol = np.log10(packs[j][2:5])
+                
+                ######################################
+                ######## Solve Rate Equations ########
+                ######################################
+                
+                # Retrieve indices used for 3D interpolation
+                indices = None
+                if self.MultiSpecies > 0: 
+                    indices = self.coeff.Interpolate.GetIndices3D(ncol)
+                
+                # Retrieve coefficients and what not.
+                args = [nabs, nion, n_H, n_He, n_e]
+                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, t))
+                
+                # Unpack so we have everything by name
+                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega = args
+                                                                                                         
+                ######################################
+                ######## Solve Rate Equations ########
+                ######################################                          
+                                
+                tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, q_cell, t, t + dt, 
+                    None, h, *args)
+                                    
+                # Unpack results of coupled equations - Remember: these are lists and we only need the last entry 
+                newHII, newHeII, newHeIII, newE = qnew
+        
+                # Convert from internal energy back to temperature
+                newT = newE * 2. * mu / 3. / k_B / n_B
+                
+                # Calculate neutral fractions
+                newHI = n_H - newHII
+                newHeI = n_He - newHeII - newHeIII
+                         
+                # Store data
+                newdata = self.StoreData(newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
+                    self.tau_all[cell], odeitr, h, rootitr, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, omega)
+                                                         
+                cell_pack += dc
+                                                
+                ######################################
+                ################ DONE ################     
+                ######################################                                   
+            
+        # Adjust timestep based on maximum allowed neutral fraction change     
+        if self.AdaptiveGlobalStep:
+            for cell in self.grid:
+                Gamma = [newdata['PhotoIonizationRate%i' % i] for i in np.arange(3)]
+                gamma = [newdata['SecondaryIonizationRate%i' % i] for i in np.arange(3)]
+                Beta = [newdata['CollisionalIonizationRate%i' % i] for i in np.arange(3)]
+                alpha = [newdata['RadiativeRecombinationRate%i' % i] for i in np.arange(3)]
+                xi = [newdata['DielectricRecombinationRate%i' % i] for i in np.arange(3)]
+                
+                dtphot[cell] = self.control.ComputePhotonTimestep(self.tau_all_arr[:,cell], 
+                    self.nabs_all[cell], self.nion_all[cell], self.ncol_all[cell], self.n_H_arr[cell], self.n_He_arr[cell], 
+                    self.ne_all[cell], self.nB_all[cell], 
+                    Gamma, gamma, Beta, alpha, xi, dt) 
+                    
+                if self.LightCrossingTimeRestrictedTimestep: 
+                    dtphot[cell] = min(dtphot[cell], self.LightCrossingTimeRestrictedTimestep * self.CellCrossingTime[cell])    
+                    
+        # Update photon packages        
+        if not self.InfiniteSpeedOfLight: 
+            newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt)
+        
+        return newdata, dtphot
+    
+    def UpdatePhotonPackages(self, packs, t_next):
+        """
+        Get rid of old photon packages.
+        """    
+                
+        to_eliminate = []
+        for i, pack in enumerate(packs):
+            if (t_next - pack[0]) > (self.LengthUnits / c): 
+                to_eliminate.append(i)
+            
+        to_eliminate.reverse()    
+        for element in to_eliminate: 
+            packs.pop(element)
+                  
+        return np.array(packs)
+       
+    def StoreData(self, newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
+        tau, odeitr, h, rootitr, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, omega):
+        """
+        Copy fields to newdata dictionary.
+        """
+        
+        # Update quantities in 'data' -> 'newdata'                
+        newdata["HIDensity"][cell] = newHI                                                                                            
+        newdata["HIIDensity"][cell] = newHII
+        newdata["HeIDensity"][cell] = newHeI
+        newdata["HeIIDensity"][cell] = newHeII
+        newdata["HeIIIDensity"][cell] = newHeIII
+        newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
+        newdata["Temperature"][cell] = newT    
+        newdata["OpticalDepth"][cell] = tau
+        newdata["ODEIterations"][cell] = odeitr
+        newdata["ODEIterationRate"][cell] = odeitr / (h / self.TimeUnits)
+        newdata["RootFinderIterations"][cell] = rootitr
+        
+        if self.OutputRates:
+            for i in xrange(3):
+                newdata['PhotoIonizationRate%i' % i][cell] += Gamma[i]
+                newdata['PhotoHeatingRate%i' % i][cell] += k_H[i]
+                newdata['CollisionalIonizationRate%i' % i][cell] += Beta[i] 
+                newdata['RadiativeRecombinationRate%i' % i][cell] += alpha[i] 
+                newdata['CollisionalIonzationCoolingRate%i' % i][cell] += zeta[i] 
+                newdata['RecombinationCoolingRate%i' % i][cell] += eta[i] 
+                newdata['CollisionalExcitationCoolingRate%i' % i][cell] += psi[i]
+                
+                newdata['SecondaryIonizationRate%i' % i][cell] += gamma[i] 
+                
+                if i == 2:
+                    newdata['DielectricRecombinationRate'][cell] += xi[i]
+                    newdata['DielectricRecombinationCoolingRate'][cell] += omega[i]           
+                    
+        return newdata            
         
     def RateEquations(self, q, t, args):    
         """
@@ -652,19 +699,5 @@ class Radiate:
 
         return dqdt
 
-    def UpdatePhotonPackages(self, packs, t_next, data):
-        """
-        Get rid of old photon packages.
-        """    
-                
-        to_eliminate = []
-        for i, pack in enumerate(packs):
-            if (t_next - pack[0]) > (self.LengthUnits / c): 
-                to_eliminate.append(i)
-            
-        to_eliminate.reverse()    
-        for element in to_eliminate: 
-            packs.pop(element)
-                
-        return packs
+    
         

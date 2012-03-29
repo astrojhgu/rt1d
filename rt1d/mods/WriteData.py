@@ -69,7 +69,8 @@ class WriteData:
                 pf_grp.create_dataset(par, data = self.pf[par])
         
         for field in data: 
-            data_grp.create_dataset(field, data = data[field])
+            if data[field].shape[0] > 0:
+                data_grp.create_dataset(field, data = data[field])
         
         f.close()
         

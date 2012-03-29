@@ -87,7 +87,7 @@ class RateCoefficients:
         Psi_N_dN = np.zeros(3)
         
         # Derived quantities we'll need
-        Vsh = self.ShellVolume(r, dr)
+        Vsh = self.ShellVolume(r, dr)        
         ncell = dr * nabs          
         
         # Set normalization constant for each species

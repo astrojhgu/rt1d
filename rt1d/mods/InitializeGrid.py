@@ -80,10 +80,6 @@ class InitializeGrid:
         for field in FieldList:
             fields[field] = np.array(eval("map(self.Initialize{0}, self.grid)".format(field)))
         
-        # Additional fields
-        fields['dtPhoton'] = np.ones_like(fields[fields.keys()[0]])
-        
-        
         if self.OutputRates:
             for i in xrange(3):
                 fields['PhotoIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
@@ -101,6 +97,8 @@ class InitializeGrid:
                     fields['DielectricRecombinationRate'] = np.zeros_like(fields[fields.keys()[0]])
                     fields['DielectricRecombinationCoolingRate'] = np.zeros_like(fields[fields.keys()[0]])
         
+        # Additional fields
+        fields['dtPhoton'] = np.ones_like(fields[fields.keys()[0]])
         fields["ODEIterations"] = np.zeros_like(fields[fields.keys()[0]])        
         fields['ODEIterationRate'] = np.zeros_like(fields[fields.keys()[0]])        
         fields['RootFinderIterations'] = np.zeros([len(fields[fields.keys()[0]]), 4])

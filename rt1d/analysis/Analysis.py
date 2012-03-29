@@ -29,9 +29,7 @@ class Analyze:
         self.pf = self.ds.pf    # dictionary
         self.g = InitializeGrid(self.pf)   
         self.iits = InitializeIntegralTables(self.pf, self.data[0], self.g)      
-        self.esec = SecondaryElectrons(self.pf) 
-        
-        self.inspect = Inspect(self)
+        self.esec = SecondaryElectrons(self.pf)         
         
         # Convenience
         self.GridDimensions = int(self.pf['GridDimensions'])
@@ -67,6 +65,9 @@ class Analyze:
                 self.itabs)
         else:
             self.itabs = self.interp = None    
+            
+        # Inspect instance    
+        self.inspect = Inspect(self)    
         
     def StromgrenSphere(self, t, sol = 0, T0 = None):
         """
@@ -134,7 +135,7 @@ class Analyze:
         self.mp.grid[1].set_xlim(0, max(self.t / self.trec))
         self.mp.grid[1].set_ylim(0.95, 1.05)
         self.mp.grid[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
-        self.mp.grid[1].set_ylabel(r'$r/r_{\mathrm{anl}}$') 
+        self.mp.grid[1].set_ylabel(r'$r_{\mathrm{num}} / r_{\mathrm{anl}}$') 
         self.mp.grid[0].xaxis.set_ticks(np.linspace(0, 4, 5))
         self.mp.grid[1].xaxis.set_ticks(np.linspace(0, 4, 5))
         
@@ -164,7 +165,7 @@ class Analyze:
         pl.draw()        
         
     def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k', 
-        annotate = False):
+        annotate = False, xscale = 'linear', yscale = 'log'):
         """
         Plot radial profiles of species fraction (for H or He) at times t (Myr).
         """      
@@ -180,18 +181,20 @@ class Analyze:
                 continue
             
             if species == 'H':
-                exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HI}}$\')' % (dd, dd, 'x_HI', '-', color))
-                exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HII}}$\')' % (dd, dd, 'x_HII', '--', color))
             if species == 'He':
-                exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeI}}$\')' % (dd, dd, 'x_HeI', '-', color))
-                exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeII}}$\')' % (dd, dd, 'x_HeII', '--', color))
-                exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeIII}}$\')' % (dd, dd, 'x_HeIII', ':', color))                
             
+        self.ax.set_xscale(xscale)
+        self.ax.set_yscale(yscale)    
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Species Fraction')  
         
