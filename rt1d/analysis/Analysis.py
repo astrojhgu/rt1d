@@ -13,21 +13,25 @@ import os
 import numpy as np
 import pylab as pl
 from Multiplot import *
-import rt1d.mods as rtm
-from rt1d.mods.Constants import *
-from rt1d.analysis.Dataset import Dataset
-from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
-from rt1d.mods.InitializeIntegralTables import InitializeIntegralTables
-from rt1d.mods.Interpolate import Interpolate
+from .Dataset import Dataset
+from .Inspection import Inspect
+from ..mods.Constants import *
+from ..mods.Interpolate import Interpolate
+from ..mods.InitializeGrid import InitializeGrid
+from ..mods.SecondaryElectrons import SecondaryElectrons
+from ..mods.ComputeCrossSections import PhotoIonizationCrossSection
+from ..mods.InitializeIntegralTables import InitializeIntegralTables
 
 class Analyze:
     def __init__(self, pf, retabulate = False):
         self.ds = Dataset(pf)
         self.data = self.ds.data
         self.pf = self.ds.pf    # dictionary
-        self.g = rtm.InitializeGrid(self.pf)   
-        self.iits = rtm.InitializeIntegralTables(self.pf, self.data[0], self.g)      
-        self.esec = rtm.SecondaryElectrons(self.pf)  
+        self.g = InitializeGrid(self.pf)   
+        self.iits = InitializeIntegralTables(self.pf, self.data[0], self.g)      
+        self.esec = SecondaryElectrons(self.pf) 
+        
+        self.inspect = Inspect(self)
         
         # Convenience
         self.GridDimensions = int(self.pf['GridDimensions'])
@@ -199,160 +203,59 @@ class Analyze:
         
         pl.draw()
         
-    def RadialProfileMovie(self, species = 'H', out = 'frames'):
+    def RadialProfileMovie(self, field = 'x_HI', out = 'frames', scale = 'linear'):
         """
         Save time-series images of 'field' to 'out' directory.
+        
+        field = x_HI, x_HII, x_HeI, x_HeII, x_HeIII, n_e, T
         """    
         
         if out is None:
             out = './'
         elif not os.path.exists(out):
             os.mkdir(out)
-
-        mi, ma = (1e-5, 1.5)
+            
+        if field == 'T':
+            mi, ma = (1e2, 1e5)
+        else:
+            mi, ma = (1e-5, 1.5)
+            
         ax = pl.subplot(111)    
         ax.set_xscale('log')        
         ax.set_yscale('log')  
          
         for dd in self.data.keys():
             
-            if species == 'H':
-                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                    self.data[%i].x_HI, ls = \'-\', color = \'k\')' % (dd, dd))
-                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                    self.data[%i].x_HII, ls = \'--\', color = \'k\')' % (dd, dd))
-            else:
-                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                    self.data[%i].x_HeI, ls = \'-\', color = \'k\')' % (dd, dd))
-                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                    self.data[%i].x_HeII, ls = \'--\', color = \'k\')' % (dd, dd))   
-                exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                    self.data[%i].x_HeIII, ls = \':\', color = \'k\')' % (dd, dd))            
+            exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                self.data[%i].%s, ls = \'-\', color = \'k\')' % (dd, dd, field))
 
             ax.set_xlim(self.data[0].r[0] / self.pf['LengthUnits'], 1)        
-            ax.set_ylim(mi, ma)         
+            ax.set_ylim(mi, ma)    
+            ax.set_xscale(scale)     
                     
-            pl.savefig('%s/dd%s_x%s.png' % (out, str(dd).zfill(4), species))                        
+            pl.savefig('%s/dd%s_%s.png' % (out, str(dd).zfill(4), field))                        
             ax.clear()
             
         pl.close()    
         
-    def InspectIntegralTable(self, integral = 0, species = 0, nHI = None, nHeI = 0.0, nHeII = 0.0,
-        color = 'k', ls = '-', annotate = True):
+    def ColumnDensityContours(self):
         """
-        Plot integral values...or something.
-        """ 
+        Construct a 2D histogram of column density vs. time.
+        """    
         
-        if species == 0:
-            s = 'HI'
-        elif species == 1:
-            s = 'HeI'
-        else:
-            s = 'HeII'
+        HI = []
+        HeI = []
         
-        # Convert integral int to string
-        if integral == 0:
-            integral = 'PhotoIonizationRate%i' % species 
-            ylabel = r'$\Phi_{\mathrm{%s}}$' % s
-        elif integral == 1:
-            integral = 'ElectronHeatingRate%i' % species
-            ylabel = r'$\Psi_{\mathrm{%s}}$' % s
-        else:
-            integral = 'TotalOpticalDepth' 
-            ylabel = r'$\sum_i\int_{\nu} \tau_{i,\nu} d\nu$'
-            pl.rcParams['figure.subplot.left'] = 0.2
-        
-        # Figure out axes
-        if nHI is None:
-            x = self.itabs['HIColumnValues_x']
-            if self.MultiSpecies:
-                i1 = np.argmin(np.abs(self.itabs['HeIColumnValues_y'] - nHeI))
-                i2 = np.argmin(np.abs(self.itabs['HeIIColumnValues_z'] - nHeII))
-                y = self.itabs[integral][0:,i1,i2]
-            else:
-                y = self.itabs[integral]
-            xlabel = r'$n_{\mathrm{HI}} \ (\mathrm{cm^{-2}})$'
-        elif nHeI is None:
-            x = self.itabs['HeIColumnValues_y']
-            i1 = np.argmin(np.abs(self.itabs['HIColumnValues_x'] - nHI))
-            i2 = np.argmin(np.abs(self.itabs['HeIIColumnValues_z'] - nHeII))
-            y = self.itabs[integral][i1,0:,i2]
-            xlabel = r'$n_{\mathrm{HeI}} \ (\mathrm{cm^{-2}})$'
-        else:
-            x = self.itabs['HeIIColumnValues_z']
-            i1 = np.argmin(np.abs(self.itabs['HIColumnValues_x'] - nHI))
-            i2 = np.argmin(np.abs(self.itabs['HeIColumnValues_y'] - nHeI))
-            y = self.itabs[integral][i1,i2,0:]
-            xlabel = r'$n_{\mathrm{HeII}} \ (\mathrm{cm^{-2}})$'
+        for i, dd in enumerate(self.data.keys()):
+            HI.extend(np.log10(self.data[dd].ncol_HI))
+            HeI.extend(np.log10(self.data[dd].ncol_HeI))
             
-        if not hasattr(self, 'ax'):
-            self.ax = pl.subplot(111)
+        hist, xedges, yedges = np.histogram2d(HI, HeI, 
+            bins = (np.linspace(17, 21, 500), np.linspace(17, 21, 500)))    
             
-        self.ax.loglog(10**x, 10**y, color = color, ls = '-')
-        self.ax.set_xlabel(xlabel)
-        self.ax.set_ylabel(ylabel)
-        
-        pl.draw()
-        
-    def InspectInterpolation(self, integral = 0, species = 0, nHI = np.linspace(12, 24, 1000), 
-        nHeI = 0.0, nHeII = 0.0, color = 'b', ls = '-'):
-        """
-        Now check how good our interpolation is...
-        
-        Give columns in log-space.
-        """   
-        
-        if species == 0:
-            s = 'HI'
-        elif species == 1:
-            s = 'HeI'
-        else:
-            s = 'HeII'
-        
-        # Convert integral int to string
-        if integral == 0:
-            integral = 'PhotoIonizationRate%i' % species 
-            ylabel = r'$\Phi_{\mathrm{%s}}$' % s
-        elif integral == 1:
-            integral = 'ElectronHeatingRate%i' % species
-            ylabel = r'$\Psi_{\mathrm{%s}}$' % s
-        else:
-            integral = 'TotalOpticalDepth%i' % species 
-            ylabel = r'$\sum_i\int_{\nu} \tau_{i,\nu} d\nu$'
-            pl.rcParams['figure.subplot.left'] = 0.2
-        
-        result = []
-        if type(nHI) not in [int, float]:
-            x = nHI
-            for col in nHI:
-                tmp = [col, nHeI, nHeII]
-                                
-                if self.MultiSpecies:
-                    indices = self.interp.GetIndices3D(tmp)
-                else:
-                    indices = None
-                    
-                result.append(self.interp.interp(indices, 
-                    '%s' % integral, tmp))
-            
-        elif type(nHeI) not in [int, float]:
-            x = nHeI
-            for col in nHeI:
-                tmp = [nHI, col, nHeII]
-                result.append(self.interp.interp(self.interp.GetIndices3D(tmp), 
-                    '%s' % integral))    
-        
-        else:
-            x = nHeII
-            for col in nHeII:
-                tmp = [nHI, nHeI, col]
-                result.append(self.interp.interp(self.interp.GetIndices3D(tmp), 
-                    '%s' % integral))            
-            
-        self.ax = pl.subplot(111)
-        self.ax.loglog(10**np.array(x), result, color = color, ls = ls)
-                                
-        pl.draw()                    
+        X, Y = (self.rebin(np.linspace(17, 21, 500)), self.rebin(np.linspace(17, 21, 500)))
+                        
+        return X, Y, hist       
         
     def InspectRateCoefficients(self, t = 1, coeff = 'Gamma', species = 0, color = 'k', ls = '-'):
         """
@@ -398,7 +301,7 @@ class Analyze:
                                 
         pl.draw()      
         
-    def InspectIonizationRate(self, t = 1, species = 0, color = 'k', legend = True, plot_recomb = False):
+    def IonizationRate(self, t = 1, species = 0, color = 'k', legend = True, plot_recomb = False):
         """
         Plot total ionization rate, and lines for primary, secondary, and collisional.
         """ 
@@ -439,9 +342,9 @@ class Analyze:
         
         pl.draw()    
         
-    def InspectHeatingRate(self, t = 1, color = 'k', legend = True):
+    def HeatingRate(self, t = 1, color = 'k', legend = True):
         """
-        Plot total ionization rate, and lines for primary, secondary, and collisional.
+        Plot total heating rate, and lines for primary, secondary, and collisional.
         """ 
         
         if legend and hasattr(self, 'ax'):
@@ -487,139 +390,7 @@ class Analyze:
         self.heat = heat
         self.cool = cool
         
-    def InspectTimestepEvolution(self, t = 1, legend = True):
-        """
-        Plot timestep as a function of radius.
-        """    
-        
-        if legend and hasattr(self, 'ax'):
-            legend = False
-        
-        self.dt = np.zeros([5, self.GridDimensions])
-        for dd in self.data.keys():
-            if self.data[dd].t / self.pf['TimeUnits'] != t: 
-                continue
-        
-            dHIIdt = self.data[dd].n_HI * \
-                (self.data[dd].Gamma[0] + self.data[dd].Beta[0] * self.data[dd].n_e) \
-                + np.sum(self.data[dd].gamma[0] * self.data[dd].nabs) \
-                - self.data[dd].n_HII * self.data[dd].n_e * self.data[dd].alpha[0]
-                
-            dHeIdt = self.data[dd].n_HeII * \
-                (self.data[dd].alpha[1] + self.data[dd].xi[1]) * self.data[dd].n_e \
-                - self.data[dd].n_HeI * (self.data[dd].Gamma[1] + self.data[dd].Beta[1]) \
-                - np.sum(self.data[dd].gamma[1] * self.data[dd].nabs) \
-                * self.data[dd].n_e     
-                
-            dHeIIdt = self.data[dd].n_HeI * \
-                (self.data[dd].Gamma[1] + self.data[dd].Beta[1] * self.data[dd].n_e) \
-                + np.sum(self.data[dd].gamma[1] * self.data[dd].nabs) \
-                + self.data[dd].alpha[2] * self.data[dd].n_HeIII * self.data[dd].n_e \
-                - self.data[dd].n_HeII * self.data[dd].n_e * \
-                (self.data[dd].alpha[1] + self.data[dd].Beta[2] + self.data[dd].xi[1]) 
-                
-            dHeIIIdt = self.data[dd].n_HeII * \
-                (self.data[dd].Gamma[2] + self.data[dd].Beta[2] * self.data[dd].n_e) \
-                - self.data[dd].n_HeIII * self.data[dd].n_e * self.data[dd].alpha[2]
-                
-            defdt = dHIIdt + dHeIIdt + 2. * dHeIIIdt
-                                        
-            self.dt[0] = self.pf['MaxHIIChange'] * self.data[dd].n_HI / np.abs(dHIIdt) / self.pf['TimeUnits']
-            self.dt[1] = self.pf['MaxHeIChange'] * self.data[dd].n_HeI / np.abs(dHeIdt) / self.pf['TimeUnits']
-            self.dt[2] = self.pf['MaxHeIIChange'] * self.data[dd].n_HeII / np.abs(dHeIIdt) / self.pf['TimeUnits']
-            self.dt[3] = self.pf['MaxHeIIIChange'] * self.data[dd].n_HeIII / np.abs(dHeIIIdt) / self.pf['TimeUnits']
-            self.dt[4] = self.pf["MaxElectronChange"] * (self.data[dd].n_e / self.data[dd].n_B) / np.abs(defdt) / self.pf['TimeUnits']  
-            
-            break
-            
-        mi = 0.01 * 10**np.floor(np.log10(np.min(self.dt)))
-        ma = 1e2
-                        
-        self.ax = pl.subplot(111)
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[0], color = 'k', label = r'$\Delta t_{\mathrm{HII}}$')
-        i1 = np.argmin(np.abs(self.data[dd].tau[0] - self.pf["OpticalDepthDefiningIFront"][0]))
-        self.ax.loglog([self.data[dd].r[i1] / self.pf['LengthUnits']] * 2, [mi, ma], color = 'b', ls = '-')
-        
-        if self.pf["MultiSpecies"]:
-            
-            if self.pf["HeIRestrictedTimestep"]:
-                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[1], color = 'k', ls = '-.', label = r'$\Delta t_{\mathrm{HeI}}$')
-            
-            if self.pf["HeIIRestrictedTimestep"]:
-                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[2], color = 'k', ls = '--', label = r'$\Delta t_{\mathrm{HeII}}$')
-            
-            if self.pf["HeIIIRestrictedTimestep"]:
-                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[3], color = 'k', ls = ':', label = r'$\Delta t_{\mathrm{HeIII}}$')
-            
-            if self.pf["ElectronFractionRestrictedTimestep"]:
-                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[4], color = 'k', ls = '-.', label = r'$\Delta t_{e^-}$')
-            
-            
-            i2 = np.argmin(np.abs(self.data[dd].tau[1] - self.pf["OpticalDepthDefiningIFront"][1]))
-            i3 = np.argmin(np.abs(self.data[dd].tau[2] - self.pf["OpticalDepthDefiningIFront"][2]))
-            self.ax.loglog([self.data[dd].r[i2] / self.pf['LengthUnits']] * 2, [mi, ma], color = 'b', ls = '--')
-            self.ax.loglog([self.data[dd].r[i3] / self.pf['LengthUnits']] * 2, [mi, ma], color = 'b', ls = ':')
-         
-        # Minimum dtphot    
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.data[dd].dtPhoton, color = 'g', ls = '-', label = r'$\Delta t_{\mathrm{min}}$')
-        
-        # Timestep chosen for next step   
-        self.ax.loglog([self.data[dd].r[0] / self.pf['LengthUnits'], self.data[dd].r[-1] / self.pf['LengthUnits']], 
-            [np.min(self.data[dd].dtPhoton)] * 2, color = 'r', ls = '-')        
-        
-        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
-        self.ax.set_ylabel(r'$\Delta t_{\mathrm{phot}} / \mathrm{TimeUnits}$') 
-        self.ax.annotate(r'$\Delta t_{\mathrm{next}}$', 
-            (self.data[dd].r[self.data[dd].dtPhoton == np.min(self.data[dd].dtPhoton)] / self.pf['LengthUnits'],
-             0.85 * np.min(self.data[dd].dtPhoton)),
-            va = 'top', ha = 'center')
-            
-        self.ax.set_ylim(mi, ma) 
-        
-        if legend:
-            self.ax.legend(loc = 'lower right', ncol = 3, frameon = False)   
-        
-        pl.draw()    
-        
-    def InspectSolverSpeed(self, t = 1, color = 'k', ls = '-', legend = True, 
-        ode = True, equation = -1, norm = True):
-        """
-        Plot ODE step as a function of radius.
-        
-        Options: odeit, odeitrate, rootit.
-        """    
-        
-        if legend and hasattr(self, 'ax'):
-            legend = False
-        
-        for dd in self.data.keys():
-            if self.data[dd].t / self.pf['TimeUnits'] != t: 
-                continue
-        
-            self.ax = pl.subplot(111)
-            
-            if ode:
-                self.ax.loglog(self.data[dd].r / self.pf["LengthUnits"], self.data[dd].odeit, color = color, ls = ls, label = r'$N_{\mathrm{ODE}}$')
-            
-            if equation >= 0:
-                if norm:
-                    self.ax.loglog(self.data[dd].r / self.pf["LengthUnits"], 
-                        self.data[dd].rootit[0:,equation] / self.data[dd].odeit, 
-                        color = color, ls = ls, label = r'$N_{\mathrm{NR}}/N_{\mathrm{ODE}}$')
-                else:
-                    self.ax.loglog(self.data[dd].r / self.pf["LengthUnits"], 
-                        self.data[dd].rootit[0:,equation], 
-                        color = color, ls = ls, label = r'$N_{\mathrm{NR}}$')        
-            
-            self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
-            self.ax.set_ylabel(r'$N_{\mathrm{iter}}$') 
-            
-            break
-            
-        if legend:
-            self.ax.legend(loc = 'upper right', ncol = 2, frameon = False)       
-            
-        pl.draw()    
+    
                     
     def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):
         """

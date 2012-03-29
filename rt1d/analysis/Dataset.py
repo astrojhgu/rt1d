@@ -12,8 +12,8 @@ Description: General module for command line analysis of rt1d data.
 import os, re, h5py
 import numpy as np
 import pylab as pl
-import rt1d.mods as rtm
-from rt1d.analysis.DataDump import DataDump
+from .DataDump import DataDump
+from ..mods.ReadParameterFile import ReadParameterFile
         
 class Dataset:
     def __init__(self, pf):
@@ -41,7 +41,7 @@ class Dataset:
         self.rd = pf.rpartition('/')[0]        
                 
         # Read in parameter file
-        self.pf = rtm.ReadParameterFile(pf)
+        self.pf = ReadParameterFile(pf)
                         
         # Also need path to parameter file (not including the parameter file itself)
         self.od = self.pf["OutputDirectory"]

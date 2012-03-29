@@ -12,12 +12,12 @@ To do:
      
 """
 
+import numpy as np
+import h5py, os, re
 from rt1d.mods.Constants import *
 from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
 from rt1d.mods.RadiationSource import RadiationSource
 from rt1d.mods.SecondaryElectrons import SecondaryElectrons
-import numpy as np
-import h5py, os, re
 
 try:
     from progressbar import *

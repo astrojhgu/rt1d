@@ -11,7 +11,7 @@ the parameter space.
      
 """
 
-from rt1d.mods.Constants import *
+from .Constants import *
 
 def SetDefaultParameterValues():
     pf = \
@@ -97,6 +97,7 @@ def SetDefaultParameterValues():
         "ClumpingFactor": 1,  
         
         # Initial conditions
+        "InitialRedshift": 20.0, 
         "DensityProfile": 0,  
         "InitialDensity": 0,  
         "TemperatureProfile": 0,  
@@ -131,8 +132,7 @@ def SetDefaultParameterValues():
         "DiscreteSpectrumSED": [13.6],  
         "DiscreteSpectrumRelLum": [1.],  
           
-        # Cosmological Parameters (WMAP7+BAO+SNIa)
-        "InitialRedshift": 20.0,  
+        # Cosmological Parameters (WMAP7+BAO+SNIa) 
         "OmegaMatterNow": 0.272,  
         "OmegaBaryonNow": 0.044,  
         "OmegaLambdaNow": 0.728,  

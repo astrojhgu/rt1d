@@ -11,7 +11,6 @@ Description: Subset of my homemade odeint routine made special for rt1d.
 
 import copy
 import numpy as np
-import pylab as pl
 
 class SolveRateEquations:
     def __init__(self, pf, guesses, AdaptiveODEStep = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
@@ -27,10 +26,6 @@ class SolveRateEquations:
             hmax: Maximum time/space step allowed when stepper > 0, otherwise sets size of fixed
                   time/space step.
                   
-            rtol: Maximum allowed relative error when using adaptive stepping.
-            atol: Maximum allowed absolute error when using adaptive stepping
-                *Both are used, limit really set by which one is smaller.
-                
         """
 
         self.pf = pf
@@ -73,10 +68,7 @@ class SolveRateEquations:
             h = self.hmax
         else: 
             h = hpre
-                        
-        tmp_y = []
-        tmp_t = []   
-        tmp_h = []             
+                                  
         i = 1
         ct = 0
         itr = np.zeros(4)
@@ -110,13 +102,10 @@ class SolveRateEquations:
                     if not np.all(ok):
                         if h > self.hmin:
                             h = max(self.hmin, h / 2.)
-                            #print 'w00t', np.sum(ynow[1:3]) - self.guesses[1], np.sum(ynext[1:3]) - self.guesses[1]
                             continue
                         elif h == self.hmin:
                             raise ValueError("xHII or xHeII or xHeIII < 0 or > 1, and we're on the minimum ODE step. Exiting.")
-                    #else:
-                    #    print 'double woot', np.sum(ynow[1:3]) - self.guesses[1], np.sum(ynext[1:3]) - self.guesses[1]           
-                               
+                            
             # Adaptive time-stepping
             if self.stepper:       
                                       
@@ -132,32 +121,12 @@ class SolveRateEquations:
                                        
             # If we've gotten this far, increase h 
             h = min(self.hmax, 2. * h)        
-            
-            tmp_t.append(xnow)
-            tmp_y.append(ynow)
-            tmp_h.append(h)
                                                                                
             xnow = xnext        
             ynow = ynext            
             i += 1
             itr += tmp
-            ct = 0
-            
-        #if i > 10:    
-        #    tmp = np.array(zip(*tmp_y))
-        #                  
-        #    ax = pl.subplot(111)          
-        #    ax.scatter(np.arange(i - 1), np.array(tmp_h) / self.pf["TimeUnits"], color = 'k')            
-        #    ax.set_xscale('log')
-        #    ax.set_yscale('log')     
-        #    ax.set_xlim(1, 1e4)
-        #    ax.set_ylim(1e-6, 1e-5)       
-        #    #pl.semilogy(np.arange(i - 1), tmp[0], color = 'k')
-        #    #pl.semilogy(np.arange(i - 1), tmp[1], color = 'b')
-        #    #pl.semilogy(np.arange(i - 1), tmp[2], color = 'g')
-        #    #pl.xlim(min(tmp_t), max(tmp_t))
-        #    pl.draw()
-        #    raw_input('done')    
+            ct = 0 
                 
         return xnow, ynow, h, i, itr
            

@@ -152,6 +152,11 @@ class Radiate:
         # For convenience 
         self.zeros_tmp = np.zeros(4)
         self.zeros_eq = np.zeros(4)
+        
+    def EvolvePhotonsAtFiniteSpeed(self):
+        pass
+    def EvolvePhotonsAtInfiniteSpeed(self):
+        pass        
 
     def EvolvePhotons(self, data, t, dt, h, lb):
         """
@@ -474,6 +479,9 @@ class Radiate:
                     
                     # Compute mean molecular weight for this cell
                     mu = mu_all[cell] 
+                    
+                    # Retrieve path length through this cell
+                    dx = self.dx[cell]     
                                             
                     # For convenience     
                     nabs = [n_HI, n_HeI, n_HeII]
@@ -481,10 +489,12 @@ class Radiate:
                     n_H = n_HI + n_HII
                     n_He = n_HeI + n_HeII + n_HeIII
                     n_B = n_H + n_He + n_e
-                                            
+                    
                     # Compute internal energy for this cell
                     T = newdata["Temperature"][cell]
                     E = 3. * k_B * T * n_B / mu / 2.
+                    
+                    q_cell = [n_HII, n_HeII, n_HeIII, E]
                     
                     # Crossing time
                     dct = self.CellCrossingTime
@@ -493,6 +503,7 @@ class Radiate:
                     packs[j][2] += newdata['HIDensity'][cell] * dc * dct * c  
                     packs[j][3] += newdata['HeIDensity'][cell] * dc * dct * c 
                     packs[j][4] += newdata['HeIIDensity'][cell] * dc * dct * c
+                    ncol = packs[j][2:5]
                     
                     ######################################
                     ######## Solve Rate Equations ########
@@ -505,9 +516,7 @@ class Radiate:
                     
                     # Retrieve coefficients and what not.
                     args = [nabs, nion, n_H, n_He, n_e]
-                    args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, self.dx, dt, t))
-                    
-                    # Compute indices2
+                    args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, dt, t))                    
                     
                     # Unpack so we have everything by name
                     nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = args
@@ -516,11 +525,8 @@ class Radiate:
                     ######## Solve Rate Equations ########
                     ######################################                          
                                     
-                    #tarr, qnew, h = self.solver.integrate(self.RateEquations, q_all[cell], t, t + dt, 
-                    #    None, h, *args)
-
-                    tarr, qnew, h = self.solver.integrate(self.qdot, qnew, t, t + subdt, None, h, \
-                        r, z, mu, n_H, n_He, packs[j][2:5], Lbol, indices)
+                    tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, q_cell, t, t + dt, 
+                        None, h, *args)
                                         
                     # Unpack results of coupled equations - Remember: these are lists and we only need the last entry 
                     newHII, newHeII, newHeIII, newE = qnew
@@ -547,10 +553,12 @@ class Radiate:
                     ################ DONE ################     
                     ######################################                                   
                 
-            if self.HIRestrictedTimestep or self.HeIRestrictedTimestep or self.HeIIRestrictedTimestep:
+            # Adjust timestep based on maximum allowed neutral fraction change     
+            if self.AdaptiveGlobalStep:
                 for cell in self.grid:
-                    dtphot[cell] = self.ComputePhotonTimestep(newdata, cell, self.rs.BolometricLuminosity(t), n_H_arr[0], n_He_arr[0])            
-        
+                    dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
+                        nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi, dt) 
+    
         # If multiple processors at work, communicate data and timestep                                                                                          
         if (size > 1) and (self.ParallelizationMethod == 1):
             for key in newdata.keys(): 
@@ -574,7 +582,7 @@ class Radiate:
             newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt, newdata)  # t + newdt?            
                                 
         # Store timestep information
-        newdata['dtPhoton'] = dtphot                        
+        newdata['dtPhoton'] = dtphot
                                 
         # Load balance grid                        
         if size > 1 and self.ParallelizationMethod == 1: 
