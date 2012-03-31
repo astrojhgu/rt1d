@@ -30,7 +30,7 @@ def SetDefaultParameterValues():
         "ODEAdaptiveStep": 1,  
         "CheckForGoofiness": 1,  
         "MaximumGlobalTimestep": 500,  
-        "MinimumSpeciesFraction": 1e-8,  
+        "MinimumSpeciesFraction": 1e-6,  
 
         # Control
         "ParallelizationMethod": 1,  
@@ -47,6 +47,8 @@ def SetDefaultParameterValues():
         "ColumnDensityBinsHeI": 100,  
         "ColumnDensityBinsHeII": 100,  
         "ExitAfterIntegralTabulation": 0,  
+        
+        "SecondaryElectronDataFile": 'None',
           
         # Grid parameters
         "GridDimensions": 100,  

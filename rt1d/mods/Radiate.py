@@ -669,7 +669,7 @@ class Radiate:
                 
         dqdt = self.zeros_tmp
         
-        # Neutrals (current)
+        # Neutrals (current step)
         nHI = n_H - q[0]
         nHeI = n_He - q[1] - q[2]
         nHeII = q[1]

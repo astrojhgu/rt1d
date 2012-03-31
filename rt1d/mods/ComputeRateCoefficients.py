@@ -179,7 +179,7 @@ class RateCoefficients:
                     if E < E_th[i]:
                         continue
                     
-                    fheat = self.esec.DepositionFraction(E = E, xi = x_HII, channel = 0)
+                    fheat = self.esec.DepositionFraction(E = E, xHII = x_HII, channel = 0)
                     
                     # Optical depth up to this cell at energy E
                     tau_E = np.sum(10**ncol * self.sigma[0:,j])
@@ -207,7 +207,7 @@ class RateCoefficients:
                             if (E - E_th[i]) < E_th[k]:
                                 continue    
                             
-                            fion = self.esec.DepositionFraction(E = E, xi = x_HII, channel = k + 1)
+                            fion = self.esec.DepositionFraction(E = E, xHII = x_HII, channel = k + 1)
                             
                             # (This k) = i from paper, and (this i) = j from paper
                             gamma[k][i] += ee * fion / (E_th[k] * erg_per_ev)
@@ -393,7 +393,7 @@ class RateCoefficients:
         """
         
         if species == 0: 
-            return 6.5e-27 * T**0.5 * (T / 1e3)**-0.2 * (1.0 + (T / 1e6)**0.7)**-1.0
+            return 6.5e-27 * np.sqrt(T) * (T / 1e3)**-0.2 * (1.0 + (T / 1e6)**0.7)**-1.0
         if species == 1: 
             return 1.55e-26 * T**0.3647
         if species == 2: 

@@ -93,9 +93,12 @@ class multiplot:
         for i in self.xaxes:
             
             xticks = list(self.grid[i].get_xticks())
+                        
             dx = np.diff(xticks)[0]
             limits = self.grid[i].get_xlim()
             
+            if xticks[0] < limits[0]: 
+                xticks.pop(0)
             if xticks[-1] > limits[1]: 
                 xticks.pop(-1)
             
@@ -105,13 +108,13 @@ class multiplot:
                 loc = None
                       
             if i == self.lowerright:
-                self.grid[i].set_xticks(xticks)                                
+                self.grid[i].set_xticks(xticks)  
             else:                 
                 self.grid[i].set_xticks(xticks[0:loc])
                 
             if style is not None: 
                 self.grid[i].ticklabel_format(style = style)   
-                
+                                
         # Make sure we don't double up on yticks
         for i in self.yaxes:
             
@@ -119,10 +122,15 @@ class multiplot:
             dy = np.diff(yticks)[0]
             limits = self.grid[i].get_ylim()
             
-            if yticks[-1] > limits[1]: yticks.pop(-1)
+            if yticks[0] < limits[0]: 
+                yticks.pop(0)
+            if yticks[-1] > limits[1]: 
+                yticks.pop(-1)
                         
-            if (limits[1] - yticks[-1]) < dy / 2.: loc = -1
-            else: loc = None
+            if (limits[1] - yticks[-1]) < dy / 2.: 
+                loc = -1
+            else: 
+                loc = None
                                     
             if i == self.upperleft:
                 self.grid[i].set_yticks(yticks)                        
@@ -131,7 +139,7 @@ class multiplot:
     
             if style is not None: 
                 self.grid[i].ticklabel_format(style = style)
-            
+                            
         # Remove ticks from non-edge axes     
         for i in xrange(self.Naxes):
             if i not in self.xaxes: 

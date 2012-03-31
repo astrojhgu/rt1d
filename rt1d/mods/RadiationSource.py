@@ -55,6 +55,7 @@ class RadiationSource:
         self.DiscreteSpectrum = pf["DiscreteSpectrum"]
         self.tau = pf["SourceLifetime"]
         self.TimeUnits = pf["TimeUnits"]
+        self.PlaneParallelField = pf["PlaneParallelField"]
                 
         # Spectrum bounds
         self.Emin = pf["SpectrumMinEnergy"]
@@ -87,13 +88,12 @@ class RadiationSource:
             self.Lbol = self.Lph * self.F * self.E * erg_per_ev 
             self.Qdot = self.F * self.Lph
         elif self.SourceType in [1, 2]:
-            if self.PlaneParallelField:
-                self.Qdot = self.Lph
-            else:    
-                self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * integrate(lambda x: x**2 / (np.exp(x) - 1.), 13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
-                self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
-                self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
-                self.Qdot = self.Lbol * self.F / self.E / erg_per_ev 
+            self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * \
+                integrate(lambda x: x**2 / (np.exp(x) - 1.), 
+                13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
+            self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
+            self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
+            self.Qdot = self.Lbol * self.F / self.E / erg_per_ev 
             
         # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()   

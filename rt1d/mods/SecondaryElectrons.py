@@ -24,20 +24,26 @@ class SecondaryElectrons:
         self.NumberOfEnergyBins = 258
         self.NumberOfXiBins = 14
         
-        rt1d = os.environ.get("RT1D")
-        f = h5py.File("{0}/input/secondary_electron_data.h5".format(rt1d), 'r')
+        if self.Method == 2:
+            rt1d = os.environ.get("RT1D")
+            if rt1d:
+                f = h5py.File("{0}/input/secondary_electron_data.h5".format(rt1d), 'r')
+            elif self.pf["SecondaryElectronDataFile"] is not 'None':
+                f = h5py.File("%s" % self.pf["SecondaryElectronDataFile"], 'r')
+            else:
+                raise Exception('Error loading secondary electron data.')
+                
+            # Read in Furlanetto & Stoever lookup tables (not yet implemented)
+            self.Energies = f["ElectronEnergy"].value
+            self.IonizedFractions = f["IonizedFraction"].value
+            self.fheat = f["Heat"].value
+            self.fion_HI = f["IonizationHI"].value
+            self.fion_HeI = f["IonizationHeI"].value
+            self.fion_HeII = f["IonizationHeII"].value
+            
+            f.close()        
         
-        # Read in Furlanetto & Stoever lookup tables (not yet implemented)
-        #self.Energies = f["ElectronEnergy"].value
-        #self.IonizedFractions = f["IonizedFraction"].value
-        #self.Heat = f["Heat"].value
-        #self.IonizationHI = f["IonizationHI"].value
-        #self.IonizationHeI = f["IonizationHeI"].value
-        #self.IonizationHeII = f["IonizationHeII"].value
-        
-        f.close()
-        
-    def DepositionFraction(self, E, xi, channel = 0):
+    def DepositionFraction(self, E, xHII, channel = 0):
         """
         Return the fraction of secondary electron energy deposited as heat, or further ionizations.
         The parameter 'channel' determines which we want, with:
@@ -69,23 +75,27 @@ class SecondaryElectrons:
             
         if self.Method == 1: 
             if channel == 0: 
-                if xi <= 1e-4: 
+                if xHII <= 1e-4: 
                     return 0.15 # This is what they do in TZ07.
                 else: 
-                    return 0.9971 * (1 - pow(1 - pow(xi, 0.2663), 1.3163))
+                    return 0.9971 * (1 - pow(1 - pow(xHII, 0.2663), 1.3163))
             if channel == 1: 
-                return 0.3908 * pow(1 - pow(xi, 0.4092), 1.7592)
+                return 0.3908 * pow(1 - pow(xHII, 0.4092), 1.7592)
             if channel == 2: 
-                return 0.0554 * pow(1 - pow(xi, 0.4614), 1.6660) 
+                return 0.0554 * pow(1 - pow(xHII, 0.4614), 1.6660) 
             if channel == 3:
                 return 0.0    
             
         if self.Method == 2:
             
-            if channel == 0: InterpolationTable = self.Heat
-            if channel == 1: InterpolationTable = self.IonizationHI
-            if channel == 2: InterpolationTable = self.IonizationHeI
-            if channel == 3: InterpolationTable = self.IonizationHeII
+            if channel == 0: 
+                InterpolationTable = self.fheat
+            if channel == 1: 
+                InterpolationTable = self.fion_HI
+            if channel == 2: 
+                InterpolationTable = self.fion_HeI
+            if channel == 3: 
+                InterpolationTable = self.fion_HeII
             
             # Determine if E is within energy boundaries.  If not, set to closest boundary.
             if (E > 0.999 * self.Energies[self.NumberOfEnergyBins - 1]):
@@ -102,14 +112,14 @@ class SecondaryElectrons:
             i_high = i_low + 1
                         
             # Determine if ionized fraction is within energy boundaries.  If not, set to closest boundary.   
-            if (xi > self.IonizedFractions[self.NumberOfXiBins - 1] * 0.999):
-                xi = self.IonizedFractions[self.NumberOfXiBins - 1] * 0.999
-            elif (xi < self.IonizedFractions[0]):
-                xi = 1.001 * self.IonizedFractions[0];
+            if (xHII > self.IonizedFractions[self.NumberOfXiBins - 1] * 0.999):
+                xHII = self.IonizedFractions[self.NumberOfXiBins - 1] * 0.999
+            elif (xHII < self.IonizedFractions[0]):
+                xHII = 1.001 * self.IonizedFractions[0];
             
             # Determine lower index in ionized fraction table iteratively.
             j_low = self.NumberOfXiBins - 1;
-            while (xi < self.IonizedFractions[j_low]):
+            while (xHII < self.IonizedFractions[j_low]):
                 j_low -= 1
             
             j_high = j_low + 1
@@ -128,7 +138,7 @@ class SecondaryElectrons:
             
             # Final interpolation over the ionized fraction
             final_result = (ehigh_result - elow_result) / (self.IonizedFractions[j_high] - self.IonizedFractions[j_low])
-            final_result *= (xi - self.IonizedFractions[j_low])
+            final_result *= (xHII - self.IonizedFractions[j_low])
             final_result += elow_result
             
             return final_result   

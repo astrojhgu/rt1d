@@ -242,7 +242,7 @@ class Analyze:
             
         pl.close()    
         
-    def AnalyzeClump(self):
+    def ClumpTest(self, t = [1,3, 15], color = 'k', legend = True):
         """
         RT06 Problem #3.
         """
@@ -250,7 +250,6 @@ class Analyze:
         self.mp = multiplot(dims = (2, 1), useAxesGrid = False)
         
         ct = 0
-        t = [1, 3, 15]
         ls = ['-', ':', '--', '-.']
         for dd in self.data.keys():
             if self.data[dd].t / self.pf['TimeUnits'] not in t: 
@@ -258,13 +257,13 @@ class Analyze:
                 
             this_t = int(self.data[dd].t / self.pf['TimeUnits'])
         
-            self.mp.grid[0].semilogy(self.data[dd].r / self.LengthUnits, self.data[dd].x_HI, color = 'k', ls = ls[ct], 
+            self.mp.grid[0].semilogy(self.data[dd].r / self.LengthUnits, self.data[dd].x_HI, color = color, ls = ls[ct], 
                 label = r'$t = %i \ \mathrm{Myr}$' % this_t)
-            self.mp.grid[1].semilogy(self.data[dd].r / self.LengthUnits, self.data[dd].T, color = 'k', ls = ls[ct])
+            self.mp.grid[1].semilogy(self.data[dd].r / self.LengthUnits, self.data[dd].T, color = color, ls = ls[ct])
             ct += 1
         
         self.mp.grid[0].set_ylim(1e-3, 1.5)
-        self.mp.grid[1].set_ylim(10, 5e4)
+        self.mp.grid[1].set_ylim(10, 8e4)
                                                 
         for i in xrange(2):
             self.mp.grid[i].set_xlim(0.6, 1.0)
@@ -272,8 +271,10 @@ class Analyze:
         self.mp.grid[1].set_xlabel(r'$x / L_{\mathrm{box}}$')    
         self.mp.grid[0].set_ylabel('Neutral Fraction')
         self.mp.grid[1].set_ylabel(r'Temperature $(K)$')    
-        self.mp.grid[0].legend(loc = 'lower right', frameon = False)    
-        self.mp.grid[0].set_xticklabels([])    
+        self.mp.fix_ticks()
+        
+        if legend:
+            self.mp.grid[0].legend(loc = 'lower right', frameon = False)    
                         
         pl.draw()        
             
