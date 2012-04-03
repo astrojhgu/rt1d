@@ -59,7 +59,6 @@ def ProblemType(ptype):
              "LengthUnits": 6.6 * cm_per_kpc,
              "StopTime": 500.0,
              "dtDataDump": 10.0, 
-             "ColumnDensityBinsHI": 500, 
              "MinimumSpeciesFraction": 1e-6, 
              "DensityProfile": 0, 
              "InitialDensity": 1e-3, 

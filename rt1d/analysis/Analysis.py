@@ -23,7 +23,7 @@ from ..mods.ComputeCrossSections import PhotoIonizationCrossSection
 from ..mods.InitializeIntegralTables import InitializeIntegralTables
 
 class Analyze:
-    def __init__(self, pf, retabulate = False):
+    def __init__(self, pf, retabulate = True):
         self.ds = Dataset(pf)
         self.data = self.ds.data
         self.pf = self.ds.pf    # dictionary
@@ -59,7 +59,7 @@ class Analyze:
         
         # Read integral table if it exists.
         self.tname = self.iits.DetermineTableName()
-        if os.path.exists('%s' % self.tname) and retabulate:
+        if os.path.exists('%s/%s' % (self.ds.od, self.tname)) and retabulate:
             self.itabs = self.iits.TabulateRateIntegrals()
             self.interp = Interpolate(self.pf, [self.iits.HIColumn, self.iits.HeIColumn, self.iits.HeIIColumn], 
                 self.itabs)
@@ -158,7 +158,7 @@ class Analyze:
                 continue
             
             exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                self.data[%i].T, ls = \'%s\', color = \'%s\')' % (dd, dd, '-', color))                
+                self.data[%i].T, ls = \'%s\', color = \'%s\')' % (dd, dd, ls, color))                
             
         self.ax.set_xscale(xscale)    
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
@@ -429,9 +429,7 @@ class Analyze:
         # Save heating and cooling rates
         self.heat = heat
         self.cool = cool
-        
-    
-                    
+            
     def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):
         """
         Histogram all fields.

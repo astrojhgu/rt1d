@@ -37,6 +37,7 @@ except ImportError:
     size = 1
 
 try:
+    import scipy
     from scipy.integrate import quad as integrate
 except ImportError:
     print 'Module scipy not found.  Replacement integration routines are much slower :('
@@ -53,8 +54,9 @@ m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
 
 tiny_number = 1e-30
+negligible_column = 1
 
-IntegralList = ['PhotoIonizationRate', 'ElectronHeatingRate', 'TotalOpticalDepth']
+scipy.seterr(all = 'ignore')
 
 class InitializeIntegralTables: 
     def __init__(self, pf, data, grid):
@@ -77,6 +79,8 @@ class InitializeIntegralTables:
         self.SourceType = pf["SourceType"]
         self.SourceTemperature = pf["SourceTemperature"]
         self.SourceMass = pf["SourceMass"]
+        self.Emin = pf["SpectrumMinEnergy"]
+        self.Emax = pf["SpectrumMaxEnergy"]
         
         # Spectral parameters
         self.SpectrumPowerLawIndex = pf["SpectrumPowerLawIndex"]
@@ -181,12 +185,12 @@ class InitializeIntegralTables:
         Return name of table (as stored in HDF5 file).
         """    
         
-        if integral == 'SecondaryIonizationRate':
+        if integral in ['PhiWiggle', 'PsiWiggle']:
             return "%s%i%i" % (integral, species, donor_species)
         elif integral == 'TotalOpticalDepth':
-            return integral
+            return integral    
         else:
-            return "%s%i" % (integral, species)        
+            return "%s%i" % (integral, species)     
             
     def ReadIntegralTable(self):
         """
@@ -217,9 +221,9 @@ class InitializeIntegralTables:
             return None
         
         if rank == 0 and table_from_pf:
-            print "\nFound table supplied in parameter file.  Reading %s\n" % tabloc
+            print "\nFound table supplied in parameter file.  Reading %s" % tabloc
         elif rank == 0:
-            print "\nFound an integral table for this source.  Reading %s\n" % tabloc
+            print "\nFound an integral table for this source.  Reading %s" % tabloc
         
         f = h5py.File("%s" % tabloc, 'r')
         
@@ -237,11 +241,11 @@ class InitializeIntegralTables:
             
             if self.RegenerateTable:
                 if rank == 0:
-                    print "Recreating now...\n"
+                    print "Recreating now..."
                 return None
             else:
                 if rank == 0:
-                    print "Set RegenerateTable = 1 to recreate this table.\n"    
+                    print "Set RegenerateTable = 1 to recreate this table."    
         
         if self.MultiSpecies > 0:
             itab["HeIColumnValues_y"] = f["ColumnVectors"]["HeIColumnValues_y"].value
@@ -259,11 +263,11 @@ class InitializeIntegralTables:
             
                 if self.RegenerateTable:
                     if rank == 0:
-                        print "Recreating now...\n"
+                        print "Recreating now..."
                     return None
                 else:
                     if rank == 0:
-                        print "Set RegenerateTable = 1 to recreate this table.\n"    
+                        print "Set RegenerateTable = 1 to recreate this table."    
         
         # Override what's in parameter file if there is a preexisting table and
         # all the bounds are OK
@@ -302,16 +306,7 @@ class InitializeIntegralTables:
                     
     def TabulateRateIntegrals(self):
         """
-        Return a dictionary of lookup tables for the integrals in the rate equations we'll be solving.
-        These integrals exist in equations (1) - (12) in Thomas & Zaroubi 2007.  For each integral, 
-        we'll have at least a 3D data cube, where each element corresponds to the value of that integral
-        given column densities for the absorbers: HI, HeI, and HeII.  If we choose to decompose the values
-        of these integrals further by storing separately contributions from each part of the spectrum, 
-        our lookup tables will be 4D (I think).
-        
-        Note: The luminosity of our sources may be time dependent, but as long as the spectra are time
-        independent we are ok.  The luminosity is just a normalization so we can be pull it outside of
-        the integrals (which are over energy).
+        Return a dictionary of lookup tables.
         """
                 
         itabs = self.ReadIntegralTable()
@@ -323,6 +318,9 @@ class InitializeIntegralTables:
         # Otherwise, make a lookup table
         itabs = {}     
         
+        # What are we going to compute?
+        IntegralList = self.ToCompute()
+        
         # If hydrogen-only
         if self.MultiSpecies == 0:
                             
@@ -333,12 +331,18 @@ class InitializeIntegralTables:
                 
                 # Print some info to the screen
                 if rank == 0 and self.ParallelizationMethod == 1: 
-                        print "\nComputing value of {0}{1}...".format(integral, 0)
-                if rank == 0 and self.ProgressBar and self.ParallelizationMethod == 1: 
+                    print "\nComputing value of %s..." % name
+                    if self.ProgressBar:
                         pbar = ProgressBar(widgets = widget, maxval = len(self.HIColumn)).start()
+                
+                if self.esec.Method < 2 or \
+                    (('Wiggle' not in integral) and \
+                     ('Hat' not in integral)):
+                    tab = np.zeros_like(self.HIColumn)
+                else:
+                    tab = np.zeros([len(self.HIColumn), self.esec.NumberOfXiBins])
                                     
-                # Loop over column density                    
-                tab = np.zeros_like(self.HIColumn)
+                # Loop over column density                                    
                 for i, ncol_HI in enumerate(self.HIColumn):
                     
                     if self.ParallelizationMethod == 1 and (i % size != rank): 
@@ -347,7 +351,15 @@ class InitializeIntegralTables:
                         pbar.update(i + 1)
                     
                     # Evaluate integral
-                    tab[i] = eval("self.{0}({1}, 0)".format(integral, [10**ncol_HI, 1, 1]))
+                    if self.esec.Method < 2 or \
+                        (('Wiggle' not in integral) and \
+                         ('Hat' not in integral)):
+                        tab[i] = eval("self.{0}({1}, 0)".format(integral, 
+                            [10**ncol_HI, negligible_column, negligible_column]))
+                    else:        
+                        for j, xi in enumerate(self.esec.IonizedFractions):
+                            tab[i][j] = eval("self.{0}({1}, 0, 0, {2})".format(integral, 
+                            [10**ncol_HI, negligible_column, negligible_column], xi))
                 
                 if size > 1 and self.ParallelizationMethod == 1: 
                     tab = MPI.COMM_WORLD.allreduce(tab, tab)
@@ -445,6 +457,17 @@ class InitializeIntegralTables:
             
         return itabs 
         
+    def ToCompute(self):
+        """
+        Return list of quantities to compute.
+        """    
+
+        integrals = ['Phi', 'Psi']
+        if self.esec.Method >= 2:    
+            integrals.extend(['PhiWiggle', 'PsiWiggle', 'PhiHat', 'PsiHat'])
+        
+        return integrals
+        
     def TotalOpticalDepth(self, ncol, species = None):
         """
         Optical depth due to all absorbing species at given column density.
@@ -483,10 +506,10 @@ class InitializeIntegralTables:
         Returns the optical depth at energy E due to column densities of HI, HeI, and HeII, which
         are stored in the variable 'ncol' as a three element array.
         """
-                        
-        if type(E) is float:
+                                    
+        if type(E) in [float, np.float32, np.float64]:
             E = [E]
-                               
+                                           
         tau = self.zeros
         for i, energy in enumerate(E):
             tmp = 0
@@ -502,25 +525,10 @@ class InitializeIntegralTables:
                         
         return tau
         
-    def PhotoIonizationRate(self, ncol = [0.0, 0.0, 0.0], species = 0):
+    def Phi(self, ncol, species = 0):
         """
-        Returns the value of the bound-free photoionization rate integral of 'species'.  However, because 
-        source luminosities vary with time and distance, it is unnormalized.  To get a true 
-        photoionization rate, one must multiply these values by the spectrum's normalization factor. 
-        """
-        
-        if self.rs.DiscreteSpectrum:
-            if self.PhotonConserving:
-                integral = self.rs.Spectrum(self.rs.E, Lbol = self.Lbol) * \
-                    np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) / \
-                    (self.rs.E * erg_per_ev)
-            else:
-                integral = PhotoIonizationCrossSection(self.rs.E, species) * \
-                    self.rs.Spectrum(self.rs.E, Lbol = self.Lbol) * \
-                    np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) / \
-                    (self.rs.E * erg_per_ev) 
-                
-            return np.sum(integral)   
+        Equation 10 in Mirocha et al. 2012.
+        """        
         
         # Otherwise, continuous spectrum                
         if self.PhotonConserving:
@@ -534,29 +542,12 @@ class InitializeIntegralTables:
                 (E * erg_per_ev)
             
         return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
-                    
-    def ElectronHeatingRate(self, ncol = [0.0, 0.0, 0.0], species = 0):    
+        
+    def Psi(self, ncol, species = 0):            
         """
-        Returns the amount of heat deposited by photo-electrons from 'species'.  This is 
-        the first term in TZ07 Eq. 12.
+        Equation 11 in Mirocha et al. 2012.
+        """        
         
-            units: cm^2 / s
-            notes: the dimensionality is resolved later when we multiply by the bolometric luminosity (erg / s),
-                   the number density of collision partners (cm^-3), and divide by 4 pi r^2 (cm^-2), leaving us 
-                   with a true heating rate in erg / cm^3 / s.
-        """    
-        
-        if self.rs.DiscreteSpectrum:
-            if self.PhotonConserving:
-                integral = self.rs.Spectrum(self.rs.E, Lbol = self.Lbol) * \
-                    np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol)) 
-            else:
-                integral = PhotoIonizationCrossSection(self.rs.E, species) * \
-                    self.rs.Spectrum(self.rs.E, Lbol = self.Lbol) * \
-                    np.exp(-self.SpecificOpticalDepth(self.rs.E, ncol))
-                    
-            return np.sum(integral)
-            
         # Otherwise, continuous spectrum    
         if self.PhotonConserving:
             integrand = lambda E: 1e20 * self.rs.Spectrum(E, Lbol = self.Lbol) * \
@@ -568,7 +559,127 @@ class InitializeIntegralTables:
         
         return 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
         
+    def PhiWiggle(self, ncol, species = 0, donor_species = 0, xHII = 0.0):
+        """
+        Equation 2.18 in the manual.
+        """        
+        
+        Ej = E_th[donor_species]
+        
+        # Otherwise, continuous spectrum                
+        if self.PhotonConserving:
+            integrand = lambda E: 1e10 * \
+                self.esec.DepositionFraction(E - Ej, xHII, channel = species + 1) * \
+                self.rs.Spectrum(E, Lbol = self.Lbol) * \
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
+                (E * erg_per_ev)
+        else:
+            integrand = lambda E: 1e10 * \
+                self.esec.DepositionFraction(E, xHII, channel = species + 1) * \
+                PhotoIonizationCrossSection(E, species) * \
+                self.rs.Spectrum(E, Lbol = self.Lbol) * \
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
+                (E * erg_per_ev)
             
+        c = self.esec.Energies >= max(Ej, self.rs.Emin)
+        c &= self.esec.Energies <= self.rs.Emax
+                        
+        y = []
+        for E in self.esec.Energies[c]:
+            y.append(integrand(E))
+             
+        return 1e-10 * \
+            np.trapz(np.array(y), self.esec.Energies[c])    
+    
+    def PsiWiggle(self, ncol, species = 0, donor_species = 0, xHII = 0.0):            
+        """
+        Equation 2.19 in the manual.
+        """        
+        
+        Ej = E_th[donor_species]
+        
+        # Otherwise, continuous spectrum    
+        if self.PhotonConserving:
+            integrand = lambda E: 1e20 * \
+                self.esec.DepositionFraction(E - Ej, xHII, channel = species + 1) * \
+                self.rs.Spectrum(E, Lbol = self.Lbol) * \
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
+        else:
+            integrand = lambda E: 1e20 * PhotoIonizationCrossSection(E, species) * \
+                self.rs.Spectrum(E, Lbol = self.Lbol) * \
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
                 
+        c = self.esec.Energies >= max(Ej, self.rs.Emin)
+        c &= self.esec.Energies <= self.rs.Emax
+                        
+        y = []
+        for E in self.esec.Energies[c]:
+            y.append(integrand(E))
+             
+        return 1e-20 * \
+            np.trapz(np.array(y), self.esec.Energies[c])          
+                              
+    def PhiHat(self, ncol, species = 0, donor_species = None, xHII = 0.0):
+        """
+        Equation 2.20 in the manual.
+        """        
+        
+        Ei = E_th[species]
+        
+        # Otherwise, continuous spectrum                
+        if self.PhotonConserving:
+            integrand = lambda E: 1e10 * \
+                self.esec.DepositionFraction(E - Ei, xHII, channel = 0) * \
+                self.rs.Spectrum(E, Lbol = self.Lbol) * \
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
+                (E * erg_per_ev)
+        else:
+            integrand = lambda E: 1e10 * \
+                self.esec.DepositionFraction(E - Ei, xHII, channel = 0) * \
+                PhotoIonizationCrossSection(E, species) * \
+                self.rs.Spectrum(E, Lbol = self.Lbol) * \
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
+                (E * erg_per_ev)
+        
+        c = self.esec.Energies >= max(Ei, self.rs.Emin)
+        c &= self.esec.Energies <= self.rs.Emax       
+                                                
+        y = []
+        for E in self.esec.Energies[c]:
+            y.append(integrand(E))
+             
+        return 1e-10 * \
+            np.trapz(np.array(y), self.esec.Energies[c])          
+                
+    def PsiHat(self, ncol, species = 0, donor_species = None, xHII = 0.0):            
+        """
+        Equation 2.21 in the manual.
+        """        
+        
+        Ei = E_th[species]
+        
+        # Otherwise, continuous spectrum    
+        if self.PhotonConserving:
+            integrand = lambda E: 1e20 * \
+                self.esec.DepositionFraction(E - Ei, xHII, channel = 0) * \
+                self.rs.Spectrum(E, Lbol = self.Lbol) * \
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
+        else:
+            integrand = lambda E: 1e20 * \
+                self.esec.DepositionFraction(E - Ei, xHII, channel = 0) * \
+                PhotoIonizationCrossSection(E, species) * \
+                self.rs.Spectrum(E, Lbol = self.Lbol) * \
+                np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
+        
+        c = self.esec.Energies >= max(Ei, self.rs.Emin)
+        c &= self.esec.Energies <= self.rs.Emax
+                        
+        y = []
+        for E in self.esec.Energies[c]:
+            y.append(integrand(E))
+             
+        return 1e-20 * \
+            np.trapz(np.array(y), self.esec.Energies[c])   
+                                  
                     
             

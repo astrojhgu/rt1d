@@ -10,11 +10,16 @@ Description: Various interpolation routines
 """
 
 import numpy as np
+from .SecondaryElectrons import SecondaryElectrons
 from scipy.interpolate import LinearNDInterpolator
 
 class Interpolate:
     def __init__(self, pf, n_col, itabs):
         self.pf = pf
+        self.esec = SecondaryElectrons(pf)
+        
+        self.MultiSpecies = self.pf["MultiSpecies"]
+        
         self.HIColumn = n_col[0]
         self.HeIColumn = n_col[1]
         self.HeIIColumn = n_col[2]
@@ -40,28 +45,63 @@ class Interpolate:
         # This is a dictionary with all the lookup tables
         self.itabs = itabs
         
-        self.MultiSpecies = self.pf["MultiSpecies"]
-        
+        # What kind of interpolator do we need?
         if self.MultiSpecies == 0: 
-            self.interp = self.InterpolateLinear
+            if self.esec.Method < 2:
+                self.interp = self.InterpolateLinear
+                self.GetIndices = self.GetIndices1D
+            else:
+                self.interp = self.InterpolateBiLinear
+                self.GetIndices = self.GetIndices2D
         else: 
-            if self.pf["InterpolationMethod"] == 0: 
+            if self.esec.Method < 2:
                 self.interp = self.InterpolateTriLinear
-            if self.pf["InterpolationMethod"] == 1: 
-                self.interp = self.InterpolateNN    
+                self.GetIndices = self.GetIndices3D
+            else:
+                self.interp = self.InterpolateQuadLinear 
+                self.GetIndices = self.GetIndices4D
             
+    # Do we still need this anywhere?        
     def OpticalDepth(self, value, species):
         return 10**np.interp(value, self.AllColumns[species], self.itabs['OpticalDepth%i' % species])
                 
-    def InterpolateLinear(self, indices, integral, value = None):
+    def InterpolateLinear(self, indices, integral, value, x_HII = None):
         """
-        Use this technique for hydrogen-only calculations.  For consistency with MultiSpecies > 0 methods, value 
-        should still be a 3-element list.  
+        Use this technique for hydrogen-only calculations.  For consistency with MultiSpecies > 0 
+        methods, value should still be a 3-element list.  
         """    
                                 
         return 10**np.interp(value[0], self.HIColumn, self.itabs[integral])
         
-    def InterpolateTriLinear(self, indices, integral, value = None):
+    def InterpolateBiLinear(self, indices, integral, value, x_HII = None):
+        """
+        We use this for runs when MultiSpecies = 0 and SecondaryIonization = 2
+        (with DiscreteSpectrum = 0, TabulateIntegrals = 1).
+        """    
+        
+        if x_HII is None:
+            return self.InterpolateLinear(indices, integral, value)
+        
+        i_n, i_x = indices      
+                                                
+        x1 = self.HIColumn[i_n]
+        x2 = self.HIColumn[i_n + 1]
+        y1 = self.esec.LogIonizedFractions[i_x]
+        y2 = self.esec.LogIonizedFractions[i_x + 1]
+        
+        f11 = self.itabs[integral][i_n][i_x]
+        f21 = self.itabs[integral][i_n + 1][i_x]
+        f12 = self.itabs[integral][i_n][i_x + 1]
+        f22 = self.itabs[integral][i_n + 1][i_x + 1]
+                                
+        final = (f11 * (x2 - value[0]) * (y2 - x_HII) + \
+            f21 * (value[0] - x1) * (y2 - x_HII) + \
+            f12 * (x2 - value[0]) * (x_HII - y1) + \
+            f22 * (value[0] - x1) * (x_HII - y1)) / (x2 - x1) / (y2 - y1)    
+                        
+        return 10**final    
+        
+    def InterpolateTriLinear(self, indices, integral, value = None, x_HII = None):
         """
         Return the average of the 8 points surrounding the value of interest.
         """       
@@ -81,9 +121,46 @@ class Interpolate:
         w1 = i1 * (1. - y_d) + i2 * y_d
         w2 = j1 * (1. - y_d) + j2 * y_d
                                                                                 
-        return 10**(w1 * (1. - x_d) + w2 * x_d)
+        final = w1 * (1. - x_d) + w2 * x_d
         
-    def GetIndices3D(self, value):
+        return 10**final
+    
+    def InterpolateQuadLinear(self, indices, integral, value, x_HII = None):
+        """
+        This gets called if MultiSpecies = 1 and SecondaryIonization = 2
+        (and DiscreteSpectrum = 0, TabulateIntegrals = 1).
+        """    
+        
+        if x_HII is None:
+            return self.InterpolateTriLinear(indices, integral, value)
+        else:
+            pass
+            
+            # Do stuff
+            
+    def GetIndices1D(self, value = None, x_HII = None):
+        return None        
+            
+    def GetIndices2D(self, value, x_HII):
+        """
+        Return column density and ionized fraction indices.
+        """    
+                
+        i_nHI = int((value[0] - self.HIColumnMin) / self.dHIColumn)
+        
+        if x_HII > self.esec.LogIonizedFractions[-1]:
+            i_xHII = self.esec.NumberOfXiBins - 2
+        elif x_HII <= self.esec.LogIonizedFractions[0]:
+            i_xHII = 0
+        else:    
+            # Determine lower index in ionized fraction table iteratively.
+            i_xHII = self.esec.NumberOfXiBins - 1
+            while (x_HII < self.esec.LogIonizedFractions[i_xHII]):
+                i_xHII -= 1
+                
+        return max(i_nHI, 0), i_xHII
+        
+    def GetIndices3D(self, value, x_HII = None):
         """
         Retrieve set of 9 indices locating the interpolation points.
         
@@ -135,21 +212,21 @@ class Interpolate:
                 
         return [i_s, j_s, k_s], [i_b, j_b, k_b], [x_d, y_d, z_d]
         
-    def InterpolateNN(self, indices, integral, value = None):
+    def GetIndices4D(self, value, x_HII):
         """
-        3D nearest neighbor interpolation.
-        """  
-                
-        # Analytically solve for positions in the array
-        i = int(round((value[0] / self.dHIColumn) - self.offsetHIColumn))
-        j = int(round((value[1] / self.dHeIColumn) - self.offsetHeIColumn))
-        k = int(round((value[2] / self.dHeIIColumn) - self.offsetHeIIColumn))
+        Return indices for 4D interpolation.
+        """    
         
-        # Make sure we're still in the data cube
-        i = min(self.HINbins - 1, max(0, i))
-        j = min(self.HeINbins - 1, max(0, j))
-        k = min(self.HeIINbins - 1, max(0, k))
-                                                        
-        return 10**self.itabs[integral][i][j][k]
-                  
+        x, y, z = self.GetIndices3D(value)
+        
+        if x_HII > self.esec.IonizedFractions[-1]:
+            i = self.esec.NumberOfXiBins - 2
+        elif x_HII <= self.esec.IonizedFractions[-1]:
+            i = 0
+        else:    
+            i = 0
+            while x_HII > self.esec.IonizedFractions[i]:
+                i += 1
+            
+        return x, y, z, i   
         

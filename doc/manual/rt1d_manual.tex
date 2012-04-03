@@ -35,13 +35,19 @@
 \newcommand{\nH}{n_{\text{H}}} 
 \newcommand{\nHI}{n_{\text{HI}}} 
 \newcommand{\nHII}{n_{\text{HII}}}  
+\newcommand{\nHe}{n_{\text{He}}}
+\newcommand{\xHI}{x_{\text{HI}}} 
+\newcommand{\xHII}{x_{\text{HII}}} 
+\newcommand{\xHeI}{x_{\text{HeI}}} 
+\newcommand{\xHeII}{x_{\text{HeII}}} 
+\newcommand{\xHeIII}{x_{\text{HeIII}}}  
 \newcommand{\nHeI}{n_{\text{HeI}}}
 \newcommand{\nHeII}{n_{\text{HeII}}}
 \newcommand{\nHeIII}{n_{\text{HeIII}}}  
 \newcommand{\nel}{n_{\text{e}}}  
-\newcommand{\nb}{n_{\text{b}}}
-\newcommand{\nnu}{$n_{\nu}$ }
-\newcommand{\ncol}{n_i^{\text{col}}}
+\newcommand{\ntot}{n_{\text{tot}}}
+\newcommand{\nnu}{$n_{\nu}$}
+\newcommand{\ncol}{N_i}
 \newcommand{\gHI}{\Gamma_{\text{HI}}}  
 \newcommand{\gHeI}{\Gamma_{\text{HeI}}}
 \newcommand{\gHeII}{\Gamma_{\text{HeII}}}
@@ -51,10 +57,12 @@
 \newcommand{\bHI}{\beta_{\text{HI}}} 
 \newcommand{\bHeI}{\beta_{\text{HeI}}}  
 \newcommand{\bHeII}{\beta_{\text{HeII}}}  
-\newcommand{\xHeII}{\xi_{\text{HeII}}}
+\newcommand{\xiHeII}{\xi_{\text{HeII}}}
 \newcommand{\kB}{k_{\text{B}}}
-\newcommand{\fheat}{f_i^{\text{heat}}}
+\newcommand{\fheat}{f^{\text{heat}}}
+\newcommand{\fheatE}{f_{(\nu - \nu_i)}^{\text{heat}}}
 \newcommand{\fion}{f_i^{\text{ion}}}
+\newcommand{\fionE}{f_{ij,(\nu - \nu_j)}^{\text{ion}}}
 \newcommand{\Lbol}{\mathcal{L}_{\text{bol}}}
 \newcommand{\spec}{\mathcal{N}}
 \newcommand{\Heat}{\mathcal{H}}
@@ -63,7 +71,10 @@
 \newcommand{\dx}{\Delta x}
 \newcommand{\dd}{\text{d}}
 \newcommand{\Htwo}{\mathrm{H}_2}
-\newcommand{\eV}{\mathrm{eV}}
+\newcommand{\drIF}{$\Delta r_{\mathrm{IF}}$}
+\newcommand{\dTb}{$\delta T_b$}
+\newcommand{\Nvec}{\mathbf{N}}
+\newcommand{\sh}{\mathrm{sh}}
 %%% END custom commands
 	
 \author{Jordan Mirocha}	
@@ -86,129 +97,181 @@ Let's see what happens to the gas around stars and black holes, shall we?
 %% Methods
 %%%
 \section{Methods}
-Our radiative transfer scheme is modeled closely after the work of
-\cite{Fukugita1994} and \cite{Thomas2008}, though for completeness we will
-reiterate the aspects of these methods most pertinent to the problem at hand.
-In general, propagating a radiation field relies on solving differential
-equations governing the rate of change in the number densities of all ions and
-the temperature of the gas. Assuming a medium consisting of hydrogen and
-helium only, we first solve for the relative abundances of each ion via
+\subsection{The Rate Equations}
+In general, the chemical and thermal evolution of gas surrounding a radiation
+source is governed by a set of differential equations describing the number
+densities of all ions and the temperature of the gas. Assuming a medium
+consisting of hydrogen and helium only, we first solve for the abundances of
+each ion via
 \begin{align}
-    \frac{d \nHII}{dt} & = \gHI \nHI + \bHI \nel \nHI - \aHII \nel \nHII   \label{eq:HIIRateEquation} \\ 
-    \frac{d \nHeII}{dt} & = \gHeI \nHeI + \bHeI \nel \nHeI - \bHeII \nel \nHeII - \aHeII \nel \nHeII + \aHeIII \nel \nHeIII - \xHeII \nel \nHeIII  \label{eq:HeIIRateEquation} \\ 
-    \frac{d \nHeIII}{dt} & = \gHeII \nHeII + \bHeII \nel \nHeII - \aHeIII \nel \nHeIII . \label{eq:HeIIIRateEquation}
+    \frac{d \nHII}{dt} & = (\gHI + \gamma_{\HI} + \bHI \nel) \nHI - \aHII \nel \nHII   \label{eq:HIIRateEquation} \\ 
+    \frac{d \nHeII}{dt} & = (\gHeI + \gamma_{\HeI} + \bHeI \nel) \nHeI \nonumber + \aHeIII \nel \nHeIII \\  & - (\bHeII + \aHeII + \xiHeII) \nel \nHeII \label{eq:HeIIRateEquation} \\ 
+    \frac{d \nHeIII}{dt} & = (\gHeII + \gamma_{\HeII} + \bHeII \nel) \nHeII  - \aHeIII \nel \nHeIII . \label{eq:HeIIIRateEquation}
 \end{align}
-Each of these equations represents the balance of ionizations and
-recombinations for ions $\HII$, $\HeII$, $\HeIII$. We associate the index $i$
-with neutral species, $i = \HI, \HeI, \HeII$, and define $\Gamma_i$ as the
-photo-ionization rate coefficient, $\alpha_i$ ($\xi_i$) as the case-A
-(dielectric) recombination rate coefficients, $\beta_i$ as the collisional
-ionization rate coefficients, and $\nel = \nHII + \nHeII + 2\nHeIII$ as the number density of electrons.
+Each of these equations represents the balance between ionizations of species
+$\HI$, $\HeI$, and $\HeII$, and recombinations of $\HII$, $\HeII$, and
+$\HeIII$. Associating the index $i$ with absorbing species, $i = \HI, \HeI,
+\HeII$, we define $\Gamma_i$ as the photo-ionization rate coefficient,
+$\gamma_i$ as the secondary ionization rate coefficient, $\alpha_i$ ($\xi_i$)
+as the case-B (dielectric) recombination rate coefficients, $\beta_i$ as the
+collisional ionization rate coefficients, and $\nel = \nHII + \nHeII +
+2\nHeIII$ as the number density of electrons.
 
-In this work, we use the formulae in Appendix B of \cite{Fukugita1994} to
-compute the values of $\alpha_i$, $\beta_i$, and $\xi_i$. As you might expect, collisional ionization and recombination depend solely on the temperature of the gas.  For example, collisional ionization of hydrogen (from $n = 1$) is governed by
-\begin{equation}
-    \beta_{1,\HI} = 5.85 \times 10^{-11} T^{1/2} \left[1 + \left(\frac{T}{10^5 \mathrm{K}}\right)^{1/2}\right]^{-1} \mathrm{exp}\left[-1.578 \times \left(\frac{T}{10^5 \mathrm{K}}\right)^{-1}\right] \mathrm{cm^3 s^{-1}}
-\end{equation}
-and recombinations (to $n \ge 1$) by
-\begin{equation}
-    \alpha_{\HII} = 6.28 \times 10^{-11} T^{-1/2} \left(\frac{T}{10^3\mathrm{K}}\right)^{-1/5} \left[1 + \left(\frac{T}{10^6\mathrm{K}}\right)^{0.7}\right]^{-1} \mathrm{cm^3s^{-1}}
-\end{equation}
-
-We absorb ionizations due to to energetic photo-electrons into the
-photoionization rate coefficients, $\Gamma_i$, which are given by
-\begin{equation}
-    \Gamma_i = \int_{E_i}^{\infty} \sigma_i(E) \spec(E) \frac{dE}{E} + \sum_j \fion \left(\frac{n_j}{n_i}\right) \int_{E_i}^{\infty} \sigma_i(E)\left(\frac{E - E_j}{E_i}\right) \spec(E) \frac{dE}{E} \label{eq:PhotoionizationRate}
-\end{equation}
-where $E_i$, $\sigma_i$, $n_i$, and $f_i$ are the ionization threshold energy,
-bound-free absorption cross section, number density, and fraction of
-photo-electron energy that goes into ionization of species $i$, respectively.
-The term summing over $j$, where $j = \HI, \HeI, \HeII$, represents
-ionizations of species $i$ due to fast secondary electrons from
-photoionizations of species $j$, which has number density $n_j$. $\spec$ is
-the spectral intensity, which we write as
-\begin{equation}
-    \spec(E, r) = \frac{\Lbol}{4\pi r^2} I(E) e^{-\tau(E, r)} . \label{eq:Spectrum}
-\end{equation}
-Here, $r$ is the distance from the source, $I(E)$ is the normalized spectral
-energy distribution (SED), satisfying
-\begin{equation}
-    \int_E I(E) dE = 1 ,
-\end{equation}
-and the optical depth $\tau(E, r)$ is given as a sum over absorbing species,
-\begin{align}
-    \tau(E, r) & = \sum_i \int_r \sigma_i(E) n_i(r) dr \nonumber \\
-               & = \sum_i \sigma_i(E) \ncol(r) \label{eq:OpticalDepth}
-\end{align}
-where $\ncol(r)$ is the column density of species $i$ at distance $r$ from the
-source. We calculate the bound-free absorption cross-sections, $\sigma_i$,
-using the fits of \cite{Verner1996}. 
-
-To be more explicit, let's write out $\Gamma_{\HI}$ in its entirety.
-\begin{align}
-    \Gamma_{\HI} & = \int_{13.6\eV}^{\infty}\sigma_{\HI}(E) \spec(E) \frac{dE}{E} \nonumber \\
-    & + f_{\HI}^{\mathrm{ion}} \left(\frac{n_{\HI}}{n_{\HI}}\right) \int_{13.6\eV}^{\infty}\sigma_{\HI}(E) \left(\frac{E - 13.6\eV}{13.6\eV}\right)\spec(E)\frac{dE}{E} \nonumber \\
-    & + f_{\HeI}^{\mathrm{ion}} \left(\frac{n_{\HeI}}{n_{\HI}}\right) \int_{24.4\eV}^{\infty}\sigma_{\HeI}(E) \left(\frac{E - 24.4\eV}{13.6\eV}\right)\spec(E)\frac{dE}{E} \nonumber \\
-    & + f_{\HeII}^{\mathrm{ion}} \left(\frac{n_{\HeII}}{n_{\HI}}\right) \int_{54.4\eV}^{\infty}\sigma_{\HeI}(E) \left(\frac{E - 54.4\eV}{13.6\eV}\right)\spec(E)\frac{dE}{E}
-\end{align}    
-The first term accounts for all hydrogen photoionization.  The final three terms account for collisional ionization of hydrogen due to secondary photo-electrons from ionizations of neutral hydrogen (second term), neutral helium (third term), and singly ionized helium (fourth term).  Collisional ionizations due to thermal electrons in the gas are accounted for separately through the $\beta_i$ coefficients.
-
-At each time-step, we also solve for the temperature evolution, $dT/dt$, which
+At each time-step, we also solve for the temperature evolution, $dT_k/dt$,
+which
 is given by
+\begin{align}
+    \frac{3}{2}\frac{d}{dt}\left(\frac{\kB T_k \ntot}{\mu}\right) & = \fheat  \sum_i n_i \Heat_i - \sum_i \zeta_i n_e n_i - \sum_i \eta_i n_e n_i \nonumber \\ & - \sum_i \psi_i n_e n_i - \omega_{\HeII} n_e \nHeII \label{eq:TemperatureEvolution} 
+\end{align}
+where $\Heat_i$ is the photo-electric heating rate coefficient (due to
+electrons previously bound to species $i$), $\omega_{\HeII}$ is the dielectric
+recombination cooling coefficient, and $\zeta_i$, $\eta_i$, and $\psi_i$ are
+the collisional ionization, recombination, and collisional excitation cooling
+coefficients, respectively. The constants in Equation
+\ref{eq:TemperatureEvolution} are the total number density of baryons, $\ntot
+= n_\mathrm{H} + n_{\mathrm{He}} + n_e$, the mean molecular weight, $\mu$,
+Boltzmann's constant, $\kB$, and the fraction of secondary electron energy
+deposited as heat, $\fheat$. We use the formulae in Appendix B of
+\citet{Fukugita1994} to compute the values of $\alpha_i$, $\beta_i$, $\xi_i$,
+$\zeta_i$, $\eta_i$, $\psi_i$, and $\omega_{\HeII}$.
+
+% Photon-conservation
+\subsection{Computing the Ionization and Heating Rates}
+The most critical aspect of propagating the radiation field in our 1D
+simulations is computing the ionization ($\Gamma_i$, $\gamma_{i}$) and heating
+($\Heat_i$) rate coefficients accurately. In order to directly relate our
+results to fully 3-dimensional radiative transfer calculations we have chosen
+to adopt a photon-conserving (PC) algorithm nearly identical to those employed
+by several widely used codes, like \textit{C$^2$Ray} \citep{Mellema2006}, and
+\textit{Enzo} \citep{Wise2011}. Our code is able to compute $\Gamma_i$,
+$\gamma_{i}$, and $\Heat_i$ in a non-photon-conserving (NPC) fashion as well,
+to enable comparison with previous 1D work such as \citet{Thomas2008}. The two
+formalisms are equivalent in the limit of very optically thin cells, a
+condition that can be met easily in 1D calculations but is rarely
+computationally feasible in 3D. For NPC methods, if the optical depth of an
+individual cell is substantial, the number of ionizations in that cell will
+\textit{not} equal the number of photons absorbed for that cell, i.e. photon
+number will not be conserved. This problem was remedied by \citet{Abel1999},
+who inferred the number of photo-ionizations of species $i$ in a cell from the
+radiation incident upon it and its optical depth,
 \begin{equation}
-    \frac{3}{2}\frac{d}{dt}\left(\frac{\kB T \nb}{\mu}\right) = \fheat \sum_i n_i \Heat_i - \sum_i \zeta_i n_e n_i - \sum_i \eta_i n_e n_i - \sum_i \psi_i n_e n_i \label{eq:TemperatureEvolution} 
-\end{equation}
-where $\Heat_i$ is the photo-electric heating rate, given by
-\begin{equation}
-    \Heat_i = \int_{E_i}^{\infty} \sigma_i(E) \spec(E, r)(E - E_i) \frac{dE}{E} \label{eq:HeatingRate} ,
+    \Delta \tau_{i,\nu} = n_i \sigma_{i,\nu} \Delta r .
 \end{equation}    
-and $\zeta_i$, $\eta_i$, and $\psi_i$ are the collisional ionization,
-recombination, and collisional excitation cooling coefficients, respectively.
-The constants in Equation \ref{eq:HeatingRate} are the total number density of
-baryons, $\nb$, the mean molecular weight, $\mu$, Boltzmann's constant, $\kB$,
-and the fraction of a photon's original energy deposited as heat, $\fheat$. In
-the remaining sections we only include the effects of secondary electrons when
-considering X-ray sources, which emit photons in the range $10^2\mathrm{eV} <
-E < 10^4\mathrm{eV}$. In this regime, the values of $\fheat$ and $\fion$
-computed via the formulae of \cite{Shull1985} are sufficiently accurate, but
-for radiation at lower energies, the lookup tables of \cite{Furlanetto2010}
-would be more appropriate.
+It is most straightforward to imagine our 1D grid as a collection of
+concentric spherical shells, each having thickness $\Delta r$ and volume
+$V_{\sh}(r) = 4 \pi [(r + \Delta r)^3 - r^3] / 3$. The ionization and heating
+rates can then be related to the number of absorptions in any given shell
+(thus preserving photon number), as
+\begin{align}
+    \Gamma_i & = A_i \int_{\nu_i}^{\infty} I_{\nu} e^{-\tau_{\nu}} \left(1 - e^{-\Delta \tau_{i,\nu}}\right) \frac{d\nu}{h\nu} \label{eq:PhotoIonizationRate} \\
+    \gamma_{ij} & = A_j \int_{\nu_j}^{\infty} \left(\frac{\nu - \nu_j}{\nu_i}\right) I_{\nu} e^{-\tau_{\nu}} \left(1 - e^{-\Delta \tau_{j,\nu}}\right) \frac{d\nu}{h\nu} \label{eq:SecondaryIonizationRate} \\
+    \Heat_i & = A_i \int_{\nu_i}^{\infty} (\nu - \nu_i) I_{\nu} e^{-\tau_{\nu}} \left(1 - e^{-\Delta \tau_{i,\nu}}\right) \frac{d\nu}{\nu} , \label{eq:HeatingRate}
+\end{align}    
+where we've defined the normalization constant, $A_i \equiv
+L_{\mathrm{bol}}/n_i V_{\sh}(r)$, and denote the ionization threshold energy
+for species $i$ as $h\nu_i$. 
 
-An important simplification is that all radial and time dependencies can be
-pulled outside of the integrals in Equations \ref{eq:PhotoionizationRate} and
-\ref{eq:HeatingRate}, leaving (ignoring the secondary ionization term)
-\begin{equation}
-    \Gamma_i(n^{\mathrm{col}}) = A \int_{E_i}^{\infty} \sigma_i(E) I(E) e^{-\tau(E, n^{\mathrm{col}})} \frac{dE}{E} \label{eq:Gamma_final} ,
-\end{equation}
-and
-\begin{equation}
-    \Heat_i(n^{\mathrm{col}}) = A \int_{E_i}^{\infty} \sigma_i(E) I(E) (E - E_i) e^{-\tau(E, n^{\mathrm{col}})} \frac{dE}{E} \label{eq:Heat_final}
-\end{equation}
-where $A \equiv \Lbol / 4 \pi r^2$, and $n^{\mathrm{col}} =
-(n_{\mathrm{HI}}^{\mathrm{col}}, n_{\mathrm{HeI}}^{\mathrm{col}},
-n_{\mathrm{HeII}}^{\mathrm{col}})$.
+Equation \ref{eq:SecondaryIonizationRate} represents ionizations of species
+$i$ due to fast secondary electrons from photoionizations of species $j$,
+which has number density $n_j$, and ionization threshold energy, $h\nu_j$.
+$\fion$ is the fraction of photo-electron energy deposited as ionizations of
+species $i$. In the remaining sections we only include the effects of
+secondary electrons when considering X-ray sources, which emit photons in the
+range $10^2\mathrm{eV} < E < 10^4\mathrm{eV}$. In this regime, the values of
+$\fheat$ and $\fion$ computed via the formulae of \citet{Shull1985} are
+sufficiently accurate, but for radiation at lower energies where $\fheat$ and
+$\fion$ have a stronger energy dependence, the lookup tables of
+\citet{Furlanetto2010} would be more appropriate. The total secondary
+ionization rate for a given species, $\gamma_i$, is the sum of ionizations due
+to the secondary electrons from all species, $\gamma_i = \fion \sum_j
+\gamma_{ij} n_j / n_i$.
 
-From Equations \ref{eq:Gamma_final} and \ref{eq:Heat_final} it is clear that
-the values of $\Gamma_i$ and $\Heat_i$ can be tabulated as a function of
-column density for a given source. This greatly improves the speed of 1D
-radiative transfer calculations, like those of \cite{Thomas2008}, since
-integral values in Equations \ref{eq:HIIRateEquation},
-\ref{eq:HeIIRateEquation}, \ref{eq:HeIIIRateEquation}, and
-\ref{eq:HeatingRate} no longer need to be computed numerically on-the-fly. It
-also provides the basis for our frequency resolution optimization strategy, as
-presented in \S\ref{sec:Methods}. Note, however, that the dimensionality of
-these lookup tables is equal to the number of absorbing species, so the tables
-for simulations including only hydrogen are 1D, while those including helium
-are 3D. If we choose to adopt the secondary electron treatment of
-\cite{Furlanetto2010} our lookup tables inherit an additional dimension, as
-the secondary ionization and heating factors $\fion$ and $\fheat$ depend on
-both energy and ionized fraction, $x_i$. Since integration takes place over
-energy, $x_i$ becomes the final dimension of the lookup tables.
+The optical depth, $\tau_{\nu} = \tau_{\nu}(r)$, in the above equations is
+the total optical depth at frequency $\nu$ due to all absorbing species, i.e.
+\begin{align}
+    \tau_{\nu}(r) & = \sum_i \int_0^r \sigma_{i,\nu} n_i(r^{\prime}) dr^{\prime} \nonumber \\
+               & = \sum_i \sigma_{i,\nu} \ncol(r) \label{eq:OpticalDepth}
+\end{align}
+where $\ncol$ is the column density of species $i$ at distance $r$ from the
+source. We calculate the bound-free absorption cross-sections using the fits
+of \citet{Verner1996} throughout.
 
-For simplicity, our current treatment neglects cooling via free-free emission,
-as well as cosmological effects, including Hubble cooling due to cosmological
-expansion, Compton heating/cooling off cosmic microwave background (CMB)
-photons, and photo-ionization by Wien-tail CMB photons.  
+The values of $\Gamma_i$, $\gamma_i$, and $\Heat_i$ are completely
+predetermined for a given radiation source, and as a result, can be tabulated
+as a function of column density to avoid evaluating the
+integrals in these expressions numerically `on-the-fly' as a simulation runs
+\citep[e.g.][]{Mellema2006,Thomas2008}. Isolating the frequency dependent
+components of Equations \ref{eq:PhotoIonizationRate}-\ref{eq:HeatingRate}, we
+can define the integrals
+\begin{align}
+    \Phi_i (\tau_{\nu}) & \equiv \int_{\nu_i}^{\infty} I_{\nu} e^{-\tau_{\nu}} \frac{d\nu}{h\nu} \label{eq:PHI} \\
+    \Psi_i (\tau_{\nu}) & \equiv \int_{\nu_i}^{\infty} I_{\nu} e^{-\tau_{\nu}} d\nu \label{eq:PSI},
+\end{align}
+allowing us to re-express the rate coefficients as
+\begin{align}
+    \Gamma_i & = A_i \left[\Phi_i(\tau_{\nu}) - \Phi_i(\tau_{i,\nu}^{\prime}) \right] \label{eq:Gamma_PhiPsi} \\
+    \gamma_{ij} & = \frac{A_j}{h\nu_i} \left\{\Psi_j(\tau_{\nu}) - \Psi_j(\tau_{j,\nu}^{\prime}) - h \nu_j \left[\Phi_j(\tau_{\nu}) - \Phi_j(\tau_{j,\nu}^{\prime}) \right] \right\}  \label{eq:gamma_PhiPsi} \\
+    \Heat_i & = A_i \left\{\Psi_i(\tau_{\nu}) - \Psi_i(\tau_{i,\nu}^{\prime}) - h\nu_i \left[\Phi_i(\tau_{\nu}) - \Phi_i(\tau_{i,\nu}^{\prime}) \right] \right\} \label{eq:Heat_PhiPsi},  
+\end{align}
+where $\tau_{i,\nu}^{\prime} \equiv \tau_{\nu} + \Delta \tau_{i, \nu}$. Later
+references to ``continuous SEDs'' signify use of this technique, where the
+integral values $\Phi_i$ and $\Psi_i$ are computed over a column density
+interval of interest a priori using a Gaussian quadrature technique, rather
+than on-the-fly via discrete summation.
+
+Equations \ref{eq:Gamma_PhiPsi}-\ref{eq:Heat_PhiPsi} are completely general
+for photon-conserving algorithms, whether the source SEDs are discrete or
+continuous -- the only difference being for discrete SEDs, the integrals in
+Equations \ref{eq:PHI}-\ref{eq:PSI} become sums over the number of frequencies
+used, $n_{\nu}$. In practice, computing $\Gamma_i$, $\gamma_i$, and $\Heat_i$
+is more straightforward than this for sources with discrete SEDs, as we can
+simply count the number of ionizations caused by each individual frequency
+group, and convert this into the amount of excess electron kinetic energy
+available for further heating and ionization. When testing the accuracy of
+discrete solutions in later sections we employ this method, where radiation is
+emitted at $n_{\nu}$ frequencies, with each frequency $\nu_n$ carrying a
+fraction $I_n$ of the bolometric luminosity. The photoionization and heating
+coefficients for each individual frequency group can then be expressed as
+\begin{align}
+    \Gamma_{i,n} & = \frac{A_i I_n}{h \nu_n} e^{-\tau_{\nu_n}}(1 - e^{-\Delta \tau_{i,\nu_n}}) \label{eq:Gamma_simple}\\
+    \gamma_{ij,n} & = \Gamma_{j,\nu_n} (\nu_n-\nu_j) / \nu_i \label{eq:gamma_simple} \\
+    \Heat_{i,n} & = \Gamma_{i,\nu_n} h(\nu_n - \nu_i) \label{eq:Heat_simple}.
+\end{align}    
+The total rate coefficients can be found by summing each of these expressions
+over all frequencies, $n=1,2,3...n_{\nu}$. These equations are identical to
+Equations \ref{eq:Gamma_PhiPsi}-\ref{eq:Heat_PhiPsi} for the discrete SED
+case, but are perhaps more intuitive.
+
+For simplicity, our current treatment neglects a few physical processes that
+are cosmological in origin, or simply do not rely on the radiation field
+directly. These include cooling via free-free emission and hydrogen ionization
+due to helium recombination photons (which depend on the gas kinetic
+temperature and electron density), and cosmological effects such as Hubble
+cooling, Compton cooling off cosmic microwave background (CMB) photons, and
+photo-ionization by Wien-tail CMB photons (which depend on kinetic
+temperature, redshift, and the Hubble parameter). Our optimized SEDs
+(\S\ref{sec:Results}) will be unchanged upon including such physics in later
+work.
+
+\subsection{Additional Complexity: Energy Dependent Secondary Electron Treatment}
+In the previous section (and in all of Mirocha et al. 2012), we considered the asymptotic limit of \citet{Shull1985}, in which the fractional energy deposition of secondary electrons as heat, ionization, and excitation depends only on the hydrogen ionized fraction.  \citet{Furlanetto2010} updated this work, providing lookup tables of deposition fraction as a function of both ionized fraction and electron energy.  These effects are most important at $E \lesssim 10^2$ eV.  
+
+To accommodate this model, we must redefine the quantities $\Phi_i$ and $\Psi_i$.  We will use a tilde to denote the new quantities related to secondary ionization, 
+\begin{align}
+    \widetilde{\Phi}_{ij} & \equiv \int_{\nu_j}^{\infty} \fionE I_{\nu} e^{-\tau_{\nu}} \frac{d\nu}{h\nu} \\
+    \widetilde{\Psi}_{ij} & \equiv \int_{\nu_j}^{\infty} \fionE I_{\nu} e^{-\tau_{\nu}} d\nu ,
+\end{align}
+and a hat to denote the new quantities related to photo-electric heating,
+\begin{align}
+    \widehat{\Phi}_i & \equiv \int_{\nu_i}^{\infty} \fheatE I_{\nu} e^{-\tau_{\nu}} \frac{d\nu}{h\nu} \\
+    \widehat{\Psi}_i & \equiv \int_{\nu_i}^{\infty} \fheatE I_{\nu} e^{-\tau_{\nu}} d\nu .
+\end{align}
+Now, our ionization and heating coefficients read
+\begin{align}
+    \Gamma_i & = A_i \left[\Phi_i(\tau_{\nu}) - \Phi_i(\tau_{i,\nu}^{\prime}) \right] \label{eq:Gamma_PhiPsi_complex} \\
+    \gamma_{ij} & = \frac{A_j}{h\nu_i} \left\{\widetilde{\Psi}_{ij}(\tau_{\nu}) - \widetilde{\Psi}_{ij}(\tau_{j,\nu}^{\prime}) - h \nu_j \left[\widetilde{\Phi}_{ij}(\tau_{\nu}) - \widetilde{\Phi}_{ij}(\tau_{j,\nu}^{\prime}) \right] \right\}  \label{eq:gamma_PhiPsi_complex} \\
+    \Heat_i & = A_i \left\{\widehat{\Psi}_i(\tau_{\nu}) - \widehat{\Psi}_i(\tau_{i,\nu}^{\prime}) - h\nu_i \left[\widehat{\Phi}_i(\tau_{\nu}) - \widehat{\Phi}_i(\tau_{i,\nu}^{\prime}) \right] \right\} \label{eq:Heat_PhiPsi_complex} .  
+\end{align}    
 
 
 %%% 
@@ -239,7 +302,9 @@ These were added for convenience in January, 2011.  If you want to make changes 
 
 \item [\texttt{ProblemType = 2}] This problem is almost exactly the same as \texttt{ProblemType = 1}.  However, the temperature is allowed to evolve, and instead of using a monochromatic spectrum, we use a $10^5$ K blackbody spectrum.  Again, the initial density, temperature, box size, and energy groups are the same as the values used in Test 1 of Wise \& Abel 2010.  
 
-\item [\texttt{ProblemType = 2.1}] Same as \texttt{ProblemType = 2} for everything, except we sample the continuous blackbody spectrum with the four energy groups used by Wise \& Abel 2010.
+\item [\texttt{ProblemType = 2.1}] Same as \texttt{ProblemType = 2} for everything, except we sample the continuous blackbody spectrum with the four energy groups used by \citet{Wise2011}
+
+\item [\texttt{ProblemType = 2.2}] Same as \texttt{ProblemType = 2} for everything, except we sample the continuous blackbody spectrum with the four energy groups used by Mirocha et al. 2012.
 
 \item [\texttt{ProblemType = 3.1}] Test problem \# 3 from \cite{Iliev2006} -- I-front trapping in a dense clump and the formation of a shadow.  The setup is the same as in \texttt{ProblemType = 2.1}, except a 1D clump is initialized at $x = 0.76 L_{\mathrm{box}}$, overdensity $\delta = 200$, radius $0.12$kpc, and temperature $T = 40$K, and the radiation field is plane-parallel.
 \end{description}
@@ -337,10 +402,10 @@ This would make it easy to:
     \item Very specific initial conditions.
 \end{itemize}    
 
-How to change the code to allow for this?
-Define main loop in RT1D.py as Shine.  Insert if __name__ == `main' stuff?
-Would be nice to have an executable...
-Move RT1D.py to \$RT1D/bin, import it from \$RT1D/rt1d/__init__.py
+%How to change the code to allow for this?
+%Define main loop in RT1D.py as Shine.  Insert if __name__ == `main' stuff?
+%Would be nice to have an executable...
+%Move RT1D.py to \$RT1D/bin, import it from \$RT1D/rt1d/__init__.py
 
 What parameters must be set?
 \begin{itemize}
@@ -352,9 +417,19 @@ What parameters must be set?
     \item SourceParameters
 \end{itemize}
 
+%In this work, we use the formulae in Appendix B of \cite{Fukugita1994} to
+%compute the values of $\alpha_i$, $\beta_i$, and $\xi_i$. As you might expect, collisional ionization and recombination depend solely on the temperature of the gas.  For example, collisional ionization of hydrogen (from $n = 1$) is governed by
+%\begin{equation}
+%    \beta_{1,\HI} = 5.85 \times 10^{-11} T^{1/2} \left[1 + \left(\frac{T}{10^5 \mathrm{K}}\right)^{1/2}\right]^{-1} \mathrm{exp}\left[-1.578 \times \left(\frac{T}{10^5 \mathrm{K}}\right)^{-1}\right] \mathrm{cm^3 s^{-1}}
+%\end{equation}
+%and recombinations (to $n \ge 1$) by
+%\begin{equation}
+%    \alpha_{\HII} = 6.28 \times 10^{-11} T^{-1/2} \left(\frac{T}{10^3\mathrm{K}}\right)^{-1/5} \left[1 + \left(\frac{T}{10^6\mathrm{K}}\right)^{0.7}\right]^{-1} \mathrm{cm^3s^{-1}}
+%\end{equation}
+
 \newpage
 \bibliography{references}
-\bibliographystyle{plain}
+\bibliographystyle{apj}
 
 
 

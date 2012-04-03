@@ -2,10 +2,10 @@
 Import everything.
 """
 
-from rt1d.mods.InitializeIntegralTables import InitializeIntegralTables
-from rt1d.mods.InitializeGrid import InitializeGrid
-from rt1d.mods.Radiate import Radiate
-from rt1d.mods.ReadParameterFile import *
-from rt1d.mods.CheckForParameterConflicts import *
-from rt1d.mods.WriteData import WriteData
-from rt1d.mods.SecondaryElectrons import SecondaryElectrons
+from .InitializeIntegralTables import InitializeIntegralTables
+from .InitializeGrid import InitializeGrid
+from .Radiate import Radiate
+from .ReadParameterFile import *
+from .CheckForParameterConflicts import *
+from .WriteData import WriteData
+from .SecondaryElectrons import SecondaryElectrons

@@ -24,7 +24,10 @@ class Inspect:
         self.itabs = self.anl.itabs
         self.interp = self.anl.interp
         
-    def InspectIntegralTable(self, integral = 0, species = 0, nHI = None, nHeI = 0.0, nHeII = 0.0,
+        self.MultiSpecies = self.pf["MultiSpecies"]
+        
+    def InspectIntegralTable(self, intnum = 1, species = 0, donor_species = 0,
+        nHI = None, nHeI = 0.0, nHeII = 0.0,
         color = 'k', ls = '-', annotate = True):
         """
         Plot integral values...or something.
@@ -38,16 +41,28 @@ class Inspect:
             s = 'HeII'
         
         # Convert integral int to string
-        if integral == 0:
-            integral = 'PhotoIonizationRate%i' % species 
+        if intnum == 1:
+            integral = 'Phi%i' % species 
             ylabel = r'$\Phi_{\mathrm{%s}}$' % s
-        elif integral == 1:
-            integral = 'ElectronHeatingRate%i' % species
+        elif intnum == 1.1:
+            integral = 'PhiWiggle%i%i' % (species, donor_species)
+            ylabel = r'$\widetilde{\Phi}_{\mathrm{%s}}$' % s 
+        elif intnum == 1.2:
+            integral = 'PhiHat%i' % species
+            ylabel = r'$\widetilde{\Phi}_{\mathrm{%s}}$' % s        
+        elif intnum == 2:
+            integral = 'Psi%i' % species
             ylabel = r'$\Psi_{\mathrm{%s}}$' % s
+        elif intnum == 2.1:
+            integral = 'PsiWiggle%i%i' % (species, donor_species)
+            ylabel = r'$\widetilde{\Psi}_{\mathrm{%s}}$' % s 
+        elif intnum == 2.2:
+            integral = 'PsiHat%i' % species
+            ylabel = r'$\widetilde{\Psi}_{\mathrm{%s}}$' % s            
         else:
             integral = 'TotalOpticalDepth' 
             ylabel = r'$\sum_i\int_{\nu} \tau_{i,\nu} d\nu$'
-            pl.rcParams['figure.subplot.left'] = 0.2
+            pl.rcParams['figure.subplot.left'] = 0.2012
         
         # Figure out axes
         if nHI is None:
@@ -57,8 +72,13 @@ class Inspect:
                 i2 = np.argmin(np.abs(self.itabs['HeIIColumnValues_z'] - nHeII))
                 y = self.itabs[integral][0:,i1,i2]
             else:
-                y = self.itabs[integral]
+                if intnum % int(intnum) != 0:
+                    y = self.itabs[integral][:,0]
+                else:
+                    y = self.itabs[integral]
+                
             xlabel = r'$n_{\mathrm{HI}} \ (\mathrm{cm^{-2}})$'
+                        
         elif nHeI is None:
             x = self.itabs['HeIColumnValues_y']
             i1 = np.argmin(np.abs(self.itabs['HIColumnValues_x'] - nHI))
@@ -81,8 +101,9 @@ class Inspect:
         
         pl.draw()
         
-    def InspectInterpolation(self, integral = 0, species = 0, nHI = np.linspace(12, 24, 1000), 
-        nHeI = 0.0, nHeII = 0.0, color = 'b', ls = '-'):
+    def InspectInterpolation(self, intnum = 1, species = 0, donor_species = 0,
+        nHI = np.linspace(12, 19, 1000), 
+        nHeI = 0.0, nHeII = 0.0, color = 'b', ls = '-', x_HII = 1e-4):
         """
         Now check how good our interpolation is...
         
@@ -97,43 +118,50 @@ class Inspect:
             s = 'HeII'
         
         # Convert integral int to string
-        if integral == 0:
-            integral = 'PhotoIonizationRate%i' % species 
+        if intnum == 1:
+            integral = 'Phi%i' % species 
             ylabel = r'$\Phi_{\mathrm{%s}}$' % s
-        elif integral == 1:
-            integral = 'ElectronHeatingRate%i' % species
+        elif intnum == 1.1:
+            integral = 'PhiWiggle%i%i' % (species, donor_species)
+            ylabel = r'$\widetilde{\Phi}_{\mathrm{%s}}$' % s 
+        elif intnum == 1.2:
+            integral = 'PhiHat%i' % species
+            ylabel = r'$\widetilde{\Phi}_{\mathrm{%s}}$' % s        
+        elif intnum == 2:
+            integral = 'Psi%i' % species
             ylabel = r'$\Psi_{\mathrm{%s}}$' % s
+        elif intnum == 2.1:
+            integral = 'PsiWiggle%i%i' % (species, donor_species)
+            ylabel = r'$\widetilde{\Psi}_{\mathrm{%s}}$' % s 
+        elif intnum == 2.2:
+            integral = 'PsiHat%i' % species
+            ylabel = r'$\widetilde{\Psi}_{\mathrm{%s}}$' % s            
         else:
-            integral = 'TotalOpticalDepth%i' % species 
+            integral = 'TotalOpticalDepth' 
             ylabel = r'$\sum_i\int_{\nu} \tau_{i,\nu} d\nu$'
-            pl.rcParams['figure.subplot.left'] = 0.2
+            pl.rcParams['figure.subplot.left'] = 0.2012
         
         result = []
         if type(nHI) not in [int, float]:
             x = nHI
             for col in nHI:
-                tmp = [col, nHeI, nHeII]
-                                
-                if self.MultiSpecies:
-                    indices = self.interp.GetIndices3D(tmp)
-                else:
-                    indices = None
-                    
+                tmp = [col, nHeI, nHeII]                
+                indices = self.interp.GetIndices(tmp, x_HII = x_HII)                
                 result.append(self.interp.interp(indices, 
-                    '%s' % integral, tmp))
+                    '%s' % integral, tmp, x_HII = x_HII))
             
         elif type(nHeI) not in [int, float]:
             x = nHeI
             for col in nHeI:
                 tmp = [nHI, col, nHeII]
-                result.append(self.interp.interp(self.interp.GetIndices3D(tmp), 
+                result.append(self.interp.interp(self.interp.GetIndices(tmp), 
                     '%s' % integral))    
         
         else:
             x = nHeII
             for col in nHeII:
                 tmp = [nHI, nHeI, col]
-                result.append(self.interp.interp(self.interp.GetIndices3D(tmp), 
+                result.append(self.interp.interp(self.interp.GetIndices(tmp), 
                     '%s' % integral))            
             
         self.ax = pl.subplot(111)
@@ -141,7 +169,6 @@ class Inspect:
                                 
         pl.draw()                    
             
-        
     def InspectTimestepEvolution(self, t = 1, legend = True):
         """
         Plot timestep as a function of radius.

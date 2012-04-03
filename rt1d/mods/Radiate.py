@@ -211,11 +211,8 @@ class Radiate:
         # Retrieve indices used for N-D interpolation
         self.indices_all = []
         for i, col in enumerate(self.ncol_all):
-            if self.MultiSpecies == 0: 
-                self.indices_all.append(None)
-            else:    
-                self.indices_all.append(self.coeff.Interpolate.GetIndices3D(col))
-                        
+            self.indices_all.append(self.coeff.Interpolate.GetIndices(col, np.log10(self.x_HII_arr[i])))
+                                                
         # Compute optical depths *between* source and all cells. Do we only use this for timestep calculation?
         self.tau_all_arr = np.zeros([3, self.GridDimensions])    
         if not self.pf['TabulateIntegrals']:
@@ -361,7 +358,7 @@ class Radiate:
             
             # Unpack so we have everything by name
             nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega = args                                                          
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
             ######################################
             ######## Solve Rate Equations ########
             ######################################        

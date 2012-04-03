@@ -69,10 +69,9 @@ class ControlSimulation:
         nout = np.log10(ncell)
         Vsh = r.coeff.ShellVolume(self.R0, r.dx[0])    
         Lbol = r.rs.BolometricLuminosity(0)
+        logxHII = np.log10(nion[0] / n_H)
                                                                     
-        indices_in = None
-        if self.pf['MultiSpecies'] > 0 and self.pf['TabulateIntegrals']: 
-            indices_in = r.coeff.Interpolate.GetIndices3D(ncol)  
+        indices_in = r.coeff.Interpolate.GetIndices(ncol, logxHII)
 
         Gamma = r.coeff.ConstructArgs([nabs, nion, n_H, n_He, n_e], 
             indices_in, Lbol, self.R0, ncol, T, r.dx[0], 0.)[0]        
