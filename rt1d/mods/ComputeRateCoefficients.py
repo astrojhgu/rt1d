@@ -11,13 +11,13 @@ Description:
 """
 
 import numpy as np
-from . import ComputeCrossSections, SecondaryElectrons, Interpolate
-from ComputeCrossSections import PhotoIonizationCrossSection
-from SecondaryElectrons import SecondaryElectrons
-from Interpolate import Interpolate
+
+from .Constants import erg_per_ev
+from .ComputeCrossSections import PhotoIonizationCrossSection
+from .SecondaryElectrons import SecondaryElectrons
+from .Interpolate import Interpolate
 
 E_th = [13.6, 24.6, 54.4]
-erg_per_ev = 1.60217646e-19 / 1e-7 
 
 class RateCoefficients:
     def __init__(self, pf, rs, itabs = None, n_col = None):

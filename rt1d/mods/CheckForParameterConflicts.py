@@ -12,18 +12,18 @@ Description: Check to make sure there are no conflicts between parameters.
 
 import numpy as np
 
-known_conflicts = [(['InfiniteSpeedOfLight', 0], ['ParallelizationMethod', 1]),
-                   (['TabulateIntegrals', 0], ['PhotonConserving', 0]),
-                   (['DiscreteSpectrum', 0], ['PhotonConserving', 1], ['TabulateIntegrals', 0]),
-                   (['Isothermal', 1], ['SecondaryIonization', 1])]
-                   
 try:
     from mpi4py import MPI
     rank = MPI.COMM_WORLD.rank
     size = MPI.COMM_WORLD.size
 except ImportError:
     rank = 0
-    size = 1                      
+    size = 1   
+
+known_conflicts = [(['InfiniteSpeedOfLight', 0], ['ParallelizationMethod', 1]),
+                   (['TabulateIntegrals', 0], ['PhotonConserving', 0]),
+                   (['DiscreteSpectrum', 0], ['PhotonConserving', 1], ['TabulateIntegrals', 0]),
+                   (['Isothermal', 1], ['SecondaryIonization', 1])]
 
 def CheckForParameterConflicts(pf):
     """

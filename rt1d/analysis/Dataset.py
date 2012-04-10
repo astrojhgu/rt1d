@@ -28,9 +28,6 @@ class Dataset:
             'dsn' = dataset name, a string that is the name of the directory all datadumps live in
             'dd' = datadump, referring to the data in a specific time output in the entire dataset
             'ddf' = datadump file, just the filename of a particular dd, like 'dd0000.h5'
-            
-        Note: When supplying parameter file, if it is in the current directory, type './Filename' 
-            so we get the path.
         
         """   
         
@@ -38,7 +35,10 @@ class Dataset:
         self.gd = os.getcwd()
                 
         # Run directory
-        self.rd = pf.rpartition('/')[0]        
+        self.rd = pf.rpartition('/')[0]
+        
+        if self.rd == '':
+            self.rd = '.'        
                 
         # Read in parameter file
         self.pf = ReadParameterFile(pf)

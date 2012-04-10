@@ -12,16 +12,12 @@ Notes: Non-constant profiles need fixing.
 """
 
 import numpy as np
-from Cosmology import *
+from .Constants import *
+from .Cosmology import Cosmology
 
 FieldList = \
     ["Temperature", "HIDensity", "HIIDensity", "HeIDensity", \
-     "HeIIDensity", "HeIIIDensity", "ElectronDensity"]    
-
-m_e = 9.10938188*10**-28 		# Electron mass - [m_e] = g
-m_p = 1.67262158*10**-24		# Proton mass - [m_p] = g
-m_n = 1.67492729*10**-24        # Neutron mass - [m_n] = g
-m_H = m_p + m_e        
+     "HeIIDensity", "HeIIIDensity", "ElectronDensity"]        
 
 tiny_number = 1e-12          
 

@@ -17,6 +17,11 @@ import numpy as np
 
 tiny_number = 1e-30
 
+# Furlanetto & Stoever ionized fractions (default)
+x_HII = np.array([1.0e-4, 2.318e-4, 4.677e-4, 1.0e-3, 2.318e-3, 
+                  4.677e-3, 1.0e-2, 2.318e-2, 4.677e-2, 1.0e-1, 
+                  0.5, 0.9, 0.99, 0.999])
+
 class SecondaryElectrons:
     def __init__(self, pf):
         self.pf = pf
@@ -24,7 +29,7 @@ class SecondaryElectrons:
         self.NumberOfEnergyBins = 258
         self.NumberOfXiBins = 14
         
-        if self.Method >= 2:
+        if self.Method == 2:
             rt1d = os.environ.get("RT1D")
             if rt1d:
                 f = h5py.File("{0}/input/secondary_electron_data.h5".format(rt1d), 'r')
@@ -33,10 +38,10 @@ class SecondaryElectrons:
             else:
                 raise Exception('Error loading secondary electron data.')
                 
-            # Read in Furlanetto & Stoever lookup tables (not yet implemented)
+            # Read in Furlanetto & Stoever lookup tables
             self.Energies = f["electron_energy"].value
             self.IonizedFractions = f["ionized_fraction"].value
-            self.LogIonizedFractions = np.log10(self.IonizedFractions)
+            self.LogIonizedFractions = np.log10(self.IonizedFractions)    
             self.fheat = f["f_heat"].value
             self.fion_HI = f["fion_HI"].value
             self.fion_HeI = f["fion_HeI"].value
@@ -49,6 +54,11 @@ class SecondaryElectrons:
             self.xmax = max(self.IonizedFractions)
             
             f.close()        
+        
+        if self.Method == 3:
+            self.IonizedFractions = x_HII
+            self.LogIonizedFractions = np.log10(self.IonizedFractions)    
+            
         
     def DepositionFraction(self, E, xHII, channel = 0):
         """
@@ -158,7 +168,7 @@ class SecondaryElectrons:
         if self.Method == 3:
             if channel == 0: 
                 if xHII <= 1e-4: 
-                    return 0.15 # This is what they do in TZ07.
+                    return 0.15 # This is what they do in Thomas & Zaroubi (2008).
                 else: 
                     if E >= 11:
                         return 3.9811 * (11. / E)**0.7 * pow(xHII, 0.4) * \

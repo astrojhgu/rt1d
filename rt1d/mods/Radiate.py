@@ -12,15 +12,16 @@ driver of rt1d, calling our solvers which call all the various physics modules.
 
 import copy, math
 import numpy as np
-from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
-from rt1d.mods.RadiationSource import RadiationSource
-from rt1d.mods.SecondaryElectrons import SecondaryElectrons
-from rt1d.mods.Interpolate import Interpolate
-from rt1d.mods.Cosmology import Cosmology
-from rt1d.mods.ComputeRateCoefficients import RateCoefficients
-from rt1d.mods.SolveRateEquations import SolveRateEquations
-from rt1d.mods.ControlSimulation import ControlSimulation
-from Integrate import simpson as integrate
+
+from .Constants import *
+from .Cosmology import Cosmology
+from .ComputeCrossSections import PhotoIonizationCrossSection
+from .RadiationSource import RadiationSource
+from .SecondaryElectrons import SecondaryElectrons
+from .Interpolate import Interpolate
+from .ComputeRateCoefficients import RateCoefficients
+from .SolveRateEquations import SolveRateEquations
+from .ControlSimulation import ControlSimulation
 
 try:
     from progressbar import *
@@ -38,15 +39,6 @@ except ImportError:
     print "Module mpi4py not found.  No worries, we'll just run in serial."
     rank = 0
     size = 1
-
-m_e = 9.10938188*10**-28 		# Electron mass - [m_e] = g
-m_p = 1.67262158*10**-24		# Proton mass - [m_p] = g
-m_n = 1.67492729*10**-24        # Neutron mass - [m_n] = g
-k_B = 1.3806503*10**-16			# Boltzmann's constant - [k_B] = erg/K
-sigma_T = 6.65*10**-25			# Cross section for Thomson scattering - [sigma_T] = cm^2
-h = 6.626068*10**-27 			# Planck's constant - [h] = erg*s
-hbar = h / (2 * np.pi) 			# H-bar - [h_bar] = erg*s
-c = 29979245800.0 			    # Speed of light - [c] = cm/s
 
 m_H = m_p + m_e
 m_HeI = 2.0 * (m_p + m_n + m_e)

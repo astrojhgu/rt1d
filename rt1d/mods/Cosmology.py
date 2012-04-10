@@ -16,13 +16,8 @@ Notes:
 """
 
 import numpy as np
-from Integrate import simpson
-
-c = 29979245800.0
-G = 6.673*10**-8
-km_per_mpc = 3.08568 * 10**13 * 10**6
-cm_per_mpc = 3.08568 * 10**13 * 10**5 * 10**6
-sqdeg_per_std = (180.0**2) / (np.pi**2)
+from .Constants import c, G, km_per_mpc
+from .Integrate import simpson
 
 class Cosmology:
     def __init__(self, pf):
