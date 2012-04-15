@@ -53,9 +53,9 @@ class RadiationSource:
         self.pf = pf
         self.SourceType = pf["SourceType"]
         self.DiscreteSpectrum = pf["DiscreteSpectrum"]
-        self.tau = pf["SourceLifetime"]
         self.TimeUnits = pf["TimeUnits"]
         self.PlaneParallelField = pf["PlaneParallelField"]
+        self.tau = pf["SourceLifetime"] * self.TimeUnits
                 
         # Spectrum bounds
         self.Emin = pf["SpectrumMinEnergy"]
@@ -199,7 +199,7 @@ class RadiationSource:
         bolometric luminosity will increase with time, hence the optional 't' argument.
         """
         
-        if (t / self.TimeUnits) > self.tau: 
+        if t >= self.tau: 
             return 0.0
         
         if self.SourceType == 0: 

@@ -5,8 +5,8 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on 2010-10-25.
 
-Description: Compute photo and collisional ionization cross sections as well as recombination rate 
-coefficients and anything else like this that may crop up.
+Description: Compute the bound-free absorption cross-sections via the fitting
+formulae of Verner et al. 1996, and eventually others.
      
 """
 

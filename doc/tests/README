@@ -1,0 +1,3 @@
+These subdirectories contain parameter files to run various tests of the code,
+like convergence with spatial resolution (e.g. rt06_*_resolution) and physics 
+modules (e.g. secondary_ionization).  The more the better.

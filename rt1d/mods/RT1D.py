@@ -69,7 +69,6 @@ def Shine(pf, r = None, IsRestart = False):
         StartRadius = pf["StartRadius"]
         GridDimensions = pf["GridDimensions"]
         StopTime = pf["StopTime"] * TimeUnits
-        dtDataDump = pf["dtDataDump"] * TimeUnits
         MaximumGlobalTimestep = pf["MaximumGlobalTimestep"] * TimeUnits
         
         # Print out cell-crossing and box-crossing times for convenience
@@ -127,12 +126,22 @@ def Shine(pf, r = None, IsRestart = False):
                                                                                                                 
         # If (probably for testing purposes) we have StopTime << 1, make sure dt <= StopTime        
         dt = min(dt, StopTime)
-                    
+        
         # Figure out data dump times, write out initial dataset (or not, if this is a restart).
-        ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
+        dtDataDump = pf["dtDataDump"] * TimeUnits
+        dd0 = pf['InitialLogDataDump'] * TimeUnits
+        
+        if pf["LogarithmicDataDump"]:
+            ddt = list(np.logspace(np.log10(dd0), np.log10(StopTime), pf["NlogDataDumps"]))
+            ddt.insert(0, 0)
+            ddt = np.array(ddt)
+        else:
+            ddt = np.linspace(0, StopTime, 1. + StopTime / dtDataDump)                    
+            #ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
+                
         t = pf["CurrentTime"] * TimeUnits
         h = dt
-        wct = int(t / dtDataDump) + 1
+        wct = np.argmin(np.abs(t - ddt)) + 1
         if not IsRestart: 
             if  pf["ParallelizationMethod"] == 0 or \
                (pf["ParallelizationMethod"] == 1 and rank == 0) or \

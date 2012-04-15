@@ -79,18 +79,19 @@ class SolveRateEquations:
             if xnext > xf: 
                 h = xf - xnow
                 xnext = xf 
-                                                                                            
+                                                                                                            
             # Solve away
-            ynext, tmp = self.solve(f, ynow, xnow, h, Dfun, args)  
-            
+            ynext, tmp = self.solve(f, ynow, xnow, h, Dfun, args)
+                        
             # Check for NaNs, reduce timestep or raise exception if h == hmin
             if self.CheckForGoofiness:
-                everything_ok = self.SolutionCheck(ynext, args)                
-                                        
+                everything_ok = self.SolutionCheck(ynext, args) 
+                                                        
                 if not everything_ok[0] and h > self.hmin:
                     h = max(self.hmin, h / 2.)
                     continue
                 elif not everything_ok[0] and h == self.hmin:
+                    print everything_ok
                     raise ValueError('NAN encountered on minimum ODE step. Exiting.') 
                                   
                 # Check to see if number densities are all physically reasonable
@@ -110,7 +111,7 @@ class SolveRateEquations:
             if self.stepper:       
                                       
                 tol_met, ok = self.stepper(f, ynow, xnow, ynext, xnext, h, Dfun, args)
-                
+                                
                 if not np.all(tol_met):  
                     if h == self.hmin: 
                         raise ValueError('ERROR: Tolerance not met on minimum ODE step.  Exiting.')

@@ -40,12 +40,14 @@ class ControlSimulation:
         self.MaxHeIIChange = pf["MaxHeIIChange"]
         self.MaxHeIIIChange = pf["MaxHeIIIChange"]
         self.MaxElectronChange = pf["MaxElectronChange"]
+        self.MaxTemperatureChange = pf["MaxTemperatureChange"]
         self.HIRestrictedTimestep = pf["HIRestrictedTimestep"]
         self.HeIRestrictedTimestep = pf["HeIRestrictedTimestep"]
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
         self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
         self.OpticalDepthDefiningIFront = pf["OpticalDepthDefiningIFront"]
-        self.ElectronFractionRestrictedTimestep = pf["ElectronFractionRestrictedTimestep"]
+        self.ElectronRestrictedTimestep = pf["ElectronRestrictedTimestep"]
+        self.TemperatureRestrictedTimestep = pf["TemperatureRestrictedTimestep"]
         self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
         
         self.mask = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
@@ -95,14 +97,18 @@ class ControlSimulation:
             dHeIIIdt = nabs[2] * Gamma[2] 
             dtHeIII = self.MaxHeIIIChange * nion[2] / dHeIIdt
                   
-        dtef = 1e50  
-        if self.ElectronFractionRestrictedTimestep:
-            defdt = np.abs(dHIdt + dHeIIdt + 2. * dHeIIIdt)
-            dtef = self.MaxElectronChange * n_e / (n_e + n_H + n_He) / defdt 
-        
-        return min(dtHI, dtHeII, dtHeIII, dtef)
+        dtne = 1e50     
+        if self.ElectronRestrictedTimestep:  
+            dHIIdt = nabs[0] * Gamma[0]
+            dHeIIdt = dHeIIdt = nabs[1] * Gamma[1]
+            dHeIIIdt = dHeIIIdt = nabs[2] * Gamma[2]              
+            dedt = np.abs(dHIIdt + dHeIIdt + 2. * dHeIIIdt)
+            dtne = self.MaxElectronChange * n_e / dedt 
+                  
+        return min(dtHI, dtHeII, dtHeIII)
     
-    def ComputePhotonTimestep(self, tau, nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi, dt):
+    def ComputePhotonTimestep(self, tau, nabs, nion, ncol, n_H, n_He, n_e, n_B, 
+        Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, T, dt):
         """
         Compute photon timestep based on maximum allowed fractional change
         in hydrogen and helium neutral fractions (Shapiro et al. 2004).
@@ -138,13 +144,28 @@ class ControlSimulation:
                 dHeIdt = (alpha[1] + xi[1]) * nion[1] * n_e \
                     - nabs[1] * (Gamma[1] + Beta[1] * n_e)
                 dtHeI = self.MaxHeIChange * nabs[1] / abs(dHeIdt)        
+        
+        dtne = 1e50     
+        if self.ElectronRestrictedTimestep:  
+            dHIIdt = nabs[0] * (Gamma[0] + Beta[0] * n_e) + \
+                     np.sum(gamma[0] * nabs) - \
+                     nion[0] * n_e * alpha[0]  
+            dHeIIdt = nabs[1] * (Gamma[1] + Beta[1] * n_e) + \
+                      np.sum(gamma[1] * nabs) + \
+                      alpha[2] * n_e * nion[2] - \
+                      (alpha[1] + Beta[2] + xi[1]) * nion[1] * n_e 
+            dHeIIIdt = nabs[2] * (Gamma[2] + Beta[2] * n_e) + \
+                       nion[2] * n_e * alpha[2]                  
+            dedt = np.abs(dHIIdt + dHeIIdt + 2. * dHeIIIdt)
+            dtne = self.MaxElectronChange * n_e / dedt 
             
-        dtef = 1e50 
-        if self.ElectronFractionRestrictedTimestep:
-            defdt = np.abs(dHIIdt + dHeIIdt + 2. * dHeIIIdt)
-            dtef = self.MaxElectronChange * (n_e / n_B) / defdt 
+        dtT = 1e50
+        if self.TemperatureRestrictedTimestep:
+            dTdt = np.abs(np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + \
+                np.sum(eta * nabs) + np.sum(psi * nabs) + nion[2] * omega[1]))
+            dtT = self.MaxTemperatureChange * T / dTdt
                       
-        return min(dtHI, dtHeII, dtHeIII, dtHeI, dtef)        
+        return min(dtHI, dtHeII, dtHeIII, dtHeI, dtne, dtT)        
         
     def LoadBalance(self, dtphot):
         """

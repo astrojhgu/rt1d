@@ -17,8 +17,8 @@ monochromatic source of photons).
 
 import re, copy, h5py
 import numpy as np
-from rt1d.mods.SetDefaultParameterValues import SetDefaultParameterValues
-from rt1d.mods.ProblemTypes import ProblemType
+from .SetDefaultParameterValues import SetDefaultParameterValues
+from .ProblemTypes import ProblemType
 
 def ReadParameterFile(pf):
     """
@@ -42,7 +42,7 @@ def ReadParameterFile(pf):
         parname, eq, parval = line.partition("=")
                         
         # ProblemType option
-        if parname.strip() == 'ProblemType' and float(parval) > 0:
+        if parname.strip() == 'ProblemType' and float(parval) > -1:
             pf_new = ProblemType(float(parval))
             for param in pf_new: 
                 pf_dict[param] = pf_new[param]

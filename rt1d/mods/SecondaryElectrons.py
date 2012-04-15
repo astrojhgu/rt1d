@@ -29,7 +29,7 @@ class SecondaryElectrons:
         self.NumberOfEnergyBins = 258
         self.NumberOfXiBins = 14
         
-        if self.Method == 2:
+        if self.Method >= 2:
             rt1d = os.environ.get("RT1D")
             if rt1d:
                 f = h5py.File("{0}/input/secondary_electron_data.h5".format(rt1d), 'r')
@@ -54,12 +54,7 @@ class SecondaryElectrons:
             self.xmax = max(self.IonizedFractions)
             
             f.close()        
-        
-        if self.Method == 3:
-            self.IonizedFractions = x_HII
-            self.LogIonizedFractions = np.log10(self.IonizedFractions)    
-            
-        
+
     def DepositionFraction(self, E, xHII, channel = 0):
         """
         Return the fraction of secondary electron energy deposited as heat, or further ionizations.
@@ -75,8 +70,8 @@ class SecondaryElectrons:
         
             Method = 0: OFF - all secondary electron energy goes to heat.
             Method = 1: Empirical fits of Shull & vanSteenberg 1985.
-            Method = 2: Lookup tables of Furlanetto & Stoever 2010.
-            Method = 3: Empirical Fits of Ricotti et al. 2002.
+            Method = 2: Empirical Fits of Ricotti et al. 2002.
+            Method = 3: Lookup tables of Furlanetto & Stoever 2010.
             
         """
         
@@ -102,7 +97,38 @@ class SecondaryElectrons:
             if channel >= 3: 
                 return 0.0
             
+        # Ricotti, Gnedin, & Shull (2002)
         if self.Method == 2:
+            if channel == 0: 
+                if xHII <= 1e-4: 
+                    return 0.15 # This is what they do in Thomas & Zaroubi (2008).
+                else: 
+                    if E >= 11:
+                        return 3.9811 * (11. / E)**0.7 * pow(xHII, 0.4) * \
+                            (1. - pow(xHII, 0.34))**2 + \
+                            (1. - (1. - pow(xHII, 0.2663))**1.3163)
+                    else:
+                        return 0.0
+                    
+            if channel == 1: 
+                if E >= 28:
+                    return -0.6941 * (28. / E)**0.4 * pow(xHII, 0.2) * \
+                        (1. - pow(xHII, 0.38))**2 + \
+                        0.3908 * (1. - pow(xHII, 0.4092))**1.7592
+                else:
+                    return 0.0    
+            if channel == 2: 
+                if E >= 28:
+                    return -0.0984 * (28. / E)**0.4 * pow(xHII, 0.2) * \
+                        (1. - pow(xHII, 0.38))**2 + \
+                        0.0554 * (1. - pow(xHII, 0.4614))**1.6660
+                else:
+                    return 0.0    
+            if channel >= 3: 
+                return 0.0
+        
+        # Furlanetto & Stoever (2010)
+        if self.Method == 3:
             
             if channel == 0: 
                 InterpolationTable = self.fheat
@@ -163,34 +189,5 @@ class SecondaryElectrons:
             final_result += elow_result
             
             return final_result
-        
-        # Ricotti, Gnedin, & Shull (2002)
-        if self.Method == 3:
-            if channel == 0: 
-                if xHII <= 1e-4: 
-                    return 0.15 # This is what they do in Thomas & Zaroubi (2008).
-                else: 
-                    if E >= 11:
-                        return 3.9811 * (11. / E)**0.7 * pow(xHII, 0.4) * \
-                            (1. - pow(xHII, 0.34))**2 + \
-                            (1. - (1. - pow(xHII, 0.2663))**1.3163)
-                    else:
-                        return 0.0
-                    
-            if channel == 1: 
-                if E >= 28:
-                    return -0.6941 * (28. / E)**0.4 * pow(xHII, 0.2) * \
-                        (1. - pow(xHII, 0.38))**2 + \
-                        0.3908 * (1. - pow(xHII, 0.4092))**1.7592
-                else:
-                    return 0.0    
-            if channel == 2: 
-                if E >= 28:
-                    return -0.0984 * (28. / E)**0.4 * pow(xHII, 0.2) * \
-                        (1. - pow(xHII, 0.38))**2 + \
-                        0.0554 * (1. - pow(xHII, 0.4614))**1.6660
-                else:
-                    return 0.0    
-            if channel >= 3: 
-                return 0.0
+                
             

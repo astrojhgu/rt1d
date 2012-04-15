@@ -1,7 +1,0 @@
-ProblemType = 2.1
-GridDimensions = 200
-LengthUnits = 3.08568e22
-OutputDirectory = op_multifreq
-TabulateIntegrals = 0
-DiscreteSpectrumSED = [16.26033859, 26.66108388, 42.09110008, 64.74058074]
-DiscreteSpectrumRelLum =  [0.14544653, 0.33130088, 0.28474559, 0.12510547]

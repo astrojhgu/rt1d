@@ -63,6 +63,9 @@ def SetDefaultParameterValues():
         "CurrentTime": 0.0,  
         "StopTime": 50.0,  
         "dtDataDump": 5.0,  
+        "LogarithmicDataDump": 0,
+        "InitialLogDataDump": 1e-6,
+        "NlogDataDumps": 100, 
         "DataDumpName": 'dd',  
         "OutputDirectory": './',  
         "OutputFormat": 1,  
@@ -76,7 +79,8 @@ def SetDefaultParameterValues():
         "HeIIRestrictedTimestep": 1,  
         "HeIIIRestrictedTimestep": 1,  
         "OpticalDepthDefiningIFront": [0.5, 0.5, 0.5],  
-        "ElectronFractionRestrictedTimestep": 0,  
+        "ElectronRestrictedTimestep": 0,
+        "TemperatureRestrictedTimestep": 0,
         "LightCrossingTimeRestrictedTimestep": 0,  
         "OnePhotonPackagePerCell": 0,  
         "MaxHIIChange": 0.05,  
@@ -84,6 +88,7 @@ def SetDefaultParameterValues():
         "MaxHeIIChange": 0.05,  
         "MaxHeIIIChange": 0.05,  
         "MaxElectronChange": 0.05,  
+        "MaxTemperatureChange": 0.05,
         
         # Physics
         "Isothermal": 1,  

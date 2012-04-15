@@ -1,7 +1,0 @@
-ProblemType = 5.1
-GridDimensions = 400
-LogarithmicGrid = 0
-StopTime = 45
-OutputDirectory = op_monochromatic
-DiscreteSpectrumSED = [1000.]
-DiscreteSpectrumRelLum = [1.0]

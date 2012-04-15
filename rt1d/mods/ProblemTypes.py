@@ -22,14 +22,47 @@ way:
 
 import numpy as np
 
-cm_per_kpc = 3.08568 * 10**21
-s_per_myr = 365.25 * 24 * 3600 * 10**6
+cm_per_kpc = 3.08568e21
+s_per_myr = 365.25 * 24 * 3600 * 1e6
 
 def ProblemType(ptype):
     """
-    Storage bin for predefined problem types, 'pt's, like those used in the 
+    Storage bin for predefined problem types, like those used in the 
     radiative transfer comparison project ('RT06').
     """
+    
+    # RT06-0.3, Single zone ionization/heating, then source switches off.
+    if ptype == 0:
+        pf = {"ProblemType": 0, 
+              "TabulateIntegrals": 1, 
+              "LengthUnits": 1e-4 * cm_per_kpc, # 100 milliparsecs 
+              "GridDimensions": 1, 
+              "StartRadius": 0.99, # cell = 1 milliparsec across
+              "StopTime": 10, 
+              "LogarithmicDataDump": 1,
+              "ElectronRestrictedTimestep": 1,
+              "TemperatureRestrictedTimestep": 0,
+              "NlogDataDumps": 500, 
+              "ODEMinStep": 1e-15,
+              "MinimumSpeciesFraction": 1e-9, 
+              "ColumnDensityBinsHI": 20,
+              "DensityProfile": 0,
+              "InitialDensity": 1., 
+              "TemperatureProfile": 0, 
+              "InitialTemperature": 1e2,
+              "IonizationProfile": 0, 
+              "InitialHIIFraction": 1e-6, 
+              "SourceType": 1, 
+              "SourceLifetime": 0.5,
+              "SpectrumPhotonLuminosity": 1e12, 
+              "SpectrumMinEnergy": 13.6, 
+              "SpectrumMaxEnergy": 100.,
+              "SpectrumMinNormEnergy": 0.1, 
+              "SpectrumMaxNormEnergy": 100., 
+              "DiscreteSpectrum": 0,
+              "Isothermal": 0,
+              "PlaneParallelField": 1              
+             }        
     
     # RT06-1, RT1: Pure hydrogen, isothermal HII region expansion, monochromatic spectrum at 13.6 eV
     if ptype in [1, 1.1]:
@@ -119,17 +152,15 @@ def ProblemType(ptype):
              "DiscreteSpectrumRelLum": [0.24, 0.35, 0.23, 0.06],
              "Isothermal": 0
             }    
-    
-    
-    
-             
+                 
     # RT06-3: I-front trapping in a dense clump and the formation of a shadow - continuous BB spectrum
     if ptype == 3:
         pf = {"ProblemType": 3,  
               "LengthUnits": 6.6 * cm_per_kpc,
               "GridDimensions": 200,
               "StopTime": 15.0, 
-              "dtDataDump": 1.0, 
+              "dtDataDump": 1.0,
+              "MaximumGlobalTimestep": 0.1,  
               "Isothermal": 0, 
               "DensityProfile": 0, 
               "InitialDensity": 2e-4, 

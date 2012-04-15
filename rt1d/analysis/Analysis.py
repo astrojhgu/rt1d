@@ -277,6 +277,46 @@ class Analyze:
             self.mp.grid[0].legend(loc = 'lower right', frameon = False)    
                         
         pl.draw()        
+        
+    def CellTimeEvolution(self, cell = 0, field = 'x_HI'):
+        """
+        Return time evolution of cell.
+        """    
+        
+        time = []
+        value = []
+        for dd in self.data.keys():
+            time.append(self.data[dd].t)
+            exec('value.append(self.data[%i].%s[%i])' % (dd, field, cell))
+        
+        return np.array(time), np.array(value)
+        
+    def CellTimeSeries(self, cell = 0, species = 0, field = 'x_HI', color = 'k', ls = '-'):
+        """
+        Plot cell evolution.
+        """    
+        
+        t, val = self.CellTimeEvolution(cell = cell, field = field)
+        
+        if len(val.shape) > 1:
+            val = zip(*val)[species]
+            
+        if field in ['Gamma', 'gamma']:
+            t, nabs = self.CellTimeEvolution(cell = cell, field = 'nabs')
+            val *= zip(*nabs)[species]
+        elif field in ['Beta']:
+            t, nabs = self.CellTimeEvolution(cell = cell, field = 'nabs')
+            t, ne = self.CellTimeEvolution(cell = cell, field = 'n_e')
+            val *= zip(*nabs)[species] * ne
+        elif field in ['zeta', 'eta', 'psi']:
+            t, nabs = self.CellTimeEvolution(cell = cell, field = 'nabs')
+            t, ne = self.CellTimeEvolution(cell = cell, field = 'n_e')
+            val *= zip(*nabs)[species] * ne
+            
+        self.ax = pl.subplot(111)
+        self.ax.loglog(t / s_per_yr, val, color = color)  
+        
+        pl.draw()  
             
     def ColumnDensityContours(self):
         """
@@ -353,13 +393,13 @@ class Analyze:
             if self.data[dd].t / self.pf['TimeUnits'] != t: 
                 continue
             
-            Gamma = self.data[dd].Gamma[species] * self.data[dd].nabs[species]
-            gamma = np.sum(self.data[dd].gamma[species] * self.data[dd].nabs, axis = 0)
-            Beta = self.data[dd].Beta[species] * self.data[dd].nabs[species] * self.data[dd].n_e
+            Gamma = self.data[dd].Gamma[:,species] * self.data[dd].nabs[:,species]
+            gamma = np.sum(self.data[dd].gamma[:,species] * self.data[dd].nabs, axis = 0)
+            Beta = self.data[dd].Beta[:,species] * self.data[dd].nabs[:,species] * self.data[dd].n_e
             ion = Gamma + gamma + Beta
             
-            alpha = self.data[dd].alpha[species] * self.data[dd].nion[species] * self.data[dd].n_e
-            xi = self.data[dd].xi[species] * self.data[dd].nion[species] * self.data[dd].n_e
+            alpha = self.data[dd].alpha[:,species] * self.data[dd].nion[:,species] * self.data[dd].n_e
+            xi = self.data[dd].xi[:,species] * self.data[dd].nion[:,species] * self.data[dd].n_e
             recomb = alpha + xi    
                 
         self.ax = pl.subplot(111)
@@ -399,11 +439,11 @@ class Analyze:
             for i in xrange(self.GridDimensions):
                 fheat[i] = self.esec.DepositionFraction(None, x_HII[i], 0)            
             
-            heat = fheat * np.sum(self.data[dd].k_H * self.data[dd].nabs, axis = 0)
-            zeta = np.sum(self.data[dd].zeta * self.data[dd].nabs, axis = 0) * self.data[dd].n_e # collisional ionization
-            eta = np.sum(self.data[dd].eta * self.data[dd].nabs, axis = 0) * self.data[dd].n_e  # recombination
-            psi = np.sum(self.data[dd].psi * self.data[dd].nabs, axis = 0) * self.data[dd].n_e  # collisional excitation
-            omega = np.sum(self.data[dd].omega * self.data[dd].nabs, axis = 0) * self.data[dd].n_e # dielectric
+            heat = fheat * np.sum(self.data[dd].k_H * self.data[dd].nabs, axis = 1)
+            zeta = np.sum(self.data[dd].zeta * self.data[dd].nabs, axis = 1) * self.data[dd].n_e # collisional ionization
+            eta = np.sum(self.data[dd].eta * self.data[dd].nabs, axis = 1) * self.data[dd].n_e  # recombination
+            psi = np.sum(self.data[dd].psi * self.data[dd].nabs, axis = 1) * self.data[dd].n_e  # collisional excitation
+            omega = np.sum(self.data[dd].omega * self.data[dd].nabs, axis = 1) * self.data[dd].n_e # dielectric
             cool = (zeta + eta + psi + omega)
             
         mi = min(np.min(heat), np.min(cool))    

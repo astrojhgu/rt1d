@@ -89,7 +89,7 @@ class RateCoefficients:
         # Derived quantities we'll need
         Vsh = self.ShellVolume(r, dr)        
         ncell = dr * nabs          
-        
+                                        
         # Set normalization constant for each species
         if self.PlaneParallelField:
             if self.PhotonConserving:
@@ -274,8 +274,8 @@ class RateCoefficients:
         else:
             Q0 = Qdot * np.exp(-tau_E)                 # number of photons entering cell per sec
             dQ = Q0 * (1. - np.exp(-tau_c))            # number of photons absorbed in cell per sec
-            IonizationRate = dQ / nabs[species] / Vsh  # ionizations / sec / atom
-        
+            IonizationRate = dQ / nabs[species] / Vsh  # ionizations / sec / atom        
+                  
         return A * IonizationRate, Phi_N, Phi_N_dN
         
     def PhotoElectricHeatingRate(self, species = None, E = None, Qdot = None, Lbol = None, 
@@ -358,13 +358,13 @@ class RateCoefficients:
         """    
         
         if species == 0:  
-            return n_e * 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)    
+            return 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)    
           
         if species == 1:    
-            return n_e * 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T) 
+            return 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T) 
         
         if species == 2:
-            return n_e * 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)     
+            return 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)     
         
     def RadiativeRecombinationRate(self, species = 0, T = None):
         """

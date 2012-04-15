@@ -95,7 +95,7 @@ class InitializeIntegralTables:
         self.HIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.min(self.n_H * grid.dx)))
         self.HIColumnMax = np.ceil(np.log10(pf["LengthUnits"] * np.max(self.n_H)))
         self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.min(self.n_He * grid.dx)))
-        self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(pf["LengthUnits"] * np.max(self.n_He)))
+        self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(pf["LengthUnits"] * np.max(self.n_He)))            
         
         self.HINBins = pf["ColumnDensityBinsHI"]
         self.HeINBins = pf["ColumnDensityBinsHeI"]
@@ -528,8 +528,8 @@ class InitializeIntegralTables:
     def Phi(self, ncol, species = 0):
         """
         Equation 10 in Mirocha et al. 2012.
-        """        
-        
+        """      
+                
         # Otherwise, continuous spectrum                
         if self.PhotonConserving:
             integrand = lambda E: 1e10 * self.rs.Spectrum(E, Lbol = self.Lbol) * \

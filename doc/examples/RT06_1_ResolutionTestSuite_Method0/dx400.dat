@@ -1,4 +1,0 @@
-ProblemType = 1
-GridDimensions = 400
-OutputDirectory = dx400
-ParallelizationMethod = 2

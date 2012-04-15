@@ -1,5 +1,0 @@
-ProblemType = 1
-GridDimensions = 6400 
-OutputDirectory = dx6400
-PhotonConserving = 1
-ParallelizationMethod = 2

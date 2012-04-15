@@ -65,8 +65,8 @@ class InitializeGrid:
                             
         # Generic data array                
         self.density = map(self.InitializeDensity, self.grid)
-        self.ionization = map(self.InitializeIonization, self.grid)    
-            
+        self.ionization = map(self.InitializeIonization, self.grid)  
+                    
     def InitializeFields(self):
         """
         Return dictionary of all fields.

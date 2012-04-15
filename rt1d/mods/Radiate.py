@@ -85,13 +85,13 @@ class Radiate:
         self.HeIRestrictedTimestep = pf["HeIRestrictedTimestep"]
         self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
         self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
-        self.ElectronFractionRestrictedTimestep = pf["ElectronFractionRestrictedTimestep"]
+        self.ElectronRestrictedTimestep = pf["ElectronRestrictedTimestep"]
         self.LightCrossingTimeRestrictedTimestep = pf["LightCrossingTimeRestrictedTimestep"]
         self.AdaptiveODEStep = pf["ODEAdaptiveStep"]
         self.MaxStep = pf["ODEMaxStep"] * self.TimeUnits
         self.MinStep = pf["ODEMinStep"] * self.TimeUnits
         
-        self.AdaptiveGlobalStep = self.HIRestrictedTimestep or self.ElectronFractionRestrictedTimestep
+        self.AdaptiveGlobalStep = self.HIRestrictedTimestep or self.ElectronRestrictedTimestep
         if self.MultiSpecies:
             self.AdaptiveGlobalStep |= (self.HeIRestrictedTimestep or \
                 self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep)
@@ -290,7 +290,7 @@ class Radiate:
         
         # Could change with time for accreting black holes
         Lbol = self.rs.BolometricLuminosity(t)
-                
+                        
         # Loop over cells radially, solve rate equations, update values in data -> newdata
         for cell in self.grid:   
                         
@@ -379,7 +379,8 @@ class Radiate:
             # Adjust timestep based on maximum allowed neutral fraction change     
             if self.AdaptiveGlobalStep:
                 dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
-                    nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, xi, dt) 
+                    nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, k_H, 
+                        zeta, eta, psi, xi, omega, newT, dt) 
         
         return newdata, dtphot
         
@@ -560,7 +561,7 @@ class Radiate:
                 dtphot[cell] = self.control.ComputePhotonTimestep(self.tau_all_arr[:,cell], 
                     self.nabs_all[cell], self.nion_all[cell], self.ncol_all[cell], self.n_H_arr[cell], self.n_He_arr[cell], 
                     self.ne_all[cell], self.nB_all[cell], 
-                    Gamma, gamma, Beta, alpha, xi, dt) 
+                    Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, dt) 
                     
                 if self.LightCrossingTimeRestrictedTimestep: 
                     dtphot[cell] = min(dtphot[cell], self.LightCrossingTimeRestrictedTimestep * self.CellCrossingTime[cell])    
@@ -658,16 +659,16 @@ class Radiate:
                 
         dqdt = self.zeros_tmp
         
-        # Neutrals (current step)
+        # Neutrals (current time-step)
         nHI = n_H - q[0]
         nHeI = n_He - q[1] - q[2]
-        nHeII = q[1]
+        nHeII = q[1]            
                 
         # Always solve hydrogen rate equation
         dqdt[0] = (Gamma[0] + Beta[0] * n_e) * nHI + \
                   (gamma[0][0] * nHI + gamma[0][1] * nHeI + gamma[0][2] * nHeII) - \
-                   alpha[0] * self.C * n_e * q[0]        
-                
+                   alpha[0] * self.C * n_e * q[0]  
+                   
         # Helium rate equations  
         if self.MultiSpecies:       
             dqdt[1] = (Gamma[1] + Beta[1] * n_e) * nHeI + \
@@ -680,7 +681,7 @@ class Radiate:
         # Temperature evolution - using np.sum is slow :(
         if not self.Isothermal:
             dqdt[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) \
-                + np.sum(eta * nabs) + np.sum(psi * nabs) + q[2] * omega[1])
+                + np.sum(eta * nion) + np.sum(psi * nabs) + q[2] * omega[1])
 
         return dqdt
 

@@ -1,5 +1,0 @@
-ProblemType = 2
-GridDimensions = 50
-OutputDirectory = dx50
-PhotonConserving = 1
-ParallelizationMethod = 2

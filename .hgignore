@@ -20,3 +20,8 @@ build/*
 *.toc
 *.DS_Store
 bin/*
+dd*
+RunComplete
+timestep_evolution.dat
+*.png
+*.eps

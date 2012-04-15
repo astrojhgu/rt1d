@@ -18,14 +18,11 @@
 \numberwithin{equation}{section}
 \usepackage{graphicx}
 \usepackage{pslatex}
+\usepackage{epsfig}
 \usepackage{natbib}
 \usepackage[pdfborder={0 0 0}]{hyperref}
 \usepackage[all]{hypcap}
 
-%%% Beginning of Document
-
-\begin{document}
-    
 %%% START custom commands
 \newcommand{\HI}{\text{HI}}
 \newcommand{\HII}{\text{HII}}
@@ -76,9 +73,10 @@
 \newcommand{\Nvec}{\mathbf{N}}
 \newcommand{\sh}{\mathrm{sh}}
 %%% END custom commands
-	
+
+%%% Beginning of Document
+\begin{document}
 \author{Jordan Mirocha}	
-	
 \title{\Large {\bf rt1d: User's Manual}}
 \date{Last Updated: \today}
 \maketitle
@@ -91,12 +89,17 @@
 %% Introduction
 %%%
 \section{Introduction}
-Let's see what happens to the gas around stars and black holes, shall we?
+Let's see what happens to the gas around stars and black holes, shall we? The
+primary reference for this code is
+\href{http://arxiv.org/abs/1204.1944}{arxiv:1204.1944} -- much of the text has
+been extracted from there.
 
 %%% 
 %% Methods
 %%%
 \section{Methods}
+
+% Rate Equations
 \subsection{The Rate Equations}
 In general, the chemical and thermal evolution of gas surrounding a radiation
 source is governed by a set of differential equations describing the number
@@ -135,7 +138,7 @@ deposited as heat, $\fheat$. We use the formulae in Appendix B of
 \citet{Fukugita1994} to compute the values of $\alpha_i$, $\beta_i$, $\xi_i$,
 $\zeta_i$, $\eta_i$, $\psi_i$, and $\omega_{\HeII}$.
 
-% Photon-conservation
+% Ionization and Heating Rates
 \subsection{Computing the Ionization and Heating Rates}
 The most critical aspect of propagating the radiation field in our 1D
 simulations is computing the ionization ($\Gamma_i$, $\gamma_{i}$) and heating
@@ -159,9 +162,9 @@ radiation incident upon it and its optical depth,
 \end{equation}    
 It is most straightforward to imagine our 1D grid as a collection of
 concentric spherical shells, each having thickness $\Delta r$ and volume
-$V_{\sh}(r) = 4 \pi [(r + \Delta r)^3 - r^3] / 3$. The ionization and heating
-rates can then be related to the number of absorptions in any given shell
-(thus preserving photon number), as
+$V_{\sh}(r) = 4 \pi [(r + \Delta r)^3 - r^3] / 3$ (i.e. radii correspond to
+cell interfaces). The ionization and heating rates can then be related to the
+number of absorptions in any given shell (thus preserving photon number), as
 \begin{align}
     \Gamma_i & = A_i \int_{\nu_i}^{\infty} I_{\nu} e^{-\tau_{\nu}} \left(1 - e^{-\Delta \tau_{i,\nu}}\right) \frac{d\nu}{h\nu} \label{eq:PhotoIonizationRate} \\
     \gamma_{ij} & = A_j \int_{\nu_j}^{\infty} \left(\frac{\nu - \nu_j}{\nu_i}\right) I_{\nu} e^{-\tau_{\nu}} \left(1 - e^{-\Delta \tau_{j,\nu}}\right) \frac{d\nu}{h\nu} \label{eq:SecondaryIonizationRate} \\
@@ -242,17 +245,7 @@ over all frequencies, $n=1,2,3...n_{\nu}$. These equations are identical to
 Equations \ref{eq:Gamma_PhiPsi}-\ref{eq:Heat_PhiPsi} for the discrete SED
 case, but are perhaps more intuitive.
 
-For simplicity, our current treatment neglects a few physical processes that
-are cosmological in origin, or simply do not rely on the radiation field
-directly. These include cooling via free-free emission and hydrogen ionization
-due to helium recombination photons (which depend on the gas kinetic
-temperature and electron density), and cosmological effects such as Hubble
-cooling, Compton cooling off cosmic microwave background (CMB) photons, and
-photo-ionization by Wien-tail CMB photons (which depend on kinetic
-temperature, redshift, and the Hubble parameter). Our optimized SEDs
-(\S\ref{sec:Results}) will be unchanged upon including such physics in later
-work.
-
+% Secondary Electrons
 \subsection{Additional Complexity: Energy Dependent Secondary Electron Treatment}
 In the previous section (and in all of Mirocha et al. 2012), we considered the asymptotic limit of \citet{Shull1985}, in which the fractional energy deposition of secondary electrons as heat, ionization, and excitation depends only on the hydrogen ionized fraction.  \citet{Furlanetto2010} updated this work, providing lookup tables of deposition fraction as a function of both ionized fraction and electron energy.  These effects are most important at $E \lesssim 10^2$ eV.  
 
@@ -272,7 +265,22 @@ Now, our ionization and heating coefficients read
     \gamma_{ij} & = \frac{A_j}{h\nu_i} \left\{\widetilde{\Psi}_{ij}(\tau_{\nu}) - \widetilde{\Psi}_{ij}(\tau_{j,\nu}^{\prime}) - h \nu_j \left[\widetilde{\Phi}_{ij}(\tau_{\nu}) - \widetilde{\Phi}_{ij}(\tau_{j,\nu}^{\prime}) \right] \right\}  \label{eq:gamma_PhiPsi_complex} \\
     \Heat_i & = A_i \left\{\widehat{\Psi}_i(\tau_{\nu}) - \widehat{\Psi}_i(\tau_{i,\nu}^{\prime}) - h\nu_i \left[\widehat{\Phi}_i(\tau_{\nu}) - \widehat{\Phi}_i(\tau_{i,\nu}^{\prime}) \right] \right\} \label{eq:Heat_PhiPsi_complex} .  
 \end{align}    
+Various methods for handling secondary electrons are compared for a $10^5$ K blackbody source of $\dot{Q} = 5 \times 10^{48}$ ionizing photons $s^{-1}$ in Figure \ref{fig:SecondaryIonizationMethods}.
 
+% Secondary electron methods
+\begin{figure*}[htbp!]
+\begin{center}
+\includegraphics[width=0.98\textwidth]{figures/secondary_ionization_methods.eps}
+\caption{Comparison of different methods for secondary ionization.  See \S\ref{sec:PhysicsParameters} for details on setting the secondary ionization method.}
+\label{fig:SecondaryIonizationMethods}
+\end{center}
+\end{figure*}
+
+\subsection{Time-stepping Techniques}
+
+
+
+\subsection{Parallelism}
 
 %%% 
 %% Classes
@@ -281,17 +289,24 @@ Now, our ionization and heating coefficients read
 In order of appearance in \texttt{RT1D.py}.
 
 \subsection{\texttt{InitializeGrid}}
+Initialize the temperature and ion densities for each cell in the grid.
 \subsection{\texttt{InitializeIntegralTables}}
+If \texttt{IntegralTabulation} = 1 (necessary when \texttt{DiscreteSpectrum} = 0), tabulates the quantities $\Phi_i$ and $\Psi_i$.  If \texttt{MultiSpecies} = 1, tabulation occurs for hydrogen and helium ions, and if \texttt{SecondaryIonization} $\ge 2$, also tabulate $\widetilde{\Phi}_i$, $\widetilde{\Psi}_i$, $\widehat{\Phi}_i$, and $\widehat{\Psi}_i$, adding an additional dimension for $x_{\mathrm{HII}}$.
 \subsection{\texttt{RadiationSource}}
+Initialize the radiation source.  Most importantly the \texttt{Spectrum} function, which returns the fraction of the bolometric luminosity emitted at energy $E$ (only argument).
 \subsection{\texttt{Radiate}}
+Calls \texttt{EvolvePhotons} routines, which loop over grid, call solver, and update ion densities and the temperature in each cell.
 \subsection{\texttt{SolveRateEquations}}
+ODE solver.
 \subsection{\texttt{Interpolate}}
+Performs linear, bi-linear, tri-linear, and eventually quad-linear interpolation on integral tables to extract ionization and heating coefficients as a function of column density.
 \subsection{\texttt{WriteData}}
+Write out data to HDF5.  Would be easy to add support for ASCII write-out.
 
 %%% 
 %% Parameters
 %%%
-\section{Parameters}
+\section{Parameters} \label{sec:Parameters}
 
 \subsection{Problem Types}
 These were added for convenience in January, 2011.  If you want to make changes to these test problems you can, just make sure \texttt{ProblemType} is the first (uncommented) line in your parameter file.  Additional parameters afterwards will be interpreted as usual.
@@ -302,11 +317,14 @@ These were added for convenience in January, 2011.  If you want to make changes 
 
 \item [\texttt{ProblemType = 2}] This problem is almost exactly the same as \texttt{ProblemType = 1}.  However, the temperature is allowed to evolve, and instead of using a monochromatic spectrum, we use a $10^5$ K blackbody spectrum.  Again, the initial density, temperature, box size, and energy groups are the same as the values used in Test 1 of Wise \& Abel 2010.  
 
-\item [\texttt{ProblemType = 2.1}] Same as \texttt{ProblemType = 2} for everything, except we sample the continuous blackbody spectrum with the four energy groups used by \citet{Wise2011}
+\item [\texttt{ProblemType = 2.1}] Same as \texttt{ProblemType = 2}, except we sample the continuous blackbody spectrum with the four energy groups used by \citet{Wise2011}.
 
-\item [\texttt{ProblemType = 2.2}] Same as \texttt{ProblemType = 2} for everything, except we sample the continuous blackbody spectrum with the four energy groups used by Mirocha et al. 2012.
+\item [\texttt{ProblemType = 2.2}] Same as \texttt{ProblemType = 2}, except we sample the continuous blackbody spectrum with the four energy groups used by Mirocha et al. (2012).
 
-\item [\texttt{ProblemType = 3.1}] Test problem \# 3 from \cite{Iliev2006} -- I-front trapping in a dense clump and the formation of a shadow.  The setup is the same as in \texttt{ProblemType = 2.1}, except a 1D clump is initialized at $x = 0.76 L_{\mathrm{box}}$, overdensity $\delta = 200$, radius $0.12$kpc, and temperature $T = 40$K, and the radiation field is plane-parallel.
+\item [\texttt{ProblemType = 3}] Test problem \# 3 from \cite{Iliev2006} -- I-front trapping in a dense clump and the formation of a shadow.  The setup is the same as in \texttt{ProblemType = 2}, except a 1D clump is initialized at $x = 0.76 L_{\mathrm{box}}$, overdensity $\delta = 200$, radius $0.12$kpc, and temperature $T = 40$K, and the radiation field is plane-parallel.
+
+\item [\texttt{ProblemType = 3.1}] Same as \texttt{ProblemType = 3}, except we sample the continuous blackbody spectrum with the four energy groups used by \citet{Wise2011}.
+
 \end{description}
 
 \subsection{Initial Conditions}
@@ -337,7 +355,7 @@ Relative tolerance of the ODE solver.  Combination of this parameter and \texttt
 \subsection{Source Parameters}
 
 
-\subsection{Physics Parameters}
+\subsection{Physics Parameters} \label{sec:PhysicsParameters}
 
 
 \section{Analysis}
@@ -349,6 +367,53 @@ import pylab as pl
 ds = rta.Analyze('./pf.dat')                # load parameter file and data
 pl.loglog(ds.data[10].r, ds.data[10].x_HI)  # radius vs. neutral fraction
 \end{verbatim}
+
+%%%
+%% Test Problems
+%%%
+\section{Test Problems}
+In this section we focus on test problems 1-3 of the Radiative Transfer Comparison Project \citep[hereafter RT06;][]{Iliev2006}.
+
+\subsection{Test \#0}
+Single-zone ionization, heating, and cooling.
+
+\begin{figure*}[htbp!]
+\begin{center}
+\includegraphics[width=0.98\textwidth]{figures/rt06_0.eps}
+\caption{Convergence test for RT06 \#1.}
+\label{fig:RT06_1}
+\end{center}
+\end{figure*}
+
+\subsection{Test \#1}
+
+\begin{figure*}[htbp!]
+\begin{center}
+\includegraphics[width=0.98\textwidth]{figures/rt06_1_convergence.eps}
+\caption{Convergence test for RT06 \#1.}
+\label{fig:RT06_1}
+\end{center}
+\end{figure*}
+
+\subsection{Test \#2}
+
+\begin{figure*}[htbp!]
+\begin{center}
+\includegraphics[width=0.98\textwidth]{figures/rt06_2.eps}
+\caption{RT06 \#3.}
+\label{fig:RT06_2}
+\end{center}
+\end{figure*}
+            
+\subsection{Test \#3}
+
+\begin{figure*}[htbp!]
+\begin{center}
+\includegraphics[width=0.98\textwidth]{figures/rt06_3.eps}
+\caption{RT06 \#3.}
+\label{fig:RT06_3}
+\end{center}
+\end{figure*}
 
 %%% 
 %% Start to Finish
@@ -402,11 +467,6 @@ This would make it easy to:
     \item Very specific initial conditions.
 \end{itemize}    
 
-%How to change the code to allow for this?
-%Define main loop in RT1D.py as Shine.  Insert if __name__ == `main' stuff?
-%Would be nice to have an executable...
-%Move RT1D.py to \$RT1D/bin, import it from \$RT1D/rt1d/__init__.py
-
 What parameters must be set?
 \begin{itemize}
     \item ProblemType
@@ -416,16 +476,6 @@ What parameters must be set?
     \item InitialDensity
     \item SourceParameters
 \end{itemize}
-
-%In this work, we use the formulae in Appendix B of \cite{Fukugita1994} to
-%compute the values of $\alpha_i$, $\beta_i$, and $\xi_i$. As you might expect, collisional ionization and recombination depend solely on the temperature of the gas.  For example, collisional ionization of hydrogen (from $n = 1$) is governed by
-%\begin{equation}
-%    \beta_{1,\HI} = 5.85 \times 10^{-11} T^{1/2} \left[1 + \left(\frac{T}{10^5 \mathrm{K}}\right)^{1/2}\right]^{-1} \mathrm{exp}\left[-1.578 \times \left(\frac{T}{10^5 \mathrm{K}}\right)^{-1}\right] \mathrm{cm^3 s^{-1}}
-%\end{equation}
-%and recombinations (to $n \ge 1$) by
-%\begin{equation}
-%    \alpha_{\HII} = 6.28 \times 10^{-11} T^{-1/2} \left(\frac{T}{10^3\mathrm{K}}\right)^{-1/5} \left[1 + \left(\frac{T}{10^6\mathrm{K}}\right)^{0.7}\right]^{-1} \mathrm{cm^3s^{-1}}
-%\end{equation}
 
 \newpage
 \bibliography{references}
