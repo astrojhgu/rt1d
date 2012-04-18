@@ -1,0 +1,3 @@
+rt1d is a 1D radiative transfer code, used to solve ionization (of hydrogen and
+helium) and temperature evolution of gas around stars, accreting black holes, or
+any other source of UV + Xray radiation you can think up.

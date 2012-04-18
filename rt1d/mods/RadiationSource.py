@@ -20,7 +20,7 @@ SourceType = 0: Monochromatic/Polychromatic emission of SpectrumPhotonLuminosity
 import numpy as np
 from Integrate import simpson as integrate                  # why did scipy.integrate.quad mess up LphotNorm? 
 from scipy.integrate import quad
-from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
+from .ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
 h = 6.626068e-27     			                            # Planck's constant - [h] = erg*s
 k_B = 1.3806503e-16     			                        # Boltzmann's constant - [k_B] = erg/K

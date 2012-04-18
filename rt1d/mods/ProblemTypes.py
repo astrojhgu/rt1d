@@ -40,9 +40,10 @@ def ProblemType(ptype):
               "StartRadius": 0.99, # cell = 1 milliparsec across
               "StopTime": 10, 
               "LogarithmicDataDump": 1,
+              "InitialLogDataDump": 1e-12,
               "ElectronRestrictedTimestep": 1,
-              "TemperatureRestrictedTimestep": 0,
-              "NlogDataDumps": 500, 
+              "NlogDataDumps": 100,
+              "dtDataDump": 0.1, 
               "ODEMinStep": 1e-15,
               "MinimumSpeciesFraction": 1e-9, 
               "ColumnDensityBinsHI": 20,

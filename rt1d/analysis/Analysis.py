@@ -308,13 +308,17 @@ class Analyze:
             t, nabs = self.CellTimeEvolution(cell = cell, field = 'nabs')
             t, ne = self.CellTimeEvolution(cell = cell, field = 'n_e')
             val *= zip(*nabs)[species] * ne
-        elif field in ['zeta', 'eta', 'psi']:
+        elif field in ['zeta', 'psi']:
             t, nabs = self.CellTimeEvolution(cell = cell, field = 'nabs')
             t, ne = self.CellTimeEvolution(cell = cell, field = 'n_e')
             val *= zip(*nabs)[species] * ne
+        elif field in ['eta']:
+            t, nion = self.CellTimeEvolution(cell = cell, field = 'nion')
+            t, ne = self.CellTimeEvolution(cell = cell, field = 'n_e')
+            val *= zip(*nion)[species] * ne
             
         self.ax = pl.subplot(111)
-        self.ax.loglog(t / s_per_yr, val, color = color)  
+        self.ax.loglog(t / s_per_yr, val, color = color, ls = ls)  
         
         pl.draw()  
             

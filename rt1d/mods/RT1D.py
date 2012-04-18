@@ -131,14 +131,13 @@ def Shine(pf, r = None, IsRestart = False):
         dtDataDump = pf["dtDataDump"] * TimeUnits
         dd0 = pf['InitialLogDataDump'] * TimeUnits
         
+        ddt = np.linspace(0, StopTime, 1. + StopTime / dtDataDump)    
+
         if pf["LogarithmicDataDump"]:
-            ddt = list(np.logspace(np.log10(dd0), np.log10(StopTime), pf["NlogDataDumps"]))
-            ddt.insert(0, 0)
-            ddt = np.array(ddt)
-        else:
-            ddt = np.linspace(0, StopTime, 1. + StopTime / dtDataDump)                    
-            #ddt = np.arange(0, StopTime + dtDataDump, dtDataDump)
-                
+            dlogdt = np.logspace(np.log10(dd0), np.log10(StopTime), pf["NlogDataDumps"])
+            ddt = np.concatenate((ddt, dlogdt))
+            ddt.sort()    
+                            
         t = pf["CurrentTime"] * TimeUnits
         h = dt
         wct = np.argmin(np.abs(t - ddt)) + 1

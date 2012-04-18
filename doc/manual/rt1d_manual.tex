@@ -313,6 +313,8 @@ These were added for convenience in January, 2011.  If you want to make changes 
 
 \begin{description}
     
+\item [\texttt{ProblemType = 0}] Single-zone.    
+    
 \item [\texttt{ProblemType = 1}] This will set up a standard test with known analytic solution: the propagation of an ionization front in an isothermal, hydrogen-only, static universe.  The spectrum used is monochromatic at $E = 13.6 \ \text{eV}$, with photon luminosity $L_{\nu} = 5\times 10^{48} \ s^{-1}$.  The initial density, temperature, and box size are the same as the values used in Test 1 of Wise \& Abel 2010. 
 
 \item [\texttt{ProblemType = 2}] This problem is almost exactly the same as \texttt{ProblemType = 1}.  However, the temperature is allowed to evolve, and instead of using a monochromatic spectrum, we use a $10^5$ K blackbody spectrum.  Again, the initial density, temperature, box size, and energy groups are the same as the values used in Test 1 of Wise \& Abel 2010.  
@@ -380,8 +382,8 @@ Single-zone ionization, heating, and cooling.
 \begin{figure*}[htbp!]
 \begin{center}
 \includegraphics[width=0.98\textwidth]{figures/rt06_0.eps}
-\caption{Convergence test for RT06 \#1.}
-\label{fig:RT06_1}
+\caption{Single-zone ionization, heating, and cooling RT06 \#0.}
+\label{fig:RT06_0}
 \end{center}
 \end{figure*}
 
