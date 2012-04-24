@@ -6,7 +6,8 @@ rt1d is a 1D radiative transfer code developed for the purpose of studying ioniz
 black holes, or really any source of ultraviolet and/or X-ray photons you can think of.
 
 Getting started
----------------::
+---------------
+::
 
     hg clone https://bitbucket.org/mirochaj/rt1d rt1d
     cd rt1d
@@ -20,12 +21,12 @@ Example
 -------
 
 rt1d can be run from the command line or in batch.  To run a simple test in batch mode, 
-first create a parameter file (let's call it 'pf.dat') containing a single line ::
+first create a parameter file (let's call it 'pf.dat') containing a single line: ::
 
     ProblemType = 1
 
 To run the simulation, copy the rt1d driver script (rt1d/bin/RT1D.py) to your current 
-working directory, and type::
+working directory, and type: ::
 
     python RT1D.py pf.dat
 
