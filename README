@@ -53,5 +53,4 @@ built-in analysis routines, or look at the raw data itself:
 >>> print min(ds.data[50].x_HI), max(ds.data[50].x_HI)
 >>>
 
-For more examples, see the current documentation:
-'<https://bitbucket.org/mirochaj/rt1d/downloads/rt1d_manual.pdf>'
+For more examples, see the 'current documentation <https://bitbucket.org/mirochaj/rt1d/downloads/rt1d_manual.pdf>'_.
