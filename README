@@ -6,9 +6,8 @@ rt1d is a 1D radiative transfer code developed for the purpose of studying ioniz
 black holes, or really any source of ultraviolet and/or X-ray photons you can think of.
 
 Getting started
----------------
+---------------::
 
-::
     hg clone https://bitbucket.org/mirochaj/rt1d rt1d
     cd rt1d
     python setup.py install
@@ -17,17 +16,17 @@ Currently, rt1d depends on h5py, numpy, and scipy, though the scipy dependence i
 I am in the process of removing it.  The built-in analysis module also relies on matplotlib, 
 though if you'd rather write your own analysis scripts, this dependence is not necessary.
 
-## Example:
-rt1d can be run from the command line or in batch.  To run a simple test in batch mode, 
-first create a parameter file (let's call it 'pf.dat') containing a single line:
+Example
+-------
 
-::
+rt1d can be run from the command line or in batch.  To run a simple test in batch mode, 
+first create a parameter file (let's call it 'pf.dat') containing a single line ::
+
     ProblemType = 1
 
 To run the simulation, copy the rt1d driver script (rt1d/bin/RT1D.py) to your current 
-working directory, and type
+working directory, and type::
 
-::
     python RT1D.py pf.dat
 
 This will simulate the expansion of an I-front around a source of monochromatic 13.6 eV 
