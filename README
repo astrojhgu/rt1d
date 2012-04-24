@@ -1,12 +1,14 @@
-# rt1d
+rt1d
+----
 
 rt1d is a 1D radiative transfer code developed for the purpose of studying ionization 
 (hydrogen and helium) and temperature evolution of gas in the vicinity of stars, accreting 
 black holes, or really any source of ultraviolet and/or X-ray photons you can think of.
 
-## To get started:
+Getting started
+---------------
 
-:::
+::
     hg clone https://bitbucket.org/mirochaj/rt1d rt1d
     cd rt1d
     python setup.py install
@@ -19,13 +21,13 @@ though if you'd rather write your own analysis scripts, this dependence is not n
 rt1d can be run from the command line or in batch.  To run a simple test in batch mode, 
 first create a parameter file (let's call it 'pf.dat') containing a single line:
 
-:::
+::
     ProblemType = 1
 
 To run the simulation, copy the rt1d driver script (rt1d/bin/RT1D.py) to your current 
 working directory, and type
 
-:::
+::
     python RT1D.py pf.dat
 
 This will simulate the expansion of an I-front around a source of monochromatic 13.6 eV 
@@ -35,23 +37,20 @@ Project; Iliev et al. 2006).
 To do some simple analysis of the output, open up a python (or ipython) session and use 
 built-in analysis routines, or look at the raw data itself:
 
-:::python
-    import rt1d.analysis as rta
-    
-    # Supply parameter file to initialize dataset ('ds') object
-    ds = rta.Analyze('./pf.dat') 
-    
-    # Some built-in analysis routines
-    ds.PlotIFrontEvolution()               # Plot the I-front radius vs. time
-    ds.IonizationProfile(t = [1, 10, 100]) # Plot neutral/ionized fractions vs. radius at 1, 10, 100 Myr
-    
-    # Note: since 1D datasets are small, the 'ds' object contains 
-    # the simulation data for all data dumps.
-    
-    # Look at min and max values of the neutral fraction in data dump 50
-    print min(ds.data[50].x_HI), max(ds.data[50].x_HI)
-
-}}}
+>>> import rt1d.analysis as rta
+>>> 
+>>> # Supply parameter file to initialize dataset ('ds') object
+>>> ds = rta.Analyze('./pf.dat') 
+>>> 
+>>> # Some built-in analysis routines
+>>> ds.PlotIFrontEvolution()               # Plot the I-front radius vs. time
+>>> ds.IonizationProfile(t = [1, 10, 100]) # Plot neutral/ionized fractions vs. radius at 1, 10, 100 Myr
+>>> 
+>>> # Note: since 1D datasets are small, the 'ds' object contains 
+>>> # the simulation data for all data dumps.
+>>> 
+>>> # Look at min and max values of the neutral fraction in data dump 50
+>>> print min(ds.data[50].x_HI), max(ds.data[50].x_HI)
 
 For more examples, see the current documentation:
-<<file doc/manual/rt1d_manual.pdf>>
+<http://bitbucket.org/mirochaj/rt1d/doc/manual/rt1d_manual.pdf>
