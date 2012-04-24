@@ -8,11 +8,13 @@ black holes, or really any source of ultraviolet and/or X-ray photons you can th
 
 Getting started
 ---------------
-::
+To clone a copy and install: ::
 
     hg clone https://bitbucket.org/mirochaj/rt1d rt1d
     cd rt1d
     python setup.py install
+
+or visit the 'Downloads' page for a tarball.
 
 Currently, rt1d depends on h5py, numpy, and scipy, though the scipy dependence is small and 
 I am in the process of removing it.  The built-in analysis module also relies on matplotlib, 
