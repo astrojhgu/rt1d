@@ -1,5 +1,5 @@
 rt1d
-----
+====
 
 rt1d is a 1D radiative transfer code developed for the purpose of studying ionization 
 (hydrogen and helium) and temperature evolution of gas in the vicinity of stars, accreting 
@@ -51,6 +51,7 @@ built-in analysis routines, or look at the raw data itself:
 >>> 
 >>> # Look at min and max values of the neutral fraction in data dump 50
 >>> print min(ds.data[50].x_HI), max(ds.data[50].x_HI)
+>>>
 
 For more examples, see the current documentation:
-<http://bitbucket.org/mirochaj/rt1d/doc/manual/rt1d_manual.pdf>
+'<https://bitbucket.org/mirochaj/rt1d/doc/manual/rt1d_manual.pdf>'
