@@ -40,6 +40,7 @@ Project; Iliev et al. 2006).
 To do some simple analysis of the output, open up a python (or ipython) session and use 
 built-in analysis routines, or look at the raw data itself:
 
+>>>
 >>> import rt1d.analysis as rta
 >>> 
 >>> # Supply parameter file to initialize dataset ('ds') object
