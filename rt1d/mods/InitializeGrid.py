@@ -24,7 +24,7 @@ tiny_number = 1e-12
 class InitializeGrid:
     def __init__(self, pf):
         self.pf = pf
-        self.Cosmology = Cosmology(pf)
+        self.cosm = Cosmology(pf)
         self.GridDimensions = int(pf["GridDimensions"])
         self.LogGrid = pf["LogarithmicGrid"]
         self.StartRadius = pf["StartRadius"]
@@ -47,9 +47,7 @@ class InitializeGrid:
             self.ClumpRadius = pf["ClumpRadius"] * self.GridDimensions
             self.ClumpTemperature = pf["ClumpTemperature"]
             self.ClumpDensityProfile = pf["ClumpDensityProfile"]
-        
-        self.Y = 0.2477 * self.MultiSpecies
-                
+                        
         # Deal with log-grid
         if self.LogGrid:
             self.r = np.logspace(np.log10(self.StartRadius * self.LengthUnits), \
@@ -114,7 +112,7 @@ class InitializeGrid:
         if self.DensityProfile == 0: 
             density = self.InitialDensity * m_H
         if self.DensityProfile == 1: 
-            density = self.Cosmology.MeanBaryonDensity(self.InitialRedshift)
+            density = self.cosm.MeanBaryonDensity(self.InitialRedshift)
         
         if self.Clump: 
             if self.ClumpDensityProfile == 0:
@@ -131,14 +129,17 @@ class InitializeGrid:
         
             TemperatureProfile:
                 0: Uniform temperature given by InitialTemperature
-                1: Uniform temperature given assuming the gas decouples from the CMB at z = 250
-                2: Gas within StartRadius at 10^4 K, InitialTemperature elsewhere
+                1: Uniform temperature assuming Tk = Tcmb
         """
                 
-        if self.TemperatureProfile == 0: temperature = self.InitialTemperature    
-        if self.TemperatureProfile == 1: temperature = 2.725 * (1. + self.InitialRedshift)**3. / 251.
-        if self.TemperatureProfile == 2: temperature = self.InitialTemperature
-            
+        if self.TemperatureProfile == 0: 
+            temperature = self.InitialTemperature    
+        if self.TemperatureProfile == 1: 
+            if self.InitialRedshift < 300:
+                temperature = 2.725 * (1. + self.InitialRedshift)**3. / 251.
+            else:
+                temperature = 2.725 * (1. + self.InitialRedshift)
+                
         if self.Clump:
             if (cell >= (self.ClumpPosition - self.ClumpRadius)) and (cell <= (self.ClumpPosition + self.ClumpRadius)):
                 temperature = self.ClumpTemperature
@@ -166,14 +167,14 @@ class InitializeGrid:
         Initialize neutral hydrogen density.
         """
                 
-        return (1. - self.Y) * (1. - self.ionization[cell]) * self.density[cell] / m_H
+        return (1. - self.cosm.Y) * (1. - self.ionization[cell]) * self.density[cell] / m_H
     
     def InitializeHIIDensity(self, cell):
         """
         Initialize ionized hydrogen density.
         """
                 
-        return (1. - self.Y) * self.ionization[cell] * self.density[cell] / m_H
+        return (1. - self.cosm.Y) * self.ionization[cell] * self.density[cell] / m_H
         
     def InitializeHeIDensity(self, cell):
         """
@@ -181,7 +182,7 @@ class InitializeGrid:
         to be the same as that of hydrogen.
         """
                 
-        return self.Y * (1. - self.ionization[cell]) * self.density[cell] / 4. / m_H
+        return self.cosm.Y * (1. - self.ionization[cell]) * self.density[cell] / 4. / m_H
         
     def InitializeHeIIDensity(self, cell):
         """
@@ -189,14 +190,14 @@ class InitializeGrid:
         to be the same as that of hydrogen.
         """
         
-        return self.Y * self.ionization[cell] * self.density[cell] / 4. / m_H
+        return self.cosm.Y * self.ionization[cell] * self.density[cell] / 4. / m_H
         
     def InitializeHeIIIDensity(self, cell):
         """
         Initialize doubly ionized helium density - assumed to be very small (can't be exactly zero or it will crash the root finder).
         """
         
-        return self.Y * self.MinimumSpeciesFraction * self.density[cell] / 4. / m_H
+        return self.cosm.Y * self.MinimumSpeciesFraction * self.density[cell] / 4. / m_H
         
     def InitializeElectronDensity(self, cell):
         """

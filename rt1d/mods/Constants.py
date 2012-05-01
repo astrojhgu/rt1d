@@ -11,11 +11,11 @@ Notes:
 
 """
 
-from math import *
+from math import pi
 
 # General 
 h = 6.626068e-27     			# Planck's constant - [h] = erg*s
-h_bar = h / ( 2 * pi) 			# H-bar - [h_bar] = erg*s
+h_bar = h / (2 * pi) 			# H-bar - [h_bar] = erg*s
 c = 29979245800.0 				# Speed of light - [c] = cm/s
 k_B = 1.3806503e-16			    # Boltzmann's constant - [k_B] = erg/K
 G = 6.673e-8     				# Gravitational constant - [G] = cm^3/g/s^2
@@ -25,6 +25,9 @@ m_p = 1.67262158e-24    		# Proton mass - [m_p] = g
 m_n = 1.67492729e-24            # Neutron mass - [m_n] = g
 sigma_T = 6.65e-25			    # Cross section for Thomson scattering - [sigma_T] = cm^2
 alpha = 1 / 137.035999070 		# Fine structure constant - unitless
+
+# Stefan-Boltzmann constant - [sigma_SB] = erg / cm^2 / deg^4 / s
+sigma_SB = 2.0 * pi**5 * k_B**4 / 15.0 / c**2 / h**3     
 
 # Hydrogen 
 A10 = 2.85e-15 				    # HI 21cm spontaneous emission coefficient - [A10] = Hz

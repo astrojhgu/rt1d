@@ -61,6 +61,7 @@ def SetDefaultParameterValues():
           
         # Control parameters
         "CurrentTime": 0.0,  
+        "CurrentRedshift": 'None',
         "StopTime": 50.0,  
         "dtDataDump": 5.0,  
         "LogarithmicDataDump": 0,
@@ -81,7 +82,8 @@ def SetDefaultParameterValues():
         "OpticalDepthDefiningIFront": [0.5, 0.5, 0.5],  
         "ElectronRestrictedTimestep": 0,
         "TemperatureRestrictedTimestep": 0,
-        "LightCrossingTimeRestrictedTimestep": 0,  
+        "LightCrossingTimeRestrictedTimestep": 0,
+        "RedshiftRestrictedTimestep": 0,  
         "OnePhotonPackagePerCell": 0,  
         "MaxHIIChange": 0.05,  
         "MaxHeIChange": 0.05,  
@@ -89,6 +91,7 @@ def SetDefaultParameterValues():
         "MaxHeIIIChange": 0.05,  
         "MaxElectronChange": 0.05,  
         "MaxTemperatureChange": 0.05,
+        "MaxRedshiftStep": 1, 
         
         # Physics
         "Isothermal": 1,  
@@ -96,15 +99,16 @@ def SetDefaultParameterValues():
         "CollisionalIonization": 1,  
         "CollisionalExcitation": 1,  
         "SecondaryIonization": 0,  
-        "ComptonCooling": 0,  
+        "ComptonHeating": 0,  
         "FreeFreeEmission": 0,  
         "CosmologicalExpansion": 0,  
         "InfiniteSpeedOfLight": 1,  
         "PlaneParallelField": 0,  
-        "ClumpingFactor": 1,  
+        "ClumpingFactor": 1,
         
         # Initial conditions
         "InitialRedshift": 20.0, 
+        "FinalRedshift": 6.,
         "DensityProfile": 0,  
         "InitialDensity": 0,  
         "TemperatureProfile": 0,  
@@ -143,7 +147,8 @@ def SetDefaultParameterValues():
         "OmegaMatterNow": 0.272,  
         "OmegaBaryonNow": 0.044,  
         "OmegaLambdaNow": 0.728,  
-        "HubbleParameterNow": 0.702
+        "HubbleParameterNow": 0.702,
+        "PrimordialHeliumByMass": 0.2477
           
         }
 

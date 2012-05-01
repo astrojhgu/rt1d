@@ -12,6 +12,7 @@ Notes:
 """
 
 import numpy as np
+from ..mods.Constants import k_B
 
 neglible_column = 1.
 
@@ -43,7 +44,10 @@ class DataDump:
         # Shift radii to cell-centered values
         self.r += self.dx / 2.   
                             
+        # Time and redshift                    
         self.t = pf["CurrentTime"].value * pf["TimeUnits"].value
+        if pf["CosmologicalExpansion"].value:
+            self.z = pf["CurrentRedshift"].value
         
         # Fields
         self.T = dd["Temperature"].value
@@ -73,6 +77,8 @@ class DataDump:
         self.f_e = self.n_e / self.n_B    
         self.nabs = np.array([self.n_HI, self.n_HeI, self.n_HeII])
         self.nion = np.array([self.n_HII, self.n_HeII, self.n_HeIII])
+        
+        self.E = 3. * k_B * self.T * self.n_B / 2.
         
         self.Gamma = np.zeros([self.GridDimensions, 3])
         self.k_H = np.zeros_like(self.Gamma)

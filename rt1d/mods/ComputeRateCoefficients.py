@@ -12,7 +12,8 @@ Description:
 
 import numpy as np
 
-from .Constants import erg_per_ev
+from .Constants import erg_per_ev, k_B, c, m_e, sigma_SB, sigma_T 
+from .Cosmology import Cosmology
 from .ComputeCrossSections import PhotoIonizationCrossSection
 from .SecondaryElectrons import SecondaryElectrons
 from .Interpolate import Interpolate
@@ -23,6 +24,7 @@ class RateCoefficients:
     def __init__(self, pf, rs, itabs = None, n_col = None):
         self.pf = pf        
         self.rs = rs
+        self.cosm = Cosmology(pf)
         self.esec = SecondaryElectrons(pf)
         
         # Initialize integral tables
@@ -37,6 +39,7 @@ class RateCoefficients:
         self.CollisionalIonization = pf["CollisionalIonization"]
         self.SecondaryIonization = pf["SecondaryIonization"]
         self.PlaneParallelField = pf["PlaneParallelField"]
+        self.CosmologicalExpansion = pf["CosmologicalExpansion"]
         
         if self.MultiSpecies:
             self.donors = np.arange(3)
@@ -53,17 +56,17 @@ class RateCoefficients:
         self.zeros_like_Q = np.zeros_like(self.rs.E)
         self.zeros_like_tau = np.zeros([len(self.zeros_like_E), 3])
         
-    def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dr, t):
+    def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dr, t, z):
         """
         Make list of rate coefficients that we'll pass to solver.
         
             incoming args: [nabs, nion, n_H, n_He, n_e]
-            outgoing args: [nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi]
+            outgoing args: [nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, theta]
             
             ***REMEMBER: ncol is really np.log10(ncol)!
             
         """    
-        
+                
         nabs = args[0]
         nion = args[1]
         n_H = args[2]
@@ -81,6 +84,7 @@ class RateCoefficients:
         psi = np.zeros(3)
         xi = np.zeros(3)
         omega = np.zeros(3)
+        theta = 0
         Phi_N = np.zeros(3)
         Phi_N_dN = np.zeros(3)
         Psi_N = np.zeros(3)
@@ -101,7 +105,7 @@ class RateCoefficients:
                 A = Lbol / nabs / Vsh
             else:
                 A = 3 * [Lbol / 4. / np.pi / r**2]
-                                
+                                                
         # Standard - integral tabulation
         if self.TabulateIntegrals:
          
@@ -118,7 +122,7 @@ class RateCoefficients:
                 # Photo-Ionization - keep integral values too to be used in heating/secondary ionization
                 Gamma[i], Phi_N[i], Phi_N_dN[i] = self.PhotoIonizationRate(species = i, indices_in = indices,  
                     Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr,
-                    Vsh = Vsh, ncell = ncell, indices_out = indices_out, A = A[i], nout = nout)
+                    Vsh = Vsh, ncell = ncell, indices_out = indices_out, A = A[i], nout = nout, t = t)
                 
                 if self.CollisionalIonization:
                     Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)    
@@ -135,7 +139,7 @@ class RateCoefficients:
                 if not self.Isothermal:
                     k_H[i], Psi_N[i], Psi_N_dN[i] = self.PhotoElectricHeatingRate(species = i, Lbol = Lbol, r = r, 
                         x_HII = x_HII, indices_in = indices, indices_out = indices_out, ncol = ncol, dr = dr, 
-                        nout = nout, nabs = nabs, Phi_N = Phi_N[i], Phi_N_dN = Phi_N_dN[i], A = A[i])
+                        nout = nout, nabs = nabs, Phi_N = Phi_N[i], Phi_N_dN = Phi_N_dN[i], A = A[i], t = t)
                     zeta[i] = self.CollisionalIonizationCoolingRate(species = i, T = T)    
                     eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
                     psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)    
@@ -154,12 +158,12 @@ class RateCoefficients:
                             continue
                             
                         gamma[i][j] += self.SecondaryIonizationRate(Psi_N = Psi_N[j], Psi_N_dN = Psi_N_dN[j],
-                            Phi_N = Phi_N[j], Phi_N_dN = Phi_N_dN[j], 
+                            Phi_N = Phi_N[j], Phi_N_dN = Phi_N_dN[j], t = t,
                             Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr,
                             species = i, donor_species = j, x_HII = x_HII, A = A[j],
                             indices_in = indices, indices_out = indices_out, nout = nout)
                                     
-                    gamma[i] /= (E_th[i] * erg_per_ev)
+                    gamma[i] /= (E_th[i] * erg_per_ev)        
                                                         
         # Only the photon-conserving algorithm is capable of this - though in
         # the future, the discrete NPC solver could do this if we wanted.                                         
@@ -189,11 +193,11 @@ class RateCoefficients:
                     
                     # Optical depth up to this cell at energy E
                     tau_E = np.sum(10**ncol * self.sigma[0:,j])
-                                    
+                                                                    
                     # Photo-ionization by *this* energy group
                     Gamma_E[j], tmp, tmp = self.PhotoIonizationRate(E = E, 
-                        Qdot = Qdot[j], nabs = nabs, dr = dr, species = i,
-                        Vsh = Vsh, tau_E = tau_E, tau_c = tau_c[j][i])
+                        Qdot = Qdot[j], nabs = nabs, dr = dr, species = i, t = t,
+                        Vsh = Vsh, tau_E = tau_E, tau_c = tau_c[j][i], A = 1.0)
                         
                     # Total photo-ionization tally
                     Gamma[i] += Gamma_E[j]
@@ -241,14 +245,20 @@ class RateCoefficients:
                 
                 zeta[i] += self.CollisionalIonizationCoolingRate(species = i, T = T)  
                 eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
-                psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)
+                psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)     
+        
+        hubble = 0
+        compton = 0                                 
+        if self.CosmologicalExpansion:
+            hubble = self.HubbleCoolingRate(z)
+            compton = self.ComptonHeatingRate(z, n_H, n_He, n_e, x_HII, T)
                                                                                                                       
-        return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega]
+        return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, hubble, compton]
 
     def PhotoIonizationRate(self, species = None, E = None, Qdot = None, Lbol = None, 
         ncol = None, n_e = None, nabs = None, x_HII = None, indices_out = None,
         T = None, r = None, dr = None, indices_in = None, Vsh = None, ncell = None, nout = None,
-        A = 1.0, tau_E = None, tau_c = None):
+        A = None, tau_E = None, tau_c = None, t = None):
         """
         Returns photo-ionization rate coefficient which we denote elsewhere as Gamma.  
         
@@ -260,6 +270,9 @@ class RateCoefficients:
             Lbol = Bolometric luminosity of source (erg/s)
                         
         """     
+                          
+        if t > self.rs.tau:
+            return 0.0, 0.0, 0.0  
                           
         Phi_N = Phi_N_dN = None
                                         
@@ -275,17 +288,20 @@ class RateCoefficients:
             Q0 = Qdot * np.exp(-tau_E)                 # number of photons entering cell per sec
             dQ = Q0 * (1. - np.exp(-tau_c))            # number of photons absorbed in cell per sec
             IonizationRate = dQ / nabs[species] / Vsh  # ionizations / sec / atom        
-                  
+                                    
         return A * IonizationRate, Phi_N, Phi_N_dN
         
     def PhotoElectricHeatingRate(self, species = None, E = None, Qdot = None, Lbol = None, 
-        ncol = None, n_e = None, nabs = None, x_HII = None, 
+        ncol = None, n_e = None, nabs = None, x_HII = None,  
         T = None, r = None, dr = None, dt = None, indices_in = None, indices_out = None,
-        Phi_N = None, Phi_N_dN = None, nout = None, A = None):
+        Phi_N = None, Phi_N_dN = None, nout = None, A = None, t = None):
         """
         Photo-electric heating rate coefficient due to photo-electrons previously 
         bound to `species.'  If this method is called, it means TabulateIntegrals = 1.
         """
+        
+        if t > self.rs.tau:
+            return 0.0 
         
         Psi_N = Psi_N_dN = None
         
@@ -318,7 +334,7 @@ class RateCoefficients:
     def SecondaryIonizationRate(self, species = 0, donor_species = 0, E = None, Qdot = None, Lbol = None, 
         ncol = None, n_e = None, nabs = None, x_HII = None, tau = None,
         T = None, r = None, dr = None, dt = None, Psi_N = None, Psi_N_dN = None,
-        Phi_N = None, Phi_N_dN = None, A = None,
+        Phi_N = None, Phi_N_dN = None, A = None, t = None,
         indices_in = None, indices_out = None, nout = None):
         """
         Secondary ionization rate which we denote elsewhere as gamma (note little g).
@@ -328,6 +344,9 @@ class RateCoefficients:
             
         If this routine is called, it means TabulateIntegrals = 1.    
         """    
+        
+        if t > self.rs.tau:
+            return 0.0 
             
         if self.esec.Method < 2:    
             if self.PhotonConserving:
@@ -446,6 +465,24 @@ class RateCoefficients:
         
         return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
         
+    def HubbleCoolingRate(self, z):
+        """
+        Just the Hubble parameter. 
+        """
+        
+        return self.cosm.HubbleParameter(z)
+        
+    def ComptonHeatingRate(self, z, nH, nHe, ne, xHII, Tk):
+        """
+        Compton heating rate due to electron-CMB scattering.
+        """    
+        
+        Tcmb = self.cosm.TCMB(z)
+        ucmb = sigma_SB * Tcmb**4. / 4. / np.pi / c
+        
+        return xHII * k_B * nH * 8. * sigma_T * ucmb * \
+            (Tcmb - Tk) / 2. / (1. + self.cosm.y + xHII) / m_e / c    
+    
     def ShellVolume(self, r, dr):
         """
         Return volume of shell at distance r, thickness dr.

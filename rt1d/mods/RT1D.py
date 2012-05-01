@@ -68,8 +68,9 @@ def Shine(pf, r = None, IsRestart = False):
         LengthUnits = pf["LengthUnits"]
         StartRadius = pf["StartRadius"]
         GridDimensions = pf["GridDimensions"]
-        StopTime = pf["StopTime"] * TimeUnits
         MaximumGlobalTimestep = pf["MaximumGlobalTimestep"] * TimeUnits
+        StopTime = pf["StopTime"] * TimeUnits
+            
         
         # Print out cell-crossing and box-crossing times for convenience
         if rank == 0:
@@ -166,7 +167,7 @@ def Shine(pf, r = None, IsRestart = False):
             lb.insert(0, 0)
         else: 
             lb = None
-        
+                    
         # SOLVE RADIATIVE TRANSFER              
         while t < StopTime:
                                     

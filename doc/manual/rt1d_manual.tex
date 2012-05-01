@@ -24,6 +24,8 @@
 \usepackage[all]{hypcap}
 
 %%% START custom commands
+\newcommand{\H}{\text{H}}
+\newcommand{\He}{\text{He}}
 \newcommand{\HI}{\text{HI}}
 \newcommand{\HII}{\text{HII}}
 \newcommand{\HeI}{\text{HeI}}
@@ -275,6 +277,28 @@ Various methods for handling secondary electrons are compared for a $10^5$ K bla
 \label{fig:SecondaryIonizationMethods}
 \end{center}
 \end{figure*}
+
+% Cosmology
+\subsection{Additional Complexity: Cosmological Expansion}
+For an expanding universe, the number density of species $i$ (neglecting all processes except for the cosmological expansion) is
+\begin{equation}
+    n_i(z) = \bar{n}_i^0 (1 + z)^3 ,
+\end{equation}    
+where $\bar{n}_i^0$ is the number density today.  The rate of change in the number density of species $i$ is then
+\begin{align}
+    \frac{dn_i}{dt} & = 3 \bar{n}_i^0 (1 + z)^2 \frac{dz}{dt} \nonumber \\
+    & = 3 \bar{n}_i^0 (1 + z)^3 H(z)
+\end{align}
+It will be advantageous to work with ionized fractions now, i.e.
+\begin{align}
+    \dot{x}_{\HII} & = (\gHI + \gamma_{\HI} + \bHI \nel) (1 - \xHII) - \aHII \nel \xHII   \label{eq:HIIRateEquation} \\ 
+    \dot{x}_{\HeII} & = (\gHeI + \gamma_{\HeI} + \bHeI \nel) (1 - \xHeI - \xHeII) \nonumber + \aHeIII \nel \xHeIII \\  & - (\bHeII + \aHeII + \xiHeII) \nel \xHeII \label{eq:HeIIRateEquation} \\ 
+    \dot{x}_{\HeIII} & = (\gHeII + \gamma_{\HeII} + \bHeII \nel) \xHeII  - \aHeIII \nel \xHeIII . \label{eq:HeIIIRateEquation}
+\end{align}
+where
+\begin{equation}
+    n_e = \bar{n}_{\H}^0 (1 + \xHII) (1 + z)^3 + \bar{n}_{\He}^0 (1 + \xHeII + 2 \xHeIII) (1 + z)^3
+\end{equation}    
 
 \subsection{Time-stepping Techniques}
 

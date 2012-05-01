@@ -16,6 +16,7 @@ from .Multiplot import *
 from .Dataset import Dataset
 from .Inspection import Inspect
 from ..mods.Constants import *
+from ..mods.Cosmology import *
 from ..mods.Interpolate import Interpolate
 from ..mods.InitializeGrid import InitializeGrid
 from ..mods.SecondaryElectrons import SecondaryElectrons
@@ -28,6 +29,7 @@ class Analyze:
         self.data = self.ds.data
         self.pf = self.ds.pf    # dictionary
         self.g = InitializeGrid(self.pf)   
+        self.cosm = Cosmology(self.pf)
         self.iits = InitializeIntegralTables(self.pf, self.data[0], self.g)      
         self.esec = SecondaryElectrons(self.pf)         
         
@@ -207,7 +209,8 @@ class Analyze:
         
         pl.draw()
         
-    def RadialProfileMovie(self, field = 'x_HI', out = 'frames', scale = 'linear'):
+    def RadialProfileMovie(self, field = 'x_HI', out = 'frames', xscale = 'linear',
+        title = True):
         """
         Save time-series images of 'field' to 'out' directory.
         
@@ -235,12 +238,54 @@ class Analyze:
 
             ax.set_xlim(self.data[0].r[0] / self.pf['LengthUnits'], 1)        
             ax.set_ylim(mi, ma)    
-            ax.set_xscale(scale)     
+            ax.set_xscale(xscale) 
+            
+            if title:
+                ax.set_title(r'$t = %g \ \mathrm{Myr}$' % self.data[dd].t / self.pf['TimeUnits'])
                     
             pl.savefig('%s/dd%s_%s.png' % (out, str(dd).zfill(4), field))                        
             ax.clear()
             
         pl.close()    
+        
+    def Ionization_Temperature_Movie(self, out = 'frames', xscale = 'linear', title = True):
+        """
+        Meant to answer Eric's question.
+        """    
+                
+        for dd in self.data.keys():
+            
+            mp = multiplot(dims = (2, 1), useAxesGrid = False)
+            
+            exec('mp.grid[0].semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                self.data[%i].x_HI, ls = \'-\', color = \'k\', label = r\'$x_{\mathrm{HI}}$\')' % (dd, dd))
+            exec('mp.grid[0].semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                self.data[%i].x_HII, ls = \'--\', color = \'k\', label = r\'$x_{\mathrm{HII}}$\')' % (dd, dd))    
+            exec('mp.grid[1].semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                self.data[%i].T, ls = \'-\', color = \'k\')' % (dd, dd))
+                
+            mp.grid[0].set_xlim(self.data[0].r[0] / self.pf['LengthUnits'], 1)        
+            mp.grid[1].set_xlim(self.data[0].r[0] / self.pf['LengthUnits'], 1)        
+            mp.grid[1].set_xscale(xscale)     
+            mp.grid[0].set_xscale(xscale)     
+                        
+            mp.grid[1].set_xlabel(r'$r / L_{\mathrm{box}}$') 
+            mp.grid[0].set_ylabel(r'Species Fraction')  
+            mp.grid[1].set_ylabel(r'Temperature $(K)$')
+            
+            mp.grid[0].set_ylim(1e-5, 1.1)
+            mp.grid[1].set_ylim(1e2, 1e5)  
+            
+            mp.fix_ticks()
+            
+            mp.grid[0].legend(loc = 'lower right', ncol = 2, frameon = False)
+            
+            if title:
+                mp.grid[0].set_title(r'$t = %g \ \mathrm{Myr}$' % (self.data[dd].t / self.pf['TimeUnits']))
+            
+            pl.draw()        
+            pl.savefig('%s/dd%s_xT.png' % (out, str(dd).zfill(4)))                        
+            pl.close()
         
     def ClumpTest(self, t = [1,3, 15], color = 'k', legend = True):
         """
@@ -286,7 +331,10 @@ class Analyze:
         time = []
         value = []
         for dd in self.data.keys():
-            time.append(self.data[dd].t)
+            if self.pf["CosmologicalExpansion"]:
+                time.append(self.data[dd].z)
+            else:
+                time.append(self.data[dd].t)
             exec('value.append(self.data[%i].%s[%i])' % (dd, field, cell))
         
         return np.array(time), np.array(value)

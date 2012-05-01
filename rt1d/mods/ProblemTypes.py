@@ -63,7 +63,32 @@ def ProblemType(ptype):
               "DiscreteSpectrum": 0,
               "Isothermal": 0,
               "PlaneParallelField": 1              
-             }        
+             }  
+    
+    # Single-zone, cosmological expansion test         
+    if ptype == 0.1:
+        pf = {"ProblemType": 0.1, 
+              "CosmologicalExpansion": 1,
+              "TabulateIntegrals": 0, 
+              "LengthUnits": 1e-4 * cm_per_kpc, # 100 milliparsecs 
+              "GridDimensions": 1, 
+              "StartRadius": 0.99, # cell = 1 milliparsec across
+              "StopTime": 800, 
+              "dtDataDump": 1, 
+              "ODEMinStep": 1e-15,
+              "DensityProfile": 1,
+              "InitialRedshift": 400., 
+              "FinalRedshift": 6,
+              "TemperatureProfile": 1, 
+              "IonizationProfile": 0, 
+              "InitialHIIFraction": 1e-4, 
+              "SourceType": 0, 
+              "SourceLifetime": 0,
+              "DiscreteSpectrum": 1,
+              "Isothermal": 0,
+              "OpticalDepthDefiningIFront": [0, 0, 0]
+             }  
+                       
     
     # RT06-1, RT1: Pure hydrogen, isothermal HII region expansion, monochromatic spectrum at 13.6 eV
     if ptype in [1, 1.1]:

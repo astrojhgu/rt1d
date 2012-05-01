@@ -13,6 +13,7 @@ load-balancing, etc.)
 
 import copy
 import numpy as np
+from .Cosmology import Cosmology
 
 try:
     from mpi4py import MPI
@@ -25,12 +26,15 @@ except ImportError:
 class ControlSimulation:
     def __init__(self, pf):
         self.pf = pf
+        self.cosm = Cosmology(pf)
         
         self.GridDimensions = pf["GridDimensions"]
         self.grid = np.arange(self.GridDimensions)
         self.LengthUnits = pf["LengthUnits"]
         self.StartRadius = pf["StartRadius"]
         self.R0 = self.LengthUnits * self.StartRadius
+        self.z0 = self.pf["InitialRedshift"]
+        self.CosmologicalExpansion = self.pf["CosmologicalExpansion"]
         
         self.ParallelizationMethod = pf["ParallelizationMethod"]
         
@@ -75,15 +79,23 @@ class ControlSimulation:
                                                                     
         indices_in = r.coeff.Interpolate.GetIndices(ncol, logxHII)
 
-        Gamma = r.coeff.ConstructArgs([nabs, nion, n_H, n_He, n_e], 
-            indices_in, Lbol, self.R0, ncol, T, r.dx[0], 0.)[0]        
-                                                                                            
+        args = [nabs, nion, n_H, n_He, n_e]
+        args.extend(r.coeff.ConstructArgs([nabs, nion, n_H, n_He, n_e], 
+            indices_in, Lbol, self.R0, ncol, T, r.dx[0], 0., self.z0))   
+                                                                          
+        nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, \
+            zeta, eta, psi, xi, omega, hubble, compton = args
+                                                                                                        
         # START TIMESTEP CALCULATION
         dtHI = 1e50   
         dHIdt = 1e-50   
         if self.HIRestrictedTimestep and nabs[0] > 0:
-            dHIdt = nabs[0] * Gamma[0]
-            dtHI = self.MaxHIIChange * nabs[0] / dHIdt
+            dHIdt = nabs[0] * (Gamma[0] + Beta[0] * n_e) + \
+                    np.sum(gamma[0] * nabs) - \
+                    nion[0] * n_e * alpha[0]
+            if self.CosmologicalExpansion:        
+                dHIdt -= 3. * nabs[0] * hubble    
+            dtHI = self.MaxHIIChange * nabs[0] / abs(dHIdt)
         
         dtHeII = 1e50
         dHeIIdt = 1e-50
@@ -100,15 +112,21 @@ class ControlSimulation:
         dtne = 1e50     
         if self.ElectronRestrictedTimestep:  
             dHIIdt = nabs[0] * Gamma[0]
-            dHeIIdt = dHeIIdt = nabs[1] * Gamma[1]
-            dHeIIIdt = dHeIIIdt = nabs[2] * Gamma[2]              
+            dHeIIdt = nabs[1] * Gamma[1]
+            dHeIIIdt = nabs[2] * Gamma[2]              
             dedt = np.abs(dHIIdt + dHeIIdt + 2. * dHeIIIdt)
             dtne = self.MaxElectronChange * n_e / dedt 
-                  
-        return min(dtHI, dtHeII, dtHeIII)
+            
+        dtT = 1e50
+        if self.TemperatureRestrictedTimestep:
+            dTdt = np.abs(2. * T * self.cosm.HubbleParameter(self.z0))
+            dtT = self.MaxTemperatureChange * T / dTdt    
+
+        return min(dtHI, dtHeII, dtHeIII, dtne, dtT)
     
     def ComputePhotonTimestep(self, tau, nabs, nion, ncol, n_H, n_He, n_e, n_B, 
-        Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, T, dt):
+        Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, hubble, compton, 
+        T, z, dt):
         """
         Compute photon timestep based on maximum allowed fractional change
         in hydrogen and helium neutral fractions (Shapiro et al. 2004).
@@ -119,6 +137,8 @@ class ControlSimulation:
             dHIIdt = nabs[0] * (Gamma[0] + Beta[0] * n_e) + \
                      np.sum(gamma[0] * nabs) - \
                      nion[0] * n_e * alpha[0]
+            if self.CosmologicalExpansion:             
+                dHIIdt -= 3. * nabs[0] * hubble
             if tau[0] >= self.OpticalDepthDefiningIFront[0]:
                 dtHI = self.MaxHIIChange * nabs[0] / abs(dHIIdt)
         
@@ -162,9 +182,10 @@ class ControlSimulation:
         dtT = 1e50
         if self.TemperatureRestrictedTimestep:
             dTdt = np.abs(np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + \
-                np.sum(eta * nabs) + np.sum(psi * nabs) + nion[2] * omega[1]))
+                np.sum(eta * nabs) + np.sum(psi * nabs) + nion[2] * omega[1]) - \
+                3. * theta * T / 2.)
             dtT = self.MaxTemperatureChange * T / dTdt
-                      
+                        
         return min(dtHI, dtHeII, dtHeIII, dtHeI, dtne, dtT)        
         
     def LoadBalance(self, dtphot):

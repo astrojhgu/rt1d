@@ -12,6 +12,7 @@ of the parameter 'WriteFormat' in the parameter file.
 
 import h5py, os
 import numpy as np
+from .Cosmology import Cosmology
 
 try:
     import h5py
@@ -34,6 +35,7 @@ GlobalDir = os.getcwd()
 class WriteData:
     def __init__(self, pf):
         self.pf = pf
+        self.cosm = Cosmology(pf)
         self.TimeUnits = pf["TimeUnits"]
         self.OutputDirectory = pf["OutputDirectory"]
         self.OutputFormat = pf["OutputFormat"] and h5
@@ -63,6 +65,8 @@ class WriteData:
         for par in self.pf: 
             if par == "CurrentTime": 
                 pf_grp.create_dataset(par, data = t / self.TimeUnits)
+            elif par == "CurrentRedshift":
+                pf_grp.create_dataset(par, data = self.cosm.TimeToRedshiftConverter(0, t, self.pf['InitialRedshift']))
             elif par == "CurrentTimestep": 
                 pf_grp.create_dataset(par, data = dt / self.TimeUnits)
             else: 
@@ -106,11 +110,17 @@ class WriteData:
         for par in names:
             
             # ProblemType must be the first parameter
-            if par == 'ProblemType': continue
+            if par == 'ProblemType': 
+                continue
             
-            if par == "CurrentTime": val = t / self.TimeUnits
-            elif par == "CurrentTimestep": val = dt / self.TimeUnits
-            else: val = self.pf[par]
+            if par == "CurrentTime": 
+                val = t / self.TimeUnits
+            elif par == "CurrentRedshift":
+                val = self.cosm.TimeToRedshiftConverter(0, t, self.pf['InitialRedshift'])
+            elif par == "CurrentTimestep": 
+                val = dt / self.TimeUnits
+            else: 
+                val = self.pf[par]
             
             print >> f, "{0} = {1}".format(par.ljust(35, ' '), val)
             

@@ -82,16 +82,15 @@ class SolveRateEquations:
                                                                                                             
             # Solve away
             ynext, tmp = self.solve(f, ynow, xnow, h, Dfun, args)
-                        
+                                                                                                                                    
             # Check for NaNs, reduce timestep or raise exception if h == hmin
             if self.CheckForGoofiness:
-                everything_ok = self.SolutionCheck(ynext, args) 
-                                                        
+                everything_ok = self.SolutionCheck(ynext, args)
+                                                                                                                                
                 if not everything_ok[0] and h > self.hmin:
                     h = max(self.hmin, h / 2.)
                     continue
                 elif not everything_ok[0] and h == self.hmin:
-                    print everything_ok
                     raise ValueError('NAN encountered on minimum ODE step. Exiting.') 
                                   
                 # Check to see if number densities are all physically reasonable
@@ -160,11 +159,14 @@ class SolveRateEquations:
                         return y - h * f([yi[0], yi[1], yi[2], y], xi + h, newargs)[i] - yi[i]
                 
                 # Guesses = 0 or for example a guess for n_HI > n_H will mess things up                
-                if yi[i] <= 0: 
-                    guess = 0.4999 * self.guesses[i]
-                elif (yi[i] > self.guesses[i] and i < 3):
-                    guess = 0.4999 * self.guesses[i]    
-                else: 
+                #if yi[i] <= 0: 
+                #    guess = 0.4999 * self.guesses[i]
+                #elif (yi[i] > self.guesses[i] and i < 3):
+                #    guess = 0.4999 * self.guesses[i]    
+                #else:
+                if i < 3: 
+                    guess = 0.49999 * yi[i]
+                else:
                     guess = yi[i]
 
                 yip1[i], itr[i] = self.rootfinder(ynext, guess, i)
