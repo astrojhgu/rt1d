@@ -135,8 +135,8 @@ class InitializeGrid:
         if self.TemperatureProfile == 0: 
             temperature = self.InitialTemperature    
         if self.TemperatureProfile == 1: 
-            if self.InitialRedshift < 300:
-                temperature = 2.725 * (1. + self.InitialRedshift)**3. / 251.
+            if self.InitialRedshift <= self.cosm.zdec:
+                temperature = self.cosm.TcmbNow * (1. + self.InitialRedshift)**2 / (1. + self.cosm.zdec)
             else:
                 temperature = 2.725 * (1. + self.InitialRedshift)
                 

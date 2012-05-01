@@ -477,11 +477,16 @@ class RateCoefficients:
         Compton heating rate due to electron-CMB scattering.
         """    
         
-        Tcmb = self.cosm.TCMB(z)
-        ucmb = sigma_SB * Tcmb**4. / 4. / np.pi / c
-        
-        return xHII * k_B * nH * 8. * sigma_T * ucmb * \
-            (Tcmb - Tk) / 2. / (1. + self.cosm.y + xHII) / m_e / c    
+        if z > self.cosm.zdec:
+            Tcmb = self.cosm.TCMB(z)
+            ucmb = sigma_SB * Tcmb**4. / 4. / np.pi / c
+            
+            return xHII * k_B * nH * 8. * sigma_T * ucmb * \
+                (Tcmb - Tk) / 2. / (1. + self.cosm.y + xHII) / m_e / c   
+        else:
+            return 0.0
+            # Implement source-dependent compton heating        
+                 
     
     def ShellVolume(self, r, dr):
         """

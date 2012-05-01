@@ -119,7 +119,7 @@ class ControlSimulation:
             
         dtT = 1e50
         if self.TemperatureRestrictedTimestep:
-            dTdt = np.abs(2. * T * self.cosm.HubbleParameter(self.z0))
+            dTdt = np.abs(2. * T * hubble)
             dtT = self.MaxTemperatureChange * T / dTdt    
 
         return min(dtHI, dtHeII, dtHeIII, dtne, dtT)
@@ -183,7 +183,7 @@ class ControlSimulation:
         if self.TemperatureRestrictedTimestep:
             dTdt = np.abs(np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + \
                 np.sum(eta * nabs) + np.sum(psi * nabs) + nion[2] * omega[1]) - \
-                3. * theta * T / 2.)
+                3. * hubble * T / 2.)
             dtT = self.MaxTemperatureChange * T / dTdt
                         
         return min(dtHI, dtHeII, dtHeIII, dtHeI, dtne, dtT)        

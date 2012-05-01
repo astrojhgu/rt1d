@@ -27,6 +27,8 @@ class Cosmology:
         self.OmegaBaryonNow = pf["OmegaBaryonNow"]
         self.OmegaCDMNow = self.OmegaMatterNow - self.OmegaBaryonNow
         self.HubbleParameterNow = pf["HubbleParameterNow"] * 100 / km_per_mpc
+        self.h70 = pf["HubbleParameterNow"]
+        self.TcmbNow = pf["CMBTemperatureNow"]
         
         self.CriticalDensityNow = (3 * self.HubbleParameterNow**2) / (8 * np.pi * G)
         
@@ -34,6 +36,8 @@ class Cosmology:
         self.y = self.Y / 4. / (1. - self.Y) 
         
         self.X = 1. - self.Y
+        
+        self.zdec = 150. * (self.OmegaBaryonNow * self.h70**2 / 0.023)**0.4 - 1.
 
         # Hydrogen, helium, electron, and baryon densities today (z = 0)
         self.rho_b_z0 = self.MeanBaryonDensity(0)
@@ -41,6 +45,10 @@ class Cosmology:
         self.nHe0 = self.y * self.nH0
         self.ne0 = self.nH0 + 2. * self.nHe0
         self.rho_n_z0 = self.nH0 + self.nHe0 + self.ne0
+        
+        self.InitialRedshift = self.zi = pf["InitialRedshift"]
+        self.FinalRedshift = self.zf = \
+            self.TimeToRedshiftConverter(0., pf["StopTime"] * pf['TimeUnits'], self.zi)
         
     def TimeToRedshiftConverter(self, t_i, t_f, z_i):
         """
@@ -56,7 +64,7 @@ class Cosmology:
             np.sqrt(self.OmegaMatterNow) / self.HubbleParameterNow / 3.    
         
     def TCMB(self, z):
-        return 2.725 * (1. + z)    
+        return self.TcmbNow * (1. + z)    
         
     def ScaleFactor(self, z):
         return 1.0 / (1.0 + z)

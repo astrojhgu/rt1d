@@ -148,7 +148,8 @@ def SetDefaultParameterValues():
         "OmegaBaryonNow": 0.044,  
         "OmegaLambdaNow": 0.728,  
         "HubbleParameterNow": 0.702,
-        "PrimordialHeliumByMass": 0.2477
+        "PrimordialHeliumByMass": 0.2477,
+        "CMBTemperatureNow": 2.725
           
         }
 

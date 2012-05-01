@@ -24,8 +24,6 @@
 \usepackage[all]{hypcap}
 
 %%% START custom commands
-\newcommand{\H}{\text{H}}
-\newcommand{\He}{\text{He}}
 \newcommand{\HI}{\text{HI}}
 \newcommand{\HII}{\text{HII}}
 \newcommand{\HeI}{\text{HeI}}
@@ -280,25 +278,13 @@ Various methods for handling secondary electrons are compared for a $10^5$ K bla
 
 % Cosmology
 \subsection{Additional Complexity: Cosmological Expansion}
-For an expanding universe, the number density of species $i$ (neglecting all processes except for the cosmological expansion) is
-\begin{equation}
-    n_i(z) = \bar{n}_i^0 (1 + z)^3 ,
-\end{equation}    
-where $\bar{n}_i^0$ is the number density today.  The rate of change in the number density of species $i$ is then
+For an expanding universe, things are slightly more complicated, as ion densities will have an additional term $\propto (1 + z)^3$, and we must take into account Hubble cooling, and Compton scattering of CMB photons.
+
+We must also modify the minimum and maximum column densities for our integral tables.  To calculate what these should be for a simulation spanning the redshift interval $(z_i, z_f)$, minimum species fraction $x_{\mathrm{min}}$, and grid resolution (in proper coordinates) $dx$, do
 \begin{align}
-    \frac{dn_i}{dt} & = 3 \bar{n}_i^0 (1 + z)^2 \frac{dz}{dt} \nonumber \\
-    & = 3 \bar{n}_i^0 (1 + z)^3 H(z)
-\end{align}
-It will be advantageous to work with ionized fractions now, i.e.
-\begin{align}
-    \dot{x}_{\HII} & = (\gHI + \gamma_{\HI} + \bHI \nel) (1 - \xHII) - \aHII \nel \xHII   \label{eq:HIIRateEquation} \\ 
-    \dot{x}_{\HeII} & = (\gHeI + \gamma_{\HeI} + \bHeI \nel) (1 - \xHeI - \xHeII) \nonumber + \aHeIII \nel \xHeIII \\  & - (\bHeII + \aHeII + \xiHeII) \nel \xHeII \label{eq:HeIIRateEquation} \\ 
-    \dot{x}_{\HeIII} & = (\gHeII + \gamma_{\HeII} + \bHeII \nel) \xHeII  - \aHeIII \nel \xHeIII . \label{eq:HeIIIRateEquation}
-\end{align}
-where
-\begin{equation}
-    n_e = \bar{n}_{\H}^0 (1 + \xHII) (1 + z)^3 + \bar{n}_{\He}^0 (1 + \xHeII + 2 \xHeIII) (1 + z)^3
-\end{equation}    
+    N_{\HI}^{\mathrm{min}} & = \bar{n}_H^0 (1 + z_f)^3 dx x_{\mathrm{min}}   \\
+    N_{\HI}^{\mathrm{max}} & = \bar{n}_H^0 (1 + z_i)^3 \Lbox .
+\end{align}    
 
 \subsection{Time-stepping Techniques}
 

@@ -701,10 +701,10 @@ class Radiate:
                 + np.sum(eta * nion) + np.sum(psi * nabs) + q[2] * omega[1])      
                                
             if self.CosmologicalExpansion:
-                dqdt[3] = -4. * hubble * q[3] / 3.
+                dqdt[3] -=2. * hubble * q[3]
                 
                 if self.ComptonHeating:
                     dqdt[3] += compton
-                
+                                                        
         return dqdt
         

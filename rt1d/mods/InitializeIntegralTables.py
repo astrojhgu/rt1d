@@ -14,10 +14,11 @@ To do:
 
 import numpy as np
 import h5py, os, re
-from rt1d.mods.Constants import *
-from rt1d.mods.ComputeCrossSections import PhotoIonizationCrossSection
-from rt1d.mods.RadiationSource import RadiationSource
-from rt1d.mods.SecondaryElectrons import SecondaryElectrons
+from .Constants import *
+from .Cosmology import Cosmology 
+from .ComputeCrossSections import PhotoIonizationCrossSection
+from .RadiationSource import RadiationSource
+from .SecondaryElectrons import SecondaryElectrons
 
 try:
     from progressbar import *
@@ -62,6 +63,7 @@ class InitializeIntegralTables:
     def __init__(self, pf, data, grid):
         self.pf = pf
         self.rs = RadiationSource(pf)
+        self.cosm = Cosmology(pf)
         self.esec = SecondaryElectrons(pf)
                 
         self.OutputDirectory = pf["OutputDirectory"]
@@ -90,12 +92,18 @@ class InitializeIntegralTables:
         self.SpectrumAbsorbingColumn = pf["SpectrumAbsorbingColumn"]
         
         # Column densities - determine automatically
-        self.n_H = data['HIDensity'] + data['HIIDensity']
-        self.n_He = data['HeIDensity'] + data['HeIIDensity'] + data['HeIIIDensity']
-        self.HIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.min(self.n_H * grid.dx)))
-        self.HIColumnMax = np.ceil(np.log10(pf["LengthUnits"] * np.max(self.n_H)))
-        self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.min(self.n_He * grid.dx)))
-        self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(pf["LengthUnits"] * np.max(self.n_He)))            
+        if self.pf["CosmologicalExpansion"]:
+            self.HIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * self.cosm.nH0 * (1. + self.cosm.zf)**3 * grid.dx))
+            self.HIColumnMax = np.ceil(np.log10(self.cosm.nH0 * (1. + self.cosm.zi)**3 * pf["LengthUnits"]))
+            self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(10**self.HIColumnMin * self.cosm.y))
+            self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(10**self.HIColumnMax * self.cosm.y))
+        else:    
+            self.n_H = data['HIDensity'] + data['HIIDensity']
+            self.n_He = data['HeIDensity'] + data['HeIIDensity'] + data['HeIIIDensity']
+            self.HIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.min(self.n_H * grid.dx)))
+            self.HIColumnMax = np.ceil(np.log10(pf["LengthUnits"] * np.max(self.n_H)))
+            self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(pf["MinimumSpeciesFraction"] * np.min(self.n_He * grid.dx)))
+            self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(pf["LengthUnits"] * np.max(self.n_He)))            
         
         self.HINBins = pf["ColumnDensityBinsHI"]
         self.HeINBins = pf["ColumnDensityBinsHeI"]
