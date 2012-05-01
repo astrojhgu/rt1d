@@ -11,6 +11,7 @@ Description: Subset of my homemade odeint routine made special for rt1d.
 
 import copy
 import numpy as np
+from .Cosmology import Cosmology
 
 class SolveRateEquations:
     def __init__(self, pf, guesses, AdaptiveODEStep = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
@@ -29,10 +30,13 @@ class SolveRateEquations:
         """
 
         self.pf = pf
+        self.cosm = Cosmology(pf)
+        
         self.debug = self.pf["Debug"]
         self.MultiSpecies = pf["MultiSpecies"]
         self.Isothermal = pf["Isothermal"]
         self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
+        self.CosmologicalExpansion = pf["CosmologicalExpansion"]
         self.CheckForGoofiness = pf["CheckForGoofiness"]
         
         self.AdaptiveODEStep = AdaptiveODEStep
@@ -52,7 +56,7 @@ class SolveRateEquations:
         # Guesses
         self.guesses = np.array(guesses)
                 
-    def integrate(self, f, ynow, xnow, xf, Dfun, hpre, *args):
+    def integrate(self, f, ynow, xnow, xf, znow, zf, Dfun, hpre, *args):
         """
         This routine does all the work.
         
@@ -68,6 +72,8 @@ class SolveRateEquations:
             h = self.hmax
         else: 
             h = hpre
+            
+        x0 = xnow    
                                   
         i = 1
         ct = 0
@@ -85,8 +91,8 @@ class SolveRateEquations:
                                                                                                                                     
             # Check for NaNs, reduce timestep or raise exception if h == hmin
             if self.CheckForGoofiness:
-                everything_ok = self.SolutionCheck(ynext, args)
-                                                                                                                                
+                everything_ok = self.SolutionCheck(ynext, xnext - x0, znow, args)
+                                                                                                                                                                                 
                 if not everything_ok[0] and h > self.hmin:
                     h = max(self.hmin, h / 2.)
                     continue
@@ -97,7 +103,7 @@ class SolveRateEquations:
                 # (i.e. positive, species fractions <= 1)        
                 if not np.all(everything_ok[1:]):
                                         
-                    ynext, ok = self.ApplyFloor(ynext, args)
+                    ynext, ok = self.ApplyFloor(ynext, xnext - x0, znow, args)
                                                                                             
                     if not np.all(ok):
                         if h > self.hmin:
@@ -109,7 +115,7 @@ class SolveRateEquations:
             # Adaptive time-stepping
             if self.stepper:       
                                       
-                tol_met, ok = self.stepper(f, ynow, xnow, ynext, xnext, h, Dfun, args)
+                tol_met, ok = self.stepper(f, ynow, xnow, ynext, xnext, h, Dfun, xnext - x0, znow, args)               
                                 
                 if not np.all(tol_met):  
                     if h == self.hmin: 
@@ -159,12 +165,12 @@ class SolveRateEquations:
                         return y - h * f([yi[0], yi[1], yi[2], y], xi + h, newargs)[i] - yi[i]
                 
                 # Guesses = 0 or for example a guess for n_HI > n_H will mess things up                
-                #if yi[i] <= 0: 
-                #    guess = 0.4999 * self.guesses[i]
+                if yi[i] <= 0: 
+                    guess = 0.4999 * self.guesses[i]
                 #elif (yi[i] > self.guesses[i] and i < 3):
                 #    guess = 0.4999 * self.guesses[i]    
                 #else:
-                if i < 3: 
+                elif i < 3: 
                     guess = 0.49999 * yi[i]
                 else:
                     guess = yi[i]
@@ -180,7 +186,7 @@ class SolveRateEquations:
                             
         return rtn, itr
         
-    def SolutionCheck(self, ynext, args):
+    def SolutionCheck(self, ynext, dt, znow, args):
         """
         Return four-element array representing things that could be wrong with
         our solutions. 
@@ -191,8 +197,14 @@ class SolveRateEquations:
             args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi, xi)
         """    
                 
-        nH = args[2]
-        nHe = args[3]
+        if self.CosmologicalExpansion:
+            znext = self.cosm.TimeToRedshiftConverter(0, dt, znow)
+            nH = self.cosm.nH0 * (1. + znext)**3
+            nHe = self.cosm.nHe0 * (1. + znext)**3
+        else:            
+            nH = args[2]
+            nHe = args[3]
+            
         nHII = ynext[0]
         nHeII = ynext[1] 
         nHeIII = ynext[2] 
@@ -215,16 +227,22 @@ class SolveRateEquations:
                  
         return everything_ok                      
                                                         
-    def ApplyFloor(self, ynext, args):
+    def ApplyFloor(self, ynext, dt, znow, args):
         """
         Apply floors in ionization (and potentially, but not implemented) internal energy.
         
         ok = [n_HII <= n_H, n_HeII <= n_He, n_HeIII <= n_He, (n_HeII + n_HeIII) <= n_He]
         
         """   
-                        
-        nH = args[2]
-        nHe = args[3] 
+        
+        if self.CosmologicalExpansion:
+            znext = self.cosm.TimeToRedshiftConverter(0, dt, znow)
+            nH = self.cosm.nH0 * (1. + znext)**3
+            nHe = self.cosm.nHe0 * (1. + znext)**3
+        else:            
+            nH = args[2]
+            nHe = args[3]
+
         nHII = ynext[0] 
         nHeII = ynext[1]
         nHeIII = ynext[2] 
@@ -285,7 +303,7 @@ class SolveRateEquations:
                     
         return ynext, ok
         
-    def StepDoubling(self, f, yi, xi, yip1, xip1, h, Dfun, args):    
+    def StepDoubling(self, f, yi, xi, yip1, xip1, h, Dfun, dt, znow, args):    
         """
         Calculate y_n+1 in two ways - first via a single step spanning 2h, and second
         using two steps spanning h each.  The difference gives an estimate of the 
@@ -295,7 +313,7 @@ class SolveRateEquations:
         ynp2_os, tmp = self.solve(f, yi, xi, 2. * h, Dfun, args) # y_n+2 using one step        
         ynp2_ts, tmp = self.solve(f, yip1, xip1, h, Dfun, args)  # y_n+2 using two steps
             
-        ynp2_os, ok = self.ApplyFloor(ynp2_os, args)  
+        ynp2_os, ok = self.ApplyFloor(ynp2_os, dt, znow, args)  
                 
         err_abs = np.abs(ynp2_ts - ynp2_os)        
         err_tol = self.xmin + self.xmin * ynp2_ts

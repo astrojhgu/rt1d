@@ -327,7 +327,7 @@ class RateCoefficients:
                 heat = (Psi_N - Psi_N_dN - E_th[species] * erg_per_ev * (Phi_N - Phi_N_dN))                   
             else:
                 Psi_N = self.Interpolate.interp(indices_in, "PsiHat%i" % species, ncol, x_HII = x_HII)
-                heat = Psi_N
+                heat = Psi_N                    
                                     
             return A * heat, None, None            
         

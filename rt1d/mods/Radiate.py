@@ -47,7 +47,7 @@ m_HeII = 2.0 * (m_p + m_n) + m_e
 E_th = [13.6, 24.6, 54.4]
 
 neglible_tau = 1e-12
-neglible_column = 1
+neglible_column = 10
 
 class Radiate:
     def __init__(self, pf, data, itabs, n_col): 
@@ -276,6 +276,9 @@ class Radiate:
             
         if rank == 0 and self.ProgressBar: 
             self.pbar.finish()    
+            
+        if np.any(newdata['HIDensity'] < 0):
+            print 'AHHHHHHHHHH!', newdata['HIIDensity'][0] - self.cosm.nH0 * (1. + self.z + self.dz)**3
                                                                                                                                                                                  
         return newdata, h, newdt, lb
         
@@ -356,7 +359,7 @@ class Radiate:
             ######################################        
                                                           
             tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, 
-                self.q_all[cell], t, t + dt, None, h, *args)
+                self.q_all[cell], t, t + dt, self.z, self.z - self.dz, None, h, *args)
                                                                                                                                        
             # Unpack results of coupled equations
             newHII, newHeII, newHeIII, newE = qnew 
@@ -705,6 +708,6 @@ class Radiate:
                 
                 if self.ComptonHeating:
                     dqdt[3] += compton
-                                                        
+                                                                            
         return dqdt
         
