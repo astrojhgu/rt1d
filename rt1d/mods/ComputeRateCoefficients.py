@@ -271,7 +271,7 @@ class RateCoefficients:
                         
         """     
                           
-        if t > self.rs.tau:
+        if t >= self.rs.tau:
             return 0.0, 0.0, 0.0  
                           
         Phi_N = Phi_N_dN = None
@@ -300,7 +300,7 @@ class RateCoefficients:
         bound to `species.'  If this method is called, it means TabulateIntegrals = 1.
         """
         
-        if t > self.rs.tau:
+        if t >= self.rs.tau:
             return 0.0 
         
         Psi_N = Psi_N_dN = None
@@ -345,7 +345,7 @@ class RateCoefficients:
         If this routine is called, it means TabulateIntegrals = 1.    
         """    
         
-        if t > self.rs.tau:
+        if t >= self.rs.tau:
             return 0.0 
             
         if self.esec.Method < 2:    

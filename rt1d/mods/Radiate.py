@@ -198,7 +198,9 @@ class Radiate:
         self.nB_all = self.n_H_arr + self.n_He_arr + self.ne_all
         self.q_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"], 
             3. * k_B * self.nB_all * data["Temperature"] / 2.])
-                
+        
+        #print 0, self.q_all[0][-1], data["Temperature"]
+        
         # Retrieve indices used for N-D interpolation
         self.indices_all = []
         for i, col in enumerate(self.ncol_all):
@@ -243,7 +245,12 @@ class Radiate:
         # SOLVE: c = finite   
         else:
             newdata, dtphot = self.EvolvePhotonsAtFiniteSpeed(newdata, t, dt, h)
-         
+        
+        n_B = newdata['HIDensity'][0] + newdata['HIIDensity'][0] + newdata['ElectronDensity'][0] + \
+            newdata['HeIDensity'][0] + newdata['HeIIDensity'][0] + newdata['HeIIIDensity'][0]
+        
+        #print 3, self.z - self.dz, 3. * k_B * n_B * newdata['Temperature'][0] / 2., newdata['Temperature'][0]
+                            
         ### 
         ## Tidy up a bit
         ###
@@ -365,20 +372,28 @@ class Radiate:
                 n_H = self.cosm.nH0 * (1. + (self.z - self.dz))**3
                 n_He = self.cosm.nHe0 * (1. + (self.z - self.dz))**3  
                 n_e = newHII + newHeII + 2.0 * newHeIII
-                n_B = n_H + n_He + n_e             
+                n_B = n_H + n_He + n_e
+                #print 'HEY', self.data['HIIDensity'] - newHII
                                 
             # Calculate neutral fractions
             newHI = n_H - newHII
             newHeI = n_He - newHeII - newHeIII 
                                                 
             # Convert from internal energy back to temperature
-            newT = newE * 2. / 3. / k_B / n_B
-                                    
+            if self.Isothermal:
+                newT = T
+            else:
+                newT = newE * 2. / 3. / k_B / n_B
+            
+            #print 1, self.z, self.z - self.dz, self.q_all[0][-1], newE, T, newT, self.nB_all[cell], n_B
+                        
             # Store data
             newdata = self.StoreData(newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
                 tau, odeitr, h, rootitr, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, 
                 omega, hubble, compton)
-                                                                                                            
+                
+            #print 2, 3. * k_B * n_B * newdata['Temperature'][cell] / 2., newT, self.ne_all[cell], n_e
+                                                                                            
             ######################################
             ################ DONE ################
             ######################################

@@ -21,6 +21,7 @@ from .Integrate import simpson
 
 class Cosmology:
     def __init__(self, pf):
+        self.pf = pf
         self.OmegaMatterNow = pf["OmegaMatterNow"]
         self.OmegaLambdaNow = pf["OmegaLambdaNow"]
         self.OmegaBaryonNow = pf["OmegaBaryonNow"]
@@ -29,7 +30,7 @@ class Cosmology:
         
         self.CriticalDensityNow = (3 * self.HubbleParameterNow**2) / (8 * np.pi * G)
         
-        self.Y = pf["PrimordialHeliumByMass"] * pf["MultiSpecies"]            
+        self.Y = self.pf["PrimordialHeliumByMass"] * self.pf["MultiSpecies"]            
         self.y = self.Y / 4. / (1. - self.Y) 
         
         self.X = 1. - self.Y
