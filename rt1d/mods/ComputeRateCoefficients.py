@@ -481,12 +481,12 @@ class RateCoefficients:
             Tcmb = self.cosm.TCMB(z)
             ucmb = sigma_SB * Tcmb**4. / 4. / np.pi / c
             
-            return xHII * k_B * nH * 8. * sigma_T * ucmb * \
-                (Tcmb - Tk) / 2. / (1. + self.cosm.y + xHII) / m_e / c   
+            return 4. * sigma_T * ne * ucmb * k_B * (Tcmb - Tk) / m_e / c
+            #return xHII * k_B * (nH + nHe + ne) * 4. * sigma_T * ucmb * \
+            #    (Tcmb - Tk) / (1. + self.cosm.y + xHII) / m_e / c   
         else:
             return 0.0
             # Implement source-dependent compton heating        
-                 
     
     def ShellVolume(self, r, dr):
         """

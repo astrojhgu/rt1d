@@ -29,11 +29,14 @@ def ReadParameterFile(pf):
     f = open(pf, "r")
     pf_dict = SetDefaultParameterValues()
     for line in f:
-        if not line.split(): continue
-        if line.split()[0][0] == "#": continue
+        if not line.split(): 
+            continue
+        if line.split()[0][0] == "#": 
+            continue
         
         # This will prevent crashes if there is not a blank line at the end of the parameter file
-        if line[-1] != '\n': line += '\n'
+        if line[-1] != '\n': 
+            line += '\n'
         
         # Cleave off end-of-line comments.
         line = line[:line.rfind("#")].strip()

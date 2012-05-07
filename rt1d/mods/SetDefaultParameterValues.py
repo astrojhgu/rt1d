@@ -127,7 +127,8 @@ def SetDefaultParameterValues():
         "SourceTemperature": 1e5,  
         "SourceMass": 1e3,  
         "SourceLifetime": 1e10,  
-        "SourceRadiativeEfficiency": 0.1,  
+        "SourceRadiativeEfficiency": 0.1,
+        "SourceISCO": 0,  
           
         # Spectral parameters
         "DiscreteSpectrum": 0,  
@@ -138,6 +139,9 @@ def SetDefaultParameterValues():
         "SpectrumMaxNormEnergy": 5e2,  
         "SpectrumPhotonLuminosity": 5e48,  
         "SpectrumAbsorbingColumn": 1.585e19,  
+        "SpectrumDiskFraction": 1.0,
+        "SpectrumColorCorrection": 1.7,
+        "SpectrumTimeEvolution": 0,
           
         # Set discrete spectrum manually  
         "DiscreteSpectrumSED": [13.6],  

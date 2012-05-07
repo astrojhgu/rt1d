@@ -90,6 +90,7 @@ class InitializeIntegralTables:
         self.SpectrumMinEnergy = pf["SpectrumMinEnergy"]
         self.SpectrumMaxEnergy = pf["SpectrumMaxEnergy"]
         self.SpectrumAbsorbingColumn = pf["SpectrumAbsorbingColumn"]
+        self.SpectrumDiskFraction = pf["SpectrumDiskFraction"]
         
         # Column densities - determine automatically
         if self.pf["CosmologicalExpansion"]:
@@ -181,6 +182,11 @@ class InitializeIntegralTables:
         elif self.SourceType == 4:
             src = "apl"
             prop = "{0}_{0}n".format(self.SpectrumPowerLawIndex, self.SpectrumAbsorbingColumn)    
+      
+        elif self.SourceType == 5:
+            src = "mcdpl"
+            prop = "{0}_{0}n".format(self.SpectrumDiskFraction, self.SpectrumPowerLawIndex)    
+      
                     
         # Limits
         Hlim = '%i%i' % (self.HIColumn[0], self.HIColumn[-1])

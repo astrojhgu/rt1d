@@ -124,19 +124,21 @@ At each time-step, we also solve for the temperature evolution, $dT_k/dt$,
 which
 is given by
 \begin{align}
-    \frac{3}{2}\frac{d}{dt}\left(\frac{\kB T_k \ntot}{\mu}\right) & = \fheat  \sum_i n_i \Heat_i - \sum_i \zeta_i n_e n_i - \sum_i \eta_i n_e n_i \nonumber \\ & - \sum_i \psi_i n_e n_i - \omega_{\HeII} n_e \nHeII \label{eq:TemperatureEvolution} 
+    \frac{3}{2}\frac{d}{dt}\left(\frac{\kB T_k \ntot}{\mu}\right) & = \fheat  \sum_i n_i \Heat_i - \sum_i \zeta_i n_e n_i - \sum_{i^{\prime}} \eta_i n_e n_i \nonumber \\ & - \sum_i \psi_i n_e n_i - \omega_{\HeII} n_e \nHeII \label{eq:TemperatureEvolution} 
 \end{align}
-where $\Heat_i$ is the photo-electric heating rate coefficient (due to
-electrons previously bound to species $i$), $\omega_{\HeII}$ is the dielectric
-recombination cooling coefficient, and $\zeta_i$, $\eta_i$, and $\psi_i$ are
-the collisional ionization, recombination, and collisional excitation cooling
-coefficients, respectively. The constants in Equation
-\ref{eq:TemperatureEvolution} are the total number density of baryons, $\ntot
-= n_\mathrm{H} + n_{\mathrm{He}} + n_e$, the mean molecular weight, $\mu$,
-Boltzmann's constant, $\kB$, and the fraction of secondary electron energy
-deposited as heat, $\fheat$. We use the formulae in Appendix B of
-\citet{Fukugita1994} to compute the values of $\alpha_i$, $\beta_i$, $\xi_i$,
-$\zeta_i$, $\eta_i$, $\psi_i$, and $\omega_{\HeII}$.
+where the index $i$ corresponds as usual to species that have bound electrons,
+and $i^{\prime}$ corresponds to ionized species. $\Heat_i$ is the
+photo-electric heating rate coefficient (due to electrons previously bound to
+species $i$), $\omega_{\HeII}$ is the dielectric recombination cooling
+coefficient, and $\zeta_i$, $\eta_i$, and $\psi_i$ are the collisional
+ionization, recombination, and collisional excitation cooling coefficients,
+respectively. The constants in Equation \ref{eq:TemperatureEvolution} are the
+total number density of baryons, $\ntot = n_\mathrm{H} + n_{\mathrm{He}} +
+n_e$, the mean molecular weight, $\mu$, Boltzmann's constant, $\kB$, and the
+fraction of secondary electron energy deposited as heat, $\fheat$. We use the
+formulae in Appendix B of \citet{Fukugita1994} to compute the values of
+$\alpha_i$, $\beta_i$, $\xi_i$, $\zeta_i$, $\eta_i$, $\psi_i$, and
+$\omega_{\HeII}$.
 
 % Ionization and Heating Rates
 \subsection{Computing the Ionization and Heating Rates}
@@ -247,7 +249,7 @@ case, but are perhaps more intuitive.
 
 % Secondary Electrons
 \subsection{Additional Complexity: Energy Dependent Secondary Electron Treatment}
-In the previous section (and in all of Mirocha et al. 2012), we considered the asymptotic limit of \citet{Shull1985}, in which the fractional energy deposition of secondary electrons as heat, ionization, and excitation depends only on the hydrogen ionized fraction.  \citet{Furlanetto2010} updated this work, providing lookup tables of deposition fraction as a function of both ionized fraction and electron energy.  These effects are most important at $E \lesssim 10^2$ eV.  
+In the previous section (and in all of \citet{Mirocha2012}), we considered the asymptotic limit of \citet{Shull1985}, in which the fractional energy deposition of secondary electrons as heat, ionization, and excitation depends only on the hydrogen ionized fraction.  \citet{Furlanetto2010} updated this work, providing lookup tables of deposition fraction as a function of both ionized fraction and electron energy.  These effects are most important at $E \lesssim 10^2$ eV.  
 
 To accommodate this model, we must redefine the quantities $\Phi_i$ and $\Psi_i$.  We will use a tilde to denote the new quantities related to secondary ionization, 
 \begin{align}
@@ -331,7 +333,7 @@ These were added for convenience in January, 2011.  If you want to make changes 
 
 \item [\texttt{ProblemType = 2.1}] Same as \texttt{ProblemType = 2}, except we sample the continuous blackbody spectrum with the four energy groups used by \citet{Wise2011}.
 
-\item [\texttt{ProblemType = 2.2}] Same as \texttt{ProblemType = 2}, except we sample the continuous blackbody spectrum with the four energy groups used by Mirocha et al. (2012).
+\item [\texttt{ProblemType = 2.2}] Same as \texttt{ProblemType = 2}, except we sample the continuous blackbody spectrum with the four energy groups used by \citet{Mirocha2012}.
 
 \item [\texttt{ProblemType = 3}] Test problem \# 3 from \cite{Iliev2006} -- I-front trapping in a dense clump and the formation of a shadow.  The setup is the same as in \texttt{ProblemType = 2}, except a 1D clump is initialized at $x = 0.76 L_{\mathrm{box}}$, overdensity $\delta = 200$, radius $0.12$kpc, and temperature $T = 40$K, and the radiation field is plane-parallel.
 
@@ -365,6 +367,20 @@ Relative tolerance of the ODE solver.  Combination of this parameter and \texttt
 
 
 \subsection{Source Parameters}
+
+\begin{description}
+    
+\item \texttt{SourceType}
+\begin{description}
+    \item [0] Monochromatic source.
+    \item [1] Blackbody.  
+    \item [2] PopIII star.  
+    \item [3] Power-law.        
+    \item [4] Absorbed power-law (column density given by \texttt{SpectrumAbsorbingColumn} parameter).
+    \item [5] Multi-color disk + power-law. Relative normalization given by \texttt{SpectrumDiskFraction} parameter.                
+\end{description}    
+
+\end{description}
 
 
 \subsection{Physics Parameters} \label{sec:PhysicsParameters}

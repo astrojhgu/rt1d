@@ -108,7 +108,7 @@ class SecondaryElectrons:
                             (1. - pow(xHII, 0.34))**2 + \
                             (1. - (1. - pow(xHII, 0.2663))**1.3163)
                     else:
-                        return 0.0
+                        return 1.0
                     
             if channel == 1: 
                 if E >= 28:
