@@ -129,14 +129,15 @@ class InitializeGrid:
         
             TemperatureProfile:
                 0: Uniform temperature given by InitialTemperature
-                1: Uniform temperature assuming Tk = Tcmb
+                1: Uniform temperature assuming Tk = Tcmb before decoupling, and
+                   Tk ~ (1 + z)^2 after decoupling.
         """
                 
         if self.TemperatureProfile == 0: 
             temperature = self.InitialTemperature    
         if self.TemperatureProfile == 1: 
             if self.InitialRedshift <= self.cosm.zdec:
-                temperature = self.cosm.TcmbNow * (1. + self.InitialRedshift)**2 / (1. + self.cosm.zdec)
+                temperature = self.cosm.Tgas(self.zdec) * (1. + self.InitialRedshift)**2 #/ (1. + self.cosm.zdec)
             else:
                 temperature = 2.725 * (1. + self.InitialRedshift)
                 

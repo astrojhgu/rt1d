@@ -50,107 +50,45 @@ neglible_tau = 1e-12
 neglible_column = 10
 
 class Radiate:
-    def __init__(self, pf, data, itabs, n_col): 
+    def __init__(self, pf, itabs, n_col): 
         self.pf = pf
+        
+        # Classes
         self.rs = RadiationSource(pf)
         self.cosm = Cosmology(pf)
-        self.coeff = RateCoefficients(pf, itabs = itabs, rs = self.rs, n_col = n_col)
         self.control = ControlSimulation(pf)
-        self.debug = pf["Debug"]
+        self.coeff = RateCoefficients(pf, itabs = itabs, n_col = n_col)
+        self.solver = SolveRateEquations(pf)
         
         self.ProgressBar = pf["ProgressBar"] and pb
-        
-        # Methodology
-        self.PhotonConserving = pf['PhotonConserving']
-        self.ParallelizationMethod = pf["ParallelizationMethod"]        
-        self.InterpolationMethod = pf["InterpolationMethod"]
-        
-        self.OutputRates = pf["OutputRates"]
         
         # Grid/units/etc
         self.GridDimensions = int(pf["GridDimensions"])
         self.grid = np.arange(self.GridDimensions)
-        self.LengthUnits = pf["LengthUnits"]
-        self.TimeUnits = pf["TimeUnits"]
-        self.StopTime = pf["StopTime"] * self.TimeUnits
-        self.StartRadius = pf["StartRadius"]
-        self.StartCell = self.StartRadius * self.GridDimensions
-        self.R0 = self.StartRadius * self.LengthUnits
+        self.StopTime = pf.StopTime * self.pf.TimeUnits
+        self.StartCell = pf.StartRadius * self.GridDimensions
+        self.R0 = pf.StartRadius * pf.LengthUnits
         
-        self.MultiSpecies = pf["MultiSpecies"]
-        
-        # Timestepping
-        self.AdaptiveTimestep = pf["ODEAdaptiveStep"]
-        self.HIRestrictedTimestep = pf["HIRestrictedTimestep"]
-        self.HeIRestrictedTimestep = pf["HeIRestrictedTimestep"]
-        self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
-        self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
-        self.ElectronRestrictedTimestep = pf["ElectronRestrictedTimestep"]
-        self.LightCrossingTimeRestrictedTimestep = pf["LightCrossingTimeRestrictedTimestep"]
-        self.RedshiftRestrictedTimestep = pf["RedshiftRestrictedTimestep"]
-        self.MaxRedshiftStep = pf["MaxRedshiftStep"]
-        self.AdaptiveODEStep = pf["ODEAdaptiveStep"]
-        self.MaxStep = pf["ODEMaxStep"] * self.TimeUnits
-        self.MinStep = pf["ODEMinStep"] * self.TimeUnits
-        
-        self.AdaptiveGlobalStep = self.HIRestrictedTimestep or self.ElectronRestrictedTimestep
-        if self.MultiSpecies:
-            self.AdaptiveGlobalStep |= (self.HeIRestrictedTimestep or \
-                self.HeIIRestrictedTimestep or self.HeIIIRestrictedTimestep)
-        
-        # Tolerance
-        self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
-        
-        # Physics
-        self.MultiSpecies = pf["MultiSpecies"]
-        self.InfiniteSpeedOfLight = pf["InfiniteSpeedOfLight"]
-        self.Isothermal = pf["Isothermal"]
-        self.ComptonHeating = pf["ComptonHeating"]
-        self.CollisionalIonization = pf["CollisionalIonization"]
-        self.CollisionalExcitation = pf["CollisionalExcitation"]
-        self.SecondaryIonization = pf["SecondaryIonization"]
-        self.FreeFreeEmission = pf["FreeFreeEmission"]
-        self.CosmologicalExpansion = pf["CosmologicalExpansion"]
-        self.PlaneParallelField = pf["PlaneParallelField"]
-        self.C = pf["ClumpingFactor"]
-        
-        self.InitialRedshift = self.z0 = pf["InitialRedshift"]
-        self.InitialHydrogenDensity = (data["HIDensity"][0] + data["HIIDensity"][0])
-        self.InitialHeliumDensity = (data["HeIDensity"][0] + data["HeIIDensity"][0] + data["HeIIIDensity"][0])
-        
+        # Time-stepping
+        self.AdaptiveGlobalStep = self.pf.HIRestrictedTimestep or \
+            self.pf.ElectronRestrictedTimestep
+        if self.pf.MultiSpecies:
+            self.AdaptiveGlobalStep |= (self.pf.HeIRestrictedTimestep or \
+                self.pf.HeIIRestrictedTimestep or self.pf.HeIIIRestrictedTimestep)
+            
         # Deal with log-grid, compute dx
         if pf['LogarithmicGrid']:
-            self.r = np.logspace(np.log10(self.StartRadius * self.LengthUnits), \
-                np.log10(self.LengthUnits), self.GridDimensions + 1)
+            self.r = np.logspace(np.log10(self.R0), \
+                np.log10(pf.LengthUnits), self.GridDimensions + 1)
         else:
-            rmin = self.StartRadius * self.LengthUnits
-            self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions + 1)
+            self.r = np.linspace(self.R0, pf.LengthUnits, self.GridDimensions + 1)
         
         self.dx = np.diff(self.r)   
         self.r = self.r[0:-1] 
-                    
         self.CellCrossingTime = self.dx / c
-        self.OnePhotonPackagePerCell = pf["OnePhotonPackagePerCell"]
-        
-        # Initial guesses for ODE solver
-        self.TotalHydrogen = data["HIDensity"][-1] + data["HIIDensity"][-1]
-        self.TotalHelium = data["HeIDensity"][-1] + data["HeIIDensity"][-1] + data["HeIIIDensity"][-1]
-        guesses = [self.cosm.nH0, 
-                   self.TotalHelium, 
-                   self.TotalHelium, 
-                   3 * self.pf["InitialTemperature"] * k_B * (self.TotalHydrogen + self.TotalHelium) / 2.]
                 
-        # Initialize solver        
-        self.solver = SolveRateEquations(pf, guesses = guesses, AdaptiveODEStep = self.AdaptiveODEStep, 
-            hmin = self.MinStep, hmax = self.MaxStep, Dfun = None, maxiter = pf["ODEMaxIter"])                 
-        
-        # Initialize helium abundance                        
-        self.Y = 0.2477 * self.MultiSpecies
-        self.X = 1. - self.Y
-
         # For convenience 
         self.zeros_tmp = np.zeros(4)
-        self.zeros_eq = np.zeros(4)
 
     def EvolvePhotons(self, data, t, dt, h, lb):
         """
@@ -168,7 +106,7 @@ class Radiate:
         self.x_HI_arr = data["HIDensity"] / self.n_H_arr
         self.x_HII_arr = data["HIIDensity"] / self.n_H_arr
         
-        if self.MultiSpecies:
+        if self.pf.MultiSpecies:
             self.n_He_arr = data["HeIDensity"] + data["HeIIDensity"] + data["HeIIIDensity"]
             self.x_HeI_arr = data["HeIDensity"] / self.n_He_arr
             self.x_HeII_arr = data["HeIIDensity"] / self.n_He_arr
@@ -177,10 +115,10 @@ class Radiate:
             self.n_He_arr = self.x_HeI_arr = self.x_HeII_arr = self.x_HeIII_arr = np.zeros_like(self.x_HI_arr)
                                                         
         # If we're in an expanding universe, dilute densities by (1 + z)**3
-        self.z = None 
-        self.dz = None   
-        if self.CosmologicalExpansion: 
-            self.z = self.cosm.TimeToRedshiftConverter(0., t, self.InitialRedshift)
+        self.z = 0 
+        self.dz = 0   
+        if self.pf.CosmologicalExpansion: 
+            self.z = self.cosm.TimeToRedshiftConverter(0., t, self.pf.InitialRedshift)
             self.dz = dt / self.cosm.dtdz(self.z)
             
         # Compute column densities - meaning column density *between* source and cell
@@ -193,7 +131,7 @@ class Radiate:
         self.ncol_all = np.transpose(np.log10([self.ncol_HI, self.ncol_HeI, self.ncol_HeII]))
         self.nabs_all = np.transpose([data["HIDensity"], data["HeIDensity"], data["HeIIDensity"]])
         self.nion_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"]])
-        self.mu_all = 1. / (self.X * (1. + self.x_HII_arr) + self.Y * (1. + self.x_HeII_arr + self.x_HeIII_arr) / 4.)
+        self.mu_all = 1. / (self.cosm.X * (1. + self.x_HII_arr) + self.cosm.Y * (1. + self.x_HeII_arr + self.x_HeIII_arr) / 4.)
         self.ne_all = data["ElectronDensity"]
         self.nB_all = self.n_H_arr + self.n_He_arr + self.ne_all
         self.q_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"], 
@@ -211,7 +149,7 @@ class Radiate:
             tmp_nHI = np.transpose(len(self.rs.E) * [self.ncol_HI])            
             self.tau_all_arr[0] = np.sum(tmp_nHI * sigma0, axis = 1)
                         
-            if self.MultiSpecies:
+            if self.pf.MultiSpecies:
                 sigma1 = PhotoIonizationCrossSection(self.rs.E, species = 1)
                 sigma2 = PhotoIonizationCrossSection(self.rs.E, species = 2)
                 tmp_nHeI = np.transpose(len(self.rs.E) * [self.ncol_HeI])
@@ -222,7 +160,7 @@ class Radiate:
             for i, col in enumerate(np.log10(self.ncol_HI)):
                 self.tau_all_arr[0][i] = self.coeff.Interpolate.OpticalDepth(col, 0)
                 
-                if self.MultiSpecies:
+                if self.pf.MultiSpecies:
                     self.tau_all_arr[1][i] = self.coeff.Interpolate.OpticalDepth(np.log10(self.ncol_HeI[i]), 1)
                     self.tau_all_arr[2][i] = self.coeff.Interpolate.OpticalDepth(np.log10(self.ncol_HeII[i]), 2)
                     
@@ -232,12 +170,12 @@ class Radiate:
                                         
         # Print status, and update progress bar
         if rank == 0: 
-            print "rt1d: %g < t < %g" % (t / self.TimeUnits, (t + dt) / self.TimeUnits)
+            print "rt1d: %g < t < %g" % (t / self.pf.TimeUnits, (t + dt) / self.pf.TimeUnits)
         if rank == 0 and self.ProgressBar: 
             self.pbar = ProgressBar(widgets = widget, maxval = self.grid[-1]).start()        
                 
         # SOLVE: c -> inf
-        if self.InfiniteSpeedOfLight: 
+        if self.pf.InfiniteSpeedOfLight: 
             newdata, dtphot = self.EvolvePhotonsAtInfiniteSpeed(newdata, t, dt, h)
                 
         # SOLVE: c = finite   
@@ -249,7 +187,7 @@ class Radiate:
         ###
         
         # If multiple processors at work, communicate data and timestep                                                                                          
-        if (size > 1) and (self.ParallelizationMethod == 1):
+        if (size > 1) and (self.pf.ParallelizationMethod == 1):
             for key in newdata.keys(): 
                 newdata[key] = MPI.COMM_WORLD.allreduce(newdata[key], newdata[key])
                 
@@ -259,8 +197,8 @@ class Radiate:
         if self.AdaptiveGlobalStep: 
             newdt = min(np.min(dtphot), 2 * dt)
             
-            if self.CosmologicalExpansion and self.RedshiftRestrictedTimestep:
-                newdt = min(newdt, self.cosm.dtdz(self.z) * self.MaxRedshiftStep)
+            if self.pf.CosmologicalExpansion and self.pf.RedshiftRestrictedTimestep:
+                newdt = min(newdt, self.cosm.dtdz(self.z) * self.pf.MaxRedshiftStep)
             
         else: 
             newdt = dt            
@@ -269,17 +207,14 @@ class Radiate:
         newdata['dtPhoton'] = dtphot
                                 
         # Load balance grid for next timestep                     
-        if size > 1 and self.ParallelizationMethod == 1: 
+        if size > 1 and self.pf.ParallelizationMethod == 1: 
             lb = self.control.LoadBalance(dtphot)   
         else: 
             lb = None      
             
         if rank == 0 and self.ProgressBar: 
             self.pbar.finish()    
-            
-        if np.any(newdata['HIDensity'] < 0):
-            print 'AHHHHHHHHHH!', newdata['HIIDensity'][0] - self.cosm.nH0 * (1. + self.z + self.dz)**3
-                                                                                                                                                                                 
+                                                                                                                                                                  
         return newdata, h, newdt, lb
         
     def EvolvePhotonsAtInfiniteSpeed(self, newdata, t, dt, h):
@@ -300,7 +235,7 @@ class Radiate:
         for cell in self.grid:   
                         
             # If this cell belongs to another processor, continue
-            if self.ParallelizationMethod == 1 and size > 1:
+            if self.pf.ParallelizationMethod == 1 and size > 1:
                 if cell not in self.solve_arr: 
                     continue
                     
@@ -365,12 +300,12 @@ class Radiate:
             newHII, newHeII, newHeIII, newE = qnew 
             
             # Convert from internal energy back to temperature
-            if self.Isothermal:
+            if self.pf.Isothermal:
                 newT = T
             else:
                 newT = newE * 2. / 3. / k_B / n_B
             
-            if self.CosmologicalExpansion:
+            if self.pf.CosmologicalExpansion:
                 n_H = self.cosm.nH0 * (1. + (self.z - self.dz))**3
                 n_He = self.cosm.nHe0 * (1. + (self.z - self.dz))**3  
                 n_e = newHII + newHeII + 2.0 * newHeIII
@@ -492,7 +427,7 @@ class Radiate:
                 x_HeIII = n_HeIII = n_He
                 
                 # Compute mean molecular weight for this cell
-                mu = 1. / (self.X * (1. + x_HII) + self.Y * (1. + x_HeII + x_HeIII) / 4.)
+                mu = 1. / (self.cosm.X * (1. + x_HII) + self.cosm.Y * (1. + x_HeII + x_HeIII) / 4.)
                 
                 # Retrieve path length through this cell
                 dx = self.dx[cell]     
@@ -619,10 +554,10 @@ class Radiate:
         newdata["Temperature"][cell] = newT    
         newdata["OpticalDepth"][cell] = tau
         newdata["ODEIterations"][cell] = odeitr
-        newdata["ODEIterationRate"][cell] = odeitr / (h / self.TimeUnits)
+        newdata["ODEIterationRate"][cell] = odeitr / (h / self.pf.TimeUnits)
         newdata["RootFinderIterations"][cell] = rootitr
         
-        if self.OutputRates:
+        if self.pf.OutputRates:
             for i in xrange(3):
                 newdata['PhotoIonizationRate%i' % i][cell] = Gamma[i]
                 newdata['PhotoHeatingRate%i' % i][cell] = k_H[i]
@@ -684,13 +619,13 @@ class Radiate:
         # Always solve hydrogen rate equation
         dqdt[0] = (Gamma[0] + Beta[0] * n_e) * nHI + \
                   (gamma[0][0] * nHI + gamma[0][1] * nHeI + gamma[0][2] * nHeII) - \
-                   alpha[0] * self.C * n_e * q[0]
+                   alpha[0] * n_e * q[0]
 
-        if self.CosmologicalExpansion:
+        if self.pf.CosmologicalExpansion:
             dqdt[0] -= 3. * q[0] * hubble
 
         # Helium rate equations  
-        if self.MultiSpecies:       
+        if self.pf.MultiSpecies:       
             dqdt[1] = (Gamma[1] + Beta[1] * n_e) * nHeI + \
                       (gamma[1][0] * nHI + gamma[1][1] * nHeI + gamma[1][2] * nHeII)  + \
                        alpha[2] * n_e * q[2] - \
@@ -699,14 +634,14 @@ class Radiate:
             dqdt[2] = (Gamma[2] + Beta[2] * n_e) * q[1] - alpha[2] * n_e * q[2]
         
         # Temperature evolution - using np.sum is slow :(
-        if not self.Isothermal:
+        if not self.pf.Isothermal:
             dqdt[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) \
                 + np.sum(eta * nion) + np.sum(psi * nabs) + q[2] * omega[1])      
                                
-            if self.CosmologicalExpansion:
+            if self.pf.CosmologicalExpansion:
                 dqdt[3] -= 2. * hubble * q[3]
                 
-                if self.ComptonHeating:
+                if self.pf.ComptonHeating:
                     dqdt[3] += compton
                                                                                                 
         return dqdt

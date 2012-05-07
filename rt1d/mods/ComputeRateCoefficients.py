@@ -14,6 +14,7 @@ import numpy as np
 
 from .Constants import erg_per_ev, k_B, c, m_e, sigma_SB, sigma_T 
 from .Cosmology import Cosmology
+from .RadiationSource import RadiationSource
 from .ComputeCrossSections import PhotoIonizationCrossSection
 from .SecondaryElectrons import SecondaryElectrons
 from .Interpolate import Interpolate
@@ -21,9 +22,9 @@ from .Interpolate import Interpolate
 E_th = [13.6, 24.6, 54.4]
 
 class RateCoefficients:
-    def __init__(self, pf, rs, itabs = None, n_col = None):
+    def __init__(self, pf, itabs = None, n_col = None):
         self.pf = pf        
-        self.rs = rs
+        self.rs = RadiationSource(pf)
         self.cosm = Cosmology(pf)
         self.esec = SecondaryElectrons(pf)
         

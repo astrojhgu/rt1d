@@ -36,10 +36,8 @@ class WriteData:
     def __init__(self, pf):
         self.pf = pf
         self.cosm = Cosmology(pf)
-        self.TimeUnits = pf["TimeUnits"]
-        self.OutputDirectory = pf["OutputDirectory"]
-        self.OutputFormat = pf["OutputFormat"] and h5
-
+        self.OutputFormat = pf.OutputFormat and h5
+        
     def WriteAllData(self, data, wct, t, dt):
         """
         Write all data to hdf5 file.
@@ -57,18 +55,19 @@ class WriteData:
         Write all data to hdf5 file.
         """
                                         
-        f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.OutputDirectory.rstrip('/'), self.GetDataDumpName(wct)), 'w') 
+        f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.pf.OutputDirectory.rstrip('/'), 
+            self.GetDataDumpName(wct)), 'w') 
 
         pf_grp = f.create_group("ParameterFile")
         data_grp = f.create_group("Data")
         
-        for par in self.pf: 
+        for par in self.pf.keys(): 
             if par == "CurrentTime": 
-                pf_grp.create_dataset(par, data = t / self.TimeUnits)
+                pf_grp.create_dataset(par, data = t / self.pf.TimeUnits)
             elif par == "CurrentRedshift":
-                pf_grp.create_dataset(par, data = self.cosm.TimeToRedshiftConverter(0, t, self.pf['InitialRedshift']))
+                pf_grp.create_dataset(par, data = self.cosm.TimeToRedshiftConverter(0, t, self.pf.InitialRedshift))
             elif par == "CurrentTimestep": 
-                pf_grp.create_dataset(par, data = dt / self.TimeUnits)
+                pf_grp.create_dataset(par, data = dt / self.pf.TimeUnits)
             else: 
                 pf_grp.create_dataset(par, data = self.pf[par])
         
@@ -79,7 +78,8 @@ class WriteData:
         f.close()
         
         if rank == 0: 
-            print "\nWrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.OutputDirectory.rstrip('/'), self.GetDataDumpName(wct))
+            print "\nWrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.pf.OutputDirectory.rstrip('/'), 
+                self.GetDataDumpName(wct))
 
     def WriteASCII(self, data, wc, t, dt):
         """
@@ -93,19 +93,20 @@ class WriteData:
         Return name of data dump to be written
         """
         
-        return "{0}{1:04d}".format(self.pf["DataDumpName"], wct)
+        return "{0}{1:04d}".format(self.pf.DataDumpName, wct)
 
     def WriteParameterFile(self, wct, t, dt):
         """
         Write out parameter file to ASCII format.
         """
                 
-        f = open("{0}/{1}/{2}".format(GlobalDir, self.OutputDirectory, self.GetDataDumpName(wct)), 'w')
+        f = open("{0}/{1}/{2}".format(GlobalDir, self.pf.OutputDirectory, 
+            self.GetDataDumpName(wct)), 'w')
         
         names = self.pf.keys()
         names.sort()
         
-        print >> f, "{0} = {1}".format('ProblemType'.ljust(35, ' '), self.pf['ProblemType'])
+        print >> f, "{0} = {1}".format('ProblemType'.ljust(35, ' '), self.pf.ProblemType)
         
         for par in names:
             
@@ -114,11 +115,11 @@ class WriteData:
                 continue
             
             if par == "CurrentTime": 
-                val = t / self.TimeUnits
+                val = t / self.pf.TimeUnits
             elif par == "CurrentRedshift":
-                val = self.cosm.TimeToRedshiftConverter(0, t, self.pf['InitialRedshift'])
+                val = self.cosm.TimeToRedshiftConverter(0, t, self.pf.InitialRedshift)
             elif par == "CurrentTimestep": 
-                val = dt / self.TimeUnits
+                val = dt / self.pf.TimeUnits
             else: 
                 val = self.pf[par]
             

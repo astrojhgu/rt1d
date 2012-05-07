@@ -11,11 +11,11 @@ Description: Subset of my homemade odeint routine made special for rt1d.
 
 import copy
 import numpy as np
+from .Constants import k_B
 from .Cosmology import Cosmology
 
 class SolveRateEquations:
-    def __init__(self, pf, guesses, AdaptiveODEStep = 1, hmin = 0, hmax = 0.1, rtol = 1e-8, atol = 1e-8, 
-        Dfun = None, maxiter = 1000):
+    def __init__(self, pf):
         """
         This 'odeint' class is the driver for ODE integration via the implicit Euler
         method, which is done below by the 'integrate' routine.  
@@ -31,30 +31,42 @@ class SolveRateEquations:
 
         self.pf = pf
         self.cosm = Cosmology(pf)
-        
-        self.debug = self.pf["Debug"]
-        self.MultiSpecies = pf["MultiSpecies"]
-        self.Isothermal = pf["Isothermal"]
-        self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
-        self.CosmologicalExpansion = pf["CosmologicalExpansion"]
-        self.CheckForGoofiness = pf["CheckForGoofiness"]
-        
-        self.AdaptiveODEStep = AdaptiveODEStep
-        self.hmax = hmax
-        self.hmin = hmin    
-        self.maxiter = maxiter    # Max number of iterations for root finding          
+                
+        self.AdaptiveODEStep = pf.ODEAdaptiveStep
+        self.hmax = pf.ODEMaxStep * pf.TimeUnits
+        self.hmin = pf.ODEMinStep * pf.TimeUnits   
+        self.maxiter = pf.ODEMaxIter    # Max number of iterations for root finding          
 
         self.solve = self.ImplicitEuler
         self.rootfinder = self.Newton
         
-        self.xmin = self.MinimumSpeciesFraction # shorthand
+        self.xmin = pf.MinimumSpeciesFraction # shorthand
         
         # Set adaptive timestepping method
         if self.AdaptiveODEStep == 1: 
             self.stepper = self.StepDoubling     
         
-        # Guesses
-        self.guesses = np.array(guesses)
+        # Initial guesses for ODE solver
+        if pf.CosmologicalExpansion:
+            self.guesses = lambda z: np.array([self.cosm.MeanHydrogenNumberDensity(z), 
+                                               self.cosm.MeanHeliumNumberDensity(z),
+                                               self.cosm.MeanHeliumNumberDensity(z),
+                                               3. * self.cosm.Tgas(z) * k_B * self.cosm.MeanBaryonNumberDensity(z) / 2.])
+        else:
+            if pf.DensityProfile == 0:
+                tmp = [pf.InitialDensity, self.cosm.y * pf.InitialDensity, self.cosm.y * pf.InitialDensity]
+            elif pf.DensityProfile == 1:
+                tmp = [self.cosm.MeanHydrogenNumberDensity(pf.InitialRedshift), 
+                       self.cosm.MeanHeliumNumberDensity(pf.InitialRedshift),
+                       self.cosm.MeanHeliumNumberDensity(pf.InitialRedshift)]
+        
+            if pf.TemperatureProfile == 0:
+                tmp.append(3. * k_B * pf.InitialTemperature * np.sum(tmp[0:2]) / 2.)
+            elif pf.TemperatureProfile == 1:
+                tmp.append(3. * k_B * self.cosm.Tgas(pf.InitialRedshift) / np.sum(tmp[0:2]) / 2.)    
+                
+            tmp = np.array(tmp)
+            self.guesses = lambda z: tmp
                 
     def integrate(self, f, ynow, xnow, xf, znow, zf, Dfun, hpre, *args):
         """
@@ -87,11 +99,12 @@ class SolveRateEquations:
                 xnext = xf 
                                                                                                             
             # Solve away
-            ynext, tmp = self.solve(f, ynow, xnow, h, Dfun, args)
+            znext = self.cosm.TimeToRedshiftConverter(0, xnext - x0, znow)
+            ynext, tmp = self.solve(f, ynow, xnow, h, Dfun, znext, args)
                                                                                                                                     
             # Check for NaNs, reduce timestep or raise exception if h == hmin
-            if self.CheckForGoofiness:
-                everything_ok = self.SolutionCheck(ynext, xnext - x0, znow, args)
+            if self.pf.CheckForGoofiness:
+                everything_ok = self.SolutionCheck(ynext, znow, znext, args)
                                                                                                                                                                                  
                 if not everything_ok[0] and h > self.hmin:
                     h = max(self.hmin, h / 2.)
@@ -103,7 +116,7 @@ class SolveRateEquations:
                 # (i.e. positive, species fractions <= 1)        
                 if not np.all(everything_ok[1:]):
                                         
-                    ynext, ok = self.ApplyFloor(ynext, xnext - x0, znow, args)
+                    ynext, ok = self.ApplyFloor(ynext, znow, znext, args)
                                                                                             
                     if not np.all(ok):
                         if h > self.hmin:
@@ -115,7 +128,7 @@ class SolveRateEquations:
             # Adaptive time-stepping
             if self.stepper:       
                                       
-                tol_met, ok = self.stepper(f, ynow, xnow, ynext, xnext, h, Dfun, xnext - x0, znow, args)               
+                tol_met, ok = self.stepper(f, ynow, xnow, ynext, xnext, h, Dfun, znow, znext, args)
                                 
                 if not np.all(tol_met):  
                     if h == self.hmin: 
@@ -136,7 +149,7 @@ class SolveRateEquations:
                 
         return xnow, ynow, h, i, itr
            
-    def ImplicitEuler(self, f, yi, xi, h, Dfun, args):
+    def ImplicitEuler(self, f, yi, xi, h, Dfun, znext, args):
         """
         Integrate ODE using backward (implicit) Euler method.  Must apply
         minimization technique separately for each yi, hence the odd array
@@ -148,7 +161,7 @@ class SolveRateEquations:
         for i, element in enumerate(yi):
 
             # If isothermal or Hydrogen only, do not change temperature or helium values
-            if (self.MultiSpecies == 0 and (i == 1 or i == 2)) or (self.Isothermal and i == 3):
+            if (self.pf.MultiSpecies == 0 and (i == 1 or i == 2)) or (self.pf.Isothermal and i == 3):
                 yip1[i] = yi[i]
             else:
                 newargs = list(args)
@@ -166,27 +179,26 @@ class SolveRateEquations:
                 
                 # Guesses = 0 or for example a guess for n_HI > n_H will mess things up                
                 if yi[i] <= 0: 
-                    guess = 0.4999 * self.guesses[i]
-                #elif (yi[i] > self.guesses[i] and i < 3):
-                #    guess = 0.4999 * self.guesses[i]    
-                #else:
+                    guess = 0.4999 * self.guesses(znext)[i]
+                elif (yi[i] > self.guesses(znext)[i] and i < 3):
+                    guess = 0.4999 * self.guesses(znext)[i]    
                 elif i < 3: 
-                    guess = 0.49999 * yi[i]
+                    guess = 0.4999 * yi[i]
                 else:
                     guess = yi[i]
 
                 yip1[i], itr[i] = self.rootfinder(ynext, guess, i)
                                                                                                                               
         rtn = yi + h * f(yip1, xi + h, args)
-        if self.MultiSpecies == 0:
+        if self.pf.MultiSpecies == 0:
             rtn[1] = yip1[1]
             rtn[2] = yip1[2]
-        if self.Isothermal:
+        if self.pf.Isothermal:
             rtn[3] = yip1[3]
                             
         return rtn, itr
         
-    def SolutionCheck(self, ynext, dt, znow, args):
+    def SolutionCheck(self, ynext, znow, znext, args):
         """
         Return four-element array representing things that could be wrong with
         our solutions. 
@@ -198,7 +210,6 @@ class SolveRateEquations:
         """    
                 
         if self.CosmologicalExpansion:
-            znext = self.cosm.TimeToRedshiftConverter(0, dt, znow)
             nH = self.cosm.nH0 * (1. + znext)**3
             nHe = self.cosm.nHe0 * (1. + znext)**3
         else:            
@@ -227,7 +238,7 @@ class SolveRateEquations:
                  
         return everything_ok                      
                                                         
-    def ApplyFloor(self, ynext, dt, znow, args):
+    def ApplyFloor(self, ynext, znow, znext, args):
         """
         Apply floors in ionization (and potentially, but not implemented) internal energy.
         
@@ -235,8 +246,7 @@ class SolveRateEquations:
         
         """   
         
-        if self.CosmologicalExpansion:
-            znext = self.cosm.TimeToRedshiftConverter(0, dt, znow)
+        if self.pf.CosmologicalExpansion:
             nH = self.cosm.nH0 * (1. + znext)**3
             nHe = self.cosm.nHe0 * (1. + znext)**3
         else:            
@@ -264,7 +274,7 @@ class SolveRateEquations:
             ynext[0] = nH * self.xmin
                     
         # Helium if necessary
-        if self.MultiSpecies:
+        if self.pf.MultiSpecies:
                         
             #if nHeII > nHe:
             #    if np.allclose(nHeII / nHe, 1.0, rtol = self.xmin, atol = self.xmin):
@@ -303,17 +313,17 @@ class SolveRateEquations:
                     
         return ynext, ok
         
-    def StepDoubling(self, f, yi, xi, yip1, xip1, h, Dfun, dt, znow, args):    
+    def StepDoubling(self, f, yi, xi, yip1, xip1, h, Dfun, znow, znext, args):    
         """
         Calculate y_n+1 in two ways - first via a single step spanning 2h, and second
         using two steps spanning h each.  The difference gives an estimate of the 
         truncation error, which we can use to adapt our step size in self.integrate.
         """
                 
-        ynp2_os, tmp = self.solve(f, yi, xi, 2. * h, Dfun, args) # y_n+2 using one step        
-        ynp2_ts, tmp = self.solve(f, yip1, xip1, h, Dfun, args)  # y_n+2 using two steps
+        ynp2_os, tmp = self.solve(f, yi, xi, 2. * h, Dfun, znext, args) # y_n+2 using one step        
+        ynp2_ts, tmp = self.solve(f, yip1, xip1, h, Dfun, znext, args)  # y_n+2 using two steps
             
-        ynp2_os, ok = self.ApplyFloor(ynp2_os, dt, znow, args)  
+        ynp2_os, ok = self.ApplyFloor(ynp2_os, znow, znext, args)  
                 
         err_abs = np.abs(ynp2_ts - ynp2_os)        
         err_tol = self.xmin + self.xmin * ynp2_ts
@@ -333,7 +343,7 @@ class SolveRateEquations:
         
         if j < 3:
             this_atol = 1e-8
-            this_rtol = 0.1 * self.MinimumSpeciesFraction
+            this_rtol = 0.1 * self.xmin
         else:
             this_atol = 1e-24
             this_rtol = 1e-5

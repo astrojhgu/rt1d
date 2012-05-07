@@ -114,7 +114,7 @@ def Shine(pf, r = None, IsRestart = False):
                 print '\n'
                     
         # Initialize radiation and write data classes
-        r = rtm.Radiate(pf, data, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
+        r = rtm.Radiate(pf, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
         w = rtm.WriteData(pf)
         
         # Compute initial timestep

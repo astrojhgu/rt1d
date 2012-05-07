@@ -20,6 +20,42 @@ import numpy as np
 from .SetDefaultParameterValues import SetDefaultParameterValues
 from .ProblemTypes import ProblemType
 
+class dotdictify(dict):
+    """
+    Class taken from:
+    
+    http://stackoverflow.com/questions/3031219/
+    python-recursively-access-dict-via-attributes-as-well-as-index-access
+    
+    Allows 'dot' access to dictionary keys.
+
+    """
+    
+    marker = object()
+    def __init__(self, value = None):
+        if value is None:
+            pass
+        elif isinstance(value, dict):
+            for key in value:
+                self.__setitem__(key, value[key])
+        else:
+            raise TypeError, 'expected dict'
+
+    def __setitem__(self, key, value):
+        if isinstance(value, dict) and not isinstance(value, dotdictify):
+            value = dotdictify(value)
+        dict.__setitem__(self, key, value)
+
+    def __getitem__(self, key):
+        found = self.get(key, dotdictify.marker)
+        if found is dotdictify.marker:
+            found = dotdictify()
+            dict.__setitem__(self, key, found)
+        return found
+
+    __setattr__ = __setitem__
+    __getattr__ = __getitem__        
+
 def ReadParameterFile(pf):
     """
     Read in the parameter file, and parse the parameter names and arguments.
@@ -69,7 +105,7 @@ def ReadParameterFile(pf):
         
         pf_dict[parname.strip()] = parval
                     
-    return pf_dict 
+    return dotdictify(pf_dict)
     
 def ReadRestartFile(rf):
     
@@ -83,6 +119,5 @@ def ReadRestartFile(rf):
     for field in f["Data"]:
         data[field] = f["Data"][field].value
             
-    return pf, data       
+    return dotdictify(pf), data       
     
-  

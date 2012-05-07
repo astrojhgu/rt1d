@@ -22,22 +22,15 @@ from .Integrate import simpson
 class Cosmology:
     def __init__(self, pf):
         self.pf = pf
-        self.OmegaMatterNow = pf["OmegaMatterNow"]
-        self.OmegaLambdaNow = pf["OmegaLambdaNow"]
-        self.OmegaBaryonNow = pf["OmegaBaryonNow"]
-        self.OmegaCDMNow = self.OmegaMatterNow - self.OmegaBaryonNow
-        self.HubbleParameterNow = pf["HubbleParameterNow"] * 100 / km_per_mpc
-        self.h70 = pf["HubbleParameterNow"]
-        self.TcmbNow = pf["CMBTemperatureNow"]
-        
+        self.OmegaCDMNow = pf.OmegaMatterNow - pf.OmegaBaryonNow
+        self.HubbleParameterNow = pf.HubbleParameterNow * 100 / km_per_mpc
         self.CriticalDensityNow = (3 * self.HubbleParameterNow**2) / (8 * np.pi * G)
         
-        self.Y = self.pf["PrimordialHeliumByMass"] * self.pf["MultiSpecies"]            
+        self.Y = pf.PrimordialHeliumByMass * pf.MultiSpecies
         self.y = self.Y / 4. / (1. - self.Y) 
-        
         self.X = 1. - self.Y
         
-        self.zdec = 150. * (self.OmegaBaryonNow * self.h70**2 / 0.023)**0.4 - 1.
+        self.zdec = 150. * (self.pf.OmegaBaryonNow * pf.HubbleParameterNow**2 / 0.023)**0.4 - 1.
 
         # Hydrogen, helium, electron, and baryon densities today (z = 0)
         self.rho_b_z0 = self.MeanBaryonDensity(0)
@@ -54,45 +47,60 @@ class Cosmology:
         """
         High redshift approximation under effect.
         """
-        return ((1. + z_i)**(-3. / 2.) + (3. * self.HubbleParameterNow * np.sqrt(self.OmegaMatterNow) * (t_f - t_i) / 2.))**(-2. / 3.) - 1.
+        return ((1. + z_i)**(-3. / 2.) + (3. * self.HubbleParameterNow * 
+            np.sqrt(self.pf.OmegaMatterNow) * (t_f - t_i) / 2.))**(-2. / 3.) - 1.
         
     def LookbackTime(self, z_i, z_f):
         """
         Returns lookback time from z_i to z_f in seconds, where z_i < z_f.
         """
         return 2. * ((1. + z_i)**-1.5 - (1. + z_f)**-1.5) / \
-            np.sqrt(self.OmegaMatterNow) / self.HubbleParameterNow / 3.    
+            np.sqrt(self.pf.OmegaMatterNow) / self.HubbleParameterNow / 3.    
         
     def TCMB(self, z):
-        return self.TcmbNow * (1. + z)    
+        return self.pf.CMBTemperatureNow * (1. + z)
+    
+    def Tgas(self, z):
+        """
+        Gas kinetic temperature at z assuming only adiabatic cooling after zdec.
+        """
+        
+        if z >= self.zdec:
+            return self.TCMB(z)
+        else:
+            return self.TCMB(self.zdec) * (1. + z)**2
         
     def ScaleFactor(self, z):
         return 1.0 / (1.0 + z)
         
     def EvolutionFunction(self, z):
-        return np.sqrt(self.OmegaMatterNow * (1.0 + z)**3  + self.OmegaLambdaNow)
+        return np.sqrt(self.pf.OmegaMatterNow * (1.0 + z)**3  + self.pf.OmegaLambdaNow)
         
     def HubbleParameter(self, z):	
-        return self.HubbleParameterNow * np.sqrt(self.OmegaMatterNow * (1.0 + z)**3 + 
-            self.OmegaLambdaNow) 
+        return self.HubbleParameterNow * np.sqrt(self.pf.OmegaMatterNow * (1.0 + z)**3 + 
+            self.pf.OmegaLambdaNow) 
     
     def OmegaMatter(self, z):
-        return self.OmegaMatterNow * (1.0 + z)**3 / self.EvolutionFunction(z)**2
+        return self.pf.OmegaMatterNow * (1.0 + z)**3 / self.EvolutionFunction(z)**2
     
     def OmegaLambda(self, z):
-	    return self.OmegaLambdaNow / self.EvolutionFunction(z)**2
+	    return self.pf.OmegaLambdaNow / self.EvolutionFunction(z)**2
     
     def MeanMatterDensity(self, z):
         return self.OmegaMatter(z) * self.CriticalDensity(z)
         
     def MeanBaryonDensity(self, z):
-        return (self.OmegaBaryonNow / self.OmegaMatterNow) * self.MeanMatterDensity(z)
+        return (self.pf.OmegaBaryonNow / self.pf.OmegaMatterNow) * self.MeanMatterDensity(z)
     
     def MeanHydrogenNumberDensity(self, z):
         return (1. - self.Y) * self.MeanBaryonDensity(z) / m_H
         
     def MeanHeliumNumberDensity(self, z):
         return self.Y * self.MeanBaryonDensity(z) / m_He    
+    
+    def MeanBaryonNumberDensity(self, z):
+        return self.MeanBaryonDensity(z) / (m_H * self.MeanHydrogenNumberDensity(z) + 
+            4. * m_H * self.y * self.MeanHeliumNumberDensity(z))
     
     def CriticalDensity(self, z):
         return (3.0 * self.HubbleParameter(z)**2) / (8.0 * np.pi * G)
