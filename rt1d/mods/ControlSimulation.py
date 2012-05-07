@@ -56,7 +56,7 @@ class ControlSimulation:
         
         self.mask = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
                 
-    def ComputeInitialPhotonTimestep(self, data, r, itabs = None):
+    def ComputeInitialPhotonTimestep(self, data, r):
         """
         Compute photon timestep based on maximum allowed fractional change
         in hydrogen and helium neutral fractions (Shapiro et al. 2004).

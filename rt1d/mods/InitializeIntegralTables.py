@@ -137,7 +137,9 @@ class InitializeIntegralTables:
         else:
             self.zeros = np.zeros(1)
             
-        self.Lbol = self.rs.BolometricLuminosity(0.0)    
+        self.Lbol = self.rs.BolometricLuminosity(0.0)   
+        
+        self.itabs = None 
                 
     def DetermineTableName(self):    
         """
@@ -469,6 +471,7 @@ class InitializeIntegralTables:
         if size > 1 and self.ParallelizationMethod == 1: 
             MPI.COMM_WORLD.barrier()       
             
+        self.itabs = itabs    
         return itabs 
         
     def ToCompute(self):

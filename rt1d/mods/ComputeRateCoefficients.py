@@ -14,35 +14,27 @@ import numpy as np
 
 from .Constants import erg_per_ev, k_B, c, m_e, sigma_SB, sigma_T 
 from .Cosmology import Cosmology
-from .RadiationSource import RadiationSource
-from .ComputeCrossSections import PhotoIonizationCrossSection
-from .SecondaryElectrons import SecondaryElectrons
 from .Interpolate import Interpolate
+from .RadiationSource import RadiationSource
+from .SecondaryElectrons import SecondaryElectrons
+from .ComputeCrossSections import PhotoIonizationCrossSection
 
 E_th = [13.6, 24.6, 54.4]
 
 class RateCoefficients:
-    def __init__(self, pf, itabs = None, n_col = None):
+    def __init__(self, pf, iits = None):
         self.pf = pf        
         self.rs = RadiationSource(pf)
         self.cosm = Cosmology(pf)
         self.esec = SecondaryElectrons(pf)
         
         # Initialize integral tables
-        self.itabs = itabs
-        self.Interpolate = Interpolate(pf, n_col, self.itabs)
+        self.itabs = iits.itabs
+        self.Interpolate = Interpolate(pf, iits)
         self.TabulateIntegrals = self.pf["TabulateIntegrals"]
         
-        # Physics parameters
-        self.MultiSpecies = pf["MultiSpecies"]
-        self.Isothermal = pf["Isothermal"]
-        self.PhotonConserving = pf["PhotonConserving"]        
-        self.CollisionalIonization = pf["CollisionalIonization"]
-        self.SecondaryIonization = pf["SecondaryIonization"]
-        self.PlaneParallelField = pf["PlaneParallelField"]
-        self.CosmologicalExpansion = pf["CosmologicalExpansion"]
-        
-        if self.MultiSpecies:
+        # Create mask
+        if pf.MultiSpecies:
             self.donors = np.arange(3)
         else:
             self.donors = np.array([0])
@@ -96,24 +88,24 @@ class RateCoefficients:
         ncell = dr * nabs          
                                         
         # Set normalization constant for each species
-        if self.PlaneParallelField:
-            if self.PhotonConserving:
+        if self.pf.PlaneParallelField:
+            if self.pf.PhotonConserving:
                 A = Lbol / ncell
             else:
                 A = 3 * [Lbol]
         else:    
-            if self.PhotonConserving:
+            if self.pf.PhotonConserving:
                 A = Lbol / nabs / Vsh
             else:
                 A = 3 * [Lbol / 4. / np.pi / r**2]
                                                 
         # Standard - integral tabulation
-        if self.TabulateIntegrals:
+        if self.pf.TabulateIntegrals:
          
             # Loop over species   
             for i in xrange(3):
                                 
-                if not self.MultiSpecies and i > 0:
+                if not self.pf.MultiSpecies and i > 0:
                     continue
                 
                 # A few quantities that are better to just compute once   
@@ -125,7 +117,7 @@ class RateCoefficients:
                     Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr,
                     Vsh = Vsh, ncell = ncell, indices_out = indices_out, A = A[i], nout = nout, t = t)
                 
-                if self.CollisionalIonization:
+                if self.pf.CollisionalIonization:
                     Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)    
                
                 # Recombination
@@ -137,7 +129,7 @@ class RateCoefficients:
                     omega[i] = self.DielectricRecombinationCoolingRate(T = T)
                     
                 # Heating/cooling                            
-                if not self.Isothermal:
+                if not self.pf.Isothermal:
                     k_H[i], Psi_N[i], Psi_N_dN[i] = self.PhotoElectricHeatingRate(species = i, Lbol = Lbol, r = r, 
                         x_HII = x_HII, indices_in = indices, indices_out = indices_out, ncol = ncol, dr = dr, 
                         nout = nout, nabs = nabs, Phi_N = Phi_N[i], Phi_N_dN = Phi_N_dN[i], A = A[i], t = t)
@@ -147,15 +139,15 @@ class RateCoefficients:
             
             # Secondary ionization - do separately to take advantage of already knowing Psi and Phi
             # Unless SecondaryIonization = 2 -- then knowing Phi and Psi for Gamma won't matter
-            if self.SecondaryIonization:
+            if self.pf.SecondaryIonization:
                 
                 for i in xrange(3):
-                    if not self.MultiSpecies and i > 0:
+                    if not self.pf.MultiSpecies and i > 0:
                         continue  
                     
                     # Ionizing species i with electrons from species j                        
                     for j in self.donors:
-                        if not self.MultiSpecies and j > 0:
+                        if not self.pf.MultiSpecies and j > 0:
                             continue
                             
                         gamma[i][j] += self.SecondaryIonizationRate(Psi_N = Psi_N[j], Psi_N_dN = Psi_N_dN[j],
@@ -180,7 +172,7 @@ class RateCoefficients:
             # Loop over species  
             for i in xrange(3):
 
-                if not self.MultiSpecies and i > 0:
+                if not self.pf.MultiSpecies and i > 0:
                     continue
                                                     
                 # Loop over energy groups
@@ -207,12 +199,12 @@ class RateCoefficients:
                     # due to ionizations by *this* energy group. 
                     ee = Gamma_E[j] * (E - E_th[i]) * erg_per_ev 
                         
-                    if self.SecondaryIonization:
+                    if self.pf.SecondaryIonization:
                         
                         # Ionizations of species k by photoelectrons from species i
                         # Neglect HeII until somebody figures out how that works
                         for k in xrange(2):
-                            if not self.MultiSpecies and k > 0:
+                            if not self.pf.MultiSpecies and k > 0:
                                 continue
                             
                             # If these photo-electrons dont have enough energy to ionize species k, continue    
@@ -224,7 +216,7 @@ class RateCoefficients:
                             # (This k) = i from paper, and (this i) = j from paper
                             gamma[k][i] += ee * fion / (E_th[k] * erg_per_ev)
                                                                                                           
-                    if self.Isothermal:
+                    if self.pf.Isothermal:
                         continue
                                                         
                     # Heating rate coefficient        
@@ -238,10 +230,10 @@ class RateCoefficients:
                     xi[i] = self.DielectricRecombinationRate(T = T)
                     omega[i] = self.DielectricRecombinationCoolingRate(T = T)
                 
-                if self.CollisionalIonization:
+                if self.pf.CollisionalIonization:
                     Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
                                 
-                if self.Isothermal:
+                if self.pf.Isothermal:
                     continue
                 
                 zeta[i] += self.CollisionalIonizationCoolingRate(species = i, T = T)  
@@ -250,7 +242,7 @@ class RateCoefficients:
         
         hubble = 0
         compton = 0                                 
-        if self.CosmologicalExpansion:
+        if self.pf.CosmologicalExpansion:
             hubble = self.HubbleCoolingRate(z)
             compton = self.ComptonHeatingRate(z, n_H, n_He, n_e, x_HII, T)
                                                                                                                       
@@ -277,8 +269,8 @@ class RateCoefficients:
                           
         Phi_N = Phi_N_dN = None
                                         
-        if self.TabulateIntegrals:
-            if self.PhotonConserving:
+        if self.pf.TabulateIntegrals:
+            if self.pf.PhotonConserving:
                 Phi_N = self.Interpolate.interp(indices_in, "Phi%i" % species, ncol)
                 Phi_N_dN = self.Interpolate.interp(indices_out, "Phi%i" % species, nout)
                 IonizationRate = Phi_N - Phi_N_dN
@@ -307,7 +299,7 @@ class RateCoefficients:
         Psi_N = Psi_N_dN = None
         
         if self.esec.Method < 2:
-            if self.PhotonConserving:
+            if self.pf.PhotonConserving:
                 Psi_N = self.Interpolate.interp(indices_in, "Psi%i" % species, ncol)
                 Psi_N_dN = self.Interpolate.interp(indices_out, "Psi%i" % species, nout)
                 heat = (Psi_N - Psi_N_dN - E_th[species] * erg_per_ev * (Phi_N - Phi_N_dN))                   
@@ -318,7 +310,7 @@ class RateCoefficients:
             return A * self.esec.DepositionFraction(0.0, x_HII, channel = 0) * heat, Psi_N, Psi_N_dN    
                 
         else:
-            if self.PhotonConserving:
+            if self.pf.PhotonConserving:
                 x_HII = np.log10(x_HII)
                 Psi_N = self.Interpolate.interp(indices_in, "PsiHat%i" % species, ncol, x_HII = x_HII)
                 Psi_N_dN = self.Interpolate.interp(indices_out, "PsiHat%i" % species, nout, x_HII = x_HII)
@@ -350,7 +342,7 @@ class RateCoefficients:
             return 0.0 
             
         if self.esec.Method < 2:    
-            if self.PhotonConserving:
+            if self.pf.PhotonConserving:
                 IonizationRate = (Psi_N - Psi_N_dN - E_th[donor_species] * erg_per_ev * (Phi_N - Phi_N_dN))        
             else:            
                 IonizationRate = (Psi_N - E_th[donor_species] * erg_per_ev * Phi_N)   
@@ -360,7 +352,7 @@ class RateCoefficients:
                 self.esec.DepositionFraction(E = E, xHII = x_HII, channel = species + 1)
         
         else:
-            if self.PhotonConserving:
+            if self.pf.PhotonConserving:
                 x_HII = np.log10(x_HII)                
                 Psi_N = self.Interpolate.interp(indices_in, "PsiWiggle%i%i" % (species, donor_species), ncol, x_HII = x_HII)
                 Psi_N_dN = self.Interpolate.interp(indices_out, "PsiWiggle%i%i" % (species, donor_species), nout, x_HII = x_HII)

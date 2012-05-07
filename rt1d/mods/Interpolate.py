@@ -14,12 +14,13 @@ from .SecondaryElectrons import SecondaryElectrons
 from scipy.interpolate import LinearNDInterpolator
 
 class Interpolate:
-    def __init__(self, pf, n_col, itabs):
+    def __init__(self, pf, iits):
         self.pf = pf
         self.esec = SecondaryElectrons(pf)
         
         self.MultiSpecies = self.pf["MultiSpecies"]
         
+        n_col = [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn]
         self.HIColumn = n_col[0]
         self.HeIColumn = n_col[1]
         self.HeIIColumn = n_col[2]
@@ -43,7 +44,7 @@ class Interpolate:
         self.AllColumns = [self.HIColumn, self.HeIColumn, self.HeIIColumn]
         
         # This is a dictionary with all the lookup tables
-        self.itabs = itabs
+        self.itabs = iits.itabs
         
         # What kind of interpolator do we need?
         if self.MultiSpecies == 0: 

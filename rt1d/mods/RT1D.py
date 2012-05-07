@@ -109,12 +109,11 @@ def Shine(pf, r = None, IsRestart = False):
         else:
             if i % size == rank:
                 print '\nNo integral tabulation necessary!'
-            itabs = None
             if IsRestart:
                 print '\n'
                     
         # Initialize radiation and write data classes
-        r = rtm.Radiate(pf, itabs, [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn])
+        r = rtm.Radiate(pf, iits)
         w = rtm.WriteData(pf)
         
         # Compute initial timestep
@@ -123,7 +122,7 @@ def Shine(pf, r = None, IsRestart = False):
         elif pf["InitialTimestep"] > 0:
             dt = pf["InitialTimestep"] * TimeUnits
         else:
-            dt = r.control.ComputeInitialPhotonTimestep(data, r, itabs)
+            dt = r.control.ComputeInitialPhotonTimestep(data, r)
                                                                                                                 
         # If (probably for testing purposes) we have StopTime << 1, make sure dt <= StopTime        
         dt = min(dt, StopTime)

@@ -50,15 +50,15 @@ neglible_tau = 1e-12
 neglible_column = 10
 
 class Radiate:
-    def __init__(self, pf, itabs, n_col): 
+    def __init__(self, pf, iits): 
         self.pf = pf
         
         # Classes
         self.rs = RadiationSource(pf)
         self.cosm = Cosmology(pf)
         self.control = ControlSimulation(pf)
-        self.coeff = RateCoefficients(pf, itabs = itabs, n_col = n_col)
         self.solver = SolveRateEquations(pf)
+        self.coeff = RateCoefficients(pf, iits)
         
         self.ProgressBar = pf["ProgressBar"] and pb
         
