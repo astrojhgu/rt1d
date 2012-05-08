@@ -28,32 +28,11 @@ class ControlSimulation:
         self.pf = pf
         self.cosm = Cosmology(pf)
         
-        self.GridDimensions = pf["GridDimensions"]
+        self.GridDimensions = int(pf.GridDimensions)
         self.grid = np.arange(self.GridDimensions)
-        self.LengthUnits = pf["LengthUnits"]
-        self.StartRadius = pf["StartRadius"]
-        self.R0 = self.LengthUnits * self.StartRadius
-        self.z0 = self.pf["InitialRedshift"]
-        self.CosmologicalExpansion = self.pf["CosmologicalExpansion"]
-        
-        self.ParallelizationMethod = pf["ParallelizationMethod"]
-        
-        self.MultiSpecies = pf["MultiSpecies"]
-        self.MaxHIIChange = pf["MaxHIIChange"]
-        self.MaxHeIChange = pf["MaxHeIChange"]
-        self.MaxHeIIChange = pf["MaxHeIIChange"]
-        self.MaxHeIIIChange = pf["MaxHeIIIChange"]
-        self.MaxElectronChange = pf["MaxElectronChange"]
-        self.MaxTemperatureChange = pf["MaxTemperatureChange"]
-        self.HIRestrictedTimestep = pf["HIRestrictedTimestep"]
-        self.HeIRestrictedTimestep = pf["HeIRestrictedTimestep"]
-        self.HeIIRestrictedTimestep = pf["HeIIRestrictedTimestep"]
-        self.HeIIIRestrictedTimestep = pf["HeIIIRestrictedTimestep"]
-        self.OpticalDepthDefiningIFront = pf["OpticalDepthDefiningIFront"]
-        self.ElectronRestrictedTimestep = pf["ElectronRestrictedTimestep"]
-        self.TemperatureRestrictedTimestep = pf["TemperatureRestrictedTimestep"]
-        self.MinimumSpeciesFraction = pf["MinimumSpeciesFraction"]
-        
+        self.R0 = pf.LengthUnits * pf.StartRadius
+        self.z0 = pf.InitialRedshift
+                
         self.mask = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
                 
     def ComputeInitialPhotonTimestep(self, data, r):
@@ -89,38 +68,38 @@ class ControlSimulation:
         # START TIMESTEP CALCULATION
         dtHI = 1e50   
         dHIdt = 1e-50   
-        if self.HIRestrictedTimestep and nabs[0] > 0:
+        if self.pf.HIRestrictedTimestep and nabs[0] > 0:
             dHIdt = nabs[0] * (Gamma[0] + Beta[0] * n_e) + \
                     np.sum(gamma[0] * nabs) - \
                     nion[0] * n_e * alpha[0]
-            if self.CosmologicalExpansion:        
+            if self.pf.CosmologicalExpansion:        
                 dHIdt -= 3. * nabs[0] * hubble    
-            dtHI = self.MaxHIIChange * nabs[0] / abs(dHIdt)
+            dtHI = self.pf.MaxHIIChange * nabs[0] / abs(dHIdt)
         
         dtHeII = 1e50
         dHeIIdt = 1e-50
-        if self.MultiSpecies and self.HeIIRestrictedTimestep and nabs[2] > 0:
+        if self.pf.MultiSpecies and self.HeIIRestrictedTimestep and nabs[2] > 0:
             dHeIIdt = nabs[1] * Gamma[1]            
-            dtHeII = self.MaxHeIIChange * nabs[2] / dHeIIdt   
+            dtHeII = self.pf.MaxHeIIChange * nabs[2] / dHeIIdt   
                          
         dtHeIII = 1e50
         dHeIIIdt = 1e-50
-        if self.MultiSpecies and self.HeIIIRestrictedTimestep and nion[2] > 0:                        
+        if self.pf.MultiSpecies and self.pf.HeIIIRestrictedTimestep and nion[2] > 0:                        
             dHeIIIdt = nabs[2] * Gamma[2] 
-            dtHeIII = self.MaxHeIIIChange * nion[2] / dHeIIdt
+            dtHeIII = self.pf.MaxHeIIIChange * nion[2] / dHeIIdt
                   
         dtne = 1e50     
-        if self.ElectronRestrictedTimestep:  
+        if self.pf.ElectronRestrictedTimestep:  
             dHIIdt = nabs[0] * Gamma[0]
             dHeIIdt = nabs[1] * Gamma[1]
             dHeIIIdt = nabs[2] * Gamma[2]              
             dedt = np.abs(dHIIdt + dHeIIdt + 2. * dHeIIIdt)
-            dtne = self.MaxElectronChange * n_e / dedt 
+            dtne = self.pf.MaxElectronChange * n_e / dedt 
             
         dtT = 1e50
-        if self.TemperatureRestrictedTimestep:
+        if self.pf.TemperatureRestrictedTimestep:
             dTdt = np.abs(2. * T * hubble)
-            dtT = self.MaxTemperatureChange * T / dTdt    
+            dtT = self.pf.MaxTemperatureChange * T / dTdt    
 
         return min(dtHI, dtHeII, dtHeIII, dtne, dtT)
     
@@ -133,40 +112,40 @@ class ControlSimulation:
         """          
                 
         dtHI = 1e50     
-        if self.HIRestrictedTimestep:
+        if self.pf.HIRestrictedTimestep:
             dHIIdt = nabs[0] * (Gamma[0] + Beta[0] * n_e) + \
                      np.sum(gamma[0] * nabs) - \
                      nion[0] * n_e * alpha[0]
-            if self.CosmologicalExpansion:             
+            if self.pf.CosmologicalExpansion:             
                 dHIIdt -= 3. * nabs[0] * hubble
-            if tau[0] >= self.OpticalDepthDefiningIFront[0]:
-                dtHI = self.MaxHIIChange * nabs[0] / abs(dHIIdt)
+            if tau[0] >= self.pf.OpticalDepthDefiningIFront[0]:
+                dtHI = self.pf.MaxHIIChange * nabs[0] / abs(dHIIdt)
         
         dtHeII = 1e50 
-        if self.MultiSpecies and self.HeIIRestrictedTimestep:
+        if self.pf.MultiSpecies and self.pf.HeIIRestrictedTimestep:
             dHeIIdt = nabs[1] * (Gamma[1] + Beta[1] * n_e) + \
                       np.sum(gamma[1] * nabs) + \
                       alpha[2] * n_e * nion[2] - \
                       (alpha[1] + Beta[2] + xi[1]) * nion[1] * n_e
-            if tau[1] >= self.OpticalDepthDefiningIFront[1]:
-                dtHeII = self.MaxHeIIChange * nabs[2] / abs(dHeIIdt)
+            if tau[1] >= self.pf.OpticalDepthDefiningIFront[1]:
+                dtHeII = self.pf.MaxHeIIChange * nabs[2] / abs(dHeIIdt)
                 
         dtHeIII = 1e50  
-        if self.MultiSpecies and self.HeIIIRestrictedTimestep:
+        if self.pf.MultiSpecies and self.pf.HeIIIRestrictedTimestep:
             dHeIIIdt = nabs[2] * (Gamma[2] + Beta[2] * n_e) + \
                        nion[2] * n_e * alpha[2]
-            if tau[2] >= self.OpticalDepthDefiningIFront[2]:                         
-                dtHeIII = self.MaxHeIIIChange * nion[2] / abs(dHeIIIdt)
+            if tau[2] >= self.pf.OpticalDepthDefiningIFront[2]:                         
+                dtHeIII = self.pf.MaxHeIIIChange * nion[2] / abs(dHeIIIdt)
               
         dtHeI = 1e50            
-        if self.MultiSpecies and self.HeIRestrictedTimestep and (nabs[1] / n_He) > self.MinimumSpeciesFraction:
-            if tau[1] >= self.OpticalDepthDefiningIFront[1]:
+        if self.pf.MultiSpecies and self.pf.HeIRestrictedTimestep and (nabs[1] / n_He) > self.pf.MinimumSpeciesFraction:
+            if tau[1] >= self.pf.OpticalDepthDefiningIFront[1]:
                 dHeIdt = (alpha[1] + xi[1]) * nion[1] * n_e \
                     - nabs[1] * (Gamma[1] + Beta[1] * n_e)
-                dtHeI = self.MaxHeIChange * nabs[1] / abs(dHeIdt)        
+                dtHeI = self.pf.MaxHeIChange * nabs[1] / abs(dHeIdt)        
         
         dtne = 1e50     
-        if self.ElectronRestrictedTimestep:  
+        if self.pf.ElectronRestrictedTimestep:  
             dHIIdt = nabs[0] * (Gamma[0] + Beta[0] * n_e) + \
                      np.sum(gamma[0] * nabs) - \
                      nion[0] * n_e * alpha[0]  
@@ -177,14 +156,14 @@ class ControlSimulation:
             dHeIIIdt = nabs[2] * (Gamma[2] + Beta[2] * n_e) + \
                        nion[2] * n_e * alpha[2]                  
             dedt = np.abs(dHIIdt + dHeIIdt + 2. * dHeIIIdt)
-            dtne = self.MaxElectronChange * n_e / dedt 
+            dtne = self.pf.MaxElectronChange * n_e / dedt 
             
         dtT = 1e50
-        if self.TemperatureRestrictedTimestep:
+        if self.pf.TemperatureRestrictedTimestep:
             dTdt = np.abs(np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) + \
                 np.sum(eta * nabs) + np.sum(psi * nabs) + nion[2] * omega[1]) - \
                 3. * hubble * T / 2.)
-            dtT = self.MaxTemperatureChange * T / dTdt
+            dtT = self.pf.MaxTemperatureChange * T / dTdt
                         
         return min(dtHI, dtHeII, dtHeIII, dtHeI, dtne, dtT)        
         
@@ -225,7 +204,7 @@ class ControlSimulation:
         
         # If parallelizing over grid, do this so an MPI all-reduce doesn't 
         # add field values together
-        if self.ParallelizationMethod == 1 and size > 1:
+        if self.pf.ParallelizationMethod == 1 and size > 1:
             proc_mask = np.zeros(self.GridDimensions)
             solve_arr = np.arange(self.GridDimensions)
             condition = (solve_arr >= lb[rank]) & (solve_arr < lb[rank + 1])
@@ -239,7 +218,7 @@ class ControlSimulation:
         for key in data.keys(): 
             newdata[key] = copy.deepcopy(data[key])
             
-            if self.ParallelizationMethod == 1 and size > 1:
+            if self.pf.ParallelizationMethod == 1 and size > 1:
                 newdata[key][proc_mask == 0] = 0        
             
         return solve_arr, newdata        

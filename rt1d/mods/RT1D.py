@@ -51,7 +51,7 @@ def Shine(pf, r = None, IsRestart = False):
     for i, pf in enumerate(all_pfs):  
         
         # Only one parameter file per processor if ParallelizationMethod = 2.    
-        if pf["ParallelizationMethod"] == 2:
+        if pf.ParallelizationMethod == 2:
             if i % size != rank: continue
             
         # Check for parameter conflicts    
@@ -63,22 +63,6 @@ def Shine(pf, r = None, IsRestart = False):
             print '\n'    
             return
               
-        # Read in a few things for convenience, convert times to real units     
-        TimeUnits = pf["TimeUnits"]
-        LengthUnits = pf["LengthUnits"]
-        StartRadius = pf["StartRadius"]
-        GridDimensions = pf["GridDimensions"]
-        MaximumGlobalTimestep = pf["MaximumGlobalTimestep"] * TimeUnits
-        StopTime = pf["StopTime"] * TimeUnits
-            
-        
-        # Print out cell-crossing and box-crossing times for convenience
-        if rank == 0:
-            print "Cell-crossing time = {0} (years), {1} (code)".format(LengthUnits / GridDimensions / \
-                29979245800.0 / 31557600.0, LengthUnits / GridDimensions / 29979245800.0 / TimeUnits)
-            print "Box-crossing time = {0} (years), {1} (code)".format(LengthUnits / 29979245800.0 / \
-                31557600.0, LengthUnits / 29979245800.0 / TimeUnits)
-                            
         # Initialize grid and file system
         if IsRestart: 
             data = ICs
@@ -88,23 +72,22 @@ def Shine(pf, r = None, IsRestart = False):
             data = g.InitializeFields()
                     
             if i % size == rank:
-                if pf["OutputDirectory"] != './':
-                    try: os.mkdir("{0}".format(pf["OutputDirectory"]))
-                    except OSError: pass        
-                made = True
-            else: 
-                made = False
+                if pf.OutputDirectory != './':
+                    try: 
+                        os.mkdir(pf.OutputDirectory)
+                    except OSError: 
+                        pass
             
-            # Wait here if parallelizing over grid
-            if size > 1 and pf["ParallelizationMethod"] == 1: 
-                MPI.COMM_WORLD.barrier()
+        # Wait here if parallelizing over grid
+        if size > 1 and pf.ParallelizationMethod == 1: 
+            MPI.COMM_WORLD.barrier()
     
         # Initialize integral tables
-        iits = rtm.InitializeIntegralTables(pf, data, g)
-        if pf['TabulateIntegrals']:
+        iits = rtm.InitializeIntegralTables(pf)
+        if pf.TabulateIntegrals:
             itabs = iits.TabulateRateIntegrals()        
             
-            if pf["ExitAfterIntegralTabulation"]: 
+            if pf.ExitAfterIntegralTabulation: 
                 continue
         else:
             if i % size == rank:
@@ -117,63 +100,61 @@ def Shine(pf, r = None, IsRestart = False):
         w = rtm.WriteData(pf)
         
         # Compute initial timestep
-        if IsRestart or pf["HIRestrictedTimestep"] == 0: 
-            dt = pf["CurrentTimestep"] * TimeUnits
-        elif pf["InitialTimestep"] > 0:
-            dt = pf["InitialTimestep"] * TimeUnits
+        if IsRestart or pf.HIRestrictedTimestep == 0: 
+            dt = pf.CurrentTimestep * pf.TimeUnits
+        elif pf.InitialTimestep > 0:
+            dt = pf.InitialTimestep * pf.TimeUnits
         else:
             dt = r.control.ComputeInitialPhotonTimestep(data, r)
                                                                                                                 
         # If (probably for testing purposes) we have StopTime << 1, make sure dt <= StopTime        
-        dt = min(dt, StopTime)
+        dt = min(dt, pf.StopTime * pf.TimeUnits)
         
         # Figure out data dump times, write out initial dataset (or not, if this is a restart).
-        dtDataDump = pf["dtDataDump"] * TimeUnits
-        dd0 = pf['InitialLogDataDump'] * TimeUnits
-        
-        ddt = np.linspace(0, StopTime, 1. + StopTime / dtDataDump)    
+        ddt = np.linspace(0, pf.StopTime * pf.TimeUnits, 1. + pf.StopTime / pf.dtDataDump)    
 
-        if pf["LogarithmicDataDump"]:
-            dlogdt = np.logspace(np.log10(dd0), np.log10(StopTime), pf["NlogDataDumps"])
+        if pf.LogarithmicDataDump:
+            dlogdt = np.logspace(np.log10(pf.InitialLogDataDump * pf.TimeUnits), 
+                np.log10(pf.StopTime * pf.TimeUnits), pf.NlogDataDumps)
             ddt = np.concatenate((ddt, dlogdt))
             ddt.sort()    
-                            
-        t = pf["CurrentTime"] * TimeUnits
-        h = dt
+        
+        h = dt                    
+        t = pf.CurrentTime * pf.TimeUnits
         wct = np.argmin(np.abs(t - ddt)) + 1
         if not IsRestart: 
-            if  pf["ParallelizationMethod"] == 0 or \
-               (pf["ParallelizationMethod"] == 1 and rank == 0) or \
-               (pf["ParallelizationMethod"] == 2): 
+            if  pf.ParallelizationMethod == 0 or \
+               (pf.ParallelizationMethod == 1 and rank == 0) or \
+               (pf.ParallelizationMethod == 2): 
                 w.WriteAllData(data, 0, t, dt)
         
         # Wait for root processor to write out initial dataset if running in parallel            
-        if size > 1 and pf["ParallelizationMethod"] == 1: 
+        if size > 1 and pf.ParallelizationMethod == 1: 
             MPI.COMM_WORLD.barrier()
         
         # If we want to store timestep evolution, setup dump file
-        if pf["OutputTimestep"]: 
+        if pf.OutputTimestep: 
             aw = 'w'
             if IsRestart: 
                 aw = 'a'
-            fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), aw)
+            fdt = open('%s/timestep_evolution.dat' % pf.OutputDirectory, aw)
             print >> fdt, '# t  dt'
             fdt.close()
         
         # Initialize load balance if running in parallel
         if size > 1: 
-            lb = list(np.linspace(pf["GridDimensions"] / size, pf["GridDimensions"], size))
+            lb = list(np.linspace(pf.GridDimensions / size, pf.GridDimensions, size))
             lb.insert(0, 0)
         else: 
             lb = None
                     
         # SOLVE RADIATIVE TRANSFER              
-        while t < StopTime:
+        while t < (pf.StopTime * pf.TimeUnits):
                                     
-            if pf["OutputTimestep"]: 
-                fdt = open('{0}/timestep_evolution.dat'.format(pf["OutputDirectory"]), 'a')
-                print >> fdt, t / TimeUnits, dt / TimeUnits
-                                    
+            if pf.OutputTimestep: 
+                fdt = open('%s/timestep_evolution.dat' % pf.OutputDirectory, 'a')
+                print >> fdt, t / pf.TimeUnits, dt / pf.TimeUnits
+                                                                        
             # Ensure we land on our data dump times exactly
             if (t + dt) > ddt[wct]: 
                 dt = ddt[wct] - t
@@ -188,14 +169,16 @@ def Shine(pf, r = None, IsRestart = False):
             # Evolve photons
             data, h, newdt, lb = r.EvolvePhotons(data, t, dt, min(h, dt), lb)
             t += dt
-            dt = min(newdt, MaximumGlobalTimestep) # dt for the next timestep
+            
+            # dt for the next timestep
+            dt = min(newdt, pf.MaximumGlobalTimestep * pf.TimeUnits) 
                                                                               
             # Write-out data                                        
             if write_now:
                 wrote = False
-                if  pf["ParallelizationMethod"] == 0 or \
-                   (pf["ParallelizationMethod"] == 1 and rank == 0) or \
-                   (pf["ParallelizationMethod"] == 2): 
+                if  pf.ParallelizationMethod == 0 or \
+                   (pf.ParallelizationMethod == 1 and rank == 0) or \
+                   (pf.ParallelizationMethod == 2): 
                     w.WriteAllData(data, wct, tnow, dt)
                     wrote = True
                 wct += 1
@@ -209,19 +192,20 @@ def Shine(pf, r = None, IsRestart = False):
                 raise ValueError('ERROR: dt -> inf.  Exiting.')    
                
             # Don't move on until root processor has written out data    
-            if size > 1 and pf["ParallelizationMethod"] == 1: 
+            if size > 1 and pf.ParallelizationMethod == 1: 
                 MPI.COMM_WORLD.barrier()    
         
         # Close timestep file
-        if pf["OutputTimestep"]: 
+        if pf.OutputTimestep: 
             print >> fdt, ""
             fdt.close()
                     
         elapsed = time.time() - start  
         if i % size == rank:  
-            print "Calculation {0} complete (output to {1}).  Elapsed time = {2} hours.".format(i + 1, pf["OutputDirectory"], round(elapsed / 3600., 4))
+            print "Calculation %i complete (output to %s).  Elapsed time = %g hours." % (i + 1, 
+                pf.OutputDirectory, round(elapsed / 3600., 4))
     
-        f = open('{0}/RunComplete'.format(pf["OutputDirectory"]), 'w')
+        f = open('%s/RunComplete' % pf.OutputDirectory, 'w')
         print >> f, '# walltime (s)'
         print >> f, elapsed
         print >> f, ''

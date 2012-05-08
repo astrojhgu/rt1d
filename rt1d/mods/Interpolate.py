@@ -17,9 +17,7 @@ class Interpolate:
     def __init__(self, pf, iits):
         self.pf = pf
         self.esec = SecondaryElectrons(pf)
-        
-        self.MultiSpecies = self.pf["MultiSpecies"]
-        
+                
         n_col = [iits.HIColumn, iits.HeIColumn, iits.HeIIColumn]
         self.HIColumn = n_col[0]
         self.HeIColumn = n_col[1]
@@ -47,7 +45,7 @@ class Interpolate:
         self.itabs = iits.itabs
         
         # What kind of interpolator do we need?
-        if self.MultiSpecies == 0: 
+        if self.pf.MultiSpecies == 0: 
             if self.esec.Method < 2:
                 self.interp = self.InterpolateLinear
                 self.GetIndices = self.GetIndices1D
@@ -168,7 +166,7 @@ class Interpolate:
         value = 3-element array: [ncol_HI, ncol_HeI, ncol_HeII]
         """
         
-        if not self.MultiSpecies:
+        if not self.pf.MultiSpecies:
             return None
                                                         
         # Smaller indices

@@ -37,6 +37,10 @@ nu_0 = 1420.4057e6 			    # Rest frequency of HI 21cm line - [nu_0] = Hz
 T_star = 0.068 				    # Corresponding temperature difference between HI hyperfine states - [T_star] = K
 a_0 = 5.292e-9 				    # Bohr radius - [a_0] = cm
 
+# Helium
+m_He = m_HeI = 2.0 * (m_p + m_n + m_e)
+m_HeII = 2.0 * (m_p + m_n) + m_e
+
 # Unit conversions
 km_per_pc = 3.08568e13
 km_per_mpc = km_per_pc*1e6
