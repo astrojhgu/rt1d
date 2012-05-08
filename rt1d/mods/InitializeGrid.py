@@ -115,7 +115,7 @@ class InitializeGrid:
         if self.pf.TemperatureProfile == 0: 
             temperature = self.pf.InitialTemperature    
         if self.pf.TemperatureProfile == 1: 
-            temperature = self.cosm.Tgas(self.InitialRedshift)
+            temperature = self.cosm.Tgas(self.pf.InitialRedshift)
                 
         if self.pf.Clump:
             if (cell >= self.pf.GridDimensions * (self.pf.ClumpPosition - self.pf.ClumpRadius)) and \

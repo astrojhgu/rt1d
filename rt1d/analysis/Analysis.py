@@ -19,6 +19,7 @@ from ..mods.Constants import *
 from ..mods.Cosmology import *
 from ..mods.Interpolate import Interpolate
 from ..mods.InitializeGrid import InitializeGrid
+from ..mods.RadiationSource import RadiationSource
 from ..mods.SecondaryElectrons import SecondaryElectrons
 from ..mods.ComputeCrossSections import PhotoIonizationCrossSection
 from ..mods.InitializeIntegralTables import InitializeIntegralTables
@@ -27,10 +28,11 @@ class Analyze:
     def __init__(self, pf, retabulate = True):
         self.ds = Dataset(pf)
         self.data = self.ds.data
-        self.pf = self.ds.pf    # dictionary
+        self.pf = self.ds.pf
         self.g = InitializeGrid(self.pf)   
         self.cosm = Cosmology(self.pf)
-        self.iits = InitializeIntegralTables(self.pf, self.data[0], self.g)      
+        self.rs = RadiationSource(self.pf)
+        self.iits = InitializeIntegralTables(self.pf)      
         self.esec = SecondaryElectrons(self.pf)         
         
         # Convenience
@@ -63,8 +65,7 @@ class Analyze:
         self.tname = self.iits.DetermineTableName()
         if os.path.exists('%s/%s' % (self.ds.od, self.tname)) and retabulate:
             self.itabs = self.iits.TabulateRateIntegrals()
-            self.interp = Interpolate(self.pf, [self.iits.HIColumn, self.iits.HeIColumn, self.iits.HeIIColumn], 
-                self.itabs)
+            self.interp = Interpolate(self.pf, self.iits)
         else:
             self.itabs = self.interp = None    
             

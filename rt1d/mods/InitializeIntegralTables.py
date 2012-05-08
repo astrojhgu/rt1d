@@ -135,23 +135,23 @@ class InitializeIntegralTables:
         
         if self.pf.SourceType == 1: 
             src = "bb"
-            prop = "{0}K".format(int(self.pf.SourceTemperature))
+            prop = "T%g" % int(self.pf.SourceTemperature)
                                                               
         elif self.pf.SourceType == 2:                            
             src = "popIII"                                    
-            prop = "{0}M".format(int(self.pf.SourceMass))        
+            prop = "M%g" % int(self.pf.SourceMass)
             
-        elif self.SourceType == 3:
+        elif self.pf.SourceType == 3:
             src = "pl"
-            prop = "{0}".format(self.pf.SpectrumPowerLawIndex)
+            prop = "%g" % self.pf.SpectrumPowerLawIndex
         
-        elif self.SourceType == 4:
+        elif self.pf.SourceType == 4:
             src = "apl"
-            prop = "{0}_{0}n".format(self.pf.SpectrumPowerLawIndex, self.pf.SpectrumAbsorbingColumn)    
+            prop = "N%g_in%g" % (round(np.log10(self.pf.SpectrumAbsorbingColumn), 2), self.pf.SpectrumPowerLawIndex)  
       
-        elif self.SourceType == 5:
+        elif self.pf.SourceType == 5:
             src = "mcdpl"
-            prop = "{0}_{0}n".format(self.pf.SpectrumDiskFraction, self.pf.SpectrumPowerLawIndex)    
+            prop = "df%g_in%g" % (self.pf.SpectrumDiskFraction, self.pf.SpectrumPowerLawIndex) 
       
         # Limits
         Hlim = '%i%i' % (self.HIColumn[0], self.HIColumn[-1])

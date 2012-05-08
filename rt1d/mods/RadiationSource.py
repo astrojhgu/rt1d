@@ -84,35 +84,33 @@ class RadiationSource:
         self.fdisk = pf.SpectrumDiskFraction
         self.fcol = pf.SpectrumColorCorrection
         self.Rg = G * self.M * g_per_msun / c**2
-        
-        if not pf.SourceISCO:
-            self.r_in = 6. * self.Rg
-        else:
-            self.r_in = pf.SourceISCO    
-            
-        self.Lbol = self.BolometricLuminosity(0.0)
-        self.T_in = (self.Lbol * xi**2 * self.fcol**4 / 4. * np.pi / sigma_SB / self.r_in**2)**0.25    
-             
+                                 
         # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
         # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
-        if self.pf.SourceType == 0:
+        if pf.SourceType == 0:
             self.Lbol = self.Lph * self.F * self.E * erg_per_ev 
             self.Qdot = self.F * self.Lph
-        elif self.pf.SourceType in [1, 2]:
-            self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * \
-                integrate(lambda x: x**2 / (np.exp(x) - 1.), 
+        elif pf.SourceType in [1, 2]:
+            self.LphNorm = 1e-10 * np.pi * 2. * (k_B * self.T)**3 * \
+                integrate(lambda x: 1e10 * x**2 / (np.exp(x) - 1.), 
                 13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
             self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
             self.Qdot = self.Lbol * self.F / self.E / erg_per_ev 
              
         # Join MCD and PL spectra
-        if self.pf.SourceType == 5:
+        if pf.SourceType == 5:
+            if not pf.SourceISCO:
+                self.r_in = 6. * self.Rg
+            else:
+                self.r_in = pf.SourceISCO    
+     
+            self.T_in = (self.BolometricLuminosity(0.0) * xi**2 * self.fcol**4 / 4. * np.pi / sigma_SB / self.r_in**2)**0.25    
             self.MCDNormalization, self.PLNormalization = self.NormalizeDisk()
-            
+               
         # Normalize spectrum
         self.LuminosityNormalization = self.NormalizeLuminosity()       
-                                        
+  
     def Spectrum(self, E, Lbol = None):
         """
         Return the fraction of the bolometric luminosity emitted at this energy.  This quantity is dimensionless, and its integral should be 1.
@@ -172,7 +170,7 @@ class RadiationSource:
         energy h*nu_0 = 1keV (Madau et al. 2004).  Unlike the previous two spectral types,
         this quantity is completely unnormalized and cannot be considered a specific intensity.
         """
-        return E * (E / 1000.0)**self.alpha
+        return E**(1. - self.alpha)
         
     def AbsorbedPowerLaw(self, E):
         """
@@ -187,10 +185,13 @@ class RadiationSource:
         Soft component of accretion disk spectra.
         """         
         
-        integrand = lambda T: (T / self.T_in)**(-11. / 3.) * self.BlackBody(E, T) / self.T_in
+        if self.fdisk == 0:
+            return 0.0
+            
+        integrand = lambda T: T**(-11. / 3.) * self.BlackBody(E, T)
         integral = quad(integrand, 0., self.T_in)[0]
         
-        return 32. * np.pi**2 * self.r_in**2 * integral / 3.
+        return self.T_in**(8. / 3.) * 32. * np.pi**2 * self.r_in**2 * integral / 3.
         
     def MCDPL(self, E):
         """
@@ -224,7 +225,6 @@ class RadiationSource:
             elif self.pf.SourceType >= 2:
                 integral, err = quad(self.SpecificIntensity, self.EminNorm, self.EmaxNorm)             
                      
-        
         return self.BolometricLuminosity(0.0) / integral 
     
     def NormalizeDisk(self):
@@ -232,12 +232,18 @@ class RadiationSource:
         Join MCD and PL components of MCDPL spectrum.
         """     
         
-        mcd_integral, err = quad(self.MultiColorDisk, self.EminNorm, self.EmaxNorm)
-        pl_integral, err = quad(self.PowerLaw, self.EminNorm, self.EmaxNorm)
-        
         Lbol = self.BolometricLuminosity(0.0)
         
-        return self.fdisk * Lbol / mcd_integral, (1. - self.fdisk) * Lbol / pl_integral
+        if self.fdisk == 1:
+            mcd_integral, err = quad(self.MultiColorDisk, self.EminNorm, self.EmaxNorm)
+            return Lbol / mcd_integral, 0.
+        elif self.fdisk == 0: 
+            pl_integral, err = quad(self.PowerLaw, self.EminNorm, self.EmaxNorm)
+            return 0., Lbol / pl_integral
+        else:
+            mcd_integral, err = quad(self.MultiColorDisk, self.EminNorm, self.EmaxNorm)
+            pl_integral, err = quad(self.PowerLaw, self.EminNorm, self.EmaxNorm)
+            return self.fdisk * Lbol / mcd_integral, (1. - self.fdisk) * Lbol / pl_integral
         
     def BolometricLuminosity(self, t = 0.0):
         """

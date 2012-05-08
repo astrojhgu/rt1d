@@ -209,7 +209,7 @@ class SolveRateEquations:
             args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi, xi)
         """    
                 
-        if self.CosmologicalExpansion:
+        if self.pf.CosmologicalExpansion:
             nH = self.cosm.nH0 * (1. + znext)**3
             nHe = self.cosm.nHe0 * (1. + znext)**3
         else:            
