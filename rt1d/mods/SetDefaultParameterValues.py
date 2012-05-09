@@ -143,7 +143,7 @@ def SetDefaultParameterValues():
         "SpectrumPhotonLuminosity": 5e48,  
         "SpectrumAbsorbingColumn": 0,  
         "SpectrumDiskFraction": 1.0,
-        "SpectrumColorCorrection": 1.7,
+        "SpectrumColorCorrectionFactor": 1.7,
           
         # Set discrete spectrum manually  
         "DiscreteSpectrumSED": [13.6],  
