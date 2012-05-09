@@ -48,7 +48,6 @@ SpectrumType = 1 (blackbody)
 SpectrumType = 2 (blackbody, but temperature and luminosity from Schaerer)
 SpectrumType = 3 (multi-color disk)
 SpectrumType = 4 (simple power-law)
-SpectrumType = 5 (absorbed power-law)
 """
                                 
 class RadiationSource:
@@ -60,6 +59,9 @@ class RadiationSource:
         
         # Cast types to int to avoid indexing complaints
         self.SpectrumPars.Type = map(int, self.SpectrumPars.Type)
+        
+        self.Emin = min(self.SpectrumPars.MinEnergy)
+        self.Emax = min(self.SpectrumPars.MaxEnergy)        
         
         if self.N == 1:
             self.Type = self.SpectrumPars.Type[0]
@@ -165,9 +167,7 @@ class RadiationSource:
         elif Type == 3:
             Lnu = self.MultiColorDisk(E, i, Type, t)
         elif Type == 4: 
-            Lnu = self.PowerLaw(E, i, Type, t)
-        elif Type == 5: 
-            Lnu = self.AbsorbedPowerLaw(E, i, Type, t)    
+            Lnu = self.PowerLaw(E, i, Type, t)    
         else:
             Lnu = 0.0
             
@@ -217,14 +217,6 @@ class RadiationSource:
         """
 
         return E**-self.SpectrumPars.PowerLawIndex[i]
-        
-    def AbsorbedPowerLaw(self, E, i, Type, t = 0.0):   
-        """
-        Power-law + attenuation by intrinsic absorbing column as in 
-        Kramer & Haiman 2008.
-        """
-        
-        return self.PowerLaw(E, i, Type, t)
     
     def MultiColorDisk(self, E, i, Type, t = 0.0):
         """
@@ -365,32 +357,4 @@ def listify(pf):
             Spectrum[new_name] = pf[par]
             
     return Spectrum         
-    
-#def NormalizeLuminosity(self):
-    #    """
-    #    Returns a constant that normalizes a given spectrum to its bolometric luminosity.
-    #    """            
-    #
-    #    if self.pf.DiscreteSpectrum == 1:
-    #        integral = 1.0
-    #    
-    #    else:
-    #    
-    #        if self.pf.SourceType in [1, 2]:
-    #            integral = integrate(self.SpecificIntensity, small_number, big_number)[0]
-    #            
-    #        elif self.pf.SourceType in [3, 4]:
-    #            if self.alpha == -1.0: 
-    #                integral = (1. / 1000.0**self.alpha) * (self.EmaxNorm - self.EminNorm)
-    #            elif self.alpha == -2.0: 
-    #                integral = (1. / 1000.0**self.alpha) * np.log(self.EmaxNorm / self.EminNorm)    
-    #            else: 
-    #                integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
-    #                (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))
-    #    
-    #        elif self.pf.SourceType >= 2:
-    #            integral, err = quad(self.SpecificIntensity, self.EminNorm, self.EmaxNorm)             
-    #                 
-    #    return self.BolometricLuminosity(0.0) / integral 
-    
     
