@@ -17,26 +17,13 @@ SourceType = 0: Monochromatic/Polychromatic emission of SpectrumPhotonLuminosity
      
 """
 
+import re
 import numpy as np
-from Integrate import simpson as integrate                  # why did scipy.integrate.quad mess up LphotNorm? 
 from scipy.integrate import quad
+from Integrate import simpson as integrate                  # why did scipy.integrate.quad mess up LphotNorm? 
+from .Constants import *
+from .ReadParameterFile import dotdictify
 from .ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
-
-h = 6.626068e-27     			                            # Planck's constant - [h] = erg*s
-k_B = 1.3806503e-16     			                        # Boltzmann's constant - [k_B] = erg/K
-c = 29979245800.0 				                            # Speed of light - [c] = cm/s
-G = 6.673e-8     				                            # Gravitational constant - [G] = cm^3/g/s^2
-sigma_SB = 2.0 * np.pi**5 * k_B**4 / 15.0 / c**2 / h**3     # Stefan-Boltzmann constant - [sigma_SB] = erg / cm^2 / deg^4 / s
-lsun = 3.839e33                                             # Solar luminosity - erg / s
-m_p = 1.67262158e-24    		                            # Proton mass - [m_p] = g
-sigma_T = 6.65e-25	        		                        # Cross section for Thomson scattering - [sigma_T] = cm^2
-g_per_msun = 1.98892e33                                     # Mass of the sun - [g_per_sun] = g
-erg_per_ev = 1.60217646e-19 / 1e-7                          # Conversion between ergs and eV
-cm_per_rsun = 695500.0 * 1e5                                # Radius of the sun - [cm_per_rsun] = cm
-s_per_yr = 365.25 * 24 * 3600                               # Seconds per year
-t_edd = 0.45 * 1e9 * s_per_yr                               # Eddington timescale (see eq. 1 in Volonteri & Rees 2005) 
-y_He = 0.08
-xi = (3. / 7.)**0.5 * (6. / 7.)**3                
 
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB - will return 0 as it should for x large
 
@@ -48,21 +35,37 @@ SchaererTable = {
 
 small_number = 1e-3                
 big_number = 1e5
+
+"""
+SourceType = 0  (monochromatic)     Just need DiscreteSpectrum__ and PhotonLuminosity
+SourceType = 1  (star)              Need temperature, PhotonLuminosity
+SourceType = 2  (popIII star)       Need mass
+SourceType = 3  (BH)                Need Mass, epsilon
+
+SpectrumType = 0 (monochromatic)    
+SpectrumType = 1 (blackbody)                    
+SpectrumType = 2 (blackbody, but temperature and luminosity from Schaerer)
+SpectrumType = 3 (multi-color disk)
+SpectrumType = 4 (simple power-law)
+"""
                                 
 class RadiationSource:
     def __init__(self, pf):
         self.pf = pf
         
-        self.tau = pf.SourceLifetime * pf.TimeUnits
-                
-        # Spectrum bounds - shorthand
-        self.Emin = pf.SpectrumMinEnergy
-        self.Emax = pf.SpectrumMaxEnergy
-        self.EminNorm = pf.SpectrumMinNormEnergy
-        self.EmaxNorm = pf.SpectrumMaxNormEnergy
-
+        self.SpectrumPars = dotdictify(listify(pf))
+        self.N = len(self.SpectrumPars.Type)
+        
+        # Cast types to int to avoid indexing complaints
+        self.SpectrumPars.Type = map(int, self.SpectrumPars.Type)
+        
+        if self.N == 1:
+            self.Type = self.SpectrumPars.Type[0]
+                    
         self.E = np.array(pf.DiscreteSpectrumSED)
         self.F = np.array(pf.DiscreteSpectrumRelLum)      
+        
+        self.tau = pf.SourceLifetime * pf.TimeUnits
         
         # SourceType 0, 1, 2
         self.Lph = pf.SpectrumPhotonLuminosity
@@ -70,20 +73,17 @@ class RadiationSource:
         # SourceType = 1, 2
         self.T = pf.SourceTemperature
         
-        # SourceType = 2, 3, 4, 5
+        # SourceType >= 3
         self.M = pf.SourceMass
-        
-        # SourceType = 3
-        self.alpha = -pf.SpectrumPowerLawIndex
         self.epsilon = pf.SourceRadiativeEfficiency
-        
-        # SourceType = 4
-        self.NHI = pf.SpectrumAbsorbingColumn
-        
-        # SourceType = 5
-        self.fdisk = pf.SpectrumDiskFraction
-        self.fcol = pf.SpectrumColorCorrection
-        self.Rg = G * self.M * g_per_msun / c**2
+        self.Rg = G * self.M * g_per_msun / c**2        
+
+        if 3 in self.SpectrumPars.Type:
+            self.r_in = self.DiskInnermostRadius(self.M)
+            self.fcol = self.SpectrumPars.ColorCorrectionFactor[self.SpectrumPars.Type.index(3)]
+            self.T_in = self.DiskInnermostTemperature(self.M)
+                    
+        ### PUT THIS STUFF ELSEWHERE
                                  
         # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
         # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
@@ -91,38 +91,48 @@ class RadiationSource:
             self.Lbol = self.Lph * self.F * self.E * erg_per_ev 
             self.Qdot = self.F * self.Lph
         elif pf.SourceType in [1, 2]:
-            self.LphNorm = 1e-10 * np.pi * 2. * (k_B * self.T)**3 * \
-                integrate(lambda x: 1e10 * x**2 / (np.exp(x) - 1.), 
+            self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * \
+                integrate(lambda x: x**2 / (np.exp(x) - 1.), 
                 13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
             self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
-            self.Qdot = self.Lbol * self.F / self.E / erg_per_ev 
+            self.Qdot = self.Lbol * self.F / self.E / erg_per_ev
+        else:
+            self.Lbol = self.BolometricLuminosity(0.0)           
              
-        # Join MCD and PL spectra
-        if pf.SourceType == 5:
-            if not pf.SourceISCO:
-                self.r_in = 6. * self.Rg
-            else:
-                self.r_in = pf.SourceISCO    
-     
-            self.T_in = (self.BolometricLuminosity(0.0) * xi**2 * self.fcol**4 / 4. * np.pi / sigma_SB / self.r_in**2)**0.25    
-            self.MCDNormalization, self.PLNormalization = self.NormalizeDisk()
-               
         # Normalize spectrum
-        self.LuminosityNormalization = self.NormalizeLuminosity()       
-  
-    def Spectrum(self, E, Lbol = None):
+        self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
+          
+    def GravitationalRadius(self, M):
         """
-        Return the fraction of the bolometric luminosity emitted at this energy.  This quantity is dimensionless, and its integral should be 1.
+        Half the Schwartzchild radius.
         """
+        return G * M * g_per_msun / c**2
         
-        if self.pf.DiscreteSpectrum == 1: 
-            return self.F  
-        else: 
-            if not Lbol:
-                Lbol = self.BolometricLuminosity()                
-                        
-            return self.LuminosityNormalization * self.SpecificIntensity(E) / Lbol        
+    def DiskInnermostRadius(self, M):      
+        """
+        Inner radius of disk.  Unless SourceISCO > 0, will be set to the 
+        inner-most stable circular orbit for a BH of mass M.
+        """
+        if not self.pf.SourceISCO:
+            return 6. * self.GravitationalRadius(M)
+        else:
+            return self.pf.SourceISCO     
+            
+    def DiskInnermostTemperature(self, M):
+        """
+        Temperature (in Kelvin) at inner edge of the disk.
+        """
+        return (self.BolometricLuminosity(t = 0.0, M = M) * xi**2 * self.fcol**4 / \
+            4. * np.pi / sigma_SB / self.DiskInnermostRadius(M)**2)**0.25
+            
+    def BlackHoleMass(self, t):
+        """
+        Compute black hole mass after t (seconds) have elapsed.  Relies on 
+        initial mass self.M, and (constant) radiaitive efficiency self.epsilon.
+        """        
+        
+        return self.M * np.exp( ((1.0 - self.epsilon) / self.epsilon) * t / t_edd)         
                 
     def IonizingPhotonLuminosity(self, t = 0, bin = None):
         """
@@ -133,30 +143,48 @@ class RadiationSource:
             return self.Qdot[bin]
         else:
             return self.BolometricLuminosity(t) * self.F[bin] / self.E[bin] / erg_per_ev          
-                
-    def SpecificIntensity(self, E):    
-        """ 
-        Calculates the specific intensity at energy E for a given spectrum.  To get the bolometric luminosity of the object, 
-        one must integrate over energy, multiply by 4 * pi * r^2, and also multiply by the normalization factor.
+              
+    def Intensity(self, E, i, Type, t):
+        """
+        Return quantity *proportional* to fraction of bolometric luminosity emitted
+        at photon energy E.  Normalization handled separately.
+        """
         
-            Units: erg / s / cm^2
-            
-        """       
-        if self.pf.SourceType == 0: 
+        if Type == 0:
             return self.F[0]
-        if self.pf.SourceType in [1, 2]:
+        elif Type in [1, 2]:
             return self.BlackBody(E)
-        if self.pf.SourceType == 3: 
-            return self.PowerLaw(E)
-        if self.pf.SourceType == 4: 
-            return self.AbsorbedPowerLaw(E)
-        if self.pf.SourceType == 5:
-            return self.MCDPL(E)
+        elif Type == 3:
+            return self.MultiColorDisk(E, i, Type, t)
+        elif Type == 4: 
+            return self.PowerLaw(E, i, Type, t)
+        else:
+            return 0.0
+                
+    def Spectrum(self, E, t = 0.0):
+        """
+        Return fraction of bolometric luminosity emitted at energy E.
+        """        
+        
+        # Renormalize if t > 0 
+        if t > 0:
+            self.Lbol = self.BolometricLuminosity(t)
+            self.LuminosityNormalizations = self.NormalizeSpectrumComponents(t)    
+        
+        emission = 0
+        for i, Type in enumerate(self.SpectrumPars.Type):
+            if not (self.SpectrumPars.MinEnergy[i] <= E <= self.SpectrumPars.MaxEnergy[i]):
+                continue
+                
+            emission += self.LuminosityNormalizations[i] * \
+                self.Intensity(E, i, Type, t) / self.Lbol
+            
+        return emission
         
     def BlackBody(self, E, T = None):
         """
         Returns specific intensity of blackbody at self.T.
-        """        
+        """
         
         if T is None:
             T = self.T
@@ -164,88 +192,49 @@ class RadiationSource:
         nu = E * erg_per_ev / h
         return 2.0 * h * nu**3 / c**2 / (np.exp(h * nu / k_B / self.T) - 1.0)
         
-    def PowerLaw(self, E):    
+    def PowerLaw(self, E, i, Type, t = 0.0):    
         """
-        A simple power law X-ray spectrum with spectral index alpha and break 
-        energy h*nu_0 = 1keV (Madau et al. 2004).  Unlike the previous two spectral types,
-        this quantity is completely unnormalized and cannot be considered a specific intensity.
+        A simple power law X-ray spectrum - this is proportional to the *energy* emitted
+        at E, not the number of photons.  Possible attenuation by intrinsic absorbing
+        column: Kramer & Haiman 2008
+            np.exp(-self.NHI * (sigma_E(E, 0) + y * sigma_E(E, 1)))
         """
-        return E**(1. - self.alpha)
-        
-    def AbsorbedPowerLaw(self, E):
-        """
-        Same as PowerLaw, except we apply an instrinsic absorbing column as in 
-        Kramer & Haiman 2008.
-        """    
-        
-        return self.PowerLaw(E) * np.exp(-self.NHI * (sigma_E(E, 0) + y_He * sigma_E(E, 1)))
+
+        return E**-self.SpectrumPars.PowerLawIndex[i]
     
-    def MultiColorDisk(self, E):
+    def MultiColorDisk(self, E, i, Type, t = 0.0):
         """
         Soft component of accretion disk spectra.
         """         
         
-        if self.fdisk == 0:
-            return 0.0
-            
-        integrand = lambda T: T**(-11. / 3.) * self.BlackBody(E, T)
-        integral = quad(integrand, 0., self.T_in)[0]
+        # If t > 0, re-compute mass, inner radius, and inner temperature
+        if t > 0 and self.pf.SourceTimeEvolution > 0:
+            self.M = self.BlackHoleMass(t)
+            self.r_in = self.DiskInnermostRadius(self.M)
+            self.T_in = (self.BolometricLuminosity(t) * xi**2 * \
+                self.SpectrumPars.ColorCorrectionFactor[i]**4 / 4. * \
+                np.pi / sigma_SB / self.r_in**2)**0.25
+        
+        integral = quad(lambda T: T**(-11. / 3.) * self.BlackBody(E, T), small_number, self.T_in)[0]
         
         return self.T_in**(8. / 3.) * 32. * np.pi**2 * self.r_in**2 * integral / 3.
-        
-    def MCDPL(self, E):
+            
+    def NormalizeSpectrumComponents(self, t = 0):
         """
-        Multi-color disk + power-law.
-        """    
-        
-        return self.MCDNormalization * self.MultiColorDisk(E) + self.PLNormalization * self.PowerLaw(E)        
-        
-    def NormalizeLuminosity(self):
+        Normalize each component of spectrum to some fraction of the bolometric luminosity.
         """
-        Returns a constant that normalizes a given spectrum to its bolometric luminosity.
-        """            
-
-        if self.pf.DiscreteSpectrum == 1:
-            integral = 1.0
         
-        else:
+        Lbol = self.BolometricLuminosity(t)
         
-            if self.pf.SourceType in [1, 2]:
-                integral = integrate(self.SpecificIntensity, small_number, big_number)[0]
-                
-            elif self.pf.SourceType in [3, 4]:
-                if self.alpha == -1.0: 
-                    integral = (1. / 1000.0**self.alpha) * (self.EmaxNorm - self.EminNorm)
-                elif self.alpha == -2.0: 
-                    integral = (1. / 1000.0**self.alpha) * np.log(self.EmaxNorm / self.EminNorm)    
-                else: 
-                    integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
-                    (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))
+        normalizations = np.zeros(self.N)
+        for i, component in enumerate(self.SpectrumPars.Type):            
+            integral, err = quad(self.Intensity, self.SpectrumPars.MinNormEnergy[i], 
+                self.SpectrumPars.MaxNormEnergy[i], args = (i, component, t,))
+            normalizations[i] = self.SpectrumPars.Fraction[i] * Lbol / integral
+            
+        return normalizations
         
-            elif self.pf.SourceType >= 2:
-                integral, err = quad(self.SpecificIntensity, self.EminNorm, self.EmaxNorm)             
-                     
-        return self.BolometricLuminosity(0.0) / integral 
-    
-    def NormalizeDisk(self):
-        """
-        Join MCD and PL components of MCDPL spectrum.
-        """     
-        
-        Lbol = self.BolometricLuminosity(0.0)
-        
-        if self.fdisk == 1:
-            mcd_integral, err = quad(self.MultiColorDisk, self.EminNorm, self.EmaxNorm)
-            return Lbol / mcd_integral, 0.
-        elif self.fdisk == 0: 
-            pl_integral, err = quad(self.PowerLaw, self.EminNorm, self.EmaxNorm)
-            return 0., Lbol / pl_integral
-        else:
-            mcd_integral, err = quad(self.MultiColorDisk, self.EminNorm, self.EmaxNorm)
-            pl_integral, err = quad(self.PowerLaw, self.EminNorm, self.EmaxNorm)
-            return self.fdisk * Lbol / mcd_integral, (1. - self.fdisk) * Lbol / pl_integral
-        
-    def BolometricLuminosity(self, t = 0.0):
+    def BolometricLuminosity(self, t = 0.0, M = None):
         """
         Returns the bolometric luminosity of a source in units of erg/s.  For accreting black holes, the 
         bolometric luminosity will increase with time, hence the optional 't' argument.
@@ -253,8 +242,8 @@ class RadiationSource:
         
         if t >= self.tau: 
             return 0.0
-        
-        if self.pf.SourceType == 0: 
+            
+        if self.pf.SourceType == 0:
             return self.Lph / (np.sum(self.F / self.E / erg_per_ev))
         
         if self.pf.SourceType == 1:
@@ -264,7 +253,9 @@ class RadiationSource:
             return 10**SchaererTable["Luminosity"][SchaererTable["Mass"].index(self.M)] * lsun
             
         if self.pf.SourceType > 2:
-            Mnow = self.M * np.exp( ((1.0 - self.epsilon) / self.epsilon) * t / t_edd)
+            Mnow = self.BlackHoleMass(t)
+            if M is not None:
+                Mnow = M
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
     
     def SpectrumCDF(self, E):
@@ -300,4 +291,49 @@ class RadiationSource:
         
         return integrate(integrand, self.EminNorm, self.EmaxNorm)[0] 
         
+def listify(pf):
+    """
+    Turn any Spectrum parameter into a list, if it isn't already.
+    """            
+    
+    Spectrum = {}
+    for par in pf.keys():
+        if par[0:8] != 'Spectrum':
+            continue
+        
+        new_name = par.lstrip('Spectrum')
+        if type(pf[par]) is not list:
+            Spectrum[new_name] = [pf[par]]
+        else:
+            Spectrum[new_name] = pf[par]
             
+    return Spectrum         
+    
+#def NormalizeLuminosity(self):
+    #    """
+    #    Returns a constant that normalizes a given spectrum to its bolometric luminosity.
+    #    """            
+    #
+    #    if self.pf.DiscreteSpectrum == 1:
+    #        integral = 1.0
+    #    
+    #    else:
+    #    
+    #        if self.pf.SourceType in [1, 2]:
+    #            integral = integrate(self.SpecificIntensity, small_number, big_number)[0]
+    #            
+    #        elif self.pf.SourceType in [3, 4]:
+    #            if self.alpha == -1.0: 
+    #                integral = (1. / 1000.0**self.alpha) * (self.EmaxNorm - self.EminNorm)
+    #            elif self.alpha == -2.0: 
+    #                integral = (1. / 1000.0**self.alpha) * np.log(self.EmaxNorm / self.EminNorm)    
+    #            else: 
+    #                integral = (1. / 1000.0**self.alpha) * (1.0 / (self.alpha + 2.0)) * \
+    #                (self.EmaxNorm**(self.alpha + 2.0) - self.EminNorm**(self.alpha + 2.0))
+    #    
+    #        elif self.pf.SourceType >= 2:
+    #            integral, err = quad(self.SpecificIntensity, self.EminNorm, self.EmaxNorm)             
+    #                 
+    #    return self.BolometricLuminosity(0.0) / integral 
+    
+    

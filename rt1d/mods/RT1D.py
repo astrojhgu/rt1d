@@ -91,9 +91,10 @@ def Shine(pf, r = None, IsRestart = False):
                 continue
         else:
             if i % size == rank:
-                print '\nNo integral tabulation necessary!'
-            if IsRestart:
-                print '\n'
+                msg = 'No integral tabulation necessary!'
+                if IsRestart:
+                    msg += '\n'
+                print msg 
                     
         # Initialize radiation and write data classes
         r = rtm.Radiate(pf, iits)

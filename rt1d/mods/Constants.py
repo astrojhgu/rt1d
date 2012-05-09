@@ -40,6 +40,8 @@ a_0 = 5.292e-9 				    # Bohr radius - [a_0] = cm
 # Helium
 m_He = m_HeI = 2.0 * (m_p + m_n + m_e)
 m_HeII = 2.0 * (m_p + m_n) + m_e
+Y = 0.2477                      # Primordial helium abundance by mass
+y = Y / 4. / (1. - Y)           # Primordial helium abundance by number
 
 # Unit conversions
 km_per_pc = 3.08568e13
@@ -59,3 +61,9 @@ sqdeg_per_std = (180.0**2)/(pi**2)
 erg_per_j = 1e-7
 erg_per_ev = e/erg_per_j
 erg_per_kev = erg_per_ev*1e3
+
+lsun = 3.839e33                                             # Solar luminosity - erg / s
+cm_per_rsun = 695500.0 * 1e5                                # Radius of the sun - [cm_per_rsun] = cm
+t_edd = 0.45 * 1e9 * s_per_yr                               # Eddington timescale (see eq. 1 in Volonteri & Rees 2005) 
+
+xi = (3. / 7.)**0.5 * (6. / 7.)**3

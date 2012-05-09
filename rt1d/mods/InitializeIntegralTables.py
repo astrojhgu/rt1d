@@ -141,18 +141,23 @@ class InitializeIntegralTables:
             src = "popIII"                                    
             prop = "M%g" % int(self.pf.SourceMass)
             
-        elif self.pf.SourceType == 3:
-            src = "pl"
-            prop = "%g" % self.pf.SpectrumPowerLawIndex
+        elif self.pf.SourceType >= 3:
+            src = ''
+            prop = ''
+            if 3 in self.rs.SpectrumPars.Type:
+                src += 'mcd'
+                prop += "f%g" % self.rs.SpectrumPars.Fraction[self.rs.SpectrumPars.Type.index(3)]
+                if self.rs.SpectrumPars.AbsorbingColumn[self.rs.SpectrumPars.Type.index(3)] > 0:
+                    prop += "_logN%g" % np.log10(self.rs.SpectrumPars.AbsorbingColumn[self.rs.SpectrumPars.Type.index(3)])
+            if 4 in self.rs.SpectrumPars.Type:
+                src += 'pl' 
+                if 3 in self.rs.SpectrumPars.Type:
+                    prop += '_'
+                prop += "f%g" % self.rs.SpectrumPars.Fraction[self.rs.SpectrumPars.Type.index(4)]
+                prop += "_in%g" % self.pf.SpectrumPowerLawIndex[self.rs.SpectrumPars.Type.index(4)]
+                if self.rs.SpectrumPars.AbsorbingColumn[self.rs.SpectrumPars.Type.index(3)] > 0:
+                    prop += "_logN%g" % np.log10(self.rs.SpectrumPars.AbsorbingColumn[self.rs.SpectrumPars.Type.index(3)])
         
-        elif self.pf.SourceType == 4:
-            src = "apl"
-            prop = "N%g_in%g" % (round(np.log10(self.pf.SpectrumAbsorbingColumn), 2), self.pf.SpectrumPowerLawIndex)  
-      
-        elif self.pf.SourceType == 5:
-            src = "mcdpl"
-            prop = "df%g_in%g" % (self.pf.SpectrumDiskFraction, self.pf.SpectrumPowerLawIndex) 
-      
         # Limits
         Hlim = '%i%i' % (self.HIColumn[0], self.HIColumn[-1])
         Helim = '%i%i' % (self.HeIColumn[0], self.HeIColumn[-1])        
@@ -198,9 +203,9 @@ class InitializeIntegralTables:
             return None
         
         if rank == 0 and table_from_pf:
-            print "\nFound table supplied in parameter file.  Reading %s" % tabloc
+            print "Found table supplied in parameter file.  Reading %s" % tabloc
         elif rank == 0:
-            print "\nFound an integral table for this source.  Reading %s" % tabloc
+            print "Found an integral table for this source.  Reading %s" % tabloc
         
         f = h5py.File("%s" % tabloc, 'r')
         

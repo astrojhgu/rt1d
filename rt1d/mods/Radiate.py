@@ -40,10 +40,6 @@ except ImportError:
     rank = 0
     size = 1
 
-m_H = m_p + m_e
-m_HeI = 2.0 * (m_p + m_n + m_e)
-m_HeII = 2.0 * (m_p + m_n) + m_e
-
 E_th = [13.6, 24.6, 54.4]
 
 neglible_tau = 1e-12
