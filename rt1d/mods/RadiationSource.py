@@ -17,7 +17,6 @@ SourceType = 0: Monochromatic/Polychromatic emission of SpectrumPhotonLuminosity
      
 """
 
-import re
 import numpy as np
 from scipy.integrate import quad, fixed_quad
 from Integrate import simpson as integrate                  # why did scipy.integrate.quad mess up LphotNorm? 
@@ -38,7 +37,7 @@ big_number = 1e5
 ls = ['-', '--', ':', '-.']
 
 """
-SourceType = 0  (monochromatic)     Just need DiscreteSpectrum__ and PhotonLuminosity
+SourceType = 0  (monochromatic)     Just need DiscreteSpectrum and PhotonLuminosity
 SourceType = 1  (star)              Need temperature, PhotonLuminosity
 SourceType = 2  (popIII star)       Need mass
 SourceType = 3  (BH)                Need Mass, epsilon
@@ -69,6 +68,7 @@ class RadiationSource:
         self.E = np.array(pf.DiscreteSpectrumSED)
         self.F = np.array(pf.DiscreteSpectrumRelLum)      
         
+        self.last_renormalized = 0
         self.tau = pf.SourceLifetime * pf.TimeUnits
         
         # SourceType 0, 1, 2
@@ -81,11 +81,13 @@ class RadiationSource:
         self.M = pf.SourceMass 
         self.M0 = pf.SourceMass
         self.epsilon = pf.SourceRadiativeEfficiency
-
+        
         if 3 in self.SpectrumPars.Type:
             self.r_in = self.DiskInnermostRadius(self.M0)
+            self.r_out = pf.SourceDiskMaxRadius * self.GravitationalRadius(self.M0)
             self.fcol = self.SpectrumPars.ColorCorrectionFactor[self.SpectrumPars.Type.index(3)]
             self.T_in = self.DiskInnermostTemperature(self.M0)
+            self.T_out = self.DiskTemperature(self.M0, self.r_out)
 
         ### PUT THIS STUFF ELSEWHERE
                                  
@@ -111,10 +113,13 @@ class RadiationSource:
         """
         Half the Schwartzchild radius.
         """
-        return G * M * g_per_msun / c**2
+        return G * M * g_per_msun / c**2    
         
     def SchwartzchildRadius(self, M):
         return 2. * self.GravitationalRadius(M)    
+        
+    def MassAccretionRate(self, M = None):
+        return self.BolometricLuminosity(0, M = M) / self.epsilon / c**2    
         
     def DiskInnermostRadius(self, M):      
         """
@@ -130,11 +135,13 @@ class RadiationSource:
         """
         Temperature (in Kelvin) at inner edge of the disk.
         """
-        return self.DiskTemperature(M, self.DiskInnermostRadius(M))
-
+        return (3. * G * M * g_per_msun * self.MassAccretionRate(M) / \
+            8. / np.pi / self.DiskInnermostRadius(M)**3 / sigma_SB)**0.25
+    
     def DiskTemperature(self, M, r):
-        return (self.BolometricLuminosity(t = 0.0, M = M) * xi**2 * self.fcol**4 / \
-            4. * np.pi / sigma_SB / r**2)**0.25
+        return ((3. * G * M * g_per_msun * self.MassAccretionRate(M) / \
+            8. / np.pi / r**3 / sigma_SB) * \
+            (1. - (self.DiskInnermostRadius(M) / r)**0.5))**0.25
             
     def BlackHoleMass(self, t):
         """
@@ -182,7 +189,9 @@ class RadiationSource:
         """        
         
         # Renormalize if t > 0 
-        if t > 0:
+        if t > 0 and t != self.last_renormalized:
+            self.last_renormalized = t
+            self.M = self.BlackHoleMass(t)
             self.Lbol = self.BolometricLuminosity(t)
             self.LuminosityNormalizations = self.NormalizeSpectrumComponents(t)    
         
@@ -227,10 +236,12 @@ class RadiationSource:
         if t > 0 and self.pf.SourceTimeEvolution > 0:
             self.M = self.BlackHoleMass(t)
             self.r_in = self.DiskInnermostRadius(self.M)
+            self.r_out = self.pf.SourceDiskMaxRadius * self.GravitationalRadius(self.M)
             self.T_in = self.DiskInnermostTemperature(self.M)
+            self.T_out = self.DiskTemperature(self.M, self.r_out)
         
         integrand = lambda T: (T / self.T_in)**(-11. / 3.) * self.BlackBody(E, T) / self.T_in
-        return quad(integrand, 0, self.T_in)[0]
+        return quad(integrand, self.T_out, self.T_in)[0]
                             
     def NormalizeSpectrumComponents(self, t = 0):
         """
@@ -304,15 +315,20 @@ class RadiationSource:
         
         return integrate(integrand, self.EminNorm, self.EmaxNorm)[0] 
         
-    def Plot(self, color = 'k', components = True):
+    def PlotSpectrum(self, color = 'k', components = True, t = 0, normalized = True):
         import pylab as pl
+        
+        if not normalized:
+            Lbol = self.BolometricLuminosity(t)
+        else: 
+            Lbol = 1
         
         E = np.logspace(np.log10(min(self.SpectrumPars.MinNormEnergy)), 
             np.log10(max(self.SpectrumPars.MaxNormEnergy)), 500)
         F = []
         
         for energy in E:
-            F.append(self.Spectrum(energy))
+            F.append(self.Spectrum(energy, t = t))
         
         if components and self.N > 1:
             EE = []
@@ -322,23 +338,27 @@ class RadiationSource:
                     np.log10(self.SpectrumPars.MaxEnergy[i]), 500)
                 tmpF = []
                 for energy in tmpE:
-                    tmpF.append(self.Spectrum(energy, only = component))
+                    tmpF.append(self.Spectrum(energy, t = t, only = component))
                 
                 EE.append(tmpE)
-                FF.append(tmpF)    
+                FF.append(tmpF)              
         
         self.ax = pl.subplot(111)    
-        self.ax.loglog(E, F, color = color, ls = ls[0])
+        self.ax.loglog(E, np.array(F) * Lbol, color = color, ls = ls[0])
         
         if components and self.N > 1:
             for i in xrange(self.N):
-                self.ax.loglog(EE[i], FF[i], color = color, ls = ls[i + 1])
+                self.ax.loglog(EE[i], np.array(FF[i]) * Lbol, color = color, ls = ls[i + 1])
         
         self.ax.set_ylim(1e-6, 1e-2)
         self.ax.set_xlabel(r'$h\nu \ (\mathrm{eV})$')
-        self.ax.set_ylabel(r'$L_{\nu} / L_{\mathrm{bol}}$')
-        pl.draw()
         
+        if normalized:
+            self.ax.set_ylabel(r'$L_{\nu} / L_{\mathrm{bol}}$')
+        else:
+            self.ax.set_ylabel(r'$L_{\nu}$')
+                
+        pl.draw()
         
 def listify(pf):
     """

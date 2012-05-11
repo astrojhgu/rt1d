@@ -25,3 +25,5 @@ RunComplete
 timestep_evolution.dat
 *.png
 *.eps
+MANIFEST
+dist/*

@@ -44,7 +44,7 @@ class Dataset:
         self.pf = ReadParameterFile(pf)
                         
         # Also need path to parameter file (not including the parameter file itself)
-        self.od = self.pf["OutputDirectory"]
+        self.od = self.pf.OutputDirectory
         
         self.data = self.load()
                                      

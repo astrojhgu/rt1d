@@ -36,19 +36,16 @@ class Analyze:
         self.esec = SecondaryElectrons(self.pf)         
         
         # Convenience
-        self.GridDimensions = int(self.pf['GridDimensions'])
+        self.GridDimensions = int(self.pf.GridDimensions)
         self.grid = np.arange(self.GridDimensions)
-        self.LengthUnits = self.pf['LengthUnits']
-        self.StartRadius = self.pf['StartRadius']
-        self.MultiSpecies = self.pf["MultiSpecies"]
                 
         # Deal with log-grid
-        if self.pf["LogarithmicGrid"]:
-            self.r = np.logspace(np.log10(self.StartRadius * self.LengthUnits), \
-                np.log10(self.LengthUnits), self.GridDimensions + 1)
+        if self.pf.LogarithmicGrid:
+            self.r = np.logspace(np.log10(pf.StartRadius * pf.LengthUnits),
+                np.log10(pf.LengthUnits), self.GridDimensions + 1)
         else:
-            rmin = self.StartRadius * self.LengthUnits
-            self.r = np.linspace(rmin, self.LengthUnits, self.GridDimensions + 1)
+            self.r = np.linspace(pf.StartRadius * pf.LengthUnits, 
+                pf.LengthUnits, self.GridDimensions + 1)
         
         self.dx = np.diff(self.r)   
         self.r = self.r[0:-1]
@@ -84,12 +81,12 @@ class Analyze:
         if sol == 0:
             if T0 is not None: T = T0
             else: T = self.data[0].T[0]
-            self.Ndot = self.pf["SpectrumPhotonLuminosity"]
+            self.Ndot = self.pf.SpectrumPhotonLuminosity
             self.alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
             self.trec = 1. / self.alpha_HII / self.data[0].n_HI[-1]                                         # s
             self.rs = (3. * self.Ndot / 4. / np.pi / self.alpha_HII / self.data[0].n_HI[-1]**2)**(1. / 3.)  # cm
         
-        return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) + self.StartRadius
+        return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) + self.pf.StartRadius
         
     def LocateIonizationFront(self, dd, species = 0):
         """
@@ -237,7 +234,7 @@ class Analyze:
             exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
                 self.data[%i].%s, ls = \'-\', color = \'k\')' % (dd, dd, field))
 
-            ax.set_xlim(self.data[0].r[0] / self.pf['LengthUnits'], 1)        
+            ax.set_xlim(self.data[0].r[0] / self.pf.LengthUnits, 1)        
             ax.set_ylim(mi, ma)    
             ax.set_xscale(xscale) 
             
@@ -265,8 +262,8 @@ class Analyze:
             exec('mp.grid[1].semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
                 self.data[%i].T, ls = \'-\', color = \'k\')' % (dd, dd))
                 
-            mp.grid[0].set_xlim(self.data[0].r[0] / self.pf['LengthUnits'], 1)        
-            mp.grid[1].set_xlim(self.data[0].r[0] / self.pf['LengthUnits'], 1)        
+            mp.grid[0].set_xlim(self.data[0].r[0] / self.pf.LengthUnits, 1)        
+            mp.grid[1].set_xlim(self.data[0].r[0] / self.pf.LengthUnits, 1)        
             mp.grid[1].set_xscale(xscale)     
             mp.grid[0].set_xscale(xscale)     
                         
@@ -298,14 +295,14 @@ class Analyze:
         ct = 0
         ls = ['-', ':', '--', '-.']
         for dd in self.data.keys():
-            if self.data[dd].t / self.pf['TimeUnits'] not in t: 
+            if self.data[dd].t / self.pf.TimeUnits not in t: 
                 continue
                 
-            this_t = int(self.data[dd].t / self.pf['TimeUnits'])
+            this_t = int(self.data[dd].t / self.pf.TimeUnits)
         
-            self.mp.grid[0].semilogy(self.data[dd].r / self.LengthUnits, self.data[dd].x_HI, color = color, ls = ls[ct], 
+            self.mp.grid[0].semilogy(self.data[dd].r / self.pf.LengthUnits, self.data[dd].x_HI, color = color, ls = ls[ct], 
                 label = r'$t = %i \ \mathrm{Myr}$' % this_t)
-            self.mp.grid[1].semilogy(self.data[dd].r / self.LengthUnits, self.data[dd].T, color = color, ls = ls[ct])
+            self.mp.grid[1].semilogy(self.data[dd].r / self.pf.LengthUnits, self.data[dd].T, color = color, ls = ls[ct])
             ct += 1
         
         self.mp.grid[0].set_ylim(1e-3, 1.5)
@@ -332,7 +329,7 @@ class Analyze:
         time = []
         value = []
         for dd in self.data.keys():
-            if self.pf["CosmologicalExpansion"]:
+            if self.pf.CosmologicalExpansion:
                 time.append(self.data[dd].z)
             else:
                 time.append(self.data[dd].t)
@@ -369,26 +366,7 @@ class Analyze:
         self.ax = pl.subplot(111)
         self.ax.loglog(t / s_per_yr, val, color = color, ls = ls)  
         
-        pl.draw()  
-            
-    def ColumnDensityContours(self):
-        """
-        Construct a 2D histogram of column density vs. time.
-        """    
-        
-        HI = []
-        HeI = []
-        
-        for i, dd in enumerate(self.data.keys()):
-            HI.extend(np.log10(self.data[dd].ncol_HI))
-            HeI.extend(np.log10(self.data[dd].ncol_HeI))
-            
-        hist, xedges, yedges = np.histogram2d(HI, HeI, 
-            bins = (np.linspace(17, 21, 500), np.linspace(17, 21, 500)))    
-            
-        X, Y = (self.rebin(np.linspace(17, 21, 500)), self.rebin(np.linspace(17, 21, 500)))
-                        
-        return X, Y, hist       
+        pl.draw()    
         
     def InspectRateCoefficients(self, t = 1, coeff = 'Gamma', species = 0, color = 'k', ls = '-'):
         """
@@ -423,7 +401,7 @@ class Analyze:
         
         self.ax = pl.subplot(111)
         for dd in self.data.keys():
-            if self.data[dd].t / self.pf['TimeUnits'] != t: 
+            if self.data[dd].t / self.pf.TimeUnits != t: 
                 continue
             
             exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
@@ -443,7 +421,7 @@ class Analyze:
             legend = False
         
         for dd in self.data.keys():
-            if self.data[dd].t / self.pf['TimeUnits'] != t: 
+            if self.data[dd].t / self.pf.TimeUnits != t: 
                 continue
             
             Gamma = self.data[dd].Gamma[:,species] * self.data[dd].nabs[:,species]
@@ -456,15 +434,15 @@ class Analyze:
             recomb = alpha + xi    
                 
         self.ax = pl.subplot(111)
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], ion, color = color, ls = '-', label = 'Ioniz.')        
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Gamma, color = color, ls = '--', label = r'$\Gamma$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], gamma, color = color, ls = ':', label = r'$\gamma$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Beta, color = color, ls = '-.', label = r'$\beta$')
+        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, ion, color = color, ls = '-', label = 'Ioniz.')        
+        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, Gamma, color = color, ls = '--', label = r'$\Gamma$')
+        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, gamma, color = color, ls = ':', label = r'$\gamma$')
+        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, Beta, color = color, ls = '-.', label = r'$\beta$')
         
         if plot_recomb:
-            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], recomb, color = 'b', ls = '-', label = 'Recomb.')
-            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], alpha, color = 'b', ls = '--', label = r'$\alpha$')
-            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], alpha, color = 'b', ls = ':', label = r'$\xi$')
+            self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, recomb, color = 'b', ls = '-', label = 'Recomb.')
+            self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, alpha, color = 'b', ls = '--', label = r'$\alpha$')
+            self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, alpha, color = 'b', ls = ':', label = r'$\xi$')
         
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Ionization Rate')
@@ -484,7 +462,7 @@ class Analyze:
             legend = False
         
         for dd in self.data.keys():
-            if self.data[dd].t / self.pf['TimeUnits'] != t: 
+            if self.data[dd].t / self.pf.TimeUnits != t: 
                 continue
             
             x_HII = self.data[dd].x_HII
@@ -503,12 +481,12 @@ class Analyze:
         ma = max(np.max(heat), np.max(cool))    
             
         self.ax = pl.subplot(111)
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], heat, color = 'r', ls = '-', label = r'$\mathcal{H}_{\mathrm{tot}}$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], cool, color = 'b', ls = '-', label = r'$\mathcal{C}_{\mathrm{tot}}$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], zeta, color = 'g', ls = '--', label = r'$\zeta$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], psi, color = 'g', ls = ':', label = r'$\psi$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], eta, color = 'c', ls = '--', label = r'$\eta$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], omega, color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
+        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, heat, color = 'r', ls = '-', label = r'$\mathcal{H}_{\mathrm{tot}}$')
+        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, cool, color = 'b', ls = '-', label = r'$\mathcal{C}_{\mathrm{tot}}$')
+        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, zeta, color = 'g', ls = '--', label = r'$\zeta$')
+        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, psi, color = 'g', ls = ':', label = r'$\psi$')
+        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, eta, color = 'c', ls = '--', label = r'$\eta$')
+        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, omega, color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
                 
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Heating/Cooling Rate')
@@ -534,10 +512,13 @@ class Analyze:
         for dd in self.data.keys():
             exec('hist, bin_edges = np.histogram(self.data[{0}].{1}, bins = bins)'.format(dd, field))                
                             
-            if volume: hist = hist**3                
+            if volume: 
+                hist = hist**3                
                             
-            if normalize: norm = float(np.sum(hist))
-            else: norm = 1.
+            if normalize: 
+                norm = float(np.sum(hist))
+            else: 
+                norm = 1.
             
             pdf.append(hist / norm)
             cdf.append(np.cumsum(hist) / float(np.sum(hist)))
@@ -554,8 +535,10 @@ class Analyze:
         
         self.ax = pl.subplot(111)
         
-        if df == 'pdf': hist = self.pdf
-        else: hist = self.cdf
+        if df == 'pdf': 
+            hist = self.pdf
+        else: 
+            hist = self.cdf
         
         self.ax.plot(self.bins[field], hist[field][dd], color = color, drawstyle = 'steps-mid')
         self.ax.set_xscale('log')

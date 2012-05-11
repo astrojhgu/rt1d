@@ -16,7 +16,7 @@ Notes:
 """
 
 import numpy as np
-from .Constants import c, G, km_per_mpc, m_H
+from .Constants import c, G, km_per_mpc, m_H, m_He
 from .Integrate import simpson
 
 class Cosmology:

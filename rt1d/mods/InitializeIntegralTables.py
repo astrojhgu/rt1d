@@ -142,8 +142,8 @@ class InitializeIntegralTables:
             prop = "M%g" % int(self.pf.SourceMass)
             
         elif self.pf.SourceType >= 3:
-            src = ''
-            prop = ''
+            src = 'bh_M%i' % int(self.pf.SourceMass)
+            prop = '' 
             if 3 in self.rs.SpectrumPars.Type:
                 src += 'mcd'
                 prop += "f%g" % self.rs.SpectrumPars.Fraction[self.rs.SpectrumPars.Type.index(3)]
@@ -157,16 +157,7 @@ class InitializeIntegralTables:
                 prop += "_in%g" % self.pf.SpectrumPowerLawIndex[self.rs.SpectrumPars.Type.index(4)]
                 if self.rs.SpectrumPars.AbsorbingColumn[self.rs.SpectrumPars.Type.index(3)] > 0:
                     prop += "_logN%g" % np.log10(self.rs.SpectrumPars.AbsorbingColumn[self.rs.SpectrumPars.Type.index(3)])
-            if 5 in self.rs.SpectrumPars.Type:
-                src += 'apl' 
-                if 3 in self.rs.SpectrumPars.Type:
-                    prop += '_'
-                prop += "f%g" % self.rs.SpectrumPars.Fraction[self.rs.SpectrumPars.Type.index(4)]
-                prop += "_in%g" % self.pf.SpectrumPowerLawIndex[self.rs.SpectrumPars.Type.index(4)]
-                if self.rs.SpectrumPars.AbsorbingColumn[self.rs.SpectrumPars.Type.index(3)] > 0:
-                    prop += "_logN%g" % np.log10(self.rs.SpectrumPars.AbsorbingColumn[self.rs.SpectrumPars.Type.index(3)])
-        
-        
+
         # Limits
         Hlim = '%i%i' % (self.HIColumn[0], self.HIColumn[-1])
         Helim = '%i%i' % (self.HeIColumn[0], self.HeIColumn[-1])        
@@ -205,10 +196,10 @@ class InitializeIntegralTables:
             table_from_pf = True
         else:
             if rank == 0:
-                print "\nDid not find a pre-existing integral table.  Generating {0}/{1} now...".format(self.pf.OutputDirectory, filename)
-                print "10^%g < ncol_HI < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
+                print "Did not find a pre-existing integral table.  Generating {0}/{1} now...".format(self.pf.OutputDirectory, filename)
+                print "10^%g < N_H / cm^-2 < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
                 if self.pf.MultiSpecies:
-                    print "10^%g < ncol_HeI and ncol_HeII < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
+                    print "10^%g < N_He / cm^-2 < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
             return None
         
         if rank == 0 and table_from_pf:
@@ -227,8 +218,8 @@ class InitializeIntegralTables:
             
             if rank == 0:
                 print "The hydrogen column bounds of the existing lookup table are inadequate for this simulation."
-                print "We require: 10^%g < ncol_H < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
-                print "            10^%g < ncol_He < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
+                print "We require: 10^%g < N_H / cm^-2 < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
+                print "            10^%g < N_He / cm^-2 < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
             
             if self.pf.RegenerateTable:
                 if rank == 0:

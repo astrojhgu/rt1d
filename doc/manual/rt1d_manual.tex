@@ -373,14 +373,17 @@ Relative tolerance of the ODE solver.  Combination of this parameter and \texttt
 \item \texttt{SourceType}
 \begin{description}
     \item [0] Monochromatic source.
-    \item [1] Blackbody.  
+    \item [1] Star.  
     \item [2] PopIII star.  
-    \item [3] Power-law.        
+    \item [3] Black hole.        
     \item [4] Absorbed power-law (column density given by \texttt{SpectrumAbsorbingColumn} parameter).
     \item [5] Multi-color disk + power-law. Relative normalization given by \texttt{SpectrumDiskFraction} parameter.                
 \end{description}    
-
 \end{description}
+
+\subsection{Spectrum Parameters}
+We keep these parameters separate from Source parameters to distinguish which parameters are allowed to vary with time, mass, luminosity, etc.  This separation was useful after renovating the \texttt{RadiationSource} class in May 2012, which made it so any parameter beginning with the word `Spectrum' can be a list, to allow construction of spectra consisting of an arbitrary number of components, each with uniquely specified parameters.
+
 
 
 \subsection{Physics Parameters} \label{sec:PhysicsParameters}
@@ -448,16 +451,6 @@ Single-zone ionization, heating, and cooling.
 %%%
 \section{Advanced Usage}
 
-%%% 
-%% Convergence
-%%%
-\section{Convergence}
-In \texttt{rt1d/doc/examples} you will find directories containing convergence test suites for RT06 test problems 1 \& 2 (\texttt{RT06\_1\_ResolutionTestSuite} and \texttt{RT06\_2\_ResolutionTestSuite}).  Each of these directories contains the parameter files necessary to run these problems on grids containing $100 \times 2^n$ cells, where $n = 0,1,...6$.  If you want, you can run them all at once, though keep in mind the simulations with 100 cells will finish much much faster than those containing 6400 cells, so it might not be good to check out a node for this as most of the computation will be spent on 1 or 2 simulations.  For instance, you could do:
-\begin{verbatim}
-    cd rt1d/doc/examples/RT06_1_ResolutionTestSuite/c_infinite
-    mpirun -np 4 python RT1D.py -b batch_list.dat
-\end{verbatim}
-I've included the same setup for $c \neq \infty$ in \texttt{rt1d/doc/examples/RT06\_1\_ResolutionTestSuite/c\_finite}, so you can see the differences (if any) caused by making the $c \rightarrow \infty$ approximation.
 
 %%% 
 %% Troubleshooting
@@ -508,10 +501,6 @@ What parameters must be set?
 \newpage
 \bibliography{references}
 \bibliographystyle{apj}
-
-
-
-
 
 \end{document}
 

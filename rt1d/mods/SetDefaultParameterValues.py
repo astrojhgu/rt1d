@@ -129,6 +129,7 @@ def SetDefaultParameterValues():
         "SourceLifetime": 1e10,  
         "SourceRadiativeEfficiency": 0.1,
         "SourceISCO": 0,  
+        "SourceDiskMaxRadius": 1e3,
         "SourceTimeEvolution": 0,
           
         # Spectral parameters
@@ -142,7 +143,6 @@ def SetDefaultParameterValues():
         "SpectrumMaxNormEnergy": 5e2,  
         "SpectrumPhotonLuminosity": 5e48,  
         "SpectrumAbsorbingColumn": 0,  
-        "SpectrumDiskFraction": 1.0,
         "SpectrumColorCorrectionFactor": 1.7,
           
         # Set discrete spectrum manually  
