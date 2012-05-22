@@ -11,6 +11,8 @@ formulae of Verner et al. 1996, and eventually others.
 """
 
 import numpy as np
+from .Constants import h
+from scipy.integrate import quad
 
 E_th = [13.6, 24.6, 54.4]
 params = [[4.298e-1, 5.475e4, 3.288e1, 2.963, 0.0, 0.0, 0.0],
@@ -42,5 +44,20 @@ def PhotoIonizationCrossSection(E, species = 0):
                                 
     return params[species][1] * F_y * 1e-18
                                                                                                                
-        
+def EffectiveCrossSection(rs, E1, E2, species = 0):
+    """
+    Compute frequency averaged cross-section, as in Aubert & Teyssier 2008.
+    
+        rs: Instance of RadiationSource class.
+    """
+    
+    Q12 = quad(lambda x: rs.Spectrum(x) / x, E1, E2)[0]
+    return quad(lambda x: rs.Spectrum(x) * PhotoIonizationCrossSection(x, species = species) / \
+        x, E1, E2)[0] / Q12
+    
+    
+    
+    
+    
+    
     

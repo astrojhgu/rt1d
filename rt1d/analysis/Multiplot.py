@@ -59,7 +59,7 @@ class multiplot:
             
             self.panel_size = np.array([xsize, ysize])
                     
-        if share_all and not useAxesGrid:
+        if (share_all and not useAxesGrid) or not share_all:
             pl.rcParams['figure.subplot.wspace'] = self.padding
             pl.rcParams['figure.subplot.hspace'] = self.padding        
                 

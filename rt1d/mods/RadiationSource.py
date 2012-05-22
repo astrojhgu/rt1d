@@ -65,6 +65,7 @@ class RadiationSource:
         if self.N == 1:
             self.Type = self.SpectrumPars.Type[0]
                     
+        # Correct later if using multi-group approach
         self.E = np.array(pf.DiscreteSpectrumSED)
         self.F = np.array(pf.DiscreteSpectrumRelLum)      
         
@@ -104,11 +105,45 @@ class RadiationSource:
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
             self.Qdot = self.Lbol * self.F / self.E / erg_per_ev
         else:
-            self.Lbol = self.BolometricLuminosity(0.0)           
+            self.Lbol = self.BolometricLuminosity(0.0)    
+                
+        # Parameters for average AGN spectrum of SOS04.
+        self.Alpha = 0.24
+        self.Beta = 1.60
+        self.Gamma = 1.06
+        self.E_1 = 83.
+        self.K = 0.0041
+        self.E_0 = (self.Beta - self.Alpha) * self.E_1
+        self.A = np.exp(2.0 / self.E_1) * 2.0**self.Alpha
+        self.B = ((self.E_0**(self.Beta - self.Alpha)) * np.exp(-(self.Beta - self.Alpha))) / \
+            (1.0 + (self.K * self.E_0**(self.Beta - self.Gamma)))
+            
+        # Normalization constants to make the SOS04 spectrum continuous.
+        self.SX_Normalization = 1.0
+        self.UV_Normalization = self.SX_Normalization * ((self.A * 2000.0**-self.Alpha) * \
+            np.exp(-2000.0 / self.E_1)) / ((1.2 * 2000**-1.7) * np.exp(2000.0 / 2000.0))
+        self.IR_Normalization = self.UV_Normalization * ((1.2 * 10**-1.7) * np.exp(10.0 / 2000.0)) / \
+            (1.2 * 159 * 10**-0.6)
+        self.HX_Normalization = self.SX_Normalization * (self.A * self.E_0**-self.Alpha * \
+            np.exp(-self.E_0 / self.E_1)) / (self.A * self.B * (1.0 + self.K * self.E_0**(self.Beta - self.Gamma)) * \
+            self.E_0**-self.Beta)               
              
         # Normalize spectrum
         self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
-          
+        
+        # Multi-group treatment
+        if pf.FrequencyAveragedCrossSections:
+            self.E = np.zeros(pf.FrequencyGroups)
+            self.F = np.ones_like(self.E)
+            self.bands = pf.FrequencyBands
+            if len(self.bands) == (len(self.E) - 1):
+                self.bands.append(self.Emax)
+            
+            for i in xrange(pf.FrequencyGroups):
+                self.E[i] = quad(lambda x: x * self.Spectrum(x), 
+                    self.bands[i], self.bands[i + 1])[0]
+                self.Qdot = np.array([pf.SpectrumPhotonLuminosity]) #self.Lbol * self.F / self.E / erg_per_ev    
+                              
     def GravitationalRadius(self, M):
         """
         Half the Schwartzchild radius.
@@ -175,6 +210,8 @@ class RadiationSource:
             Lnu = self.MultiColorDisk(E, i, Type, t)
         elif Type == 4: 
             Lnu = self.PowerLaw(E, i, Type, t)    
+        elif Type == 5:
+            Lnu = self.QuasarTemplate(E, i, Type, t)    
         else:
             Lnu = 0.0
             
@@ -242,6 +279,39 @@ class RadiationSource:
         
         integrand = lambda T: (T / self.T_in)**(-11. / 3.) * self.BlackBody(E, T) / self.T_in
         return quad(integrand, self.T_out, self.T_in)[0]
+        
+    def QuasarTemplate(self, E, i, Type, t = 0.0):
+        """
+        Quasar spectrum of Sazonov, Ostriker, & Sunyaev 2004.
+        """    
+        
+        op = (E < 10)
+        uv = (E >= 10) & (E < 2e3) 
+        xs = (E >= 2e3) & (E < self.E_0)
+        xh = (E >= self.E_0) & (E < 4e5)        
+        
+        if type(E) in [int, float]:
+            if op:
+                F = self.IR_Normalization * 1.2 * 159 * E**-0.6
+            elif uv:
+                F = int(uv) * self.UV_Normalization * 1.2 * E**-1.7 * np.exp(E / 2000.0)
+            elif xs:
+                F = self.SX_Normalization * self.A * E**-self.Alpha * np.exp(-E / self.E_1)
+            elif xh:
+                F = self.HX_Normalization * self.A * self.B * (1.0 + self.K * \
+                    E**(self.Beta - self.Gamma)) * E**-self.Beta
+            else: 
+                F = 0
+                
+        else:
+            F = np.zeros_like(E)
+            F += op * self.IR_Normalization * 1.2 * 159 * E**-0.6
+            F += uv * self.UV_Normalization * 1.2 * E**-1.7 * np.exp(E / 2000.0)
+            F += xs * self.SX_Normalization * self.A * E**-self.Alpha * np.exp(-E / self.E_1)
+            F += xh * self.HX_Normalization * self.A * self.B * (1.0 + self.K * \
+                    E**(self.Beta - self.Gamma)) * E**-self.Beta
+        
+        return F
                             
     def NormalizeSpectrumComponents(self, t = 0):
         """

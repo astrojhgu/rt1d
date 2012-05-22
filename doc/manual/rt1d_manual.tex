@@ -20,8 +20,7 @@
 \usepackage{pslatex}
 \usepackage{epsfig}
 \usepackage{natbib}
-\usepackage[pdfborder={0 0 0}]{hyperref}
-\usepackage[all]{hypcap}
+\usepackage[pdfborder={0 0 1}]{hyperref}
 
 %%% START custom commands
 \newcommand{\HI}{\text{HI}}
@@ -90,8 +89,7 @@
 %%%
 \section{Introduction}
 Let's see what happens to the gas around stars and black holes, shall we? The
-primary reference for this code is
-\href{http://arxiv.org/abs/1204.1944}{arxiv:1204.1944} -- much of the text has
+primary reference for this code is \cite[\href{http://arxiv.org/abs/1204.1944}{arxiv:1204.1944}]{Mirocha2012} -- much of the text has
 been extracted from there.
 
 %%% 
@@ -249,7 +247,7 @@ case, but are perhaps more intuitive.
 
 % Secondary Electrons
 \subsection{Additional Complexity: Energy Dependent Secondary Electron Treatment}
-In the previous section (and in all of \citet{Mirocha2012}), we considered the asymptotic limit of \citet{Shull1985}, in which the fractional energy deposition of secondary electrons as heat, ionization, and excitation depends only on the hydrogen ionized fraction.  \citet{Furlanetto2010} updated this work, providing lookup tables of deposition fraction as a function of both ionized fraction and electron energy.  These effects are most important at $E \lesssim 10^2$ eV.  
+In the previous section (and in all of \citet{Mirocha2012}), we considered the asymptotic limit of \citet{Shull1985}, in which the fractional energy deposition of secondary electrons as heat, ionization, and excitation depends only on the hydrogen ionized fraction.  \citet{Ricotti2002} and \citet{Furlanetto2010} updated this work, providing (respectively) empirical fits and lookup tables of deposition fraction as a function of both ionized fraction and electron energy. These effects are most important at $E \lesssim 10^2$ eV.  
 
 To accommodate this model, we must redefine the quantities $\Phi_i$ and $\Psi_i$.  We will use a tilde to denote the new quantities related to secondary ionization, 
 \begin{align}
@@ -282,17 +280,31 @@ Various methods for handling secondary electrons are compared for a $10^5$ K bla
 \subsection{Additional Complexity: Cosmological Expansion}
 For an expanding universe, things are slightly more complicated, as ion densities will have an additional term $\propto (1 + z)^3$, and we must take into account Hubble cooling, and Compton scattering of CMB photons.
 
+Let's first account for dilution of ion densities by expansion.  The number density of atoms at the cosmic mean density evolves as
+\begin{align}
+    \frac{dn}{dt} & = \frac{dn}{dz}\frac{dz}{dt} \nonumber \\
+    & = \frac{d}{dz}\left(\bar{n}^0 (1 + z)^3 \right) \frac{dz}{dt} \nonumber \\
+    & = 3 \bar{n}^0 (1 + z)^2 \frac{dz}{dt} .
+\end{align}    
+But, $dz/dt = H(z) (1 +z)$ and $\bar{n}^0 (1 + z)^3 = n$, so
+\begin{equation}
+    \frac{dn}{dt} = -3 n H(z) , \label{eq:dilution}
+\end{equation}    
+where we've inserted a minus sign to indicate that densities decrease with increasing time, or decreasing redshift.  The right-hand side of Equation \ref{eq:dilution} is added to Equations \ref{eq:HIIRateEquation}-\ref{eq:HeIIIRateEquation} when \texttt{CosmologicalExpansion = 1}.
+
 We must also modify the minimum and maximum column densities for our integral tables.  To calculate what these should be for a simulation spanning the redshift interval $(z_i, z_f)$, minimum species fraction $x_{\mathrm{min}}$, and grid resolution (in proper coordinates) $dx$, do
 \begin{align}
-    N_{\HI}^{\mathrm{min}} & = \bar{n}_H^0 (1 + z_f)^3 dx x_{\mathrm{min}}   \\
-    N_{\HI}^{\mathrm{max}} & = \bar{n}_H^0 (1 + z_i)^3 \Lbox .
+    N_{\HI}^{\mathrm{min}} & = \bar{n}_H^0 (1 + z_f)^3 x_{\mathrm{min}} dx   \\
+    N_{\HI}^{\mathrm{max}} & = \bar{n}_H^0 (1 + z_i)^3 \Lbox
 \end{align}    
+
 
 \subsection{Time-stepping Techniques}
 
 
 
 \subsection{Parallelism}
+
 
 %%% 
 %% Classes
@@ -447,9 +459,20 @@ Single-zone ionization, heating, and cooling.
 \end{figure*}
 
 %%%
+%% SED studies
+%%%
+\section{Verifying Discrete SEDs with \texttt{rt1d}}
+In \citet{Mirocha2012}, we used \texttt{rt1d} to verify new, optimally selected discrete spectral energy distributions for sources of ultraviolet and X-ray photons.  As we optimize more and more SEDs for fully 3D cosmological  radiation-hydro simulations, \texttt{rt1d} remains a quick and easy tool for verifying that the SEDs we're using are acceptable.
+
+
+
+
+
+%%%
 %% Advanced usage
 %%%
 \section{Advanced Usage}
+In \cite{Mirocha2012}
 
 
 %%% 

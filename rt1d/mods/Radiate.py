@@ -283,7 +283,7 @@ class Radiate:
             
             # Unpack so we have everything by name
             nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, \
-                k_H, zeta, eta, psi, xi, omega, hubble, compton = args                                                                           
+                k_H, zeta, eta, psi, xi, omega, hubble, compton = args                                                   
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
             ######################################
             ######## Solve Rate Equations ########
@@ -310,7 +310,7 @@ class Radiate:
             # Calculate neutral fractions
             newHI = n_H - newHII
             newHeI = n_He - newHeII - newHeIII 
-                                    
+                                                
             # Store data
             newdata = self.StoreData(newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
                 tau, odeitr, h, rootitr, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, 

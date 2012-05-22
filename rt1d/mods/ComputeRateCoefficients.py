@@ -17,7 +17,7 @@ from .Cosmology import Cosmology
 from .Interpolate import Interpolate
 from .RadiationSource import RadiationSource
 from .SecondaryElectrons import SecondaryElectrons
-from .ComputeCrossSections import PhotoIonizationCrossSection
+from .ComputeCrossSections import *
 
 E_th = [13.6, 24.6, 54.4]
 
@@ -31,20 +31,30 @@ class RateCoefficients:
         # Initialize integral tables
         self.itabs = iits.itabs
         self.Interpolate = Interpolate(pf, iits)
-        self.TabulateIntegrals = self.pf["TabulateIntegrals"]
+        self.TabulateIntegrals = pf.TabulateIntegrals
         
-        # Create mask
+        # Multi-group method
+        if pf.FrequencyAveragedCrossSections:
+            self.N = pf.FrequencyGroups
+            self.sigma = np.zeros([3, self.N])
+            self.sigma[0] = EffectiveCrossSection(self.rs, 13.6, 100)
+            #for i in in xrange(3):
+            #    for j in xrange(self.pf.FrequencyGroups):
+                    
+        
+        # Polychromatic method                        
+        else:
+            self.N = len(self.rs.E)
+            self.sigma = np.zeros([3, self.N])
+            for i in xrange(3):
+                self.sigma[i] = PhotoIonizationCrossSection(self.rs.E, species = i)
+            
+        self.mask = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])    
         if pf.MultiSpecies:
             self.donors = np.arange(3)
         else:
-            self.donors = np.array([0])
-            
-        self.mask = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])    
-        
-        self.sigma = np.zeros([3, len(self.rs.E)])
-        for i in xrange(3):
-            self.sigma[i] = PhotoIonizationCrossSection(self.rs.E, species = i)
-            
+            self.donors = np.array([0])    
+                        
         self.zeros_like_E = np.zeros_like(self.rs.E)
         self.zeros_like_Q = np.zeros_like(self.rs.E)
         self.zeros_like_tau = np.zeros([len(self.zeros_like_E), 3])
@@ -164,7 +174,7 @@ class RateCoefficients:
                         
             Qdot = self.zeros_like_Q
             tau_c = self.zeros_like_tau
-            for i in xrange(len(self.rs.E)):
+            for i in xrange(self.N):
                 Qdot[i] = self.rs.IonizingPhotonLuminosity(t = t, bin = i)
                 for j in xrange(3):            
                     tau_c[i][j] = dr * nabs[j] * self.sigma[j][i]
@@ -192,6 +202,8 @@ class RateCoefficients:
                         Qdot = Qdot[j], nabs = nabs, dr = dr, species = i, t = t,
                         Vsh = Vsh, tau_E = tau_E, tau_c = tau_c[j][i], A = 1.0)
                         
+                    Gamma_E[j] = Gamma_E[j]    
+                        
                     # Total photo-ionization tally
                     Gamma[i] += Gamma_E[j]
                     
@@ -217,10 +229,12 @@ class RateCoefficients:
                             gamma[k][i] += ee * fion / (E_th[k] * erg_per_ev)
                                                                                                           
                     if self.pf.Isothermal:
-                        continue
+                        continue                           
                                                         
                     # Heating rate coefficient        
                     k_H[i] += ee * fheat
+                                
+                    #print E, self.sigma[i], Qdot[i], Gamma_E[i], k_H[i], fheat, ee       
                                                     
                 # Recombination
                 alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)

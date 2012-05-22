@@ -28,7 +28,7 @@ class Analyze:
     def __init__(self, pf, retabulate = True):
         self.ds = Dataset(pf)
         self.data = self.ds.data
-        self.pf = self.ds.pf
+        self.pf = self.ds.pf        # dict
         self.g = InitializeGrid(self.pf)   
         self.cosm = Cosmology(self.pf)
         self.rs = RadiationSource(self.pf)
@@ -41,11 +41,11 @@ class Analyze:
                 
         # Deal with log-grid
         if self.pf.LogarithmicGrid:
-            self.r = np.logspace(np.log10(pf.StartRadius * pf.LengthUnits),
-                np.log10(pf.LengthUnits), self.GridDimensions + 1)
+            self.r = np.logspace(np.log10(self.pf.StartRadius * self.pf.LengthUnits),
+                np.log10(self.pf.LengthUnits), self.GridDimensions + 1)
         else:
-            self.r = np.linspace(pf.StartRadius * pf.LengthUnits, 
-                pf.LengthUnits, self.GridDimensions + 1)
+            self.r = np.linspace(self.pf.StartRadius * self.pf.LengthUnits, 
+                self.pf.LengthUnits, self.GridDimensions + 1)
         
         self.dx = np.diff(self.r)   
         self.r = self.r[0:-1]

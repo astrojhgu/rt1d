@@ -134,6 +134,9 @@ def SetDefaultParameterValues():
           
         # Spectral parameters
         "DiscreteSpectrum": 0,
+        "FrequencyAveragedCrossSections": 0,
+        "FrequencyGroups": 1,
+        "FrequencyBands": [13.6, 24.6, 54.4],
         "SpectrumType": 1, 
         "SpectrumFraction": 1,   
         "SpectrumPowerLawIndex": 1.5,  
