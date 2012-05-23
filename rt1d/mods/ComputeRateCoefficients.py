@@ -37,11 +37,10 @@ class RateCoefficients:
         if pf.FrequencyAveragedCrossSections:
             self.N = pf.FrequencyGroups
             self.sigma = np.zeros([3, self.N])
-            self.sigma[0] = EffectiveCrossSection(self.rs, 13.6, 100)
-            #for i in in xrange(3):
-            #    for j in xrange(self.pf.FrequencyGroups):
+            for i in xrange(3):
+                for j in xrange(self.pf.FrequencyGroups):
+                    self.sigma[i] = EffectiveCrossSection(self.rs, self.rs.bands[j], self.rs.bands[j + 1])
                     
-        
         # Polychromatic method                        
         else:
             self.N = len(self.rs.E)

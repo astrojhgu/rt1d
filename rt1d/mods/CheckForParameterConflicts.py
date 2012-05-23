@@ -38,8 +38,12 @@ def CheckForParameterConflicts(pf):
         
     if probs:
         msg = []
-        for con in probs:
-            msg.append('%s = %g and %s = %g' % (con[0][0], con[0][1], con[1][0], con[1][1]))
+        for i, con in enumerate(probs):
+            for element in con:
+                msg.append('%s = %g' % (element[0], element[1]))
+            
+            if len(probs) > 1 and i != len(probs):
+                msg.append('\nAND\n')
         
         return True, msg
     else:

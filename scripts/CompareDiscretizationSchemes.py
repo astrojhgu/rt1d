@@ -33,8 +33,8 @@ mp = rta.multiplot(dims = (1, 2), useAxesGrid = False, panel_size = (2, 1),
         share_all = False, aspect = False, padding = 0.2)
 
 mp.grid[0].plot(continuous.data[1].r / Lbox, np.log10(continuous.data[1].T), color = 'k', ls = '-')
-#mp.grid[0].plot(continuous.data[7].r / Lbox, np.log10(continuous.data[7].T), color = 'k', ls = '--')
-mp.grid[0].plot(continuous.data[20].r / Lbox, np.log10(continuous.data[20].T), color = 'k', ls = ':')
+#mp.grid[0].plot(continuous.data[7].r / Lbox, np.log10(continuous.data[7].T), color = 'k', ls = '-')
+mp.grid[0].plot(continuous.data[20].r / Lbox, np.log10(continuous.data[20].T), color = 'k', ls = '-')
 
 mp.grid[0].scatter(optimal_mono.data[1].r[mask == 1] / Lbox, np.log10(optimal_mono.data[1].T[mask == 1]), color = 'b', marker = 'o', s = 20, facecolors = 'none')
 #mp.grid[0].scatter(optimal_mono.data[7].r[mask == 1] / Lbox, np.log10(optimal_mono.data[7].T[mask == 1]), color = 'b', marker = '^', s = 20, facecolors = 'none')

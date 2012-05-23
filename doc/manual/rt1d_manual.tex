@@ -21,6 +21,7 @@
 \usepackage{epsfig}
 \usepackage{natbib}
 \usepackage[pdfborder={0 0 1}]{hyperref}
+\usepackage[htt]{hyphenat}
 
 %%% START custom commands
 \newcommand{\HI}{\text{HI}}
@@ -80,6 +81,7 @@
 \date{Last Updated: \today}
 \maketitle
 
+% Table of contents
 \setcounter{tocdepth}{2}
 \tableofcontents
 \newpage
@@ -89,8 +91,9 @@
 %%%
 \section{Introduction}
 Let's see what happens to the gas around stars and black holes, shall we? The
-primary reference for this code is \cite[\href{http://arxiv.org/abs/1204.1944}{arxiv:1204.1944}]{Mirocha2012} -- much of the text has
-been extracted from there.
+primary reference for this code is
+\cite[\href{http://arxiv.org/abs/1204.1944}{arxiv:1204.1944}]{Mirocha2012} --
+much of the text has been extracted from there.
 
 %%% 
 %% Methods
@@ -112,31 +115,31 @@ each ion via
 Each of these equations represents the balance between ionizations of species
 $\HI$, $\HeI$, and $\HeII$, and recombinations of $\HII$, $\HeII$, and
 $\HeIII$. Associating the index $i$ with absorbing species, $i = \HI, \HeI,
-\HeII$, we define $\Gamma_i$ as the photo-ionization rate coefficient,
-$\gamma_i$ as the secondary ionization rate coefficient, $\alpha_i$ ($\xi_i$)
-as the case-B (dielectric) recombination rate coefficients, $\beta_i$ as the
-collisional ionization rate coefficients, and $\nel = \nHII + \nHeII +
-2\nHeIII$ as the number density of electrons.
+\HeII$, and the index $i^{\prime}$ with ions, $i^{\prime} = \HII, \HeII,
+\HeIII$, we define $\Gamma_i$ as the photo-ionization rate coefficient,
+$\gamma_i$ as the secondary ionization rate coefficient, $\alpha_{i^{\prime}}$
+($\xi_{i^{\prime}}$) as the case-B (dielectric) recombination rate
+coefficients, $\beta_i$ as the collisional ionization rate coefficients, and
+$\nel = \nHII + \nHeII + 2\nHeIII$ as the number density of electrons.
 
 At each time-step, we also solve for the temperature evolution, $dT_k/dt$,
 which
 is given by
 \begin{align}
-    \frac{3}{2}\frac{d}{dt}\left(\frac{\kB T_k \ntot}{\mu}\right) & = \fheat  \sum_i n_i \Heat_i - \sum_i \zeta_i n_e n_i - \sum_{i^{\prime}} \eta_i n_e n_i \nonumber \\ & - \sum_i \psi_i n_e n_i - \omega_{\HeII} n_e \nHeII \label{eq:TemperatureEvolution} 
+    \frac{3}{2}\frac{d}{dt}\left(\frac{\kB T_k \ntot}{\mu}\right) & = \fheat  \sum_i n_i \Heat_i - \sum_i \zeta_i n_e n_i - \sum_{i^{\prime}} \eta_{i^{\prime}} n_e n_{i^{\prime}} \nonumber \\ & - \sum_i \psi_i n_e n_i - \omega_{\HeII} n_e \nHeII \label{eq:TemperatureEvolution} 
 \end{align}
-where the index $i$ corresponds as usual to species that have bound electrons,
-and $i^{\prime}$ corresponds to ionized species. $\Heat_i$ is the
-photo-electric heating rate coefficient (due to electrons previously bound to
-species $i$), $\omega_{\HeII}$ is the dielectric recombination cooling
-coefficient, and $\zeta_i$, $\eta_i$, and $\psi_i$ are the collisional
-ionization, recombination, and collisional excitation cooling coefficients,
-respectively. The constants in Equation \ref{eq:TemperatureEvolution} are the
-total number density of baryons, $\ntot = n_\mathrm{H} + n_{\mathrm{He}} +
-n_e$, the mean molecular weight, $\mu$, Boltzmann's constant, $\kB$, and the
-fraction of secondary electron energy deposited as heat, $\fheat$. We use the
-formulae in Appendix B of \citet{Fukugita1994} to compute the values of
-$\alpha_i$, $\beta_i$, $\xi_i$, $\zeta_i$, $\eta_i$, $\psi_i$, and
-$\omega_{\HeII}$.
+where $\Heat_i$ is the photo-electric heating rate coefficient (due to
+electrons previously bound to species $i$), $\omega_{\HeII}$ is the dielectric
+recombination cooling coefficient, and $\zeta_i$, $\eta_{i^{\prime}}$, and
+$\psi_i$ are the collisional ionization, recombination, and collisional
+excitation cooling coefficients, respectively. The constants in Equation
+\ref{eq:TemperatureEvolution} are the total number density of baryons, $\ntot
+= n_\mathrm{H} + n_{\mathrm{He}} + n_e$, the mean molecular weight, $\mu$,
+Boltzmann's constant, $\kB$, and the fraction of secondary electron energy
+deposited as heat, $\fheat$. We use the formulae in Appendix B of
+\citet{Fukugita1994} to compute the values of $\alpha_i$, $\beta_i$, $\xi_i$,
+$\zeta_i$, $\eta_{i^{\prime}}$, $\psi_i$, and $\omega_{\HeII}$.
+
 
 % Ionization and Heating Rates
 \subsection{Computing the Ionization and Heating Rates}
@@ -162,17 +165,22 @@ radiation incident upon it and its optical depth,
 \end{equation}    
 It is most straightforward to imagine our 1D grid as a collection of
 concentric spherical shells, each having thickness $\Delta r$ and volume
-$V_{\sh}(r) = 4 \pi [(r + \Delta r)^3 - r^3] / 3$ (i.e. radii correspond to
-cell interfaces). The ionization and heating rates can then be related to the
-number of absorptions in any given shell (thus preserving photon number), as
+$V_{\sh}(r) = 4 \pi [(r + \Delta r)^3 - r^3] / 3$, where $r$ is the distance
+between the origin and the inner interface if each shell. The ionization and
+heating rates can then be related to the number of absorptions in any given
+shell (thus preserving photon number), as
 \begin{align}
     \Gamma_i & = A_i \int_{\nu_i}^{\infty} I_{\nu} e^{-\tau_{\nu}} \left(1 - e^{-\Delta \tau_{i,\nu}}\right) \frac{d\nu}{h\nu} \label{eq:PhotoIonizationRate} \\
     \gamma_{ij} & = A_j \int_{\nu_j}^{\infty} \left(\frac{\nu - \nu_j}{\nu_i}\right) I_{\nu} e^{-\tau_{\nu}} \left(1 - e^{-\Delta \tau_{j,\nu}}\right) \frac{d\nu}{h\nu} \label{eq:SecondaryIonizationRate} \\
     \Heat_i & = A_i \int_{\nu_i}^{\infty} (\nu - \nu_i) I_{\nu} e^{-\tau_{\nu}} \left(1 - e^{-\Delta \tau_{i,\nu}}\right) \frac{d\nu}{\nu} , \label{eq:HeatingRate}
 \end{align}    
-where we've defined the normalization constant, $A_i \equiv
+where we have defined the normalization constant $A_i \equiv
 L_{\mathrm{bol}}/n_i V_{\sh}(r)$, and denote the ionization threshold energy
-for species $i$ as $h\nu_i$. 
+for species $i$ as $h\nu_i$.  $I_{\nu}$ represents the SED of radiation sources, and satisfies 
+\begin{equation}
+\int_{\nu} I_{\nu} d\nu = 1,
+\end{equation}
+such that $A_i I_{\nu}$ is the number of photons of frequency $\nu$ per atom (of species $i$) in a shell at radius $r$.
 
 Equation \ref{eq:SecondaryIonizationRate} represents ionizations of species
 $i$ due to fast secondary electrons from photoionizations of species $j$,
@@ -298,6 +306,42 @@ We must also modify the minimum and maximum column densities for our integral ta
     N_{\HI}^{\mathrm{max}} & = \bar{n}_H^0 (1 + z_i)^3 \Lbox
 \end{align}    
 
+% Time-dependent source SEDs
+\subsection{Additional Complexity: Time-Dependent Source SEDs}
+Our lookup tables will inherit an additional dimension.  Goodie.
+
+
+
+% Spectrum Normalization
+\subsection{Spectrum Normalization}
+For convenience, we generally work with the normalized SED $I_{\nu}$, such that 
+\begin{equation}
+    L_{\nu} = L_{\mathrm{bol}} I_{\nu} ,
+\end{equation}    
+and 
+\begin{equation}
+    \dot{Q}_{\nu} = L_{\nu} / h\nu .
+\end{equation}    
+However, in \S\ref{sec:Discretization}, we will discuss how \texttt{rt1d} can be used to verify choices of discrete SEDs -- when \texttt{DiscreteSpectrum = 1}, we must be careful about how we normalize a spectrum.
+
+There are two primary ways we can go about normalizing a discrete spectrum consisting of $n_{\nu}$ frequency bins.  
+
+The first way is to manually supply the location of each bin (in eV) and the fraction of the bolometric luminosity allocated to that bin via the parameters \texttt{DiscreteSpectrumSED} and \texttt{DiscreteSpectrumRelLum}.  In \citet{Mirocha2012}, we denote these quantities as $h\nu_n$ and $I_n$, respectively, where $n = 1, 2,...n_{\nu}$, and do \textit{not} require the bolometric luminosity to remain conserved.  That is, we allow
+\begin{equation}
+    \sum_n I_n \neq 1.
+\end{equation}    
+This is because very high energy photons (depending on the spectrum) may not be absorbed at all over the column density regime or volume of interest.  It is important to note that even if $\sum_n I_n = 1$ exactly, the photon emissivity of a source constructed in this way will \textit{not} be conserved.  
+
+For example, when we simulate a $10^5$ K blackbody source emitting $5\times 10^{48}$ ionizing photons per second (as in RT06 problem \#2), the \texttt{RadiationSource} class figures out the bolometric luminosity (show equations here for reference), and assigns a fraction $I_n$ of that to bin $n$.  In doing this, 
+\begin{equation}
+    L_{\mathrm{bol}} \sum_n I_n / h\nu_n \neq 5 \times 10^{48} \ \mathrm{s}^{-1} .
+\end{equation}   
+
+The second approach we can use is that used in previous work such as \citet{Aubert2008}, which requires us to define bandpasses, each defined by an average photon energy and effective bound-free absorption cross-section.  The details will be discussed in \S\ref{sec:Discretization}, but for now it is enough to know that the ionizing photon luminosity \textit{will} be preserved with this method, assuming that the bandpasses span the full emission interval of the radiation source of interest, and the bolometric luminosity will \textit{not} be preserved.  That is,
+\begin{equation}
+    \sum_n \dot{Q}_n h \nu_n \neq L_{\mathrm{bol}} .
+\end{equation}    
+
 
 \subsection{Time-stepping Techniques}
 
@@ -305,6 +349,9 @@ We must also modify the minimum and maximum column densities for our integral ta
 
 \subsection{Parallelism}
 
+% Lookup Tables
+\subsection{Lookup Tables}
+How does the dimensionality of our lookup tables depend on input parameters?
 
 %%% 
 %% Classes
@@ -461,9 +508,33 @@ Single-zone ionization, heating, and cooling.
 %%%
 %% SED studies
 %%%
-\section{Verifying Discrete SEDs with \texttt{rt1d}}
-In \citet{Mirocha2012}, we used \texttt{rt1d} to verify new, optimally selected discrete spectral energy distributions for sources of ultraviolet and X-ray photons.  As we optimize more and more SEDs for fully 3D cosmological  radiation-hydro simulations, \texttt{rt1d} remains a quick and easy tool for verifying that the SEDs we're using are acceptable.
+\section{Verifying Discrete SEDs with \texttt{rt1d}} \label{sec:Discretization}
+In \citet{Mirocha2012}, we used \texttt{rt1d} to verify new, optimally
+selected discrete spectral energy distributions for sources of ultraviolet and
+X-ray photons. As we optimize more and more SEDs for fully 3D cosmological
+radiation-hydro simulations, \texttt{rt1d} remains a quick and easy tool for
+verifying that the SEDs we're using are acceptable.
 
+In the literature, discrete SEDs have been constructed using a `multi-group'
+approach, which defines new absorption cross sections which represent
+spectrum-weighted averages over broad bandpasses,
+\begin{equation}
+    \tilde{\sigma}_{i,n} \equiv \int_{\nu_n}^{\nu_{n+1}} \sigma_{i,\nu} \frac{I_{\nu}}{h\nu}  d\nu \left(\int_{\nu_n}^{\nu_{n+1}}\frac{I_{\nu}}{h\nu}d\nu \right)^{-1} ,
+\end{equation}    
+where the interval $(\nu_n, \nu_{n+1})$ represents the bandpass bounds for
+discrete photon group $n$.
+
+The emission energies are chosen in a similar way, 
+\begin{equation}
+    h\nu_n = \int_{h\nu_n}^{h\nu_{n+1}} I_{\nu} d\nu \left(\int_{h\nu_n}^{h\nu_{n+1}} \frac{I_{\nu}}{h\nu} d\nu \right)^{-1} . \label{eq:MeanPhotonEnergy}
+\end{equation}    
+It's worth keeping in mind that there are different ways to compute the mean
+photon energy in each interval. Here, we've calculated by dividing a quantity
+proportional to the bolometric energy output by the total number of ionizing
+photons. We could also compute the expectation value, median value, or even
+the peak of emission (e.g. for a blackbody). Equation
+\ref{eq:MeanPhotonEnergy} is most often used in the literature, so we'll stick
+to that.
 
 
 

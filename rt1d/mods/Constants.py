@@ -62,8 +62,8 @@ erg_per_j = 1e-7
 erg_per_ev = e/erg_per_j
 erg_per_kev = erg_per_ev*1e3
 
-lsun = 3.839e33                                             # Solar luminosity - erg / s
-cm_per_rsun = 695500.0 * 1e5                                # Radius of the sun - [cm_per_rsun] = cm
-t_edd = 0.45 * 1e9 * s_per_yr                               # Eddington timescale (see eq. 1 in Volonteri & Rees 2005) 
-
-xi = (3. / 7.)**0.5 * (6. / 7.)**3
+lsun = 3.839e33                     # Solar luminosity - erg / s
+cm_per_rsun = 695500.0 * 1e5        # Radius of the sun - [cm_per_rsun] = cm
+t_edd = 0.45 * 1e9 * s_per_yr       # Eddington timescale (see eq. 1 in Volonteri & Rees 2005) 
+                                    
+xi = (3. / 7.)**0.5 * (6. / 7.)**3  # Correction factor for peak temperature location in disk                        

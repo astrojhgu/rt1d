@@ -18,7 +18,7 @@ SourceType = 0: Monochromatic/Polychromatic emission of SpectrumPhotonLuminosity
 """
 
 import numpy as np
-from scipy.integrate import quad, fixed_quad
+from scipy.integrate import quad
 from Integrate import simpson as integrate                  # why did scipy.integrate.quad mess up LphotNorm? 
 from .Constants import *
 from .ReadParameterFile import dotdictify
@@ -60,7 +60,9 @@ class RadiationSource:
         self.SpectrumPars.Type = map(int, self.SpectrumPars.Type)
         
         self.Emin = min(self.SpectrumPars.MinEnergy)
-        self.Emax = min(self.SpectrumPars.MaxEnergy)        
+        self.Emax = min(self.SpectrumPars.MaxEnergy)   
+        self.EminNorm = min(self.SpectrumPars.MinNormEnergy)
+        self.EmaxNorm = min(self.SpectrumPars.MaxNormEnergy)
         
         if self.N == 1:
             self.Type = self.SpectrumPars.Type[0]
@@ -132,18 +134,24 @@ class RadiationSource:
         self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
         
         # Multi-group treatment
+        Qnorm = pf.SpectrumPhotonLuminosity / self.Lbol / \
+            quad(lambda x: self.Spectrum(x) / x, self.EminNorm, self.EmaxNorm)[0]
         if pf.FrequencyAveragedCrossSections:
             self.E = np.zeros(pf.FrequencyGroups)
             self.F = np.ones_like(self.E)
+            self.Qdot = np.zeros_like(self.E)
             self.bands = pf.FrequencyBands
+            
             if len(self.bands) == (len(self.E) - 1):
                 self.bands.append(self.Emax)
             
             for i in xrange(pf.FrequencyGroups):
-                self.E[i] = quad(lambda x: x * self.Spectrum(x), 
-                    self.bands[i], self.bands[i + 1])[0]
-                self.Qdot = np.array([pf.SpectrumPhotonLuminosity]) #self.Lbol * self.F / self.E / erg_per_ev    
-                              
+                L = quad(lambda x: self.Spectrum(x), self.bands[i], self.bands[i + 1])[0]
+                Q = quad(lambda x: self.Spectrum(x) / x, self.bands[i], self.bands[i + 1])[0]
+                
+                self.E[i] = L / Q
+                self.Qdot[i] = Qnorm * self.Lbol * Q
+                                              
     def GravitationalRadius(self, M):
         """
         Half the Schwartzchild radius.

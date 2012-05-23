@@ -109,7 +109,7 @@ class InitializeIntegralTables:
         Returns the filename following the convention:
                 
         filename = SourceType_UniqueSourceProperties_PhotonConserving_MultiSpecies_
-            DiscreteOrContinuous_TableDims_NHlimits_NHelimits.h5
+            DiscreteOrContinuous_TimeDependent?_TableDims_NHlimits_NHelimits.h5
         
         """
         
@@ -117,7 +117,8 @@ class InitializeIntegralTables:
             return self.pf.IntegralTableName
               
         ms = 'ms%i' % self.pf.MultiSpecies
-        pc = 'pc%i' % self.pf.PhotonConserving        
+        pc = 'pc%i' % self.pf.PhotonConserving 
+        td = 'tdep%i' % self.pf.SourceTimeEvolution       
         
         if self.pf.DiscreteSpectrum:
             sed = 'D'
@@ -162,7 +163,7 @@ class InitializeIntegralTables:
         Hlim = '%i%i' % (self.HIColumn[0], self.HIColumn[-1])
         Helim = '%i%i' % (self.HeIColumn[0], self.HeIColumn[-1])        
                     
-        return "%s_%s_%s_%s_%s_%s_%s_%s.h5" % (src, prop, pc, ms, sed, dims, Hlim, Helim)
+        return "%s_%s_%s_%s_%s_%s_%s_%s_%s.h5" % (src, prop, pc, ms, sed, td, dims, Hlim, Helim)
             
     def DatasetName(self, integral, species, donor_species = None):
         """
@@ -450,6 +451,28 @@ class InitializeIntegralTables:
             integrals.extend(['PhiWiggle', 'PsiWiggle', 'PhiHat', 'PsiHat'])
         
         return integrals
+    
+    def Dimensionality(self):
+        """
+        Return dimensionality of lookup table.
+        """    
+        
+        dims = 0
+          
+        if self.pf.SecondaryIonization >= 2:
+            dims += 1
+            
+        if self.pf.SourceTimeEvolution:
+            dims += 1
+            
+        if self.pf.MultiSpecies >= 1:
+            dims += 2            
+            
+        # Reserved for H2    
+        if self.pf.MultiSpecies == 2: 
+            dims += 1   
+        
+        return dims    
         
     def TotalOpticalDepth(self, ncol, species = None):
         """
