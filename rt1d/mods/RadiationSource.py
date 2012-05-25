@@ -151,6 +151,11 @@ class RadiationSource:
                 
                 self.E[i] = L / Q
                 self.Qdot[i] = Qnorm * self.Lbol * Q
+                
+        # Time evolution
+        if pf.SourceTimeEvolution:
+            self.logMarr = np.logspace(np.log10(pf.SourceMass), np.log10(pf.SourceFinalMass), pf.MassBins)
+            self.Marr = 10**self.logMarr     
                                               
     def GravitationalRadius(self, M):
         """
@@ -193,6 +198,13 @@ class RadiationSource:
         """        
         
         return self.M0 * np.exp(((1.0 - self.epsilon) / self.epsilon) * t / t_edd)         
+    
+    def BlackHoleAge(self, M):
+        """
+        Compute age of black hole based on current time, current mass, and initial mass.
+        """            
+        
+        return np.log(M / self.SourceMass) (self.epsilon / (1. - self.epsilon)) * t_edd
                 
     def IonizingPhotonLuminosity(self, t = 0, bin = None):
         """

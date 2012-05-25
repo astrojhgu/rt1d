@@ -423,14 +423,14 @@ class Analyze:
         for dd in self.data.keys():
             if self.data[dd].t / self.pf.TimeUnits != t: 
                 continue
+                            
+            Gamma = self.data[dd].Gamma[:,species] * self.data[dd].nabs[species,:]
+            gamma = np.sum(self.data[dd].gamma[:,species,:] * np.transpose(self.data[dd].nabs), axis = 1)
+            Beta = self.data[dd].Beta[:,species] * self.data[dd].nabs[species,:] * self.data[dd].n_e            
+            ion = Gamma + Beta + gamma
             
-            Gamma = self.data[dd].Gamma[:,species] * self.data[dd].nabs[:,species]
-            gamma = np.sum(self.data[dd].gamma[:,species] * self.data[dd].nabs, axis = 0)
-            Beta = self.data[dd].Beta[:,species] * self.data[dd].nabs[:,species] * self.data[dd].n_e
-            ion = Gamma + gamma + Beta
-            
-            alpha = self.data[dd].alpha[:,species] * self.data[dd].nion[:,species] * self.data[dd].n_e
-            xi = self.data[dd].xi[:,species] * self.data[dd].nion[:,species] * self.data[dd].n_e
+            alpha = self.data[dd].alpha[:,species] * self.data[dd].nion[species,:] * self.data[dd].n_e
+            xi = self.data[dd].xi[:,species] * self.data[dd].nion[species,:] * self.data[dd].n_e
             recomb = alpha + xi    
                 
         self.ax = pl.subplot(111)
@@ -438,11 +438,11 @@ class Analyze:
         self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, Gamma, color = color, ls = '--', label = r'$\Gamma$')
         self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, gamma, color = color, ls = ':', label = r'$\gamma$')
         self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, Beta, color = color, ls = '-.', label = r'$\beta$')
-        
+                
         if plot_recomb:
             self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, recomb, color = 'b', ls = '-', label = 'Recomb.')
             self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, alpha, color = 'b', ls = '--', label = r'$\alpha$')
-            self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, alpha, color = 'b', ls = ':', label = r'$\xi$')
+            self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, xi, color = 'b', ls = ':', label = r'$\xi$')
         
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Ionization Rate')
@@ -468,15 +468,17 @@ class Analyze:
             x_HII = self.data[dd].x_HII
             fheat = np.zeros(self.GridDimensions)
             for i in xrange(self.GridDimensions):
-                fheat[i] = self.esec.DepositionFraction(None, x_HII[i], 0)            
+                fheat[i] = self.esec.DepositionFraction(None, x_HII[i], 0)   
+                
+            tranabs = np.transpose(self.data[dd].nabs)             
             
-            heat = fheat * np.sum(self.data[dd].k_H * self.data[dd].nabs, axis = 1)
-            zeta = np.sum(self.data[dd].zeta * self.data[dd].nabs, axis = 1) * self.data[dd].n_e # collisional ionization
-            eta = np.sum(self.data[dd].eta * self.data[dd].nabs, axis = 1) * self.data[dd].n_e  # recombination
-            psi = np.sum(self.data[dd].psi * self.data[dd].nabs, axis = 1) * self.data[dd].n_e  # collisional excitation
-            omega = np.sum(self.data[dd].omega * self.data[dd].nabs, axis = 1) * self.data[dd].n_e # dielectric
+            heat = fheat * np.sum(self.data[dd].k_H * tranabs, axis = 1)
+            zeta = np.sum(self.data[dd].zeta * tranabs, axis = 1) * self.data[dd].n_e # collisional ionization
+            eta = np.sum(self.data[dd].eta * tranabs, axis = 1) * self.data[dd].n_e  # recombination
+            psi = np.sum(self.data[dd].psi * tranabs, axis = 1) * self.data[dd].n_e  # collisional excitation
+            omega = np.sum(self.data[dd].omega * tranabs, axis = 1) * self.data[dd].n_e # dielectric
             cool = (zeta + eta + psi + omega)
-            
+
         mi = min(np.min(heat), np.min(cool))    
         ma = max(np.max(heat), np.max(cool))    
             
@@ -489,7 +491,7 @@ class Analyze:
         self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, omega, color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
                 
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
-        self.ax.set_ylabel(r'Heating/Cooling Rate')
+        self.ax.set_ylabel(r'Heating & Cooling Rate $(\mathrm{erg/s/cm^3})$')
         self.ax.set_ylim(0.001 * 10**np.floor(np.log10(mi)), 10**np.ceil(np.log10(ma)))
         
         if legend:
@@ -558,7 +560,8 @@ class Analyze:
             result = 0
         else:
             result = np.zeros(bins.size - 1)
-            for i, element in enumerate(result): result[i] = (bins[i] + bins[i + 1]) / 2.
+            for i, element in enumerate(result): 
+                result[i] = (bins[i] + bins[i + 1]) / 2.
                 
         return result
         

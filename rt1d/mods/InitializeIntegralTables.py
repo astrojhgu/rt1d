@@ -13,7 +13,7 @@ To do:
 """
 
 import numpy as np
-import h5py, os, re
+import h5py, os, re, itertools
 from .Constants import *
 from .Cosmology import Cosmology 
 from .InitializeGrid import InitializeGrid
@@ -90,10 +90,16 @@ class InitializeIntegralTables:
             self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
             self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
         
-        self.itabs = None            
-        self.AllColumns = [self.HIColumn, self.HeIColumn, self.HeIIColumn]                
-        self.TableDims = np.array([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
-            
+        self.itabs = None 
+        
+        # What quantities are we going to compute?
+        self.IntegralList = self.ToCompute()
+        
+        # What will our table look like?
+        self.Nd, self.Nt, self.dims, self.values, \
+        self.indices, self.columns, self.dcolumns, self.locs = \
+            self.TableProperties()
+                        
         # Retrive rt1d environment - look for tables in rt1d/input
         self.rt1d = os.environ.get("RT1D")
 
@@ -109,7 +115,7 @@ class InitializeIntegralTables:
         Returns the filename following the convention:
                 
         filename = SourceType_UniqueSourceProperties_PhotonConserving_MultiSpecies_
-            DiscreteOrContinuous_TimeDependent?_TableDims_NHlimits_NHelimits.h5
+            DiscreteOrContinuous_TimeDependent?_SecondaryIonization_TableDims_NHlimits_NHelimits.h5
         
         """
         
@@ -118,6 +124,7 @@ class InitializeIntegralTables:
               
         ms = 'ms%i' % self.pf.MultiSpecies
         pc = 'pc%i' % self.pf.PhotonConserving 
+        si = 'si%i' % self.pf.SecondaryIonization
         td = 'tdep%i' % self.pf.SourceTimeEvolution       
         
         if self.pf.DiscreteSpectrum:
@@ -163,7 +170,7 @@ class InitializeIntegralTables:
         Hlim = '%i%i' % (self.HIColumn[0], self.HIColumn[-1])
         Helim = '%i%i' % (self.HeIColumn[0], self.HeIColumn[-1])        
                     
-        return "%s_%s_%s_%s_%s_%s_%s_%s_%s.h5" % (src, prop, pc, ms, sed, td, dims, Hlim, Helim)
+        return "%s_%s_%s_%s_%s_%s_%s_%s_%s_%s.h5" % (src, prop, pc, ms, sed, td, si, dims, Hlim, Helim)
             
     def DatasetName(self, integral, species, donor_species = None):
         """
@@ -171,11 +178,11 @@ class InitializeIntegralTables:
         """    
         
         if integral in ['PhiWiggle', 'PsiWiggle']:
-            return "%s%i%i" % (integral, species, donor_species)
+            return "log%s%i%i" % (integral, species, donor_species)
         elif integral == 'TotalOpticalDepth':
-            return integral    
+            return 'log%s' % integral    
         else:
-            return "%s%i" % (integral, species)     
+            return "log%s%i" % (integral, species)     
             
     def ReadIntegralTable(self):
         """
@@ -198,24 +205,24 @@ class InitializeIntegralTables:
         else:
             if rank == 0:
                 print "Did not find a pre-existing integral table.  Generating {0}/{1} now...".format(self.pf.OutputDirectory, filename)
-                print "10^%g < N_H / cm^-2 < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
+                print "Range of hydrogen column densities: 10^%g < N_H / cm^-2 < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
                 if self.pf.MultiSpecies:
-                    print "10^%g < N_He / cm^-2 < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
+                    print "Range of helium column densities: 10^%g < N_He / cm^-2 < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)
             return None
         
         if rank == 0 and table_from_pf:
-            print "Found table supplied in parameter file.  Reading %s" % tabloc
+            print "Found table supplied in parameter file.  Reading %s..." % tabloc
         elif rank == 0:
-            print "Found an integral table for this source.  Reading %s" % tabloc
+            print "Found an integral table for this source.  Reading %s..." % tabloc
         
         f = h5py.File("%s" % tabloc, 'r')
         
-        for item in f["IntegralTable"]: 
-            itab[item] = f["IntegralTable"][item].value
+        for item in f["integrals"]: 
+            itab[item] = f["integrals"][item].value
         
-        itab["HIColumnValues_x"] = f["ColumnVectors"]["HIColumnValues_x"].value
-        if np.min(itab["HIColumnValues_x"]) > self.HIColumnMin or \
-            np.max(itab["HIColumnValues_x"]) < self.HIColumnMax:
+        itab["logNHI"] = f["columns"]["logNHI"].value
+        if np.min(itab["logNHI"]) > self.HIColumnMin or \
+            np.max(itab["logNHI"]) < self.HIColumnMax:
             
             if rank == 0:
                 print "The hydrogen column bounds of the existing lookup table are inadequate for this simulation."
@@ -231,13 +238,13 @@ class InitializeIntegralTables:
                     print "Set RegenerateTable = 1 to recreate this table."    
         
         if self.pf.MultiSpecies > 0:
-            itab["HeIColumnValues_y"] = f["ColumnVectors"]["HeIColumnValues_y"].value
-            itab["HeIIColumnValues_z"] = f["ColumnVectors"]["HeIIColumnValues_z"].value
+            itab["logNHeI"] = f["columns"]["logNHeI"].value
+            itab["logNHeII"] = f["columns"]["logNHeII"].value
         
-            if np.min(itab["HeIColumnValues_y"]) > self.HeIColumnMin or \
-                np.max(itab["HeIColumnValues_y"]) < self.HeIColumnMin or \
-                np.min(itab["HeIIColumnValues_z"]) > self.HeIIColumnMin or \
-                np.max(itab["HeIIColumnValues_z"]) < self.HeIIColumnMin:
+            if np.min(itab["logNHeI"]) > self.HeIColumnMin or \
+                np.max(itab["logNHeI"]) < self.HeIColumnMin or \
+                np.min(itab["logNHeII"]) > self.HeIIColumnMin or \
+                np.max(itab["logNHeII"]) < self.HeIIColumnMin:
                 
                 if rank == 0:
                     print "The helium column bounds of the existing lookup table are inadequate for this simulation."
@@ -254,38 +261,45 @@ class InitializeIntegralTables:
         
         # Override what's in parameter file if there is a preexisting table and
         # all the bounds are OK
-        self.HIColumn = itab["HIColumnValues_x"]    
+        self.HIColumn = itab["logNHI"]    
         if self.pf.MultiSpecies > 0:
-            self.HeIColumn = itab["HeIColumnValues_y"]
-            self.HeIIColumn = itab["HeIIColumnValues_z"]
+            self.HeIColumn = itab["logNHeI"]
+            self.HeIIColumn = itab["logNHeII"]
         
         return itab
-                    
+         
     def WriteIntegralTable(self, itabs):
         """
         Write out interpolation tables.
         """
         
         filename = self.DetermineTableName()                    
-        f = h5py.File("{0}/{1}".format(self.pf.OutputDirectory, filename), 'w') 
+        f = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'w') 
 
-        pf_grp = f.create_group("ParameterFile")
-        tab_grp = f.create_group("IntegralTable")
-        col_grp = f.create_group("ColumnVectors")
+        pf_grp = f.create_group("parameters")
+        tab_grp = f.create_group("integrals")
+        col_grp = f.create_group("columns")
         
         for par in self.pf: 
             pf_grp.create_dataset(par, data = self.pf[par])
         for integral in itabs: 
             tab_grp.create_dataset(integral, data = itabs[integral])
     
-        col_grp.create_dataset("HIColumnValues_x", data = self.HIColumn)
+        col_grp.create_dataset("logNHI", data = self.HIColumn)
         
         if self.pf.MultiSpecies > 0:
-            col_grp.create_dataset("HeIColumnValues_y", data = self.HeIColumn)
-            col_grp.create_dataset("HeIIColumnValues_z", data = self.HeIIColumn)
+            col_grp.create_dataset("logNHeI", data = self.HeIColumn)
+            col_grp.create_dataset("logNHeII", data = self.HeIIColumn)
         
-        f.close()
-                    
+        if self.pf.SecondaryIonization >= 2:
+            col_grp.create_dataset('logxHII', data = self.esec.LogIonizedFractions)
+        
+        if self.pf.SourceTypeEvolution:
+            col_grp.create_dataset('logM', data = self.rs.logMarr)
+            col_grp.create_dataset('logAge', data = np.log10(self.rs.BlackHoleAge(self.rs.Marr)))
+        
+        f.close()     
+                        
     def TabulateRateIntegrals(self):
         """
         Return a dictionary of lookup tables, and also store a copy as self.itabs.
@@ -300,105 +314,68 @@ class InitializeIntegralTables:
         
         # Otherwise, make a new lookup table
         itabs = {}     
-        
-        # What are we going to compute?
-        IntegralList = self.ToCompute()
-        
-        # If hydrogen-only
-        if self.pf.MultiSpecies == 0:
-                            
-            # Loop over integrals                
-            for h, integral in enumerate(IntegralList):
+         
+        s = ''
+        for i in self.dims:
+            s += '%ix' % i
+        s = s.rstrip('x')
                 
-                name = self.DatasetName(integral, species = 0, donor_species = 0)
+        print 'This lookup table will contain %i unique tables. Each will have %s (%i) elements.' % (self.Nt, s, np.prod(self.dims))
+        print 'If that sounds like a lot, you should consider hitting ctrl-D.'
+                    
+        # Loop over integrals     
+        donor_species = 0  
+        for h in xrange(len(self.IntegralList)): 
+            integral = self.IntegralList[h] 
+                        
+            for species in np.arange(3):
+                if species > 0 and not self.pf.MultiSpecies:
+                    continue                    
                 
+                name = self.DatasetName(integral, species = species, 
+                    donor_species = donor_species)
+                                    
                 # Print some info to the screen
                 if rank == 0 and self.pf.ParallelizationMethod == 1: 
                     print "\nComputing value of %s..." % name
                     if self.ProgressBar:
-                        pbar = ProgressBar(widgets = widget, maxval = len(self.HIColumn)).start()
-                
-                if self.esec.Method < 2 or \
-                    (('Wiggle' not in integral) and \
-                     ('Hat' not in integral)):
-                    tab = np.zeros_like(self.HIColumn)
-                else:
-                    tab = np.zeros([len(self.HIColumn), self.esec.NumberOfXiBins])
+                        pbar = ProgressBar(widgets = widget, maxval = np.prod(self.dims)).start()                    
                                     
-                # Loop over column density                                    
-                for i, ncol_HI in enumerate(self.HIColumn):
+                tab = np.zeros(self.dims)
+                for i, ind in enumerate(self.indices):
                     
-                    if self.pf.ParallelizationMethod == 1 and (i % size != rank): 
+                    if i % size != rank:
                         continue
-                    if rank == 0 and self.ProgressBar and self.pf.ParallelizationMethod == 1:
-                        pbar.update(i + 1)
                     
-                    # Evaluate integral
-                    if self.esec.Method < 2 or \
-                        (('Wiggle' not in integral) and \
-                         ('Hat' not in integral)):
-                        tab[i] = eval("self.{0}({1}, 0)".format(integral, 
-                            [10**ncol_HI, negligible_column, negligible_column]))
-                    else:        
-                        for j, xi in enumerate(self.esec.IonizedFractions):
-                            tab[i][j] = eval("self.{0}({1}, 0, 0, {2})".format(integral, 
-                            [10**ncol_HI, negligible_column, negligible_column], xi))
-                
+                    logNHI, logNHeI, logNHeII, logx, logM = self.parse_args(self.values[i]) 
+                    N = 10**np.array([logNHI, logNHeI, logNHeII])
+                    tab[ind] = eval('self.{0}([{1},{2},{3}], {4}, {5}, {6}, {7})'.format(integral, 
+                        N[0], N[1], N[2], species, donor_species, 10**logx, logM))
+                        
+                    if rank == 0 and self.ProgressBar and self.pf.ParallelizationMethod == 1:
+                        pbar.update(i)    
+                    
                 if size > 1 and self.pf.ParallelizationMethod == 1: 
                     tab = MPI.COMM_WORLD.allreduce(tab, tab)
         
-                MPI.COMM_WORLD.barrier()
                 if rank == 0 and self.ProgressBar and self.pf.ParallelizationMethod == 1: 
-                    pbar.finish()
-        
+                    pbar.finish()    
+                    
                 # Store table
                 itabs[name] = np.log10(tab)
-                del tab
+                del tab    
                 
-        # If we're including helium as well         
-        else:
-                            
-            for h, integral in enumerate(IntegralList):
-                                                              
-                for species in np.arange(3):
-                    
-                    if integral == 'TotalOpticalDepth' and species > 0:
-                        continue
-                    
-                    name = self.DatasetName(integral, species = species)
-                    
-                    # This could take a while
-                    if rank == 0: 
-                        print "\nComputing value of %s..." % name
-                    if rank == 0 and self.ProgressBar: 
-                        pbar = ProgressBar(widgets = widget, maxval = np.prod(self.TableDims)).start()
-                                        
-                    # Loop over column densities
-                    tab = np.zeros([len(self.HIColumn), len(self.HeIColumn), len(self.HeIIColumn)])
-                    for i, ncol_HI in enumerate(self.HIColumn):                          
-                        for j, ncol_HeI in enumerate(self.HeIColumn):
-                            for k, ncol_HeII in enumerate(self.HeIIColumn):
-                                
-                                global_i = i * (self.TableDims[1] * self.TableDims[2]) + j * self.TableDims[2] + k + 1
-                                
-                                if self.pf.ParallelizationMethod == 1 and (global_i % size != rank): 
-                                    continue
-                                
-                                tab[i][j][k] = eval("self.{0}({1}, {2})".format(integral, [10**ncol_HI, 10**ncol_HeI, 10**ncol_HeII], species))  
-                                                                
-                                if rank == 0 and self.ProgressBar:
-                                    pbar.update(global_i)                            
-                    
-                    if size > 1 and self.pf.ParallelizationMethod == 1: 
-                        tab = MPI.COMM_WORLD.allreduce(tab, tab)
-                    
-                    itabs[name] = np.log10(tab)
-                    del tab
-                    
-                    MPI.COMM_WORLD.barrier()
-                    if rank == 0 and self.ProgressBar and self.pf.ParallelizationMethod == 1: 
-                        pbar.finish() 
-                        
+            # Increment/Decrement donor_species
+            if donor_species == 2:
+                donor_species == 0
+                h += 1
+            elif donor_species < 2 and \
+                (re.search('Wiggle', integral) or re.search('Hat', integral)) and \
+                self.pf.MultiSpecies:
+                donor_species += 1            
+            else:
+                h += 1
+                
         # Optical depths for individual species
         for i in xrange(3):
             
@@ -406,12 +383,12 @@ class InitializeIntegralTables:
                 continue
                 
             if rank == 0: 
-                print "\nComputing value of OpticalDepth%i..." % i
+                print "\nComputing value of logOpticalDepth%i..." % i
             if rank == 0 and self.ProgressBar:     
-                pbar = ProgressBar(widgets = widget, maxval = self.TableDims[i]).start()
+                pbar = ProgressBar(widgets = widget, maxval = self.dims[i]).start()
             
-            tab = np.zeros(self.TableDims[i])
-            for j, col in enumerate(self.AllColumns[i]): 
+            tab = np.zeros(self.dims[i])
+            for j, col in enumerate(self.columns[i]): 
                         
                 if self.pf.ParallelizationMethod == 1 and (j % size != rank): 
                     continue
@@ -423,12 +400,13 @@ class InitializeIntegralTables:
             
             if size > 1 and self.pf.ParallelizationMethod == 1: 
                 tab = MPI.COMM_WORLD.allreduce(tab, tab)
-            
-            itabs['OpticalDepth%i' % i] = np.log10(tab) 
-            del tab
-            
-            if rank == 0 and self.ProgressBar:
+
+            MPI.COMM_WORLD.barrier()
+            if rank == 0 and self.ProgressBar and self.pf.ParallelizationMethod == 1: 
                 pbar.finish()
+            
+            itabs['logOpticalDepth%i' % i] = np.log10(tab) 
+            del tab
 
         # Write-out data
         if rank == 0 or self.pf.ParallelizationMethod == 2: 
@@ -439,8 +417,95 @@ class InitializeIntegralTables:
             MPI.COMM_WORLD.barrier()       
             
         self.itabs = itabs    
-        return itabs 
-        
+        return itabs         
+            
+    def parse_args(self, values):
+        """
+        Figures out what's what.
+        """        
+                
+        if self.Nd == 1:
+            return values, 0, 0, 0, 0
+        elif self.Nd == 2:
+            if self.pf.SecondaryIonization < 2:
+                return values[0], 0, 0, 0, values[1]
+            else:
+                return values[0], 0, 0, values[1], 0
+        elif self.Nd == 3:
+            if self.pf.MultiSpecies:
+                return values[0], values[1], values[2], 0, 0
+            else:
+                return values[0], 0, 0, values[1], values[2]
+        elif self.Nd == 4:
+            if self.pf.SecondaryIonization < 2:
+                return values[0], values[1], values[2], 0, values[3]
+            else:
+                return values[0], values[1], values[2], values[3], 0
+        else:
+            return values
+            
+    def TableProperties(self):
+        """
+        Figure out ND space of all lookup table elements.
+        """        
+
+        Nd = 1                  # Table dimensions
+        Nt = 1                  # Number of tables (unique quantities)
+        dims = [self.HINBins]   # Number of elements in each dimension of each table        
+        columns = [self.HIColumn]                    
+        locs = [0]
+                            
+        if not self.pf.Isothermal:
+            Nt += 1                    
+                                
+        if self.pf.MultiSpecies >= 1:
+            Nd += 2
+            Nt += (1 + (not self.pf.Isothermal)) * 2
+            dims.extend([self.HeINBins, self.HeIINbins]) 
+            columns.extend([self.HeIColumn, self.HeIIColumn]) 
+            locs.extend([1, 2])
+          
+        if self.pf.SecondaryIonization >= 2:
+            Nd += 1
+            Nt += (2. + 2. * (not self.pf.Isothermal)) * (1. + 2 * self.pf.MultiSpecies)**2
+            dims.append(self.pf.IonizedFractionBins)
+            columns.append(self.esec.log_xHII)
+            locs.append(3)
+            
+        if self.pf.SourceTimeEvolution:
+            Nd += 1
+            dims.append(self.pf.MassBins)
+            columns.append(self.rs.logMarr)
+            locs.append(4)
+            
+        indices = []
+        for element in columns:
+            indices.append(np.arange(len(element)))
+                
+        if Nd > 1:
+            tmp1 = itertools.product(*columns)
+            tmp2 = itertools.product(*indices)
+            
+            values = []
+            for item in tmp1:
+                values.append(item) 
+            
+            indices = []
+            for item in tmp2:
+                indices.append(item)    
+                
+            # spacing of columns    
+            dcol = []
+            for col in columns:
+                dcol.append(np.diff(col)[0])
+                  
+        else:
+            values = columns[0]
+            indices = indices[0]     
+            dcol = np.diff(values)[0]    
+            
+        return Nd, Nt, dims, values, indices, columns, dcol, locs
+                                     
     def ToCompute(self):
         """
         Return list of quantities to compute.
@@ -451,29 +516,7 @@ class InitializeIntegralTables:
             integrals.extend(['PhiWiggle', 'PsiWiggle', 'PhiHat', 'PsiHat'])
         
         return integrals
-    
-    def Dimensionality(self):
-        """
-        Return dimensionality of lookup table.
-        """    
-        
-        dims = 0
-          
-        if self.pf.SecondaryIonization >= 2:
-            dims += 1
             
-        if self.pf.SourceTimeEvolution:
-            dims += 1
-            
-        if self.pf.MultiSpecies >= 1:
-            dims += 2            
-            
-        # Reserved for H2    
-        if self.pf.MultiSpecies == 2: 
-            dims += 1   
-        
-        return dims    
-        
     def TotalOpticalDepth(self, ncol, species = None):
         """
         Optical depth due to all absorbing species at given column density.
@@ -531,7 +574,7 @@ class InitializeIntegralTables:
                         
         return tau
         
-    def Phi(self, ncol, species = 0):
+    def Phi(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):
         """
         Equation 10 in Mirocha et al. 2012.
         """      
@@ -549,7 +592,7 @@ class InitializeIntegralTables:
             
         return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
         
-    def Psi(self, ncol, species = 0):            
+    def Psi(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):            
         """
         Equation 11 in Mirocha et al. 2012.
         """        
@@ -565,7 +608,7 @@ class InitializeIntegralTables:
         
         return 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
         
-    def PhiWiggle(self, ncol, species = 0, donor_species = 0, xHII = 0.0):
+    def PhiWiggle(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):
         """
         Equation 2.18 in the manual.
         """        
@@ -597,7 +640,7 @@ class InitializeIntegralTables:
         return 1e-10 * \
             np.trapz(np.array(y), self.esec.Energies[c])    
     
-    def PsiWiggle(self, ncol, species = 0, donor_species = 0, xHII = 0.0):            
+    def PsiWiggle(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):            
         """
         Equation 2.19 in the manual.
         """        
@@ -625,7 +668,7 @@ class InitializeIntegralTables:
         return 1e-20 * \
             np.trapz(np.array(y), self.esec.Energies[c])          
                               
-    def PhiHat(self, ncol, species = 0, donor_species = None, xHII = 0.0):
+    def PhiHat(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):
         """
         Equation 2.20 in the manual.
         """        
@@ -657,7 +700,7 @@ class InitializeIntegralTables:
         return 1e-10 * \
             np.trapz(np.array(y), self.esec.Energies[c])          
                 
-    def PsiHat(self, ncol, species = 0, donor_species = None, xHII = 0.0):            
+    def PsiHat(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):            
         """
         Equation 2.21 in the manual.
         """        

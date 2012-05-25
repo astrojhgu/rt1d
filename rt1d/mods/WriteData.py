@@ -58,8 +58,8 @@ class WriteData:
         f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.pf.OutputDirectory.rstrip('/'), 
             self.GetDataDumpName(wct)), 'w') 
 
-        pf_grp = f.create_group("ParameterFile")
-        data_grp = f.create_group("Data")
+        pf_grp = f.create_group("parameters")
+        data_grp = f.create_group("data")
         
         for par in self.pf.keys(): 
             if par == "CurrentTime": 
@@ -78,8 +78,8 @@ class WriteData:
         f.close()
         
         if rank == 0: 
-            print "\nWrote {0}/{1}/{2}.h5\n".format(GlobalDir, self.pf.OutputDirectory.rstrip('/'), 
-                self.GetDataDumpName(wct))
+            print "\nWrote %s/%s.h5\n" % (self.pf.OutputDirectory, 
+                    self.GetDataDumpName(wct))
 
     def WriteASCII(self, data, wc, t, dt):
         """
@@ -92,7 +92,7 @@ class WriteData:
         """
         Return name of data dump to be written
         """
-        
+
         return "{0}{1:04d}".format(self.pf.DataDumpName, wct)
 
     def WriteParameterFile(self, wct, t, dt):

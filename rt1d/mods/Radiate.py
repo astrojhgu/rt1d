@@ -110,7 +110,7 @@ class Radiate:
         else: 
             self.n_He_arr = self.x_HeI_arr = self.x_HeII_arr = self.x_HeIII_arr = np.zeros_like(self.x_HI_arr)
                                                         
-        # If we're in an expanding universe, dilute densities by (1 + z)**3
+        # If we're in an expanding universe, prepare to dilute densities by (1 + z)**3
         self.z = 0 
         self.dz = 0   
         if self.pf.CosmologicalExpansion: 
@@ -132,11 +132,11 @@ class Radiate:
         self.nB_all = self.n_H_arr + self.n_He_arr + self.ne_all
         self.q_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"], 
             3. * k_B * self.nB_all * data["Temperature"] / 2.])
-                
+                                
         # Retrieve indices used for N-D interpolation
         self.indices_all = []
         for i, col in enumerate(self.ncol_all):
-            self.indices_all.append(self.coeff.Interpolate.GetIndices(col, np.log10(self.x_HII_arr[i])))
+            self.indices_all.append(self.coeff.Interpolate.GetIndices([col[0], col[1], col[2], np.log10(self.x_HII_arr[i]), t]))
                                                 
         # Compute optical depths *between* source and all cells. Do we only use this for timestep calculation?
         self.tau_all_arr = np.zeros([3, self.GridDimensions])    

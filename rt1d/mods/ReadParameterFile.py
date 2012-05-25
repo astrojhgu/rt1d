@@ -116,8 +116,8 @@ def ReadRestartFile(rf):
     f = h5py.File('%s.h5' % rf, 'r')
     
     data = {} 
-    for field in f["Data"]:
-        data[field] = f["Data"][field].value
+    for field in f["data"]:
+        data[field] = f["data"][field].value
             
     return dotdictify(pf), data       
     

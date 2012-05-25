@@ -56,7 +56,7 @@ class ControlSimulation:
         Lbol = r.rs.BolometricLuminosity(0)
         logxHII = np.log10(nion[0] / n_H)
                                                                     
-        indices_in = r.coeff.Interpolate.GetIndices(ncol, logxHII)
+        indices_in = r.coeff.Interpolate.GetIndices([ncol[0], ncol[1], ncol[2], logxHII, 0])
 
         args = [nabs, nion, n_H, n_He, n_e]
         args.extend(r.coeff.ConstructArgs([nabs, nion, n_H, n_He, n_e], 

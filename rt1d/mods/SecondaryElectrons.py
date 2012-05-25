@@ -6,7 +6,11 @@ Affiliation: University of Colorado at Boulder
 Created on 2010-11-07.
 
 Description: Read in Furlanetto & Stoever results, provide functions for interpolation of heating ionization deposition
-fractions for fast secondary electrons.  Fits of Shull & vanSteenberg also available.
+fractions for fast secondary electrons.  Fits of Shull & vanSteenberg (1985) and
+Ricotti, Gnedin, & Shull (2002) also available.
+     
+Notes:
+FJS10 logx_HII values interpolated first to grid where dlogx = const.     
      
 To do: check in on i_low. 
      
@@ -28,6 +32,9 @@ class SecondaryElectrons:
         self.Method = pf.SecondaryIonization
         self.NumberOfEnergyBins = 258
         self.NumberOfXiBins = 14
+        
+        self.log_xHII = np.linspace(np.log10(min(x_HII)), np.log10(max(x_HII)),
+            pf.IonizedFractionBins)
         
         if self.Method >= 2:
             rt1d = os.environ.get("RT1D")

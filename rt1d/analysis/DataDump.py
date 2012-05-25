@@ -25,6 +25,7 @@ class DataDump:
         
         """        
         
+        self.dd = dd
         self.LengthUnits = pf["LengthUnits"].value
         self.StartRadius = pf["StartRadius"].value
         self.GridDimensions = pf["GridDimensions"].value
@@ -82,7 +83,7 @@ class DataDump:
         
         self.Gamma = np.zeros([self.GridDimensions, 3])
         self.k_H = np.zeros_like(self.Gamma)
-        self.gamma = np.zeros_like(self.Gamma)
+        self.gamma = np.zeros([self.GridDimensions, 3, 3])
         self.Beta = np.zeros_like(self.Gamma)
         self.alpha = np.zeros_like(self.Gamma)
         self.xi = np.zeros_like(self.Gamma)

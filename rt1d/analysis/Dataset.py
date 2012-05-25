@@ -64,7 +64,7 @@ class Dataset:
         for ddf in alldds:
             f = h5py.File("{0}/{1}/{2}".format(self.rd, self.od, ddf))
             ID = ddf.partition('.')[0].strip('dd')
-            ds[int(ID)] = DataDump(f["Data"], f["ParameterFile"])
+            ds[int(ID)] = DataDump(f["data"], f["parameters"])
             f.close()
             
         return ds

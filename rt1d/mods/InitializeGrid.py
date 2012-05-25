@@ -19,7 +19,7 @@ FieldList = \
     ["Temperature", "HIDensity", "HIIDensity", "HeIDensity", \
      "HeIIDensity", "HeIIIDensity", "ElectronDensity"]        
 
-tiny_number = 1e-12          
+tiny_number = 1e-12
 
 class InitializeGrid:
     def __init__(self, pf):

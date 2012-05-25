@@ -33,20 +33,23 @@ class RateCoefficients:
         self.Interpolate = Interpolate(pf, iits)
         self.TabulateIntegrals = pf.TabulateIntegrals
         
-        # Multi-group method
-        if pf.FrequencyAveragedCrossSections:
-            self.N = pf.FrequencyGroups
-            self.sigma = np.zeros([3, self.N])
-            for i in xrange(3):
-                for j in xrange(self.pf.FrequencyGroups):
-                    self.sigma[i] = EffectiveCrossSection(self.rs, self.rs.bands[j], self.rs.bands[j + 1])
-                    
-        # Polychromatic method                        
-        else:
-            self.N = len(self.rs.E)
-            self.sigma = np.zeros([3, self.N])
-            for i in xrange(3):
-                self.sigma[i] = PhotoIonizationCrossSection(self.rs.E, species = i)
+        # Discretization techniques
+        if pf.DiscreteSpectrum:
+            
+            # Multi-group method
+            if pf.FrequencyAveragedCrossSections:
+                self.N = pf.FrequencyGroups
+                self.sigma = np.zeros([3, self.N])
+                for i in xrange(3):
+                    for j in xrange(self.pf.FrequencyGroups):
+                        self.sigma[i] = EffectiveCrossSection(self.rs, self.rs.bands[j], self.rs.bands[j + 1])
+                        
+            # Polychromatic method                        
+            else:
+                self.N = len(self.rs.E)
+                self.sigma = np.zeros([3, self.N])
+                for i in xrange(3):
+                    self.sigma[i] = PhotoIonizationCrossSection(self.rs.E, species = i)
             
         self.mask = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])    
         if pf.MultiSpecies:
@@ -116,14 +119,14 @@ class RateCoefficients:
                                 
                 if not self.pf.MultiSpecies and i > 0:
                     continue
-                
+                                
                 # A few quantities that are better to just compute once   
                 nout = np.log10(10**ncol + ncell * self.mask[i])
-                indices_out = self.Interpolate.GetIndices(nout, np.log10(x_HII))
+                indices_out = self.Interpolate.GetIndices([nout[0], nout[1], nout[2], np.log10(x_HII), t])
                                                                                                                       
                 # Photo-Ionization - keep integral values too to be used in heating/secondary ionization
                 Gamma[i], Phi_N[i], Phi_N_dN[i] = self.PhotoIonizationRate(species = i, indices_in = indices,  
-                    Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr,
+                    Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr, x_HII = x_HII,
                     Vsh = Vsh, ncell = ncell, indices_out = indices_out, A = A[i], nout = nout, t = t)
                 
                 if self.pf.CollisionalIonization:
@@ -284,11 +287,14 @@ class RateCoefficients:
                                         
         if self.pf.TabulateIntegrals:
             if self.pf.PhotonConserving:
-                Phi_N = self.Interpolate.interp(indices_in, "Phi%i" % species, ncol)
-                Phi_N_dN = self.Interpolate.interp(indices_out, "Phi%i" % species, nout)
+                Phi_N = self.Interpolate.interp(indices_in, "logPhi%i" % species, 
+                    [ncol[0], ncol[1], ncol[2], x_HII, t])
+                Phi_N_dN = self.Interpolate.interp(indices_out, "logPhi%i" % species, 
+                    [nout[0], nout[1], nout[2], x_HII, t])
                 IonizationRate = Phi_N - Phi_N_dN
             else:                
-                Phi_N = self.Interpolate.interp(indices_in, "Phi%i" % species, ncol)       
+                Phi_N = self.Interpolate.interp(indices_in, "logPhi%i" % species, 
+                    [ncol[0], ncol[1], ncol[2], x_HII, t])       
                 IonizationRate = Phi_N
         else:
             Q0 = Qdot * np.exp(-tau_E)                 # number of photons entering cell per sec
@@ -313,11 +319,14 @@ class RateCoefficients:
         
         if self.esec.Method < 2:
             if self.pf.PhotonConserving:
-                Psi_N = self.Interpolate.interp(indices_in, "Psi%i" % species, ncol)
-                Psi_N_dN = self.Interpolate.interp(indices_out, "Psi%i" % species, nout)
+                Psi_N = self.Interpolate.interp(indices_in, "logPsi%i" % species, 
+                    [ncol[0], ncol[1], ncol[2], x_HII, t])
+                Psi_N_dN = self.Interpolate.interp(indices_out, "logPsi%i" % species, 
+                    [nout[0], nout[1], nout[2], x_HII, t])
                 heat = (Psi_N - Psi_N_dN - E_th[species] * erg_per_ev * (Phi_N - Phi_N_dN))                   
             else:
-                Psi_N = self.Interpolate.interp(indices_in, "Psi%i" % species, ncol)
+                Psi_N = self.Interpolate.interp(indices_in, "logPsi%i" % species, 
+                    [ncol[0], ncol[1], ncol[2], x_HII, t])
                 heat = Psi_N
                 
             return A * self.esec.DepositionFraction(0.0, x_HII, channel = 0) * heat, Psi_N, Psi_N_dN    
@@ -325,14 +334,19 @@ class RateCoefficients:
         else:
             if self.pf.PhotonConserving:
                 x_HII = np.log10(x_HII)
-                Psi_N = self.Interpolate.interp(indices_in, "PsiHat%i" % species, ncol, x_HII = x_HII)
-                Psi_N_dN = self.Interpolate.interp(indices_out, "PsiHat%i" % species, nout, x_HII = x_HII)
-                Phi_N = self.Interpolate.interp(indices_in, "PhiHat%i" % species, ncol, x_HII = x_HII)
-                Phi_N_dN = self.Interpolate.interp(indices_out, "PhiHat%i" % species, nout, x_HII = x_HII)
+                Psi_N = self.Interpolate.interp(indices_in, "logPsiHat%i" % species, 
+                    [ncol[0], ncol[1], ncol[2], x_HII, t])
+                Psi_N_dN = self.Interpolate.interp(indices_out, "logPsiHat%i" % species, 
+                    [nout[0], nout[1], nout[2], x_HII, t])
+                Phi_N = self.Interpolate.interp(indices_in, "logPhiHat%i" % species, 
+                    [ncol[0], ncol[1], ncol[2], x_HII, t])
+                Phi_N_dN = self.Interpolate.interp(indices_out, "logPhiHat%i" % species, 
+                    [nout[0], nout[1], nout[2], x_HII, t])
                                 
                 heat = (Psi_N - Psi_N_dN - E_th[species] * erg_per_ev * (Phi_N - Phi_N_dN))                   
             else:
-                Psi_N = self.Interpolate.interp(indices_in, "PsiHat%i" % species, ncol, x_HII = x_HII)
+                Psi_N = self.Interpolate.interp(indices_in, "logPsiHat%i" % species,
+                    [ncol[0], ncol[1], ncol[2], x_HII, t])
                 heat = Psi_N                    
                                     
             return A * heat, None, None            
@@ -367,10 +381,14 @@ class RateCoefficients:
         else:
             if self.pf.PhotonConserving:
                 x_HII = np.log10(x_HII)                
-                Psi_N = self.Interpolate.interp(indices_in, "PsiWiggle%i%i" % (species, donor_species), ncol, x_HII = x_HII)
-                Psi_N_dN = self.Interpolate.interp(indices_out, "PsiWiggle%i%i" % (species, donor_species), nout, x_HII = x_HII)
-                Phi_N = self.Interpolate.interp(indices_in, "PhiWiggle%i%i" % (species, donor_species), ncol, x_HII = x_HII)
-                Phi_N_dN = self.Interpolate.interp(indices_out, "PhiWiggle%i%i" % (species, donor_species), nout, x_HII = x_HII)
+                Psi_N = self.Interpolate.interp(indices_in, "logPsiWiggle%i%i" % (species, donor_species), 
+                    [ncol[0], ncol[1], ncol[2], x_HII, t])
+                Psi_N_dN = self.Interpolate.interp(indices_out, "logPsiWiggle%i%i" % (species, donor_species), 
+                    [nout[0], nout[1], nout[2], x_HII, t])
+                Phi_N = self.Interpolate.interp(indices_in, "logPhiWiggle%i%i" % (species, donor_species), 
+                    [ncol[0], ncol[1], ncol[2], x_HII, t])
+                Phi_N_dN = self.Interpolate.interp(indices_out, "logPhiWiggle%i%i" % (species, donor_species), 
+                    [nout[0], nout[1], nout[2], x_HII, t])
                 IonizationRate = (Psi_N - Psi_N_dN - E_th[donor_species] * erg_per_ev * (Phi_N - Phi_N_dN))        
             else:            
                 IonizationRate = (Psi_N - E_th[donor_species] * erg_per_ev * Phi_N)   
