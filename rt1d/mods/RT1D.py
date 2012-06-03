@@ -216,7 +216,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
         f.close()
             
     if __name__ != '__main__':
-        return data
+        return data, dt
     else:
         print "Successful run. Exiting."
 

@@ -138,32 +138,9 @@ class Radiate:
         for i, col in enumerate(self.ncol_all):
             self.indices_all.append(self.coeff.Interpolate.GetIndices([col[0], col[1], col[2], np.log10(self.x_HII_arr[i]), t]))
                                                 
-        # PUT THIS ELSEWHERE                                        
-        # Compute optical depths *between* source and all cells. Do we only use this for timestep calculation?
-        self.tau_all_arr = np.zeros([3, self.GridDimensions])    
-        if not self.pf['TabulateIntegrals']:
-            sigma0 = PhotoIonizationCrossSection(self.rs.E, species = 0)
-            tmp_nHI = np.transpose(len(self.rs.E) * [self.ncol_HI])            
-            self.tau_all_arr[0] = np.sum(tmp_nHI * sigma0, axis = 1)
-                        
-            if self.pf.MultiSpecies:
-                sigma1 = PhotoIonizationCrossSection(self.rs.E, species = 1)
-                sigma2 = PhotoIonizationCrossSection(self.rs.E, species = 2)
-                tmp_nHeI = np.transpose(len(self.rs.E) * [self.ncol_HeI])
-                tmp_nHeII = np.transpose(len(self.rs.E) * [self.ncol_HeII])
-                self.tau_all_arr[1] = np.sum(tmp_nHeI * sigma1, axis = 1)
-                self.tau_all_arr[2] = np.sum(tmp_nHeII * sigma2, axis = 1)
-        else:
-            for i, col in enumerate(np.log10(self.ncol_HI)):
-                self.tau_all_arr[0][i] = self.coeff.Interpolate.OpticalDepth(col, 0)
-                
-                if self.pf.MultiSpecies:
-                    self.tau_all_arr[1][i] = self.coeff.Interpolate.OpticalDepth(np.log10(self.ncol_HeI[i]), 1)
-                    self.tau_all_arr[2][i] = self.coeff.Interpolate.OpticalDepth(np.log10(self.ncol_HeII[i]), 2)
-                    
-            self.tau_all_arr[0][0] = self.tau_all_arr[1][0] = self.tau_all_arr[2][0] = neglible_tau 
-
-        self.tau_all = zip(*self.tau_all_arr) 
+        # Compute tau *between* source and all cells
+        tau_all_arr = self.ComputeOpticalDepths([self.ncol_HI, self.ncol_HeI, self.ncol_HeII])
+        self.tau_all = zip(*tau_all_arr) 
                                         
         # Print status, and update progress bar
         if rank == 0: 
@@ -387,6 +364,7 @@ class Radiate:
                     break
                 
                 # Compute dc (like dx but in fractional cell units)
+                # Actually distance to nearest cell interface
                 if cell_pack % 1 == 0: 
                     dc = min(cell_pack_max - cell_pack, 1)
                 else: 
@@ -398,12 +376,14 @@ class Radiate:
                     subdt = min(dt, packs[j + 1][0] - pack[0])
                 else: 
                     subdt = dt
-                                                                                                                                                                                                                                                                                                                                          
+                
+                # Current radius in code units                                                                                                                                                                                                                                                                                                                          
                 r = cell_pack * self.pf.LengthUnits / self.pf.GridDimensions
                 
+                # this is wrong
                 if r < (self.pf.StartRadius / self.pf.LengthUnits): 
                     cell_pack += dc
-                    continue
+                    continue 
                 
                 # These quantities will be different (in general) for each step
                 # of the while loop
@@ -513,6 +493,8 @@ class Radiate:
             ncol_HI[0] = ncol_HeI[0] = ncol_HeII[0] = neglible_column
             ncol = np.transpose(np.log10([ncol_HI, ncol_HeI, ncol_HeII]))   
             
+            tau = self.ComputeOpticalDepths([ncol_HI, ncol_HeI, ncol_HeII])
+            
             for cell in self.grid:
                 r = self.r[cell]
                 dx = self.dx[cell]
@@ -528,7 +510,7 @@ class Radiate:
                 nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, \
                     k_H, zeta, eta, psi, xi, omega, hubble, compton = args 
                 
-                dtphot[cell] = self.control.ComputePhotonTimestep(self.tau_all_arr[:,cell], 
+                dtphot[cell] = self.control.ComputePhotonTimestep(tau[:,cell], 
                     nabs, nion, ncol[cell], n_H, n_He, 
                     n_e, n_B_all[cell], Gamma, gamma, Beta, alpha, k_H, zeta, 
                     eta, psi, xi, omega, hubble, compton, T[cell], self.z, dt) 
@@ -665,4 +647,34 @@ class Radiate:
                     dqdt[3] += compton
                                                                                                 
         return dqdt
+
+    def ComputeOpticalDepths(self, ncol):
+        """
+        Compute optical depths *between* source and all cells. 
+        Do we only use this for timestep calculation?
+        """
         
+        tau_all_arr = np.zeros([3, self.GridDimensions])    
+        if not self.pf.TabulateIntegrals:
+            sigma0 = PhotoIonizationCrossSection(self.rs.E, species = 0)
+            tmp_nHI = np.transpose(len(self.rs.E) * [ncol[0]])   
+            tau_all_arr[0] = np.sum(tmp_nHI * sigma0, axis = 1)
+                        
+            if self.pf.MultiSpecies:
+                sigma1 = PhotoIonizationCrossSection(self.rs.E, species = 1)
+                sigma2 = PhotoIonizationCrossSection(self.rs.E, species = 2)
+                tmp_nHeI = np.transpose(len(self.rs.E) * [ncol[1]])
+                tmp_nHeII = np.transpose(len(self.rs.E) * [ncol[2]])
+                tau_all_arr[1] = np.sum(tmp_nHeI * sigma1, axis = 1)
+                tau_all_arr[2] = np.sum(tmp_nHeII * sigma2, axis = 1)
+        else:
+            for i, col in enumerate(np.log10(ncol[0])):
+                tau_all_arr[0][i] = self.coeff.Interpolate.OpticalDepth(col, 0)
+                
+                if self.pf.MultiSpecies:
+                    tau_all_arr[1][i] = self.coeff.Interpolate.OpticalDepth(np.log10(ncol[1][i]), 1)
+                    tau_all_arr[2][i] = self.coeff.Interpolate.OpticalDepth(np.log10(ncol[2][i]), 2)
+                    
+            self.tau_all_arr[0][0] = self.tau_all_arr[1][0] = self.tau_all_arr[2][0] = neglible_tau 
+
+        return tau_all_arr
