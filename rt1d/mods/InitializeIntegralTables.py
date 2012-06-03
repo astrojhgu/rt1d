@@ -82,6 +82,8 @@ class InitializeIntegralTables:
                         
         self.HIColumn = np.linspace(self.HIColumnMin, self.HIColumnMax, self.HINBins)
 
+        self.itabs = None
+
         # Set up column density vectors for each absorber
         if self.pf.MultiSpecies > 0: 
             self.HeIColumn = np.linspace(self.HeIColumnMin, self.HeIColumnMax, self.HeINBins)
@@ -89,8 +91,6 @@ class InitializeIntegralTables:
         else:
             self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
             self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
-        
-        self.itabs = None 
         
         # What quantities are we going to compute?
         self.IntegralList = self.ToCompute()
@@ -109,7 +109,7 @@ class InitializeIntegralTables:
             self.zeros = np.zeros(1)
             
         self.Lbol = self.rs.BolometricLuminosity(0.0)
-                
+                        
     def DetermineTableName(self):    
         """
         Returns the filename following the convention:
@@ -294,7 +294,7 @@ class InitializeIntegralTables:
         if self.pf.SecondaryIonization >= 2:
             col_grp.create_dataset('logxHII', data = self.esec.LogIonizedFractions)
         
-        if self.pf.SourceTypeEvolution:
+        if self.pf.SourceTimeEvolution:
             col_grp.create_dataset('logM', data = self.rs.logMarr)
             col_grp.create_dataset('logAge', data = np.log10(self.rs.BlackHoleAge(self.rs.Marr)))
         
@@ -305,7 +305,7 @@ class InitializeIntegralTables:
         Return a dictionary of lookup tables, and also store a copy as self.itabs.
         """
                 
-        itabs = self.ReadIntegralTable()
+        itabs = self.itabs
 
         # If there was a pre-existing table, return it
         if itabs is not None:

@@ -239,7 +239,7 @@ class Analyze:
             ax.set_xscale(xscale) 
             
             if title:
-                ax.set_title(r'$t = %g \ \mathrm{Myr}$' % self.data[dd].t / self.pf['TimeUnits'])
+                ax.set_title(r'$t = %g \ \mathrm{Myr}$' % (self.data[dd].t / self.pf['TimeUnits']))
                     
             pl.savefig('%s/dd%s_%s.png' % (out, str(dd).zfill(4), field))                        
             ax.clear()
@@ -248,7 +248,7 @@ class Analyze:
         
     def Ionization_Temperature_Movie(self, out = 'frames', xscale = 'linear', title = True):
         """
-        Meant to answer Eric's question.
+        Meant to answer Coughlitron's question about outside-in recombination.
         """    
                 
         for dd in self.data.keys():

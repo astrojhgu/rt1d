@@ -56,7 +56,7 @@ class RateCoefficients:
             self.donors = np.arange(3)
         else:
             self.donors = np.array([0])    
-                        
+                                                
         self.zeros_like_E = np.zeros_like(self.rs.E)
         self.zeros_like_Q = np.zeros_like(self.rs.E)
         self.zeros_like_tau = np.zeros([len(self.zeros_like_E), 3])
@@ -415,18 +415,29 @@ class RateCoefficients:
         refers to HII, HeII, and HeIII.
         """
         
-        if species == 0:
-            return 2.6e-13 * (T / 1.e4)**-0.85 
-        elif species == 1:
-            return 9.94e-11 * T**-0.6687
+        if self.pf.RecombinationMethod == 'CaseA':
+            if species == 0:
+                return 6.28e-11 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 1e6)**0.7)**-1.
+            elif species == 1:
+                1.5e-10 * T**-0.6353
+            elif species == 2:
+                return 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4e6)**0.7)**-1.
+        elif self.pf.RecombinationMethod == 'CaseB':
+            if species == 0:
+                return 2.6e-13 * (T / 1.e4)**-0.85 
+            elif species == 1:
+                return 9.94e-11 * T**-0.6687
+            else:
+                alpha = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1
+                if T < 2.2e4: 
+                    alpha *= (1.11 - 0.044 * np.log(T)) # To n >= 1                       
+                else: 
+                    alpha *= (1.43 - 0.076 * np.log(T)) # To n >= 2
+                
+                return alpha
         else:
-            alpha = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1
-            if T < 2.2e4: 
-                alpha *= (1.11 - 0.044 * np.log(T)) # To n >= 1                       
-            else: 
-                alpha *= (1.43 - 0.076 * np.log(T)) # To n >= 2
-            
-            return alpha        
+            print 'Unrecognized RecombinationMethod.  Should be CaseA or CaseB.'
+            return 0.0          
         
     def DielectricRecombinationRate(self, T = None):
         """

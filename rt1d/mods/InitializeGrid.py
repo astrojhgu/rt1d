@@ -74,6 +74,8 @@ class InitializeGrid:
         fields['ODEIterationRate'] = np.zeros_like(fields[fields.keys()[0]])        
         fields['RootFinderIterations'] = np.zeros([len(fields[fields.keys()[0]]), 4])
         fields['OpticalDepth'] = np.zeros([len(fields[fields.keys()[0]]), 3])        
+        fields['Radius'] = self.r
+        fields['ShellThickness'] = self.dx  
                 
         return fields                
                         

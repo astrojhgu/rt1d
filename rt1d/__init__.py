@@ -1,5 +1,6 @@
 """
-Import main driver module.
+Import everything.
 """
 
-from .mods import RT1D
+from .mods import *
+from .mods.RT1D import Shine

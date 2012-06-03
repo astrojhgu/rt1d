@@ -568,10 +568,17 @@ Is it worth doing this?  Would want it to look something like this:
 
 \begin{verbatim}
 import rt1d
-import numpy as np
+
 pf = rt1d.SetDefaultParameterValues()
-r = np.linspace(3e19, 3e21, 100) # 100 grid cells between 0.01-1kpc. (optional)
-data = rt1d.Shine(pf, r)    
+prob = rt1d.ProblemTypes.ProblemType(1)
+
+for key in pf.keys():
+    if key in prob.keys():
+        pf[key] = prob[key]
+
+pf["StopTime"] = 10
+
+data = rt1d.Shine(pf)   
 \end{verbatim}    
 
 This would make it easy to:
@@ -580,6 +587,7 @@ This would make it easy to:
     \item Change source properties manually with time.
     \item Making arbitrarily structured grids.
     \item Very specific initial conditions.
+    \item Run rad-hydro with \texttt{proteus}.
 \end{itemize}    
 
 What parameters must be set?

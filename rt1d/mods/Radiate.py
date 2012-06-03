@@ -138,6 +138,7 @@ class Radiate:
         for i, col in enumerate(self.ncol_all):
             self.indices_all.append(self.coeff.Interpolate.GetIndices([col[0], col[1], col[2], np.log10(self.x_HII_arr[i]), t]))
                                                 
+        # PUT THIS ELSEWHERE                                        
         # Compute optical depths *between* source and all cells. Do we only use this for timestep calculation?
         self.tau_all_arr = np.zeros([3, self.GridDimensions])    
         if not self.pf['TabulateIntegrals']:
@@ -351,12 +352,12 @@ class Radiate:
         else: 
             packs = list(self.data['PhotonPackages']) 
         
-        if packs and self.OnePhotonPackagePerCell:
+        if packs and self.pf.OnePhotonPackagePerCell:
             t_packs = np.array(zip(*packs)[0])    # Birth times for all packages
             r_packs = (t - t_packs) * c
             
             # If there are already photon packages in the first cell, add energy in would-be packet to preexisting one
-            if r_packs[-1] < (self.StartRadius * self.LengthUnits):
+            if r_packs[-1] < (self.pf.StartRadius * self.pf.LengthUnits):
                 packs[-1][-1] += Lbol * dt
             # Launch new photon package
             else:
@@ -371,8 +372,8 @@ class Radiate:
             r_max = r_pack + dt * c           # Furthest this package will get this timestep
                                                                              
             # Cells we need to know about - not necessarily integer
-            cell_pack = r_pack * self.GridDimensions / self.LengthUnits
-            cell_pack_max = r_max * self.GridDimensions / self.LengthUnits
+            cell_pack = r_pack * self.pf.GridDimensions / self.pf.LengthUnits
+            cell_pack_max = r_max * self.pf.GridDimensions / self.pf.LengthUnits
                           
             Lbol = pack[-1] / pack[1]          
                                             
@@ -382,7 +383,7 @@ class Radiate:
                 # What cell are we in
                 cell = int(round(cell_pack))
                 
-                if cell >= self.GridDimensions: 
+                if cell >= self.pf.GridDimensions: 
                     break
                 
                 # Compute dc (like dx but in fractional cell units)
@@ -398,9 +399,9 @@ class Radiate:
                 else: 
                     subdt = dt
                                                                                                                                                                                                                                                                                                                                           
-                r = cell_pack * self.LengthUnits / self.GridDimensions
+                r = cell_pack * self.pf.LengthUnits / self.pf.GridDimensions
                 
-                if r < (self.StartRadius / self.LengthUnits): 
+                if r < (self.pf.StartRadius / self.pf.LengthUnits): 
                     cell_pack += dc
                     continue
                 
@@ -454,24 +455,23 @@ class Radiate:
                 ######## Solve Rate Equations ########
                 ######################################
                 
-                # Retrieve indices used for 3D interpolation
-                indices = None
-                if self.MultiSpecies > 0: 
-                    indices = self.coeff.Interpolate.GetIndices3D(ncol)
+                # Retrieve indices used for interpolation
+                indices = self.coeff.Interpolate.GetIndices(ncol)
                 
                 # Retrieve coefficients and what not.
-                args = [nabs, nion, n_H, n_He, n_e]
-                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, t))
-                
+                args = [nabs, nion, n_H, n_He, n_e]                
+                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, t, self.z))
+           
                 # Unpack so we have everything by name
-                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, theta = args
+                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, \
+                    k_H, zeta, eta, psi, xi, omega, hubble, compton = args        
                                                                                                          
                 ######################################
                 ######## Solve Rate Equations ########
                 ######################################                          
                                 
-                tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, q_cell, t, t + dt, 
-                    None, h, *args)
+                tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, 
+                    q_cell, t, t + dt, self.z, self.z - self.dz, None, h, *args)                 
                                     
                 # Unpack results of coupled equations - Remember: these are lists and we only need the last entry 
                 newHII, newHeII, newHeIII, newE = qnew
@@ -482,38 +482,62 @@ class Radiate:
                 # Calculate neutral fractions
                 newHI = n_H - newHII
                 newHeI = n_He - newHeII - newHeIII
-                         
+                                 
                 # Store data
                 newdata = self.StoreData(newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
-                    self.tau_all[cell], odeitr, h, rootitr, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, omega)
+                    self.tau_all[cell], odeitr, h, rootitr, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, 
+                    omega, hubble, compton)                    
                                                          
                 cell_pack += dc
                                                 
                 ######################################
                 ################ DONE ################     
-                ######################################                                   
-            
+                ######################################  
+                
         # Adjust timestep based on maximum allowed neutral fraction change     
         if self.AdaptiveGlobalStep:
+            n_HI = newdata['HIDensity']
+            n_HII = newdata['HIIDensity']
+            n_H_all = n_HI + n_HII
+            n_HeI = newdata['HeIDensity']
+            n_HeII = newdata['HeIIDensity']
+            n_HeIII = newdata['HeIIIDensity']
+            n_He_all = n_HeI + n_HeII + n_HeIII
+            n_e_all = n_HII + n_HeII + 2 * n_HeIII
+            T = newdata['Temperature']
+            n_B_all = n_H_all + n_He_all + n_e_all
+            
+            ncol_HI = np.roll(np.cumsum(n_HI * self.dx), 1)
+            ncol_HeI = np.roll(np.cumsum(n_HeI * self.dx), 1)
+            ncol_HeII = np.roll(np.cumsum(n_HeII * self.dx), 1)
+            ncol_HI[0] = ncol_HeI[0] = ncol_HeII[0] = neglible_column
+            ncol = np.transpose(np.log10([ncol_HI, ncol_HeI, ncol_HeII]))   
+            
             for cell in self.grid:
-                Gamma = [newdata['PhotoIonizationRate%i' % i] for i in np.arange(3)]
-                gamma = [newdata['SecondaryIonizationRate%i' % i] for i in np.arange(3)]
-                Beta = [newdata['CollisionalIonizationRate%i' % i] for i in np.arange(3)]
-                alpha = [newdata['RadiativeRecombinationRate%i' % i] for i in np.arange(3)]
-                xi = [newdata['DielectricRecombinationRate%i' % i] for i in np.arange(3)]
-                newT = newdata["Temperature"][cell]
+                r = self.r[cell]
+                dx = self.dx[cell]
+                nabs = np.array([n_HI[cell], n_HeI[cell], n_HeII[cell]])
+                nion = np.array([n_HII[cell], n_HeII[cell], n_HeIII[cell]])
+                
+                indices = self.coeff.Interpolate.GetIndices(ncol[cell])
+                               
+                args = [nabs, nion, n_H_all[cell], n_He_all[cell], n_e_all[cell]]  
+                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol[cell], T[cell], dx, t, self.z))
+           
+                # Unpack so we have everything by name
+                nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, \
+                    k_H, zeta, eta, psi, xi, omega, hubble, compton = args 
                 
                 dtphot[cell] = self.control.ComputePhotonTimestep(self.tau_all_arr[:,cell], 
-                    self.nabs_all[cell], self.nion_all[cell], self.ncol_all[cell], self.n_H_arr[cell], self.n_He_arr[cell], 
-                    self.ne_all[cell], self.nB_all[cell], 
-                    Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, theta, newT, dt) 
+                    nabs, nion, ncol[cell], n_H, n_He, 
+                    n_e, n_B_all[cell], Gamma, gamma, Beta, alpha, k_H, zeta, 
+                    eta, psi, xi, omega, hubble, compton, T[cell], self.z, dt) 
                     
-                if self.LightCrossingTimeRestrictedTimestep: 
+                if self.pf.LightCrossingTimeRestrictedTimestep: 
                     dtphot[cell] = min(dtphot[cell], self.LightCrossingTimeRestrictedTimestep * self.CellCrossingTime[cell])    
                     
         # Update photon packages        
-        if not self.InfiniteSpeedOfLight: 
-            newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt)
+        newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt)
         
         return newdata, dtphot
     
@@ -524,7 +548,7 @@ class Radiate:
                 
         to_eliminate = []
         for i, pack in enumerate(packs):
-            if (t_next - pack[0]) > (self.LengthUnits / c): 
+            if (t_next - pack[0]) > (self.pf.LengthUnits / c): 
                 to_eliminate.append(i)
             
         to_eliminate.reverse()    

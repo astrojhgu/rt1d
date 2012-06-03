@@ -12,6 +12,7 @@ the parameter space.
 """
 
 from .Constants import *
+from .Extras import dotdictify
 
 def SetDefaultParameterValues():
     pf = \
@@ -107,6 +108,7 @@ def SetDefaultParameterValues():
         "InfiniteSpeedOfLight": 1,  
         "PlaneParallelField": 0,  
         "ClumpingFactor": 1,
+        "RecombinationMethod": 'CaseB',
         
         # Initial conditions
         "InitialRedshift": 20.0, 
@@ -165,4 +167,4 @@ def SetDefaultParameterValues():
           
         }
 
-    return pf
+    return dotdictify(pf)

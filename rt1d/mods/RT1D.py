@@ -24,7 +24,7 @@ except ImportError:
 # Class definitions
 import rt1d.mods as rtm
     
-def Shine(pf, r = None, IsRestart = False):
+def Shine(pf, r = None, data = None, IsRestart = False):
     """
     Initialize grid, radiation source, integral tables (maybe), and evolve
     radiation from CurrentTime to StopTime.
@@ -64,6 +64,9 @@ def Shine(pf, r = None, IsRestart = False):
             return
               
         # Initialize grid and file system
+        if data is not None:
+            data = data
+            g = rtm.InitializeGrid(pf)
         if IsRestart: 
             data = ICs
             g = rtm.InitializeGrid(pf)
@@ -84,7 +87,7 @@ def Shine(pf, r = None, IsRestart = False):
     
         # Initialize integral tables
         iits = rtm.InitializeIntegralTables(pf)
-        if pf.TabulateIntegrals:
+        if pf.TabulateIntegrals and iits.itabs:
             itabs = iits.TabulateRateIntegrals()        
             
             if pf.ExitAfterIntegralTabulation: 
@@ -211,8 +214,11 @@ def Shine(pf, r = None, IsRestart = False):
         print >> f, elapsed
         print >> f, ''
         f.close()
-    
-    print "Successful run. Exiting."
+            
+    if __name__ != '__main__':
+        return data
+    else:
+        print "Successful run. Exiting."
 
 if __name__ == '__main__':
     
