@@ -320,8 +320,7 @@ class Radiate:
         else:
             dtphot = dt
             
-        # Could change with time for accreting black holes
-        Lbol = self.rs.BolometricLuminosity(t)  
+        Lbol = self.rs.BolometricLuminosity(t)    
             
         # Photon packages going from oldest to youngest - will have to create it on first timestep
         if t == 0: 
@@ -329,18 +328,8 @@ class Radiate:
         else: 
             packs = list(self.data['PhotonPackages']) 
         
-        if packs and self.pf.OnePhotonPackagePerCell:
-            t_packs = np.array(zip(*packs)[0])    # Birth times for all packages
-            r_packs = (t - t_packs) * c
-            
-            # If there are already photon packages in the first cell, add energy in would-be packet to preexisting one
-            if r_packs[-1] < (self.pf.StartRadius * self.pf.LengthUnits):
-                packs[-1][-1] += Lbol * dt
-            # Launch new photon package
-            else:
-                packs.append(np.array([t, dt, neglible_column, neglible_column, neglible_column, Lbol * dt]))
-        else: 
-            packs.append(np.array([t, dt, neglible_column, neglible_column, neglible_column, Lbol * dt]))
+        # Add one for this timestep
+        packs.append(np.array([t, dt, neglible_column, neglible_column, neglible_column, Lbol * dt]))
             
         # Loop over photon packages, updating values in cells: data -> newdata
         for j, pack in enumerate(packs):
@@ -349,41 +338,46 @@ class Radiate:
             r_max = r_pack + dt * c           # Furthest this package will get this timestep
                                                                              
             # Cells we need to know about - not necessarily integer
-            cell_pack = r_pack * self.pf.GridDimensions / self.pf.LengthUnits
-            cell_pack_max = r_max * self.pf.GridDimensions / self.pf.LengthUnits
-                          
+            cell_pack = (r_pack - self.R0) * self.pf.GridDimensions / self.pf.LengthUnits
+            cell_pack_max = (r_max - self.R0) * self.pf.GridDimensions / self.pf.LengthUnits - 1
+            cell_t = t  
+                      
             Lbol = pack[-1] / pack[1]          
                                             
             # Advance this photon package as far as it will go on this global timestep  
             while cell_pack < cell_pack_max:
                                                         
                 # What cell are we in
-                cell = int(round(cell_pack))
+                if cell_pack < 0:
+                    cell = -1
+                else:    
+                    cell = int(cell_pack)
                 
                 if cell >= self.pf.GridDimensions: 
                     break
                 
                 # Compute dc (like dx but in fractional cell units)
-                # Actually distance to nearest cell interface
+                # Really how far this photon can go in this step
                 if cell_pack % 1 == 0: 
                     dc = min(cell_pack_max - cell_pack, 1)
                 else: 
                     dc = min(math.ceil(cell_pack) - cell_pack, cell_pack_max - cell_pack)        
-                                                     
+                                                                                          
                 # We really need to evolve this cell until the next photon package arrives, which
                 # is probably longer than a cell crossing time unless the global dt is vv small.
                 if (len(packs) > 1) and ((j + 1) < len(packs)): 
                     subdt = min(dt, packs[j + 1][0] - pack[0])
                 else: 
                     subdt = dt
-                
+                   
+                # If photons haven't hit first cell interface yet, evolve in time                
+                if cell < 0:
+                    cell_pack += dc
+                    cell_t += subdt
+                    continue        
+                    
                 # Current radius in code units                                                                                                                                                                                                                                                                                                                          
                 r = cell_pack * self.pf.LengthUnits / self.pf.GridDimensions
-                
-                # this is wrong
-                if r < (self.pf.StartRadius / self.pf.LengthUnits): 
-                    cell_pack += dc
-                    continue 
                 
                 # These quantities will be different (in general) for each step
                 # of the while loop
@@ -426,9 +420,9 @@ class Radiate:
                 q_cell = [n_HII, n_HeII, n_HeIII, E]
                                 
                 # Add columns of this cell
-                packs[j][2] += newdata['HIDensity'][cell] * dc * dct * c  
-                packs[j][3] += newdata['HeIDensity'][cell] * dc * dct * c 
-                packs[j][4] += newdata['HeIIDensity'][cell] * dc * dct * c
+                packs[j][2] += newdata['HIDensity'][cell] * dc * dx
+                packs[j][3] += newdata['HeIDensity'][cell] * dc * dx 
+                packs[j][4] += newdata['HeIIDensity'][cell] * dc * dx
                 ncol = np.log10(packs[j][2:5])
                 
                 ######################################
@@ -440,7 +434,7 @@ class Radiate:
                 
                 # Retrieve coefficients and what not.
                 args = [nabs, nion, n_H, n_He, n_e]                
-                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, t, self.z))
+                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx * dc, t, self.z))
            
                 # Unpack so we have everything by name
                 nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, \
@@ -451,17 +445,27 @@ class Radiate:
                 ######################################                          
                                 
                 tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, 
-                    q_cell, t, t + dt, self.z, self.z - self.dz, None, h, *args)                 
+                    q_cell, cell_t, cell_t + subdt, self.z, self.z - self.dz, None, h, *args)                 
                                     
                 # Unpack results of coupled equations - Remember: these are lists and we only need the last entry 
-                newHII, newHeII, newHeIII, newE = qnew
-        
-                # Convert from internal energy back to temperature
-                newT = newE * 2. * mu / 3. / k_B / n_B
+                newHII, newHeII, newHeIII, newE = qnew    
                 
+                # Weight by volume if less than a cell traversed
+                if dc < 1:
+                    dnHII = newHII - newdata['HIIDensity'][cell]
+                    dnHeII = newHeII - newdata['HeIIDensity'][cell]
+                    dnHeIII = newHeIII - newdata['HeIIIDensity'][cell]
+                    dV = self.coeff.ShellVolume(r, dx * dc) / self.coeff.ShellVolume(self.r[cell], dx)
+                    newHII = newdata['HIIDensity'][cell] + dnHII * dV 
+                    newHeII = newdata['HeIIDensity'][cell] + dnHeII * dV
+                    newHeIII = newdata['HeIIIDensity'][cell] + dnHeIII * dV
+                                
                 # Calculate neutral fractions
                 newHI = n_H - newHII
-                newHeI = n_He - newHeII - newHeIII
+                newHeI = n_He - newHeII - newHeIII               
+                
+                # Convert from internal energy back to temperature
+                newT = newE * 2. * mu / 3. / k_B / n_B     
                                  
                 # Store data
                 newdata = self.StoreData(newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
@@ -469,12 +473,13 @@ class Radiate:
                     omega, hubble, compton)                    
                                                          
                 cell_pack += dc
+                cell_t += subdt
                                                 
                 ######################################
                 ################ DONE ################     
                 ######################################  
                 
-        # Adjust timestep based on maximum allowed neutral fraction change     
+        # Adjust timestep for next cycle
         if self.AdaptiveGlobalStep:
             n_HI = newdata['HIDensity']
             n_HII = newdata['HIIDensity']
@@ -516,11 +521,12 @@ class Radiate:
                     eta, psi, xi, omega, hubble, compton, T[cell], self.z, dt) 
                     
                 if self.pf.LightCrossingTimeRestrictedTimestep: 
-                    dtphot[cell] = min(dtphot[cell], self.LightCrossingTimeRestrictedTimestep * self.CellCrossingTime[cell])    
+                    dtphot[cell] = min(dtphot[cell], 
+                        self.LightCrossingTimeRestrictedTimestep * self.CellCrossingTime[cell])    
                     
-        # Update photon packages        
-        newdata['PhotonPackages'] = self.UpdatePhotonPackages(packs, t + dt)
-        
+        # Update photon packages   
+        newdata['PhotonPackages'] = np.array(self.UpdatePhotonPackages(packs, t + dt))
+                
         return newdata, dtphot
     
     def UpdatePhotonPackages(self, packs, t_next):
@@ -541,7 +547,7 @@ class Radiate:
        
     def StoreData(self, newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
         tau, odeitr, h, rootitr, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, 
-        omega, hubble, compton):
+        omega, hubble, compton, packs = None):
         """
         Copy fields to newdata dictionary.
         """
@@ -573,7 +579,7 @@ class Radiate:
                 
                 if i == 2:
                     newdata['DielectricRecombinationRate'][cell] = xi[i]
-                    newdata['DielectricRecombinationCoolingRate'][cell] = omega[i]           
+                    newdata['DielectricRecombinationCoolingRate'][cell] = omega[i]     
                     
         return newdata            
         
@@ -675,6 +681,6 @@ class Radiate:
                     tau_all_arr[1][i] = self.coeff.Interpolate.OpticalDepth(np.log10(ncol[1][i]), 1)
                     tau_all_arr[2][i] = self.coeff.Interpolate.OpticalDepth(np.log10(ncol[2][i]), 2)
                     
-            self.tau_all_arr[0][0] = self.tau_all_arr[1][0] = self.tau_all_arr[2][0] = neglible_tau 
+            tau_all_arr[0][0] = tau_all_arr[1][0] = tau_all_arr[2][0] = neglible_tau 
 
         return tau_all_arr

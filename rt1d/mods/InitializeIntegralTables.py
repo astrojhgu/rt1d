@@ -125,8 +125,8 @@ class InitializeIntegralTables:
         ms = 'ms%i' % self.pf.MultiSpecies
         pc = 'pc%i' % self.pf.PhotonConserving 
         si = 'si%i' % self.pf.SecondaryIonization
-        td = 'tdep%i' % self.pf.SourceTimeEvolution       
-        
+        td = 'tdep%i' % self.pf.SourceTimeEvolution
+                
         if self.pf.DiscreteSpectrum:
             sed = 'D'
         else:
@@ -305,7 +305,7 @@ class InitializeIntegralTables:
         Return a dictionary of lookup tables, and also store a copy as self.itabs.
         """
                 
-        itabs = self.itabs
+        itabs = self.ReadIntegralTable()
 
         # If there was a pre-existing table, return it
         if itabs is not None:

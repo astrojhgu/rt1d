@@ -59,11 +59,14 @@ def ReadParameterFile(pf):
                 parval = str(parval.strip())
             elif re.search('/', parval):
                 parval = str(parval.strip())
+            elif not parval.replace('.', '').strip():
+                parval = str(parval).strip()    
             else:
                 parval = parval.strip().split(",")
                 tmp = []                           
                 if parval[0][0] == '[':
-                    for element in parval: tmp.append(float(element.strip("[,]")))
+                    for element in parval: 
+                        tmp.append(float(element.strip("[,]")))
                     parval = list(tmp)
                 else:
                     raise ValueError('The format of this parameter is not understood.')

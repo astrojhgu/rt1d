@@ -76,6 +76,7 @@ class InitializeGrid:
         fields['OpticalDepth'] = np.zeros([len(fields[fields.keys()[0]]), 3])        
         fields['Radius'] = self.r
         fields['ShellThickness'] = self.dx  
+        fields['PhotonPackages'] = np.zeros(3)
                 
         return fields                
                         

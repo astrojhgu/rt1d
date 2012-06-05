@@ -249,6 +249,10 @@ class RadiationSource:
         if t > 0 and t != self.last_renormalized:
             self.last_renormalized = t
             self.M = self.BlackHoleMass(t)
+            self.r_in = self.DiskInnermostRadius(self.M)
+            self.r_out = self.pf.SourceDiskMaxRadius * self.GravitationalRadius(self.M)
+            self.T_in = self.DiskInnermostTemperature(self.M)
+            self.T_out = self.DiskTemperature(self.M, self.r_out)
             self.Lbol = self.BolometricLuminosity(t)
             self.LuminosityNormalizations = self.NormalizeSpectrumComponents(t)    
         
@@ -290,13 +294,13 @@ class RadiationSource:
         """         
         
         # If t > 0, re-compute mass, inner radius, and inner temperature
-        if t > 0 and self.pf.SourceTimeEvolution > 0:
+        if t > 0 and self.pf.SourceTimeEvolution and t != self.last_renormalized:
             self.M = self.BlackHoleMass(t)
             self.r_in = self.DiskInnermostRadius(self.M)
             self.r_out = self.pf.SourceDiskMaxRadius * self.GravitationalRadius(self.M)
             self.T_in = self.DiskInnermostTemperature(self.M)
             self.T_out = self.DiskTemperature(self.M, self.r_out)
-        
+                    
         integrand = lambda T: (T / self.T_in)**(-11. / 3.) * self.BlackBody(E, T) / self.T_in
         return quad(integrand, self.T_out, self.T_in)[0]
         
@@ -405,7 +409,8 @@ class RadiationSource:
         
         return integrate(integrand, self.EminNorm, self.EmaxNorm)[0] 
         
-    def PlotSpectrum(self, color = 'k', components = True, t = 0, normalized = True):
+    def PlotSpectrum(self, color = 'k', components = True, t = 0, normalized = True,
+        bins = 100):
         import pylab as pl
         
         if not normalized:
@@ -414,7 +419,7 @@ class RadiationSource:
             Lbol = 1
         
         E = np.logspace(np.log10(min(self.SpectrumPars.MinNormEnergy)), 
-            np.log10(max(self.SpectrumPars.MaxNormEnergy)), 500)
+            np.log10(max(self.SpectrumPars.MaxNormEnergy)), bins)
         F = []
         
         for energy in E:
@@ -425,7 +430,7 @@ class RadiationSource:
             FF = []
             for i, component in enumerate(self.SpectrumPars.Type):
                 tmpE = np.logspace(np.log10(self.SpectrumPars.MinEnergy[i]), 
-                    np.log10(self.SpectrumPars.MaxEnergy[i]), 500)
+                    np.log10(self.SpectrumPars.MaxEnergy[i]), bins)
                 tmpF = []
                 for energy in tmpE:
                     tmpF.append(self.Spectrum(energy, t = t, only = component))
@@ -440,7 +445,7 @@ class RadiationSource:
             for i in xrange(self.N):
                 self.ax.loglog(EE[i], np.array(FF[i]) * Lbol, color = color, ls = ls[i + 1])
         
-        self.ax.set_ylim(1e-6, 1e-2)
+        self.ax.set_ylim(1e-3 * np.max(F), 1.1 * np.max(F))
         self.ax.set_xlabel(r'$h\nu \ (\mathrm{eV})$')
         
         if normalized:

@@ -79,8 +79,11 @@ class Analyze:
         
         # Stuff for analytic solution
         if sol == 0:
-            if T0 is not None: T = T0
-            else: T = self.data[0].T[0]
+            if T0 is not None: 
+                T = T0
+            else: 
+                T = self.data[0].T[0]
+                
             self.Ndot = self.pf.SpectrumPhotonLuminosity
             self.alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
             self.trec = 1. / self.alpha_HII / self.data[0].n_HI[-1]                                         # s
