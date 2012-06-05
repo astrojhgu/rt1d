@@ -320,8 +320,9 @@ class InitializeIntegralTables:
             s += '%ix' % i
         s = s.rstrip('x')
                 
-        print 'This lookup table will contain %i unique tables. Each will have %s (%i) elements.' % (self.Nt, s, np.prod(self.dims))
-        print 'If that sounds like a lot, you should consider hitting ctrl-D.'
+        if rank == 0:        
+            print 'This lookup table will contain %i unique tables. Each will have %s (%i) elements.' % (self.Nt, s, np.prod(self.dims))
+            print 'If that sounds like a lot, you should consider hitting ctrl-D.'
                     
         # Loop over integrals     
         donor_species = 0  
