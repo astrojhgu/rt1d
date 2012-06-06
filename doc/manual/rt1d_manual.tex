@@ -600,6 +600,24 @@ What parameters must be set?
     \item SourceParameters
 \end{itemize}
 
+%%%
+%% Diffuse Radiation
+%%%
+\section{Diffuse Radiation}
+Let's figure out where the on-the-spot approximation is pretty good.  This will depend on photon frequency, gas neutral fraction (of hydrogen and helium), and our grid resolution.
+
+The optical depth along a ray is
+\begin{align}
+    \tau_{i,\nu} & = N_{i,\nu} \sigma_{i,\nu} \nonumber \\
+    & = n_i dx \sigma_{i,\nu}
+\end{align}    
+where $n_i$ is the number density of absorbing species $i$, $\sigma_{i, \nu}$ is the bound-free absorption cross section for species $i$, and $dx$ is the length of the ray segment (i.e. our grid resolution). So, the total optical depth along this ray segment is
+\begin{equation}
+    \tau_{\nu} = \sum_i \tau_{i, \nu} .
+\end{equation}    
+If we assume that $\xHII = \xHeII$ and $\xHeIII = 0$, we can plot the ionized fraction vs. $\tau_{\nu}$ to get a handle on how good the OTSA is as a function of grid resolution and frequency.
+
+
 \newpage
 \bibliography{references}
 \bibliographystyle{apj}

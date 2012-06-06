@@ -48,7 +48,7 @@ def SetDefaultParameterValues():
         "ColumnDensityBinsHeI": 100,  
         "ColumnDensityBinsHeII": 100,  
         "IonizedFractionBins": 20,
-        "MassBins": 20, 
+        "AgeBins": 20,
         "ExitAfterIntegralTabulation": 0,  
         
         "SecondaryElectronDataFile": 'None',
@@ -130,7 +130,6 @@ def SetDefaultParameterValues():
         "SourceType": 1,  
         "SourceTemperature": 1e5,  
         "SourceMass": 1e3,  
-        "SourceFinalMass": 1e5,
         "SourceLifetime": 1e10,  
         "SourceRadiativeEfficiency": 0.1,
         "SourceISCO": 0,  

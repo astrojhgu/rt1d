@@ -261,8 +261,7 @@ class InitializeIntegralTables:
         
         # If SED time-dependent
         if self.pf.SourceTimeEvolution:
-            itab['logM'] = f["columns"]["logM"].value
-            itab['logAge'] = f["columns"]["logAge"].value
+            itab['Age'] = f["columns"]["Age"].value
         
         # Override what's in parameter file if there is a preexisting table and
         # all the bounds are OK
@@ -300,8 +299,7 @@ class InitializeIntegralTables:
             col_grp.create_dataset('logxHII', data = self.esec.LogIonizedFractions)
         
         if self.pf.SourceTimeEvolution:
-            col_grp.create_dataset('logM', data = self.rs.logMarr)
-            col_grp.create_dataset('logAge', data = self.rs.logAge)
+            col_grp.create_dataset('Age', data = self.rs.Age)
         
         f.close()     
                         
@@ -353,10 +351,10 @@ class InitializeIntegralTables:
                     if i % size != rank:
                         continue
                     
-                    logNHI, logNHeI, logNHeII, logx, logA = self.parse_args(self.values[i]) 
+                    logNHI, logNHeI, logNHeII, logx, Age = self.parse_args(self.values[i]) 
                     N = 10**np.array([logNHI, logNHeI, logNHeII])
                     tab[ind] = eval('self.{0}([{1},{2},{3}], {4}, {5}, {6}, {7})'.format(integral, 
-                        N[0], N[1], N[2], species, donor_species, 10**logx, 10**logA))
+                        N[0], N[1], N[2], species, donor_species, 10**logx, Age))
                         
                     if rank == 0 and self.ProgressBar and self.pf.ParallelizationMethod == 1:
                         pbar.update(i)    
@@ -480,8 +478,8 @@ class InitializeIntegralTables:
             
         if self.pf.SourceTimeEvolution:
             Nd += 1
-            dims.append(self.pf.MassBins)
-            columns.append(self.rs.logAge)
+            dims.append(self.pf.AgeBins)
+            columns.append(self.rs.Age)
             locs.append(4)
             
         indices = []
