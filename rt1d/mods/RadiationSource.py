@@ -156,6 +156,10 @@ class RadiationSource:
         if pf.SourceTimeEvolution:
             self.logMarr = np.linspace(np.log10(pf.SourceMass), np.log10(pf.SourceFinalMass), pf.MassBins)
             self.Marr = 10**self.logMarr     
+            self.Age = self.BlackHoleAge(self.Marr)
+            self.logAge = np.log10(self.Age)
+            self.Age[0] = 0
+            self.logAge[0] = 1  # seconds
                                               
     def GravitationalRadius(self, M):
         """

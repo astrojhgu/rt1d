@@ -259,13 +259,18 @@ class InitializeIntegralTables:
                     if rank == 0:
                         print "Set RegenerateTable = 1 to recreate this table."    
         
+        # If SED time-dependent
+        if self.pf.SourceTimeEvolution:
+            itab['logM'] = f["columns"]["logM"].value
+            itab['logAge'] = f["columns"]["logAge"].value
+        
         # Override what's in parameter file if there is a preexisting table and
         # all the bounds are OK
         self.HIColumn = itab["logNHI"]    
         if self.pf.MultiSpecies > 0:
             self.HeIColumn = itab["logNHeI"]
             self.HeIIColumn = itab["logNHeII"]
-        
+                    
         return itab
          
     def WriteIntegralTable(self, itabs):
@@ -348,10 +353,10 @@ class InitializeIntegralTables:
                     if i % size != rank:
                         continue
                     
-                    logNHI, logNHeI, logNHeII, logx, logM = self.parse_args(self.values[i]) 
+                    logNHI, logNHeI, logNHeII, logx, logA = self.parse_args(self.values[i]) 
                     N = 10**np.array([logNHI, logNHeI, logNHeII])
                     tab[ind] = eval('self.{0}([{1},{2},{3}], {4}, {5}, {6}, {7})'.format(integral, 
-                        N[0], N[1], N[2], species, donor_species, 10**logx, logM))
+                        N[0], N[1], N[2], species, donor_species, 10**logx, 10**logA))
                         
                     if rank == 0 and self.ProgressBar and self.pf.ParallelizationMethod == 1:
                         pbar.update(i)    
@@ -476,7 +481,7 @@ class InitializeIntegralTables:
         if self.pf.SourceTimeEvolution:
             Nd += 1
             dims.append(self.pf.MassBins)
-            columns.append(self.rs.logMarr)
+            columns.append(self.rs.logAge)
             locs.append(4)
             
         indices = []
@@ -575,36 +580,36 @@ class InitializeIntegralTables:
                         
         return tau
         
-    def Phi(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):
+    def Phi(self, ncol, species = 0, donor_species = 0, xHII = 0.0, t = None):
         """
         Equation 10 in Mirocha et al. 2012.
         """      
                 
         # Otherwise, continuous spectrum                
         if self.pf.PhotonConserving:
-            integrand = lambda E: 1e10 * self.rs.Spectrum(E) * \
+            integrand = lambda E: 1e10 * self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
         else:
             integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
             
         return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
         
-    def Psi(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):            
+    def Psi(self, ncol, species = 0, donor_species = 0, xHII = 0.0, t = None):            
         """
         Equation 11 in Mirocha et al. 2012.
         """        
         
         # Otherwise, continuous spectrum    
         if self.pf.PhotonConserving:
-            integrand = lambda E: 1e20 * self.rs.Spectrum(E) * \
+            integrand = lambda E: 1e20 * self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
         else:
             integrand = lambda E: 1e20 * PhotoIonizationCrossSection(E, species) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
         
         return 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
@@ -620,14 +625,14 @@ class InitializeIntegralTables:
         if self.pf.PhotonConserving:
             integrand = lambda E: 1e10 * \
                 self.esec.DepositionFraction(E - Ej, xHII, channel = species + 1) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
         else:
             integrand = lambda E: 1e10 * \
                 self.esec.DepositionFraction(E, xHII, channel = species + 1) * \
                 PhotoIonizationCrossSection(E, species) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
             
@@ -652,11 +657,11 @@ class InitializeIntegralTables:
         if self.pf.PhotonConserving:
             integrand = lambda E: 1e20 * \
                 self.esec.DepositionFraction(E - Ej, xHII, channel = species + 1) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
         else:
             integrand = lambda E: 1e20 * PhotoIonizationCrossSection(E, species) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
                 
         c = self.esec.Energies >= max(Ej, self.rs.Emin)
@@ -680,14 +685,14 @@ class InitializeIntegralTables:
         if self.pf.PhotonConserving:
             integrand = lambda E: 1e10 * \
                 self.esec.DepositionFraction(E - Ei, xHII, channel = 0) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
         else:
             integrand = lambda E: 1e10 * \
                 self.esec.DepositionFraction(E - Ei, xHII, channel = 0) * \
                 PhotoIonizationCrossSection(E, species) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
         
@@ -712,13 +717,13 @@ class InitializeIntegralTables:
         if self.pf.PhotonConserving:
             integrand = lambda E: 1e20 * \
                 self.esec.DepositionFraction(E - Ei, xHII, channel = 0) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
         else:
             integrand = lambda E: 1e20 * \
                 self.esec.DepositionFraction(E - Ei, xHII, channel = 0) * \
                 PhotoIonizationCrossSection(E, species) * \
-                self.rs.Spectrum(E) * \
+                self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
         
         c = self.esec.Energies >= max(Ei, self.rs.Emin)
