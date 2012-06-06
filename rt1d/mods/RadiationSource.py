@@ -154,7 +154,7 @@ class RadiationSource:
                 
         # Time evolution
         if pf.SourceTimeEvolution:
-            self.logMarr = np.logspace(np.log10(pf.SourceMass), np.log10(pf.SourceFinalMass), pf.MassBins)
+            self.logMarr = np.linspace(np.log10(pf.SourceMass), np.log10(pf.SourceFinalMass), pf.MassBins)
             self.Marr = 10**self.logMarr     
                                               
     def GravitationalRadius(self, M):

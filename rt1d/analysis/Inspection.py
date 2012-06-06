@@ -49,13 +49,13 @@ class Inspect:
             integral = 'PhiHat%i' % species
             ylabel = r'$\widetilde{\Phi}_{\mathrm{%s}}$' % s        
         elif intnum == 2:
-            integral = 'Psi%i' % species
+            integral = 'logPsi%i' % species
             ylabel = r'$\Psi_{\mathrm{%s}}$' % s
         elif intnum == 2.1:
-            integral = 'PsiWiggle%i%i' % (species, donor_species)
+            integral = 'logPsiWiggle%i%i' % (species, donor_species)
             ylabel = r'$\widetilde{\Psi}_{\mathrm{%s}}$' % s 
         elif intnum == 2.2:
-            integral = 'PsiHat%i' % species
+            integral = 'logPsiHat%i' % species
             ylabel = r'$\widetilde{\Psi}_{\mathrm{%s}}$' % s            
         else:
             integral = 'TotalOpticalDepth' 
@@ -64,7 +64,7 @@ class Inspect:
         
         # Figure out axes
         if nHI is None:
-            x = self.itabs['HIColumnValues_x']
+            x = self.itabs['logNHI']
             if self.pf.MultiSpecies:
                 i1 = np.argmin(np.abs(self.itabs['HeIColumnValues_y'] - nHeI))
                 i2 = np.argmin(np.abs(self.itabs['HeIIColumnValues_z'] - nHeII))
@@ -79,13 +79,13 @@ class Inspect:
                         
         elif nHeI is None:
             x = self.itabs['HeIColumnValues_y']
-            i1 = np.argmin(np.abs(self.itabs['HIColumnValues_x'] - nHI))
+            i1 = np.argmin(np.abs(self.itabs['logNHI'] - nHI))
             i2 = np.argmin(np.abs(self.itabs['HeIIColumnValues_z'] - nHeII))
             y = self.itabs[integral][i1,0:,i2]
             xlabel = r'$n_{\mathrm{HeI}} \ (\mathrm{cm^{-2}})$'
         else:
             x = self.itabs['HeIIColumnValues_z']
-            i1 = np.argmin(np.abs(self.itabs['HIColumnValues_x'] - nHI))
+            i1 = np.argmin(np.abs(self.itabs['logNHI'] - nHI))
             i2 = np.argmin(np.abs(self.itabs['HeIColumnValues_y'] - nHeI))
             y = self.itabs[integral][i1,i2,0:]
             xlabel = r'$n_{\mathrm{HeII}} \ (\mathrm{cm^{-2}})$'
@@ -117,22 +117,22 @@ class Inspect:
         
         # Convert integral int to string
         if intnum == 1:
-            integral = 'Phi%i' % species 
+            integral = 'logPhi%i' % species 
             ylabel = r'$\Phi_{\mathrm{%s}}$' % s
         elif intnum == 1.1:
-            integral = 'PhiWiggle%i%i' % (species, donor_species)
+            integral = 'logPhiWiggle%i%i' % (species, donor_species)
             ylabel = r'$\widetilde{\Phi}_{\mathrm{%s}}$' % s 
         elif intnum == 1.2:
-            integral = 'PhiHat%i' % species
+            integral = 'logPhiHat%i' % species
             ylabel = r'$\widetilde{\Phi}_{\mathrm{%s}}$' % s        
         elif intnum == 2:
-            integral = 'Psi%i' % species
+            integral = 'logPsi%i' % species
             ylabel = r'$\Psi_{\mathrm{%s}}$' % s
         elif intnum == 2.1:
-            integral = 'PsiWiggle%i%i' % (species, donor_species)
+            integral = 'logPsiWiggle%i%i' % (species, donor_species)
             ylabel = r'$\widetilde{\Psi}_{\mathrm{%s}}$' % s 
         elif intnum == 2.2:
-            integral = 'PsiHat%i' % species
+            integral = 'logPsiHat%i' % species
             ylabel = r'$\widetilde{\Psi}_{\mathrm{%s}}$' % s            
         else:
             integral = 'TotalOpticalDepth' 
