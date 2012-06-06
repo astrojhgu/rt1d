@@ -301,7 +301,7 @@ class InitializeIntegralTables:
         
         if self.pf.SourceTimeEvolution:
             col_grp.create_dataset('logM', data = self.rs.logMarr)
-            col_grp.create_dataset('logAge', data = np.log10(self.rs.BlackHoleAge(self.rs.Marr)))
+            col_grp.create_dataset('logAge', data = self.rs.logAge)
         
         f.close()     
                         
