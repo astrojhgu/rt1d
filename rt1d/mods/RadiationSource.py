@@ -204,7 +204,7 @@ class RadiationSource:
         Compute age of black hole based on current time, current mass, and initial mass.
         """            
         
-        return np.log(M / self.pf.SourceMass) (self.epsilon / (1. - self.epsilon)) * t_edd
+        return np.log(M / self.pf.SourceMass) * (self.epsilon / (1. - self.epsilon)) * t_edd
                 
     def IonizingPhotonLuminosity(self, t = 0, bin = None):
         """
