@@ -40,13 +40,13 @@ class Inspect:
         
         # Convert integral int to string
         if intnum == 1:
-            integral = 'Phi%i' % species 
+            integral = 'logPhi%i' % species 
             ylabel = r'$\Phi_{\mathrm{%s}}$' % s
         elif intnum == 1.1:
-            integral = 'PhiWiggle%i%i' % (species, donor_species)
+            integral = 'logPhiWiggle%i%i' % (species, donor_species)
             ylabel = r'$\widetilde{\Phi}_{\mathrm{%s}}$' % s 
         elif intnum == 1.2:
-            integral = 'PhiHat%i' % species
+            integral = 'logPhiHat%i' % species
             ylabel = r'$\widetilde{\Phi}_{\mathrm{%s}}$' % s        
         elif intnum == 2:
             integral = 'logPsi%i' % species
@@ -66,8 +66,8 @@ class Inspect:
         if nHI is None:
             x = self.itabs['logNHI']
             if self.pf.MultiSpecies:
-                i1 = np.argmin(np.abs(self.itabs['HeIColumnValues_y'] - nHeI))
-                i2 = np.argmin(np.abs(self.itabs['HeIIColumnValues_z'] - nHeII))
+                i1 = np.argmin(np.abs(self.itabs['logNHeI'] - nHeI))
+                i2 = np.argmin(np.abs(self.itabs['logNHeII'] - nHeII))
                 y = self.itabs[integral][0:,i1,i2]
             else:
                 if intnum % int(intnum) != 0:
@@ -78,15 +78,15 @@ class Inspect:
             xlabel = r'$n_{\mathrm{HI}} \ (\mathrm{cm^{-2}})$'
                         
         elif nHeI is None:
-            x = self.itabs['HeIColumnValues_y']
+            x = self.itabs['logNHeI']
             i1 = np.argmin(np.abs(self.itabs['logNHI'] - nHI))
-            i2 = np.argmin(np.abs(self.itabs['HeIIColumnValues_z'] - nHeII))
+            i2 = np.argmin(np.abs(self.itabs['logNHeII'] - nHeII))
             y = self.itabs[integral][i1,0:,i2]
             xlabel = r'$n_{\mathrm{HeI}} \ (\mathrm{cm^{-2}})$'
         else:
-            x = self.itabs['HeIIColumnValues_z']
+            x = self.itabs['logNHeII']
             i1 = np.argmin(np.abs(self.itabs['logNHI'] - nHI))
-            i2 = np.argmin(np.abs(self.itabs['HeIColumnValues_y'] - nHeI))
+            i2 = np.argmin(np.abs(self.itabs['logNHeI'] - nHeI))
             y = self.itabs[integral][i1,i2,0:]
             xlabel = r'$n_{\mathrm{HeII}} \ (\mathrm{cm^{-2}})$'
             

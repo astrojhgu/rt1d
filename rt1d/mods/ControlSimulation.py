@@ -49,7 +49,7 @@ class ControlSimulation:
         nion = np.array([data['HIIDensity'][0], data['HeIIDensity'][0], data['HeIIIDensity'][0]])
         T = data['Temperature'][0]
         
-        ncol = 1. * np.zeros(3)
+        ncol = 11 * np.ones(3)
         ncell = r.dx[0] * nabs    
         nout = np.log10(ncell)
         Vsh = r.coeff.ShellVolume(self.R0, r.dx[0])    

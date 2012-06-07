@@ -43,7 +43,7 @@ except ImportError:
 E_th = [13.6, 24.6, 54.4]
 
 neglible_tau = 1e-12
-neglible_column = 10
+neglible_column = 1e11
 
 class Radiate:
     def __init__(self, pf, iits): 

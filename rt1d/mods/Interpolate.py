@@ -65,23 +65,25 @@ class Interpolate:
         or SourceTimeEvolution > 0) with DiscreteSpectrum = 0 and TabulateIntegrals = 1.
         """    
         
-        i_n, i_x = indices      
-                                        
-        x1 = self.columns[0][i_n]
-        x2 = self.columns[0][i_n + 1]
-        y1 = self.columns[1][i_x]
-        y2 = self.columns[1][i_x + 1]
+        i_x, i_y = indices      
+                                                                                
+        x1 = self.columns[0][i_x]
+        x2 = self.columns[0][i_x + 1]
+        y1 = self.columns[1][i_y]
+        y2 = self.columns[1][i_y + 1]
                 
-        f11 = self.itabs[integral][i_n][i_x]
-        f21 = self.itabs[integral][i_n + 1][i_x]
-        f12 = self.itabs[integral][i_n][i_x + 1]
-        f22 = self.itabs[integral][i_n + 1][i_x + 1]
-                                
+        f11 = self.itabs[integral][i_x][i_y]
+        f21 = self.itabs[integral][i_x + 1][i_y]
+        f12 = self.itabs[integral][i_x][i_y + 1]
+        f22 = self.itabs[integral][i_x + 1][i_y + 1]
+                                        
         final = (f11 * (x2 - value[self.locs[0]]) * (y2 - value[self.locs[1]]) + \
             f21 * (value[self.locs[0]] - x1) * (y2 - value[self.locs[1]]) + \
             f12 * (x2 - value[self.locs[0]]) * (value[self.locs[1]] - y1) + \
             f22 * (value[self.locs[0]] - x1) * (value[self.locs[1]] - y1)) / \
-            (x2 - x1) / (y2 - y1)    
+            (x2 - x1) / (y2 - y1)
+                        
+        print integral, value[self.locs[0]], value[self.locs[1]], x1, x2, y1, y2, f11, f21, f12, f22, final
                         
         return 10**final    
         
@@ -127,7 +129,7 @@ class Interpolate:
             
     def GetIndices2D(self, value):
         """
-        Return column density and ionized fraction (or mass/age) indices.
+        Return column density and ionized fraction (or age) indices.
         """    
                 
         i1 = int((value[self.locs[0]] - self.colmin[0]) / self.dcolumns[0])

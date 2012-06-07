@@ -612,7 +612,7 @@ class InitializeIntegralTables:
         
         return 1e-20 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
         
-    def PhiWiggle(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):
+    def PhiWiggle(self, ncol, species = 0, donor_species = 0, xHII = 0.0, t = None):
         """
         Equation 2.18 in the manual.
         """        
@@ -644,7 +644,7 @@ class InitializeIntegralTables:
         return 1e-10 * \
             np.trapz(np.array(y), self.esec.Energies[c])    
     
-    def PsiWiggle(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):            
+    def PsiWiggle(self, ncol, species = 0, donor_species = 0, xHII = 0.0, t = None):            
         """
         Equation 2.19 in the manual.
         """        
@@ -672,7 +672,7 @@ class InitializeIntegralTables:
         return 1e-20 * \
             np.trapz(np.array(y), self.esec.Energies[c])          
                               
-    def PhiHat(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):
+    def PhiHat(self, ncol, species = 0, donor_species = 0, xHII = 0.0, t = None):
         """
         Equation 2.20 in the manual.
         """        
@@ -704,7 +704,7 @@ class InitializeIntegralTables:
         return 1e-10 * \
             np.trapz(np.array(y), self.esec.Energies[c])          
                 
-    def PsiHat(self, ncol, species = 0, donor_species = 0, xHII = 0.0, M = None):            
+    def PsiHat(self, ncol, species = 0, donor_species = 0, xHII = 0.0, t = None):            
         """
         Equation 2.21 in the manual.
         """        
