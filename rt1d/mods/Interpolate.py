@@ -51,7 +51,7 @@ class Interpolate:
     def OpticalDepth(self, value, species):
         return 10**np.interp(value, self.columns[species], self.itabs['logOpticalDepth%i' % species])
                 
-    def InterpolateLinear(self, indices, integral, value, x_HII = None):
+    def InterpolateLinear(self, indices, integral, value):
         """
         Use this technique for hydrogen-only calculations.  For consistency with MultiSpecies > 0 
         methods, 'value' should still be a 3-element list.  
@@ -66,7 +66,7 @@ class Interpolate:
         """    
         
         i_x, i_y = indices      
-                                                                                
+                                                                                        
         x1 = self.columns[0][i_x]
         x2 = self.columns[0][i_x + 1]
         y1 = self.columns[1][i_y]
@@ -82,9 +82,7 @@ class Interpolate:
             f12 * (x2 - value[self.locs[0]]) * (value[self.locs[1]] - y1) + \
             f22 * (value[self.locs[0]] - x1) * (value[self.locs[1]] - y1)) / \
             (x2 - x1) / (y2 - y1)
-                        
-        print integral, value[self.locs[0]], value[self.locs[1]], x1, x2, y1, y2, f11, f21, f12, f22, final
-                        
+                                                                                         
         return 10**final    
         
     def InterpolateTriLinear(self, indices, integral, value):
@@ -134,7 +132,7 @@ class Interpolate:
                 
         i1 = int((value[self.locs[0]] - self.colmin[0]) / self.dcolumns[0])
         i2 = int((value[self.locs[1]] - self.colmin[1]) / self.dcolumns[1])
-        
+                
         return min(max(i1, 0), self.dims[0] - 2), min(max(i2, 0), self.dims[1] - 2)
         
     def GetIndices3D(self, value):

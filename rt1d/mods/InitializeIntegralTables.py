@@ -355,7 +355,7 @@ class InitializeIntegralTables:
                     N = 10**np.array([logNHI, logNHeI, logNHeII])
                     tab[ind] = eval('self.{0}([{1},{2},{3}], {4}, {5}, {6}, {7})'.format(integral, 
                         N[0], N[1], N[2], species, donor_species, 10**logx, Age))
-                        
+                                                
                     if rank == 0 and self.ProgressBar and self.pf.ParallelizationMethod == 1:
                         pbar.update(i)    
                     
@@ -582,19 +582,19 @@ class InitializeIntegralTables:
         """
         Equation 10 in Mirocha et al. 2012.
         """      
-                
+                                
         # Otherwise, continuous spectrum                
         if self.pf.PhotonConserving:
-            integrand = lambda E: 1e10 * self.rs.Spectrum(E, t = t) * \
+            integrand = lambda E: self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
         else:
-            integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * \
+            integrand = lambda E: PhotoIonizationCrossSection(E, species) * \
                 self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
             
-        return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax, epsrel = 1e-8)[0]
+        return integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax)[0]
         
     def Psi(self, ncol, species = 0, donor_species = 0, xHII = 0.0, t = None):            
         """

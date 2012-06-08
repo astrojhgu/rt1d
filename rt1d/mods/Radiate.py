@@ -43,7 +43,7 @@ except ImportError:
 E_th = [13.6, 24.6, 54.4]
 
 neglible_tau = 1e-12
-neglible_column = 1e11
+neglible_column = 10
 
 class Radiate:
     def __init__(self, pf, iits): 
@@ -262,7 +262,7 @@ class Radiate:
             # Unpack so we have everything by name
             nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, \
                 k_H, zeta, eta, psi, xi, omega, hubble, compton = args                                                   
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
             ######################################
             ######## Solve Rate Equations ########
             ######################################        
@@ -628,7 +628,7 @@ class Radiate:
         dqdt[0] = (Gamma[0] + Beta[0] * n_e) * nHI + \
                   (gamma[0][0] * nHI + gamma[0][1] * nHeI + gamma[0][2] * nHeII) - \
                    alpha[0] * n_e * q[0]
-
+                
         if self.pf.CosmologicalExpansion:
             dqdt[0] -= 3. * q[0] * hubble
 

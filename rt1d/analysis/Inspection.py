@@ -100,7 +100,7 @@ class Inspect:
         pl.draw()
         
     def InspectInterpolation(self, intnum = 1, species = 0, donor_species = 0,
-        nHI = np.linspace(12, 19, 1000), 
+        nHI = np.linspace(12, 19, 1000), t = 0,
         nHeI = 0.0, nHeII = 0.0, color = 'b', ls = '-', x_HII = 1e-4):
         """
         Now check how good our interpolation is...
@@ -143,10 +143,10 @@ class Inspect:
         if type(nHI) not in [int, float]:
             x = nHI
             for col in nHI:
-                tmp = [col, nHeI, nHeII]                
-                indices = self.interp.GetIndices(tmp, x_HII = x_HII)                
+                tmp = [col, nHeI, nHeII, np.log10(x_HII), t]                
+                indices = self.interp.GetIndices(tmp)                
                 result.append(self.interp.interp(indices, 
-                    '%s' % integral, tmp, x_HII = x_HII))
+                    '%s' % integral, tmp))
             
         elif type(nHeI) not in [int, float]:
             x = nHeI

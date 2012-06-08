@@ -49,7 +49,7 @@ class ControlSimulation:
         nion = np.array([data['HIIDensity'][0], data['HeIIDensity'][0], data['HeIIIDensity'][0]])
         T = data['Temperature'][0]
         
-        ncol = 11 * np.ones(3)
+        ncol = 1. * np.ones(3)
         ncell = r.dx[0] * nabs    
         nout = np.log10(ncell)
         Vsh = r.coeff.ShellVolume(self.R0, r.dx[0])    
@@ -101,7 +101,8 @@ class ControlSimulation:
             dTdt = np.abs(2. * T * hubble)
             dtT = self.pf.MaxTemperatureChange * T / dTdt    
 
-        return min(dtHI, dtHeII, dtHeIII, dtne, dtT)
+        return min(dtHI, dtHeII, dtHeIII, dtne, dtT, 
+            self.pf.MaximumGlobalTimestep * self.pf.TimeUnits)
     
     def ComputePhotonTimestep(self, tau, nabs, nion, ncol, n_H, n_He, n_e, n_B, 
         Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, hubble, compton, 
@@ -120,7 +121,7 @@ class ControlSimulation:
                 dHIIdt -= 3. * nabs[0] * hubble
             if tau[0] >= self.pf.OpticalDepthDefiningIFront[0]:
                 dtHI = self.pf.MaxHIIChange * nabs[0] / abs(dHIIdt)
-        
+                    
         dtHeII = 1e50 
         if self.pf.MultiSpecies and self.pf.HeIIRestrictedTimestep:
             dHeIIdt = nabs[1] * (Gamma[1] + Beta[1] * n_e) + \

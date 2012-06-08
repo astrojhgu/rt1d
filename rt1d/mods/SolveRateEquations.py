@@ -105,7 +105,7 @@ class SolveRateEquations:
             # Check for NaNs, reduce timestep or raise exception if h == hmin
             if self.pf.CheckForGoofiness:
                 everything_ok = self.SolutionCheck(ynext, znow, znext, args)
-                                                                                                                                                                                 
+                                                                                                                                                                                                                   
                 if not everything_ok[0] and h > self.hmin:
                     h = max(self.hmin, h / 2.)
                     continue
@@ -117,7 +117,7 @@ class SolveRateEquations:
                 if not np.all(everything_ok[1:]):
                                         
                     ynext, ok = self.ApplyFloor(ynext, znow, znext, args)
-                                                                                            
+                                                                                                                
                     if not np.all(ok):
                         if h > self.hmin:
                             h = max(self.hmin, h / 2.)
@@ -272,7 +272,14 @@ class SolveRateEquations:
         # Hitting MinimumSpeciesFraction
         elif np.allclose(nHII / nH, self.xmin, rtol = self.xmin, atol = self.xmin):
             ynext[0] = nH * self.xmin
-                    
+        
+        # Negative    
+        else:
+            if np.allclose((nHII / nH) + 1, 1.0, rtol = self.xmin, atol = self.xmin):
+                ynext[0] = nH * self.xmin
+            else:
+                ok[0] = 0
+           
         # Helium if necessary
         if self.pf.MultiSpecies:
                         

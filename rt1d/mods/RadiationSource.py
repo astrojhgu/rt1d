@@ -245,7 +245,7 @@ class RadiationSource:
         """        
         
         # Renormalize if t > 0 
-        if t > 0 and t != self.last_renormalized:
+        if t != self.last_renormalized:
             self.last_renormalized = t
             self.M = self.BlackHoleMass(t)
             self.r_in = self.DiskInnermostRadius(self.M)

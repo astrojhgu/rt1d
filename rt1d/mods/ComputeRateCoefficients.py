@@ -235,9 +235,7 @@ class RateCoefficients:
                                                         
                     # Heating rate coefficient        
                     k_H[i] += ee * fheat
-                                
-                    #print E, self.sigma[i], Qdot[i], Gamma_E[i], k_H[i], fheat, ee       
-                                                    
+                                                                                    
                 # Recombination
                 alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
                 
@@ -301,7 +299,7 @@ class RateCoefficients:
             dQ = Q0 * (1. - np.exp(-tau_c))            # number of photons absorbed in cell per sec
             IonizationRate = dQ / nabs[species] / Vsh  # ionizations / sec / atom        
                           
-        #print A * IonizationRate, Phi_N, Phi_N_dN, indices_in, indices_out
+        print A * IonizationRate, Phi_N, Phi_N_dN, indices_in, indices_out, ncol[0], nout[0]
         return A * IonizationRate, Phi_N, Phi_N_dN
         
     def PhotoElectricHeatingRate(self, species = None, E = None, Qdot = None, Lbol = None, 
