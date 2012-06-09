@@ -299,7 +299,6 @@ class RateCoefficients:
             dQ = Q0 * (1. - np.exp(-tau_c))            # number of photons absorbed in cell per sec
             IonizationRate = dQ / nabs[species] / Vsh  # ionizations / sec / atom        
                           
-        print A * IonizationRate, Phi_N, Phi_N_dN, indices_in, indices_out, ncol[0], nout[0]
         return A * IonizationRate, Phi_N, Phi_N_dN
         
     def PhotoElectricHeatingRate(self, species = None, E = None, Qdot = None, Lbol = None, 

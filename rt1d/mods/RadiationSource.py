@@ -409,7 +409,7 @@ class RadiationSource:
         return integrate(integrand, self.EminNorm, self.EmaxNorm)[0] 
         
     def PlotSpectrum(self, color = 'k', components = True, t = 0, normalized = True,
-        bins = 100):
+        bins = 100, mp = None):
         import pylab as pl
         
         if not normalized:
@@ -437,7 +437,11 @@ class RadiationSource:
                 EE.append(tmpE)
                 FF.append(tmpF)              
         
-        self.ax = pl.subplot(111)    
+        if mp is None:
+            self.ax = pl.subplot(111)
+        else:
+            self.ax = mp
+                    
         self.ax.loglog(E, np.array(F) * Lbol, color = color, ls = ls[0])
         
         if components and self.N > 1:
