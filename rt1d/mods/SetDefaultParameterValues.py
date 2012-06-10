@@ -59,6 +59,7 @@ def SetDefaultParameterValues():
         "StartRadius": 0.01,  
           
         # Units
+        "DensityUnits": 1e-3 * m_H,
         "LengthUnits": cm_per_kpc,  
         "TimeUnits": s_per_myr,  
           
@@ -114,7 +115,6 @@ def SetDefaultParameterValues():
         "InitialRedshift": 20.0, 
         "FinalRedshift": 6.,
         "DensityProfile": 0,  
-        "InitialDensity": 0,  
         "TemperatureProfile": 0,  
         "InitialTemperature": 1e4,  
         "IonizationProfile": 0,  

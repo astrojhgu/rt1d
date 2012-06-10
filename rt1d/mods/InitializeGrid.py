@@ -90,7 +90,7 @@ class InitializeGrid:
         """        
                 
         if self.pf.DensityProfile == 0: 
-            density = self.pf.InitialDensity * m_H
+            density = self.pf.DensityUnits * m_H
         if self.pf.DensityProfile == 1: 
             density = self.cosm.MeanBaryonDensity(self.pf.InitialRedshift)
         

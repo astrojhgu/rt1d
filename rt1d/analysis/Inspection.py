@@ -137,7 +137,7 @@ class Inspect:
         else:
             integral = 'TotalOpticalDepth' 
             ylabel = r'$\sum_i\int_{\nu} \tau_{i,\nu} d\nu$'
-            pl.rcParams['figure.subplot.left'] = 0.2012
+            pl.rcParams['figure.subplot.left'] = 0.2
         
         result = []
         if type(nHI) not in [int, float]:
