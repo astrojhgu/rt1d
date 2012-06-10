@@ -27,3 +27,4 @@ timestep_evolution.dat
 *.eps
 MANIFEST
 dist/*
+*.bst

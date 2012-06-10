@@ -107,9 +107,7 @@ class InitializeIntegralTables:
             self.zeros = np.zeros_like(self.rs.E)
         else:
             self.zeros = np.zeros(1)
-            
-        self.Lbol = self.rs.BolometricLuminosity(0.0)
-                        
+                                    
     def DetermineTableName(self):    
         """
         Returns the filename following the convention:
@@ -465,7 +463,7 @@ class InitializeIntegralTables:
         if self.pf.MultiSpecies >= 1:
             Nd += 2
             Nt += (1 + (not self.pf.Isothermal)) * 2
-            dims.extend([self.HeINBins, self.HeIINbins]) 
+            dims.extend([self.HeINBins, self.HeIINBins]) 
             columns.extend([self.HeIColumn, self.HeIIColumn]) 
             locs.extend([1, 2])
           
