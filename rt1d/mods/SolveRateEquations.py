@@ -123,6 +123,7 @@ class SolveRateEquations:
                             h = max(self.hmin, h / 2.)
                             continue
                         elif h == self.hmin:
+                            print ok
                             raise ValueError("xHII or xHeII or xHeIII < 0 or > 1, and we're on the minimum ODE step. Exiting.")
                             
             # Adaptive time-stepping

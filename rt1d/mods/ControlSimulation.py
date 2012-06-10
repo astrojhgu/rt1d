@@ -78,7 +78,7 @@ class ControlSimulation:
         
         dtHeII = 1e50
         dHeIIdt = 1e-50
-        if self.pf.MultiSpecies and self.HeIIRestrictedTimestep and nabs[2] > 0:
+        if self.pf.MultiSpecies and self.pf.HeIIRestrictedTimestep and nabs[2] > 0:
             dHeIIdt = nabs[1] * Gamma[1]            
             dtHeII = self.pf.MaxHeIIChange * nabs[2] / dHeIIdt   
                          

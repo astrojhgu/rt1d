@@ -583,16 +583,16 @@ class InitializeIntegralTables:
                                 
         # Otherwise, continuous spectrum                
         if self.pf.PhotonConserving:
-            integrand = lambda E: self.rs.Spectrum(E, t = t) * \
+            integrand = lambda E: 1e10 * self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
         else:
-            integrand = lambda E: PhotoIonizationCrossSection(E, species) * \
+            integrand = lambda E: 1e10 * PhotoIonizationCrossSection(E, species) * \
                 self.rs.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
             
-        return integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax)[0]
+        return 1e-10 * integrate(integrand, max(E_th[species], self.rs.Emin), self.rs.Emax)[0]
         
     def Psi(self, ncol, species = 0, donor_species = 0, xHII = 0.0, t = None):            
         """

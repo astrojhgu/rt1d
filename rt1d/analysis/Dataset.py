@@ -64,7 +64,10 @@ class Dataset:
         for ddf in alldds:
             f = h5py.File("{0}/{1}/{2}".format(self.rd, self.od, ddf))
             ID = ddf.partition('.')[0].strip('dd')
-            ds[int(ID)] = DataDump(f["data"], f["parameters"])
+            try:
+                ds[int(ID)] = DataDump(f["data"], f["parameters"])
+            except KeyError: # backwards compatibility
+                ds[int(ID)] = DataDump(f["Data"], f["ParameterFile"])
             f.close()
             
         return ds
