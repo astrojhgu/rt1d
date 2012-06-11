@@ -21,7 +21,7 @@ way:
 """
 
 import numpy as np
-from .Constants import cm_per_kpc, s_per_myr, m_H
+from .Constants import cm_per_kpc, cm_per_mpc, s_per_myr, m_H
 
 def ProblemType(ptype):
     """
@@ -270,5 +270,38 @@ def ProblemType(ptype):
               "ColumnDensityBinsHeI": 50, 
               "ColumnDensityBinsHeII": 50
              }      
+    # X-ray source, helium included, discrete spectrum       
+    if ptype == 5.1:
+        pf = {"ProblemType": 5.1, 
+              "LengthUnits": cm_per_mpc,
+              "GridDimensions": 100, 
+              "StopTime": 45.0, 
+              "StartRadius": 0.01, 
+              "dtDataDump": 1, 
+              "Isothermal": 0, 
+              "MultiSpecies": 1, 
+              "SecondaryIonization": 1, 
+              "DensityProfile": 1, 
+              "InitialRedshift": 10, 
+              "TemperatureProfile": 0, 
+              "InitialTemperature": 1e2,
+              "IonizationProfile": 0, 
+              "InitialHIIFraction": 1e-4, 
+              "SourceType": 3,
+              "SourceMass": 1e6, 
+              "SourceRadiativeEfficiency": 0.1, 
+              "SpectrumPowerLawIndex": 1.5, \
+              "SpectrumMinEnergy": 1e2, 
+              "SpectrumMaxEnergy": 1e4, 
+              "SpectrumMinNormEnergy": 1e2, 
+              "SpectrumMaxNormEnergy": 1e4,
+              "ColumnDensityBinsHI": 100, 
+              "ColumnDensityBinsHeI": 50, 
+              "ColumnDensityBinsHeII": 50,
+              "DiscreteSpectrum": 1,
+              "DiscreteSpectrumSED": [500.],
+              "DiscreteSpectrumRelLum": [1.0]
+             }      
+             
         
     return pf    

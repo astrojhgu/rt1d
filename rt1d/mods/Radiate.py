@@ -132,7 +132,7 @@ class Radiate:
         self.nB_all = self.n_H_arr + self.n_He_arr + self.ne_all
         self.q_all = np.transpose([data["HIIDensity"], data["HeIIDensity"], data["HeIIIDensity"], 
             3. * k_B * self.nB_all * data["Temperature"] / 2.])
-                                
+                                                            
         # Retrieve indices used for N-D interpolation
         self.indices_all = []
         for i, col in enumerate(self.ncol_all):

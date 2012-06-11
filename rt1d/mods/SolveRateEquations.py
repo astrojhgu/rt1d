@@ -244,7 +244,7 @@ class SolveRateEquations:
         """
         Apply floors in ionization (and potentially, but not implemented) internal energy.
         
-        ok = [n_HII <= n_H, n_HeII <= n_He, n_HeIII <= n_He, (n_HeII + n_HeIII) <= n_He]
+        ok = [0 < n_HII <= n_H, 0 < n_HeII <= n_He, 0 < n_HeIII <= n_He, (n_HeII + n_HeIII) <= n_He]
         
         """   
         
@@ -258,6 +258,7 @@ class SolveRateEquations:
         nHII = ynext[0] 
         nHeII = ynext[1]
         nHeIII = ynext[2] 
+        xHII = nHII / nH
         xHeII = nHeII / nHe
         xHeIII = nHeIII / nHe 
         nHe_ions = nHeII + nHeIII
@@ -266,52 +267,44 @@ class SolveRateEquations:
                         
         # Hydrogen first - overionization     
         if nHII > nH:
-            if np.allclose(nHII / nH, 1.0, rtol = self.xmin, atol = self.xmin):
+            if np.allclose(xHII, 1, rtol = 0, atol = 1):
                 ynext[0] = nH * (1. - self.xmin)
             else:
                 ok[0] = 0
         
         # Hitting MinimumSpeciesFraction
-        elif np.allclose(nHII / nH, self.xmin, rtol = self.xmin, atol = self.xmin):
+        elif np.allclose(xHII, self.xmin, rtol = 0, atol = self.xmin):
             ynext[0] = nH * self.xmin
         
         # Negative    
         elif nHII < 0:
-            if np.allclose((nHII / nH) + 1, 1.0, rtol = self.xmin, atol = self.xmin):
+            if np.allclose(xHII, 0, rtol = 0, atol = self.xmin):
                 ynext[0] = nH * self.xmin
             else:
                 ok[0] = 0
            
         # Helium if necessary
         if self.pf.MultiSpecies:
-                        
-            #if nHeII > nHe:
-            #    if np.allclose(nHeII / nHe, 1.0, rtol = self.xmin, atol = self.xmin):
-            #        ynext[1] = nHe * (1. - self.xmin)            
-            #    else:
-            #        ok[1] = 0     
-            #elif np.allclose(nHeII / nHe, self.xmin, rtol = self.xmin, atol = self.xmin):
-            #    ynext[1] = nHe * self.xmin         
-            #
-            #if nHeIII > nHe:
-            #    if np.allclose(nHeIII / nHe, 1.0, rtol = self.xmin, atol = self.xmin):
-            #        ynext[1] = nHe * (1. - self.xmin)            
-            #    else:
-            #        ok[2] = 0         
-            #elif np.allclose(nHeIII / nHe, self.xmin, rtol = self.xmin, atol = self.xmin):
-            #    ynext[2] = nHe * self.xmin
-            #                        
-            #xHeI = (nHe - ynext[1] - ynext[2]) / nHe        
-            #xHeII = ynext[1] / nHe
-            #xHeIII = ynext[2] / nHe                     
-                                      
+            
+            if nHeII < 0:
+                if np.allclose(xHeII, 0, rtol = 0, atol = self.xmin):
+                    ynext[1] = nHe * self.xmin
+                else:
+                    ok[1] = 0
+            
+            if nHeIII < 0:
+                if np.allclose(xHeIII, 0, rtol = 0, atol = self.xmin):
+                    ynext[2] = nHe * self.xmin
+                else:
+                    ok[2] = 0 
+                                
             if nHe_ions > nHe:
-                if np.allclose(nHe_ions - nHe, 0, rtol = 0, atol = self.xmin):
+                if np.allclose(nHe_ions / nHe, 1., rtol = 0, atol = 1):
                     norm = nHe_ions / nHe / (1. - self.xmin)
                     ynext[1] /= norm
                     ynext[2] /= norm                         
                 else:
-                    ok[3] = 0
+                    ok[3] = 0     
                     
         return ynext, ok
         
@@ -328,7 +321,7 @@ class SolveRateEquations:
         ynp2_os, ok = self.ApplyFloor(ynp2_os, znow, znext, args)  
                 
         err_abs = np.abs(ynp2_ts - ynp2_os)        
-        err_tol = self.xmin + self.xmin * ynp2_ts
+        err_tol = 1e-8 + 1e-5 * ynp2_ts
 
         return np.less_equal(err_abs, err_tol), ok
         

@@ -81,7 +81,10 @@ class Dataset:
         """
         
         if not self.pf.OutputTimestep:
-            return None
+            return None, None
+        
+        if not os.path.exists('%s/timestep_evolution.dat' % self.pf.OutputDirectory):
+            return None, None
             
         f = open('%s/timestep_evolution.dat' % self.pf.OutputDirectory, 'r')
         t = []
