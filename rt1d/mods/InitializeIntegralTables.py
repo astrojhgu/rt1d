@@ -180,7 +180,19 @@ class InitializeIntegralTables:
         elif integral == 'TotalOpticalDepth':
             return 'log%s' % integral    
         else:
-            return "log%s%i" % (integral, species)     
+            return "log%s%i" % (integral, species)   
+            
+    def SuitableTable(self):
+        """
+        There may be a table good enough for our purposes, but with slightly 
+        different parameters.  Find it.
+        
+            i.e. SecondaryIonization = 0, 1 has no effect
+            Resolution of table doesn't either.
+        """          
+        
+        tname = self.DetermineTableName()
+        ob, prop, pc, ms, cd, dt, si, dims, hlim, helim = tname.rstrip('.h5').split('_')
             
     def ReadIntegralTable(self):
         """

@@ -47,6 +47,7 @@ class Dataset:
         self.od = self.pf.OutputDirectory
         
         self.data = self.load()
+        self.t, self.dt = self.read_timestep_evolution()
                                      
     def load(self):
         """
@@ -56,8 +57,10 @@ class Dataset:
         # List all data*dumps* in this data*set*.
         alldds = []
         for f in os.listdir("{0}/{1}".format(self.rd, self.od)):
-            if not re.search('.h5', f): continue
-            if not re.search('dd', f): continue # temporary hack
+            if not re.search('.h5', f): 
+                continue
+            if not re.search('dd', f): 
+                continue # temporary hack
             alldds.append(f)
             
         ds = {}
@@ -72,4 +75,30 @@ class Dataset:
             
         return ds
 
+    def read_timestep_evolution(self):
+        """
+        Read in t vs. dt. 
+        """
+        
+        if not self.pf.OutputTimestep:
+            return None
+            
+        f = open('%s/timestep_evolution.dat' % self.pf.OutputDirectory, 'r')
+        t = []
+        dt = []
+        for line in f:
+            if not line.strip():
+                continue
+            if line[0] == '#':
+                continue
+            
+            newline = line.split()
+            t.append(float(newline[0]))
+            dt.append(float(newline[1]))
+            
+        f.close()
+        
+        return np.array(t), np.array(dt)      
+        
+            
                         

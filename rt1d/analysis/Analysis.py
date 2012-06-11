@@ -28,6 +28,9 @@ class Analyze:
     def __init__(self, pf, retabulate = True):
         self.ds = Dataset(pf)
         self.data = self.ds.data
+        self.t = self.ds.t
+        self.dt = self.ds.dt
+        
         self.pf = self.ds.pf        # dict
         self.g = InitializeGrid(self.pf)   
         self.cosm = Cosmology(self.pf)
@@ -568,6 +571,41 @@ class Analyze:
                 
         return result
         
+    def add_Ncol_axis(self, dd, species = 0, units = '1'):     
+        """
+        Add column density on top axis.
+        """
+        
+        rmin = min(self.ax.get_xticks())
+        rmax = max(self.ax.get_xticks())
+        
+        #if rmin == 0 and rmax == 1:
+            
+                         
+        
+        if species == 0:
+            s = 'HI'
+            lab = r'$N_{\mathrm{HI}} \ (\mathrm{cm}^{-2})$'
+        elif species == 1:
+            s = 'HeI'
+            lab = r'$N_{\mathrm{HeI}} \ (\mathrm{cm}^{-2})$'
+        else:
+            s = 'HeII'
+            lab = r'$N_{\mathrm{HeII}} \ (\mathrm{cm}^{-2})$'
+                         
+        self.freq_ax = self.ax.twiny()
+        self.freq_ax.set_xscale('log')
+        self.freq_ax.set_xlabel(lab)
+        
+        if species == 0:
+            self.freq_ax.set_xlim(min(self.data[dd].ncol_HI[1:]), max(self.data[dd].ncol_HI))
+        elif species == 1:
+            self.freq_ax.set_xlim(min(self.data[dd].ncol_HeI[1:]), max(self.data[dd].ncol_HeI))
+        else:
+            self.freq_ax.set_xlim(min(self.data[dd].ncol_HeII[1:]), max(self.data[dd].ncol_HeII))       
+        
+        pl.draw()    
+            
         
 
     

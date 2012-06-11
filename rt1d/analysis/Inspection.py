@@ -25,8 +25,7 @@ class Inspect:
         self.interp = self.anl.interp
                 
     def InspectIntegralTable(self, intnum = 1, species = 0, donor_species = 0,
-        nHI = None, nHeI = 0.0, nHeII = 0.0,
-        color = 'k', ls = '-', annotate = True):
+        nHI = None, nHeI = 0.0, nHeII = 0.0, color = 'k', ls = '-', annotate = True):
         """
         Plot integral values...or something.
         """ 
@@ -68,27 +67,27 @@ class Inspect:
             if self.pf.MultiSpecies:
                 i1 = np.argmin(np.abs(self.itabs['logNHeI'] - nHeI))
                 i2 = np.argmin(np.abs(self.itabs['logNHeII'] - nHeII))
-                y = self.itabs[integral][0:,i1,i2]
+                y = self.itabs[integral][:,i1,i2]
             else:
                 if intnum % int(intnum) != 0:
                     y = self.itabs[integral][:,0]
                 else:
                     y = self.itabs[integral]
                 
-            xlabel = r'$n_{\mathrm{HI}} \ (\mathrm{cm^{-2}})$'
+            xlabel = r'$N_{\mathrm{HI}} \ (\mathrm{cm^{-2}})$'
                         
         elif nHeI is None:
             x = self.itabs['logNHeI']
             i1 = np.argmin(np.abs(self.itabs['logNHI'] - nHI))
             i2 = np.argmin(np.abs(self.itabs['logNHeII'] - nHeII))
             y = self.itabs[integral][i1,0:,i2]
-            xlabel = r'$n_{\mathrm{HeI}} \ (\mathrm{cm^{-2}})$'
+            xlabel = r'$N_{\mathrm{HeI}} \ (\mathrm{cm^{-2}})$'
         else:
             x = self.itabs['logNHeII']
             i1 = np.argmin(np.abs(self.itabs['logNHI'] - nHI))
             i2 = np.argmin(np.abs(self.itabs['logNHeI'] - nHeI))
             y = self.itabs[integral][i1,i2,0:]
-            xlabel = r'$n_{\mathrm{HeII}} \ (\mathrm{cm^{-2}})$'
+            xlabel = r'$N_{\mathrm{HeII}} \ (\mathrm{cm^{-2}})$'
             
         if not hasattr(self, 'ax'):
             self.ax = pl.subplot(111)
@@ -175,25 +174,25 @@ class Inspect:
         if legend and hasattr(self, 'ax'):
             legend = False
         
-        self.dt = np.zeros([5, self.GridDimensions])
+        self.dt = np.zeros([5, self.pf.GridDimensions])
         for dd in self.data.keys():
             if self.data[dd].t / self.pf.TimeUnits != t: 
                 continue
         
             dHIIdt = self.data[dd].n_HI * \
                 (self.data[dd].Gamma[0] + self.data[dd].Beta[0] * self.data[dd].n_e) \
-                + np.sum(self.data[dd].gamma[0] * self.data[dd].nabs) \
+                + np.sum(self.data[dd].gamma[:,0,:] * np.transpose(self.data[dd].nabs), axis = 1) \
                 - self.data[dd].n_HII * self.data[dd].n_e * self.data[dd].alpha[0]
                 
             dHeIdt = self.data[dd].n_HeII * \
                 (self.data[dd].alpha[1] + self.data[dd].xi[1]) * self.data[dd].n_e \
                 - self.data[dd].n_HeI * (self.data[dd].Gamma[1] + self.data[dd].Beta[1]) \
-                - np.sum(self.data[dd].gamma[1] * self.data[dd].nabs) \
+                - np.sum(self.data[dd].gamma[:,1,:] * np.transpose(self.data[dd].nabs), axis = 1) \
                 * self.data[dd].n_e     
                 
             dHeIIdt = self.data[dd].n_HeI * \
                 (self.data[dd].Gamma[1] + self.data[dd].Beta[1] * self.data[dd].n_e) \
-                + np.sum(self.data[dd].gamma[1] * self.data[dd].nabs) \
+                + np.sum(self.data[dd].gamma[:,1,:] * np.transpose(self.data[dd].nabs), axis = 1) \
                 + self.data[dd].alpha[2] * self.data[dd].n_HeIII * self.data[dd].n_e \
                 - self.data[dd].n_HeII * self.data[dd].n_e * \
                 (self.data[dd].alpha[1] + self.data[dd].Beta[2] + self.data[dd].xi[1]) 

@@ -66,11 +66,11 @@ class Radiate:
         self.R0 = pf.StartRadius * pf.LengthUnits
         
         # Time-stepping
-        self.AdaptiveGlobalStep = self.pf.HIRestrictedTimestep or \
-            self.pf.ElectronRestrictedTimestep
+        self.AdaptiveGlobalStep = bool(self.pf.HIRestrictedTimestep) or \
+            bool(self.pf.ElectronRestrictedTimestep)
         if self.pf.MultiSpecies:
-            self.AdaptiveGlobalStep |= (self.pf.HeIRestrictedTimestep or \
-                self.pf.HeIIRestrictedTimestep or self.pf.HeIIIRestrictedTimestep)
+            self.AdaptiveGlobalStep |= (bool(self.pf.HeIRestrictedTimestep) or \
+                bool(self.pf.HeIIRestrictedTimestep) or bool(self.pf.HeIIIRestrictedTimestep))
             
         # Deal with log-grid, compute dx
         if pf['LogarithmicGrid']:
@@ -195,7 +195,7 @@ class Radiate:
         """
         Solver for InfiniteSpeedOfLight = 1.
         """        
-        
+                
         # Set up timestep array for use on next cycle
         if self.AdaptiveGlobalStep:
             dtphot = 1. * np.zeros_like(self.grid)
@@ -269,7 +269,7 @@ class Radiate:
                                                           
             tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, 
                 self.q_all[cell], t, t + dt, self.z, self.z - self.dz, None, h, *args)
-                                                                                                                                       
+                                                                                                                                                                                 
             # Unpack results of coupled equations
             newHII, newHeII, newHeIII, newE = qnew 
             
@@ -562,9 +562,9 @@ class Radiate:
         newdata["Temperature"][cell] = newT    
         newdata["OpticalDepth"][cell] = tau
         newdata["ODEIterations"][cell] = odeitr
-        newdata["ODEIterationRate"][cell] = odeitr / (h / self.pf.TimeUnits)
+        #newdata["ODEIterationRate"][cell] = odeitr / (h / self.pf.TimeUnits)
         newdata["RootFinderIterations"][cell] = rootitr
-        
+                
         if self.pf.OutputRates:
             for i in xrange(3):
                 newdata['PhotoIonizationRate%i' % i][cell] = Gamma[i]
@@ -579,7 +579,7 @@ class Radiate:
                 
                 if i == 2:
                     newdata['DielectricRecombinationRate'][cell] = xi[i]
-                    newdata['DielectricRecombinationCoolingRate'][cell] = omega[i]     
+                    newdata['DielectricRecombinationCoolingRate'][cell] = omega[i]                 
                     
         return newdata            
         

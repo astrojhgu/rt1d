@@ -11,7 +11,7 @@ Description: Subset of my homemade odeint routine made special for rt1d.
 
 import copy
 import numpy as np
-from .Constants import k_B
+from .Constants import k_B, m_H
 from .Cosmology import Cosmology
 
 class SolveRateEquations:
@@ -54,7 +54,9 @@ class SolveRateEquations:
                                                3. * self.cosm.Tgas(z) * k_B * self.cosm.MeanBaryonNumberDensity(z) / 2.])
         else:
             if pf.DensityProfile == 0:
-                tmp = [pf.InitialDensity, self.cosm.y * pf.InitialDensity, self.cosm.y * pf.InitialDensity]
+                tmp = [pf.DensityUnits * (1. - self.cosm.Y) / m_H, 
+                       self.cosm.Y * pf.DensityUnits / 4. / m_H, 
+                       self.cosm.Y * pf.DensityUnits / 4. / m_H]
             elif pf.DensityProfile == 1:
                 tmp = [self.cosm.MeanHydrogenNumberDensity(pf.InitialRedshift), 
                        self.cosm.MeanHeliumNumberDensity(pf.InitialRedshift),
@@ -105,7 +107,7 @@ class SolveRateEquations:
             # Check for NaNs, reduce timestep or raise exception if h == hmin
             if self.pf.CheckForGoofiness:
                 everything_ok = self.SolutionCheck(ynext, znow, znext, args)
-                                                                                                                                                                                                                   
+                                                                                   
                 if not everything_ok[0] and h > self.hmin:
                     h = max(self.hmin, h / 2.)
                     continue
@@ -123,7 +125,6 @@ class SolveRateEquations:
                             h = max(self.hmin, h / 2.)
                             continue
                         elif h == self.hmin:
-                            print ok
                             raise ValueError("xHII or xHeII or xHeIII < 0 or > 1, and we're on the minimum ODE step. Exiting.")
                             
             # Adaptive time-stepping
@@ -275,7 +276,7 @@ class SolveRateEquations:
             ynext[0] = nH * self.xmin
         
         # Negative    
-        else:
+        elif nHII < 0:
             if np.allclose((nHII / nH) + 1, 1.0, rtol = self.xmin, atol = self.xmin):
                 ynext[0] = nH * self.xmin
             else:
@@ -305,17 +306,10 @@ class SolveRateEquations:
             #xHeIII = ynext[2] / nHe                     
                                       
             if nHe_ions > nHe:
-                if np.allclose(nHe_ions / nHe, 1.0, rtol = 0, atol = 2. * self.xmin):
-                    if xHeIII == self.xmin and xHeII != self.xmin:
-                        norm = nHeII / nHe / (1. - 2. * self.xmin)
-                        ynext[1] /= norm
-                    elif xHeII == self.xmin and xHeIII != self.xmin:
-                        norm = nHeIII / nHe / (1. - 2. * self.xmin)
-                        ynext[2] /= norm  
-                    else:
-                        norm = nHe_ions / nHe / (1. - self.xmin)
-                        ynext[1] /= norm
-                        ynext[2] /= norm                         
+                if np.allclose(nHe_ions - nHe, 0, rtol = 0, atol = self.xmin):
+                    norm = nHe_ions / nHe / (1. - self.xmin)
+                    ynext[1] /= norm
+                    ynext[2] /= norm                         
                 else:
                     ok[3] = 0
                     
