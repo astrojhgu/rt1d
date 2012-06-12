@@ -261,7 +261,8 @@ def ProblemType(ptype):
               "SourceType": 3,
               "SourceMass": 1e6, 
               "SourceRadiativeEfficiency": 0.1, 
-              "SpectrumPowerLawIndex": 1.5, \
+              "SpectrumType": 4,
+              "SpectrumPowerLawIndex": 1.5,
               "SpectrumMinEnergy": 1e2, 
               "SpectrumMaxEnergy": 1e4, 
               "SpectrumMinNormEnergy": 1e2, 
@@ -290,7 +291,8 @@ def ProblemType(ptype):
               "SourceType": 3,
               "SourceMass": 1e6, 
               "SourceRadiativeEfficiency": 0.1, 
-              "SpectrumPowerLawIndex": 1.5, \
+              "SpectrumType": 4,
+              "SpectrumPowerLawIndex": 1.5, 
               "SpectrumMinEnergy": 1e2, 
               "SpectrumMaxEnergy": 1e4, 
               "SpectrumMinNormEnergy": 1e2, 

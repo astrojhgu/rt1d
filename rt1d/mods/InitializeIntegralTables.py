@@ -129,7 +129,7 @@ class InitializeIntegralTables:
             sed = 'D'
         else:
             sed = 'C'
-        
+                
         dims = ''
         for i in self.dims:
             dims += '%ix' % i
@@ -160,8 +160,8 @@ class InitializeIntegralTables:
                 if 3 in self.rs.SpectrumPars.Type:
                     prop += '_'
                 prop += "f%g" % self.rs.SpectrumPars.Fraction[self.rs.SpectrumPars.Type.index(4)]
-                prop += "_in%g" % self.pf.SpectrumPowerLawIndex[self.rs.SpectrumPars.Type.index(4)]
-                if self.rs.SpectrumPars.AbsorbingColumn[self.rs.SpectrumPars.Type.index(3)] > 0:
+                prop += "_in%g" % self.rs.SpectrumPars.PowerLawIndex[self.rs.SpectrumPars.Type.index(4)]
+                if self.rs.SpectrumPars.AbsorbingColumn[self.rs.SpectrumPars.Type.index(4)] > 0:
                     prop += "_logN%g" % np.log10(self.rs.SpectrumPars.AbsorbingColumn[self.rs.SpectrumPars.Type.index(3)])
 
         # Limits
