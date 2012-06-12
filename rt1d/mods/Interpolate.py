@@ -109,7 +109,7 @@ class Interpolate:
         
         return 10**final
     
-    def InterpolateQuadLinear(self, indices, integral, value):
+    def InterpolateSphericalLinear(self, indices, integral, value):
         """
         This gets called if MultiSpecies = 1 and SecondaryIonization = 2
         (and DiscreteSpectrum = 0, TabulateIntegrals = 1).

@@ -107,8 +107,6 @@ class InitializeIntegralTables:
             self.zeros = np.zeros_like(self.rs.E)
         else:
             self.zeros = np.zeros(1)
-            
-        self.tname = self.DetermineTableName()    
                                     
     def DetermineTableName(self):    
         """
@@ -132,10 +130,10 @@ class InitializeIntegralTables:
         else:
             sed = 'C'
         
-        if self.pf.MultiSpecies:
-            dims = '%ix%ix%i' % (self.HINBins, self.HeINBins, self.HeIINBins)
-        else:
-            dims = '%i' % self.HINBins
+        dims = ''
+        for i in self.dims:
+            dims += '%ix' % i
+        dims = dims.rstrip('x')    
         
         if self.pf.SourceType == 0: 
             src = "mf"
@@ -286,7 +284,7 @@ class InitializeIntegralTables:
         
     def WriteIntegralTable(self, name, tab):
         """
-        On-the-fly data write-out.
+        Write-out integral table to HDF5.
         """    
         
         if size > 1 and self.pf.ParallelizationMethod == 1 and rank > 0:
@@ -295,9 +293,7 @@ class InitializeIntegralTables:
             filename = self.DetermineTableName() 
             if os.path.exists(filename):
                 f = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'a') 
-                pf_grp = f['parameters']
                 tab_grp = f["integrals"]
-                col_grp = f["columns"]
             else:
                 f = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'w') 
                 pf_grp = f.create_group("parameters")
@@ -319,7 +315,7 @@ class InitializeIntegralTables:
                 if self.pf.SourceTimeEvolution:
                     col_grp.create_dataset('Age', data = self.rs.Age)    
             
-            tab_grp.create_dataset(name, data = tab)            
+            tab_grp.create_dataset(name, data = tab)    
             f.close()
         
         # Don't move on until root processor has written out data    
@@ -369,10 +365,11 @@ class InitializeIntegralTables:
                 print ' '
                     
         # Loop over integrals
+        h = 0
         donor_species = 0  
-        for h in xrange(len(self.IntegralList)): 
+        while h < len(self.IntegralList): 
             integral = self.IntegralList[h] 
-                        
+                                                
             for species in np.arange(3):
                 if species > 0 and not self.pf.MultiSpecies:
                     continue                    
@@ -413,18 +410,17 @@ class InitializeIntegralTables:
                     
                 # Store table
                 itabs[name] = np.log10(tab)
-                self.WriteIntegralTable(name, np.log10(tab))
-                del tab    
-                
+                self.WriteIntegralTable(name, itabs[name])
+                del tab   
+                                
             # Increment/Decrement donor_species
-            if donor_species == 2:
-                donor_species == 0
+            if re.search('Wiggle', name) and (donor_species < 2 and self.pf.MultiSpecies):
+                donor_species += 1 
+            elif re.search('Wiggle', name) and donor_species == 2:
+                donor_species = 0
                 h += 1
-            elif (re.search('Wiggle', name) or re.search('Hat', name)) and \
-                donor_species < 2 and self.pf.MultiSpecies:
-                donor_species += 1            
             else:
-                h += 1
+                h += 1    
                 
         # Optical depths for individual species
         for i in xrange(3):
@@ -440,7 +436,7 @@ class InitializeIntegralTables:
                 continue       
                 
             if rank == 0: 
-                print "\nComputing value of logOpticalDepth%i..." % i
+                print "\nComputing value of %s..." % name
             if rank == 0 and self.ProgressBar:     
                 pbar = ProgressBar(widgets = widget, maxval = self.dims[i]).start()
             
@@ -458,17 +454,12 @@ class InitializeIntegralTables:
             if size > 1 and self.pf.ParallelizationMethod == 1: 
                 tab = MPI.COMM_WORLD.allreduce(tab, tab)
 
-            MPI.COMM_WORLD.barrier()
             if rank == 0 and self.ProgressBar and self.pf.ParallelizationMethod == 1: 
                 pbar.finish()
             
             itabs[name] = np.log10(tab) 
-            self.WriteIntegralTable(name, np.log10(tab))
-            del tab
-
-        # Don't move on until root processor has written out data    
-        if size > 1 and self.pf.ParallelizationMethod == 1: 
-            MPI.COMM_WORLD.barrier()       
+            self.WriteIntegralTable(name, itabs[name])
+            del tab   
             
         self.itabs = itabs    
         return itabs         
@@ -501,27 +492,29 @@ class InitializeIntegralTables:
     def TableProperties(self):
         """
         Figure out ND space of all lookup table elements.
-        """        
+        """  
+        
+        Ns = 1. + 2 * self.pf.MultiSpecies  # number of species      
 
         Nd = 1                  # Table dimensions
-        Nt = 1                  # Number of tables (unique quantities)
+        Nt = 1. * Ns            # Number of tables (unique quantities)
         dims = [self.HINBins]   # Number of elements in each dimension of each table        
         columns = [self.HIColumn]                    
         locs = [0]
-                            
+                                    
         if not self.pf.Isothermal:
-            Nt += 1                    
+            Nt += 1 * Ns   
                                 
         if self.pf.MultiSpecies >= 1:
             Nd += 2
-            Nt += (1 + (not self.pf.Isothermal)) * 2
             dims.extend([self.HeINBins, self.HeIINBins]) 
             columns.extend([self.HeIColumn, self.HeIIColumn]) 
             locs.extend([1, 2])
           
         if self.pf.SecondaryIonization >= 2:
             Nd += 1
-            Nt += (2. + 2. * (not self.pf.Isothermal)) * (1. + 2 * self.pf.MultiSpecies)**2
+            Nt += 2. * (1. + 8 * self.pf.MultiSpecies)     # Phi/Psi Wiggle
+            Nt += 2. * Ns                                  # Phi/Psi Hat
             dims.append(self.pf.IonizedFractionBins)
             columns.append(self.esec.log_xHII)
             locs.append(3)
@@ -629,8 +622,7 @@ class InitializeIntegralTables:
                 
         if self.pf.DiscreteSpectrum == 0:
             integrand = lambda E: self.PartialOpticalDepth(E, ncol, species)                           
-            result = integrate(integrand, max(self.rs.Emin, E_th[species]), self.rs.Emax, epsrel = 1e-8)[0]
-                  
+            result = integrate(integrand, max(self.rs.Emin, E_th[species]), self.rs.Emax)[0]
         else:                                                                                                                                                                                
             result = np.sum(self.PartialOpticalDepth(self.rs.E, ncol, species)[self.rs.E > E_th[species]])
             
