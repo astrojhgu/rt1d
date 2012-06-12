@@ -335,9 +335,9 @@ class InitializeIntegralTables:
 
         # If there was a pre-existing table, return it
         # (assuming it has everything we need)
+        items_missing = 0
         if itabs is not None:
             tnames = self.IntegralNames()
-            items_missing = 0
             has_keys = itabs.keys()
             for key in ['logNHI', 'logNHeI', 'logNHeII', 'logAge', 'logxHII']:
                 if key in has_keys:
