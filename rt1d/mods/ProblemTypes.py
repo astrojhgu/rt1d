@@ -266,9 +266,9 @@ def ProblemType(ptype):
               "SpectrumMaxEnergy": 1e4, 
               "SpectrumMinNormEnergy": 1e2, 
               "SpectrumMaxNormEnergy": 1e4,
-              "ColumnDensityBinsHI": 100, 
-              "ColumnDensityBinsHeI": 50, 
-              "ColumnDensityBinsHeII": 50
+              "ColumnDensityBinsHI": 200, 
+              "ColumnDensityBinsHeI": 100, 
+              "ColumnDensityBinsHeII": 100
              }      
     # X-ray source, helium included, discrete spectrum       
     if ptype == 5.1:
@@ -295,9 +295,9 @@ def ProblemType(ptype):
               "SpectrumMaxEnergy": 1e4, 
               "SpectrumMinNormEnergy": 1e2, 
               "SpectrumMaxNormEnergy": 1e4,
-              "ColumnDensityBinsHI": 100, 
-              "ColumnDensityBinsHeI": 50, 
-              "ColumnDensityBinsHeII": 50,
+              "ColumnDensityBinsHI": 200, 
+              "ColumnDensityBinsHeI": 100, 
+              "ColumnDensityBinsHeII": 100,
               "DiscreteSpectrum": 1,
               "DiscreteSpectrumSED": [500.],
               "DiscreteSpectrumRelLum": [1.0]

@@ -297,7 +297,7 @@ class InitializeIntegralTables:
                 f = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'a') 
                 pf_grp = f['parameters']
                 tab_grp = f["integrals"]
-                col_grp = f["columns"]         
+                col_grp = f["columns"]
             else:
                 f = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'w') 
                 pf_grp = f.create_group("parameters")
@@ -314,7 +314,7 @@ class InitializeIntegralTables:
                     col_grp.create_dataset("logNHeII", data = self.HeIIColumn)
                 
                 if self.pf.SecondaryIonization >= 2:
-                    col_grp.create_dataset('logxHII', data = self.esec.LogIonizedFractions)
+                    col_grp.create_dataset('logxHII', data = self.esec.log_xHII)
                 
                 if self.pf.SourceTimeEvolution:
                     col_grp.create_dataset('Age', data = self.rs.Age)    
@@ -364,7 +364,9 @@ class InitializeIntegralTables:
             print '\nThis lookup table will contain %i unique %iD tables. Each will have %s (%i) elements.' % (self.Nt, self.Nd, s, np.prod(self.dims))
             print 'That is a grand total of %i table elements.' % (self.Nt * np.prod(self.dims))
             print 'If that sounds like a lot, you should consider hitting ctrl-D.'
-            print ' '
+            
+            if items_missing > 0:
+                print ' '
                     
         # Loop over integrals
         donor_species = 0  
@@ -418,9 +420,8 @@ class InitializeIntegralTables:
             if donor_species == 2:
                 donor_species == 0
                 h += 1
-            elif donor_species < 2 and \
-                (re.search('Wiggle', integral) or re.search('Hat', integral)) and \
-                self.pf.MultiSpecies:
+            elif (re.search('Wiggle', name) or re.search('Hat', name)) and \
+                donor_species < 2 and self.pf.MultiSpecies:
                 donor_species += 1            
             else:
                 h += 1
