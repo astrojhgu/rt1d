@@ -213,12 +213,15 @@ class ControlSimulation:
             solve_arr = solve_arr[proc_mask == 1]
         else:
             solve_arr = np.ones(self.GridDimensions)
-            proc_mask = np.ones_like(solve_arr)
-        
+            proc_mask = np.ones_like(solve_arr)            
+                    
         # Set up newdata dictionary                                
         newdata = {}
         for key in data.keys(): 
             newdata[key] = copy.deepcopy(data[key])
+            
+            if key == 'PhotonPackages': 
+                continue
             
             if self.pf.ParallelizationMethod == 1 and size > 1:
                 newdata[key][proc_mask == 0] = 0        
