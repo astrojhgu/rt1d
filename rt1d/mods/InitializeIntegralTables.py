@@ -361,8 +361,10 @@ class InitializeIntegralTables:
         s = s.rstrip('x')
                 
         if rank == 0:        
-            print 'This lookup table will contain %i unique tables. Each will have %s (%i) elements.' % (self.Nt, s, np.prod(self.dims))
+            print '\nThis lookup table will contain %i unique %iD tables. Each will have %s (%i) elements.' % (self.Nt, self.Nd, s, np.prod(self.dims))
+            print 'That is a grand total of %i table elements.' % (self.Nt * np.prod(self.dims))
             print 'If that sounds like a lot, you should consider hitting ctrl-D.'
+            print ' '
                     
         # Loop over integrals
         donor_species = 0  
@@ -377,6 +379,8 @@ class InitializeIntegralTables:
                     donor_species = donor_species)
                     
                 if name in has_keys:
+                    if rank == 0:
+                        print 'Found table %s...' % name
                     continue   
                                     
                 # Print some info to the screen
@@ -430,6 +434,8 @@ class InitializeIntegralTables:
             name = 'logOpticalDepth%i' % i
                 
             if name in has_keys:
+                if rank == 0:
+                    print 'Found table %s...' % name
                 continue       
                 
             if rank == 0: 
@@ -558,9 +564,15 @@ class InitializeIntegralTables:
         Return list of quantities to compute.
         """    
 
-        integrals = ['Phi', 'Psi']
+        integrals = ['Phi']
+        if not self.pf.Isothermal:
+            integrals.append('Psi')
+        
         if self.esec.Method >= 2:    
-            integrals.extend(['PhiWiggle', 'PsiWiggle', 'PhiHat', 'PsiHat'])
+            integrals.extend(['PhiWiggle', 'PhiHat'])
+            
+            if not self.pf.Isothermal:
+                integrals.extend(['PsiWiggle', 'PsiHat'])
         
         return integrals
         
