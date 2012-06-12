@@ -284,7 +284,7 @@ class InitializeIntegralTables:
                     
         return itab
         
-    def WriteIndividualTable(self, name, tab):
+    def WriteIntegralTable(self, name, tab):
         """
         On-the-fly data write-out.
         """    
@@ -336,20 +336,23 @@ class InitializeIntegralTables:
         # If there was a pre-existing table, return it
         # (assuming it has everything we need)
         if itabs is not None:
+            tnames = self.IntegralNames()
             items_missing = 0
             has_keys = itabs.keys()
-            items = self.ToCompute()
-            for item in items:
-                if item not in has_keys:
+            for key in ['logNHI', 'logNHeI', 'logNHeII', 'logAge', 'logxHII']:
+                if key in has_keys:
+                    has_keys.remove(key)
+                                
+            for name in tnames:
+                if name not in has_keys:
                     items_missing += 1
             
             if items_missing == 0:            
                 self.itabs = itabs
                 return itabs    
+        # Otherwise, make a new lookup table
         else:
             has_keys = []
-    
-            # Otherwise, make a new lookup table
             itabs = {}     
          
         s = ''
@@ -374,7 +377,6 @@ class InitializeIntegralTables:
                     donor_species = donor_species)
                     
                 if name in has_keys:
-                    print 'Found table %s' % name
                     continue   
                                     
                 # Print some info to the screen
@@ -428,7 +430,6 @@ class InitializeIntegralTables:
             name = 'logOpticalDepth%i' % i
                 
             if name in has_keys:
-                print 'Found table %s' % name
                 continue       
                 
             if rank == 0: 
@@ -562,6 +563,39 @@ class InitializeIntegralTables:
             integrals.extend(['PhiWiggle', 'PsiWiggle', 'PhiHat', 'PsiHat'])
         
         return integrals
+        
+    def IntegralNames(self):
+        """
+        Full names including species indices.
+        """    
+        
+        names = ['logOpticalDepth0']        
+        integrals = self.ToCompute()
+        
+        for integral in integrals:
+            if integral == 'Phi':
+                names.append('logPhi0')
+                if self.pf.MultiSpecies:
+                    names.extend(['logPhi1', 'logPhi2', 'logOpticalDepth1', 'logOpticalDepth2'])
+            elif integral == 'Psi':
+                names.append('logPsi0')
+                if self.pf.MultiSpecies:
+                    names.extend(['logPsi1', 'logPsi2'])
+            else:
+                pass        
+                
+        if self.pf.SecondaryIonization >= 2:
+            names.extend(['logPhiHat0', 'logPsiHat0'])
+                        
+            if self.pf.MultiSpecies:
+                names.extend(['logPhiHat1', 'logPsiHat1', 'logPhiHat2', 'logPsiHat2'])
+                for i in xrange(3):
+                    for j in xrange(3):
+                        names.extend(['logPhiWiggle%i%i' % (i, j), 'logPsiWiggle%i%i' % (i, j)])
+            else:
+                names.extend(['logPhiWiggle00', 'logPsiWiggle00'])
+            
+        return names
             
     def TotalOpticalDepth(self, ncol, species = None):
         """

@@ -213,7 +213,8 @@ class ControlSimulation:
             solve_arr = solve_arr[proc_mask == 1]
         else:
             solve_arr = np.ones(self.GridDimensions)
-            
+            proc_mask = np.ones_like(solve_arr)
+        
         # Set up newdata dictionary                                
         newdata = {}
         for key in data.keys(): 
