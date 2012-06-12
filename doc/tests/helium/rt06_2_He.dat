@@ -1,0 +1,6 @@
+ProblemType = 2
+MultiSpecies = 1
+OutputDirectory = rt06_2_He
+StopTime = 100
+DensityUnits = 2.2245547230998267e-27
+IntegralTableName = rt06_2_He/bb_T100000_pc1_ms1_C_tdep0_si0_200x100x100_1120_1019.h5

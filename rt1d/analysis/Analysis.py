@@ -72,7 +72,7 @@ class Analyze:
         # Inspect instance    
         self.inspect = Inspect(self)    
         
-    def StromgrenSphere(self, t, sol = 0, T0 = None):
+    def StromgrenSphere(self, t, sol = 0, T0 = None, helium_correction = 0):
         """
         Classical analytic solution for expansion of an HII region in an isothermal medium.  Given the time
         in seconds, will return the I-front radius in centimeters.
@@ -87,10 +87,14 @@ class Analyze:
             else: 
                 T = self.data[0].T[0]
                 
+            AHe = 1
+            if helium_correction:
+                AHe = 1. / (1. - 3. * self.cosm.Y / 4.)
+            nH = AHe * self.pf.DensityUnits * (1. - self.cosm.Y) / m_H
             self.Ndot = self.pf.SpectrumPhotonLuminosity
             self.alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
             self.trec = 1. / self.alpha_HII / self.data[0].n_HI[-1]                                         # s
-            self.rs = (3. * self.Ndot / 4. / np.pi / self.alpha_HII / self.data[0].n_HI[-1]**2)**(1. / 3.)  # cm
+            self.rs = (3. * self.Ndot / 4. / np.pi / self.alpha_HII / nH**2)**(1. / 3.)  # cm
         
         return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) + self.pf.StartRadius
         
@@ -104,7 +108,7 @@ class Analyze:
         else:
             return np.interp(0.5, self.data[dd].x_HeI, self.data[dd].r)
         
-    def ComputeIonizationFrontEvolution(self, T0 = None):
+    def ComputeIonizationFrontEvolution(self, T0 = None, helium_correction = 0):
         """
         Find the position of the I-front at all times, and compute value of analytic solution.
         """    
@@ -116,14 +120,16 @@ class Analyze:
         for i, dd in enumerate(self.data.keys()[1:]): 
             self.t[i] = self.data[dd].t
             self.rIF[i] = self.LocateIonizationFront(dd) / cm_per_kpc
-            self.ranl[i] = self.StromgrenSphere(self.data[dd].t, T0 = T0) / cm_per_kpc
+            self.ranl[i] = self.StromgrenSphere(self.data[dd].t, T0 = T0, 
+                helium_correction = helium_correction) / cm_per_kpc
                 
-    def PlotIonizationFrontEvolution(self, mp = None, anl = True, T0 = None, color = 'k', ls = '--'):
+    def PlotIonizationFrontEvolution(self, mp = None, anl = True, T0 = None, helium_correction = 0,
+        color = 'k', ls = '--'):
         """
         Compute analytic and numerical I-front radii vs. time and plot.
         """    
 
-        self.ComputeIonizationFrontEvolution(T0 = T0)
+        self.ComputeIonizationFrontEvolution(T0 = T0, helium_correction = helium_correction)
 
         if mp is not None: 
             self.mp = mp    
@@ -183,6 +189,7 @@ class Analyze:
         self.ax.set_xscale('log')
         self.ax.set_yscale('log')
         
+        ct = 0
         for dd in self.data.keys():
             if self.data[dd].t / self.pf['TimeUnits'] not in t: 
                 continue
@@ -199,6 +206,8 @@ class Analyze:
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeII}}$\')' % (dd, dd, 'x_HeII', '--', color))
                 exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeIII}}$\')' % (dd, dd, 'x_HeIII', ':', color))                
+            
+            ct += 1
             
         self.ax.set_xscale(xscale)
         self.ax.set_yscale(yscale)    

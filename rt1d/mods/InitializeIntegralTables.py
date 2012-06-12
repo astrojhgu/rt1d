@@ -107,6 +107,8 @@ class InitializeIntegralTables:
             self.zeros = np.zeros_like(self.rs.E)
         else:
             self.zeros = np.zeros(1)
+            
+        self.tname = self.DetermineTableName()    
                                     
     def DetermineTableName(self):    
         """
@@ -281,38 +283,49 @@ class InitializeIntegralTables:
             self.HeIIColumn = itab["logNHeII"]
                     
         return itab
-         
-    def WriteIntegralTable(self, itabs):
+        
+    def WriteIndividualTable(self, name, tab):
         """
-        Write out interpolation tables.
-        """
+        On-the-fly data write-out.
+        """    
         
-        filename = self.DetermineTableName()                    
-        f = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'w') 
-
-        pf_grp = f.create_group("parameters")
-        tab_grp = f.create_group("integrals")
-        col_grp = f.create_group("columns")
+        if size > 1 and self.pf.ParallelizationMethod == 1 and rank > 0:
+            pass
+        else:  
+            filename = self.DetermineTableName() 
+            if os.path.exists(filename):
+                f = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'a') 
+                pf_grp = f['parameters']
+                tab_grp = f["integrals"]
+                col_grp = f["columns"]         
+            else:
+                f = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'w') 
+                pf_grp = f.create_group("parameters")
+                tab_grp = f.create_group("integrals")
+                col_grp = f.create_group("columns")
+            
+                for par in self.pf: 
+                    pf_grp.create_dataset(par, data = self.pf[par])
+                    
+                col_grp.create_dataset("logNHI", data = self.HIColumn)
+            
+                if self.pf.MultiSpecies > 0:
+                    col_grp.create_dataset("logNHeI", data = self.HeIColumn)
+                    col_grp.create_dataset("logNHeII", data = self.HeIIColumn)
+                
+                if self.pf.SecondaryIonization >= 2:
+                    col_grp.create_dataset('logxHII', data = self.esec.LogIonizedFractions)
+                
+                if self.pf.SourceTimeEvolution:
+                    col_grp.create_dataset('Age', data = self.rs.Age)    
+            
+            tab_grp.create_dataset(name, data = tab)            
+            f.close()
         
-        for par in self.pf: 
-            pf_grp.create_dataset(par, data = self.pf[par])
-        for integral in itabs: 
-            tab_grp.create_dataset(integral, data = itabs[integral])
-    
-        col_grp.create_dataset("logNHI", data = self.HIColumn)
-        
-        if self.pf.MultiSpecies > 0:
-            col_grp.create_dataset("logNHeI", data = self.HeIColumn)
-            col_grp.create_dataset("logNHeII", data = self.HeIIColumn)
-        
-        if self.pf.SecondaryIonization >= 2:
-            col_grp.create_dataset('logxHII', data = self.esec.LogIonizedFractions)
-        
-        if self.pf.SourceTimeEvolution:
-            col_grp.create_dataset('Age', data = self.rs.Age)
-        
-        f.close()     
-                        
+        # Don't move on until root processor has written out data    
+        if size > 1 and self.pf.ParallelizationMethod == 1: 
+            MPI.COMM_WORLD.barrier()
+                            
     def TabulateRateIntegrals(self):
         """
         Return a dictionary of lookup tables, and also store a copy as self.itabs.
@@ -321,12 +334,23 @@ class InitializeIntegralTables:
         itabs = self.ReadIntegralTable()
 
         # If there was a pre-existing table, return it
+        # (assuming it has everything we need)
         if itabs is not None:
-            self.itabs = itabs
-            return itabs
-        
-        # Otherwise, make a new lookup table
-        itabs = {}     
+            items_missing = 0
+            has_keys = itabs.keys()
+            items = self.ToCompute()
+            for item in items:
+                if item not in has_keys:
+                    items_missing += 1
+            
+            if items_missing == 0:            
+                self.itabs = itabs
+                return itabs    
+        else:
+            has_keys = []
+    
+            # Otherwise, make a new lookup table
+            itabs = {}     
          
         s = ''
         for i in self.dims:
@@ -337,7 +361,7 @@ class InitializeIntegralTables:
             print 'This lookup table will contain %i unique tables. Each will have %s (%i) elements.' % (self.Nt, s, np.prod(self.dims))
             print 'If that sounds like a lot, you should consider hitting ctrl-D.'
                     
-        # Loop over integrals     
+        # Loop over integrals
         donor_species = 0  
         for h in xrange(len(self.IntegralList)): 
             integral = self.IntegralList[h] 
@@ -348,6 +372,10 @@ class InitializeIntegralTables:
                 
                 name = self.DatasetName(integral, species = species, 
                     donor_species = donor_species)
+                    
+                if name in has_keys:
+                    print 'Found table %s' % name
+                    continue   
                                     
                 # Print some info to the screen
                 if rank == 0 and self.pf.ParallelizationMethod == 1: 
@@ -377,6 +405,7 @@ class InitializeIntegralTables:
                     
                 # Store table
                 itabs[name] = np.log10(tab)
+                self.WriteIntegralTable(name, np.log10(tab))
                 del tab    
                 
             # Increment/Decrement donor_species
@@ -395,6 +424,12 @@ class InitializeIntegralTables:
             
             if i > 0 and not self.pf.MultiSpecies:
                 continue
+            
+            name = 'logOpticalDepth%i' % i
+                
+            if name in has_keys:
+                print 'Found table %s' % name
+                continue       
                 
             if rank == 0: 
                 print "\nComputing value of logOpticalDepth%i..." % i
@@ -419,13 +454,10 @@ class InitializeIntegralTables:
             if rank == 0 and self.ProgressBar and self.pf.ParallelizationMethod == 1: 
                 pbar.finish()
             
-            itabs['logOpticalDepth%i' % i] = np.log10(tab) 
+            itabs[name] = np.log10(tab) 
+            self.WriteIntegralTable(name, np.log10(tab))
             del tab
 
-        # Write-out data
-        if rank == 0 or self.pf.ParallelizationMethod == 2: 
-            self.WriteIntegralTable(itabs)
-            
         # Don't move on until root processor has written out data    
         if size > 1 and self.pf.ParallelizationMethod == 1: 
             MPI.COMM_WORLD.barrier()       
