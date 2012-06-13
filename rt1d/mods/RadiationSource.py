@@ -146,10 +146,10 @@ class RadiationSource:
             if len(self.bands) == (len(self.E) - 1):
                 self.bands.append(self.Emax)
             
-            for i in xrange(pf.FrequencyGroups):
+            for i in xrange(int(pf.FrequencyGroups)):
                 L = quad(lambda x: self.Spectrum(x), self.bands[i], self.bands[i + 1])[0]
                 Q = quad(lambda x: self.Spectrum(x) / x, self.bands[i], self.bands[i + 1])[0]
-                
+                                
                 self.E[i] = L / Q
                 self.Qdot[i] = Qnorm * self.Lbol * Q
                 

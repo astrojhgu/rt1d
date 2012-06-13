@@ -38,11 +38,11 @@ class RateCoefficients:
             
             # Multi-group method
             if pf.FrequencyAveragedCrossSections:
-                self.N = pf.FrequencyGroups
+                self.N = int(pf.FrequencyGroups)
                 self.sigma = np.zeros([3, self.N])
                 for i in xrange(3):
-                    for j in xrange(self.pf.FrequencyGroups):
-                        self.sigma[i] = EffectiveCrossSection(self.rs, self.rs.bands[j], self.rs.bands[j + 1])
+                    for j in xrange(self.N):
+                        self.sigma[i] = EffectiveCrossSection(self.rs, self.rs.bands[j], self.rs.bands[j + 1], species = i)
                         
             # Polychromatic method                        
             else:
@@ -60,7 +60,7 @@ class RateCoefficients:
         self.zeros_like_E = np.zeros_like(self.rs.E)
         self.zeros_like_Q = np.zeros_like(self.rs.E)
         self.zeros_like_tau = np.zeros([len(self.zeros_like_E), 3])
-        
+                
     def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dr, t, z):
         """
         Make list of rate coefficients that we'll pass to solver.
