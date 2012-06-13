@@ -359,7 +359,7 @@ class InitializeIntegralTables:
         if rank == 0:        
             print '\nThis lookup table will contain %i unique %iD tables. Each will have %s (%i) elements.' % (self.Nt, self.Nd, s, np.prod(self.dims))
             print 'That is a grand total of %i table elements.' % (self.Nt * np.prod(self.dims))
-            print 'If that sounds like a lot, you should consider hitting ctrl-D.'
+            print 'If that sounds like a lot, you should consider hitting ctrl-C.'
             
             if items_missing > 0:
                 print ' '

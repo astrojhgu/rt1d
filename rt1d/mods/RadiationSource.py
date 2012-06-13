@@ -32,6 +32,7 @@ SchaererTable = {
                 "Luminosity": [2.87, 3.709, 4.324, 4.89, 5.42, 5.715, 5.947, 6.243, 6.574, 6.819, 6.984, 7.106, 7.444]
                 }
 
+E_th = [13.6, 24.6, 54.4]
 small_number = 1e-3                
 big_number = 1e5
 ls = ['-', '--', ':', '-.']
@@ -406,7 +407,24 @@ class RadiationSource:
         
         integrand = lambda E: self.Spectrum(E) * E
         
-        return integrate(integrand, self.EminNorm, self.EmaxNorm)[0] 
+        return integrate(integrand, self.EminNorm, self.EmaxNorm)[0]
+        
+    def FrequencyAveragedBin(self, species = 0, Emin = None, Emax = None):
+        """
+        Bolometric luminosity / number of ionizing photons in spectrum in bandpass
+        spanning interval (Emin, Emax). Returns mean photon energy and number of 
+        ionizing photons in band.
+        """     
+        
+        if Emin is None:
+            Emin = max(E_th[species], self.Emin)
+        if Emax is None:
+            Emax = self.Emax
+            
+        L = self.Lbol * quad(lambda x: self.Spectrum(x), Emin, Emax)[0] 
+        Q = self.Lbol * quad(lambda x: self.Spectrum(x) / x, Emin, Emax)[0] / erg_per_ev
+                        
+        return L / Q / erg_per_ev, Q
         
     def PlotSpectrum(self, color = 'k', components = True, t = 0, normalized = True,
         bins = 100, mp = None):

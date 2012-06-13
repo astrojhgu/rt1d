@@ -41,7 +41,7 @@ def SetDefaultParameterValues():
         "PhotonConserving": 1,  
           
         # Integral tabulation
-        "TabulateIntegrals": 1,  
+        "TabulateIntegrals": 0,  
         "IntegralTableName": 'None',  
         "RegenerateTable": 0,  
         "ColumnDensityBinsHI": 200,  

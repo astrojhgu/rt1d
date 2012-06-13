@@ -93,7 +93,7 @@ class DataDump:
         self.omega = np.zeros_like(self.Gamma)
         
         # extra stuff
-        self.tau = dd['OpticalDepth'].value
+        self.tau = dd['OpticalDepth'].value            
         self.odeit = dd['ODEIterations'].value
         self.odeitrate = dd['ODEIterationRate'].value
         
