@@ -40,8 +40,8 @@ class Interpolate:
         elif iits.Nd == 3:
             self.interp = self.InterpolateTriLinear
             self.GetIndices = self.GetIndices3D
-        elif iits.Nd == 3:
-            self.interp = self.InterpolateQuadLinear
+        elif iits.Nd == 4:
+            self.interp = self.InterpolateSphericalLinear
             self.GetIndices = self.GetIndices4D
         else:
             self.interp = self.InterpolateQuintLinear
@@ -111,17 +111,25 @@ class Interpolate:
     
     def InterpolateSphericalLinear(self, indices, integral, value):
         """
-        This gets called if MultiSpecies = 1 and SecondaryIonization = 2
+        This gets called if MultiSpecies = 1 and (SecondaryIonization >=2 or SourceTimeEvolution = 1)
         (and DiscreteSpectrum = 0, TabulateIntegrals = 1).
         """    
+            
+        i, j, k, l = indices
         
-        if x_HII is None:
-            return self.InterpolateTriLinear(indices, integral, value)
-        else:
-            pass
-            
-            # Do stuff
-            
+        results = np.zeros([2, 2, 2, 2])
+        for ii in xrange(2):
+            for jj in xrange(2):
+                for kk in xrange(2):
+                    for ll in xrange(2):
+                        results[ii][jj][kk][ll] = self.itabs[integral][i + ii][j + jj][k + kk][l + ll]
+
+        
+
+
+
+        return np.mean(np.array(results))
+                    
     def GetIndices1D(self, value = None):
         return None        
             
@@ -137,9 +145,7 @@ class Interpolate:
         
     def GetIndices3D(self, value):
         """
-        Retrieve set of 9 indices locating the interpolation points.
-        
-        value = 3-element array: [ncol_HI, ncol_HeI, ncol_HeII]
+        Retrieve set of 9 indices locating the interpolation points.        
         """
         
         if not self.pf.MultiSpecies:
@@ -189,15 +195,17 @@ class Interpolate:
         
     def GetIndices4D(self, value):
         """
-        Return indices for 4D interpolation.
+        Return 4 indices for 4D interpolation.
         """    
         
-        x, y, z = self.GetIndices3D(value)
-        
-        i = 0
+        i1 = int((value[self.locs[0]] - self.colmin[0]) / self.dcolumns[0])
+        i2 = int((value[self.locs[1]] - self.colmin[1]) / self.dcolumns[1])
+        i3 = int((value[self.locs[2]] - self.colmin[2]) / self.dcolumns[2])
+        i4 = int((value[self.locs[3]] - self.colmin[3]) / self.dcolumns[3])        
                 
-        return x, y, z, i 
-        
+        return min(max(i1, 0), self.dims[0] - 2), min(max(i2, 0), self.dims[1] - 2), \
+            min(max(i3, 0), self.dims[2] - 2), min(max(i4, 0), self.dims[3] - 2)
+                
     def GetIndices5D(self, value):
         pass      
         

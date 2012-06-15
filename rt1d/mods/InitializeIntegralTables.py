@@ -107,6 +107,8 @@ class InitializeIntegralTables:
             self.zeros = np.zeros_like(self.rs.E)
         else:
             self.zeros = np.zeros(1)
+            
+        self.tname = self.DetermineTableName()    
                                     
     def DetermineTableName(self):    
         """
@@ -290,15 +292,17 @@ class InitializeIntegralTables:
         if size > 1 and self.pf.ParallelizationMethod == 1 and rank > 0:
             pass
         else:  
-            filename = self.DetermineTableName() 
-            if os.path.exists(filename):
-                f = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'a') 
-                tab_grp = f["integrals"]
+            filename = self.tname 
+            if hasattr(self, 'lookup_tab'):
+                tab_grp = self.lookup_tab["integrals"]
+            elif os.path.exists("%s/%s" % (self.pf.OutputDirectory, filename)):
+                self.lookup_tab = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'a') 
+                tab_grp = self.lookup_tab["integrals"]
             else:
-                f = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'w') 
-                pf_grp = f.create_group("parameters")
-                tab_grp = f.create_group("integrals")
-                col_grp = f.create_group("columns")
+                self.lookup_tab = h5py.File("%s/%s" % (self.pf.OutputDirectory, filename), 'w') 
+                pf_grp = self.lookup_tab.create_group("parameters")
+                tab_grp = self.lookup_tab.create_group("integrals")
+                col_grp = self.lookup_tab.create_group("columns")
             
                 for par in self.pf: 
                     pf_grp.create_dataset(par, data = self.pf[par])
@@ -315,8 +319,7 @@ class InitializeIntegralTables:
                 if self.pf.SourceTimeEvolution:
                     col_grp.create_dataset('Age', data = self.rs.Age)    
             
-            tab_grp.create_dataset(name, data = tab)    
-            f.close()
+            tab_grp.create_dataset(name, data = tab)
         
         # Don't move on until root processor has written out data    
         if size > 1 and self.pf.ParallelizationMethod == 1: 
@@ -460,6 +463,8 @@ class InitializeIntegralTables:
             itabs[name] = np.log10(tab) 
             self.WriteIntegralTable(name, itabs[name])
             del tab   
+            
+        self.lookup_tab.close()    
             
         self.itabs = itabs    
         return itabs         
