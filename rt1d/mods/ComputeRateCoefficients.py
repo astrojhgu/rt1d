@@ -100,24 +100,24 @@ class RateCoefficients:
         ncell = dr * nabs          
                                         
         # Set normalization constant for each species
-        if self.pf.PlaneParallelField:
-            if self.pf.PhotonConserving:
+        if self.pf['PlaneParallelField']:
+            if self.pf['PhotonConserving']:
                 A = Lbol / ncell
             else:
                 A = 3 * [Lbol]
         else:    
-            if self.pf.PhotonConserving:
+            if self.pf['PhotonConserving']:
                 A = Lbol / nabs / Vsh
             else:
                 A = 3 * [Lbol / 4. / np.pi / r**2]
                                                 
         # Standard - integral tabulation
-        if self.pf.TabulateIntegrals:
+        if self.pf['TabulateIntegrals']:
          
             # Loop over species   
             for i in xrange(3):
                                 
-                if not self.pf.MultiSpecies and i > 0:
+                if not self.pf['MultiSpecies'] and i > 0:
                     continue
                                 
                 # A few quantities that are better to just compute once   
@@ -129,7 +129,7 @@ class RateCoefficients:
                     Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr, x_HII = x_HII,
                     Vsh = Vsh, ncell = ncell, indices_out = indices_out, A = A[i], nout = nout, t = t)
                 
-                if self.pf.CollisionalIonization:
+                if self.pf['CollisionalIonization']:
                     Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)    
                
                 # Recombination
@@ -141,7 +141,7 @@ class RateCoefficients:
                     omega[i] = self.DielectricRecombinationCoolingRate(T = T)
                     
                 # Heating/cooling                            
-                if not self.pf.Isothermal:
+                if not self.pf['Isothermal']:
                     k_H[i], Psi_N[i], Psi_N_dN[i] = self.PhotoElectricHeatingRate(species = i, Lbol = Lbol, r = r, 
                         x_HII = x_HII, indices_in = indices, indices_out = indices_out, ncol = ncol, dr = dr, 
                         nout = nout, nabs = nabs, Phi_N = Phi_N[i], Phi_N_dN = Phi_N_dN[i], A = A[i], t = t)
@@ -151,15 +151,15 @@ class RateCoefficients:
             
             # Secondary ionization - do separately to take advantage of already knowing Psi and Phi
             # Unless SecondaryIonization = 2 -- then knowing Phi and Psi for Gamma won't matter
-            if self.pf.SecondaryIonization:
+            if self.pf['SecondaryIonization']:
                 
                 for i in xrange(3):
-                    if not self.pf.MultiSpecies and i > 0:
+                    if not self.pf['MultiSpecies'] and i > 0:
                         continue  
                     
                     # Ionizing species i with electrons from species j                        
                     for j in self.donors:
-                        if not self.pf.MultiSpecies and j > 0:
+                        if not self.pf['MultiSpecies'] and j > 0:
                             continue
                             
                         gamma[i][j] += self.SecondaryIonizationRate(Psi_N = Psi_N[j], Psi_N_dN = Psi_N_dN[j],
@@ -184,7 +184,7 @@ class RateCoefficients:
             # Loop over species  
             for i in xrange(3):
 
-                if not self.pf.MultiSpecies and i > 0:
+                if not self.pf['MultiSpecies'] and i > 0:
                     continue
                                                     
                 # Loop over energy groups
@@ -213,7 +213,7 @@ class RateCoefficients:
                     # due to ionizations by *this* energy group. 
                     ee = Gamma_E[j] * (E - E_th[i]) * erg_per_ev 
                         
-                    if self.pf.SecondaryIonization:
+                    if self.pf['SecondaryIonization']:
                         
                         # Ionizations of species k by photoelectrons from species i
                         # Neglect HeII until somebody figures out how that works
@@ -230,7 +230,7 @@ class RateCoefficients:
                             # (This k) = i from paper, and (this i) = j from paper
                             gamma[k][i] += ee * fion / (E_th[k] * erg_per_ev)
                                                                                                           
-                    if self.pf.Isothermal:
+                    if self.pf['Isothermal']:
                         continue                           
                                                         
                     # Heating rate coefficient        
@@ -244,10 +244,10 @@ class RateCoefficients:
                     xi[i] = self.DielectricRecombinationRate(T = T)
                     omega[i] = self.DielectricRecombinationCoolingRate(T = T)
                 
-                if self.pf.CollisionalIonization:
+                if self.pf['CollisionalIonization']:
                     Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
                                 
-                if self.pf.Isothermal:
+                if self.pf['Isothermal']:
                     continue
                 
                 zeta[i] += self.CollisionalIonizationCoolingRate(species = i, T = T)  
@@ -256,7 +256,7 @@ class RateCoefficients:
         
         hubble = 0
         compton = 0                                 
-        if self.pf.CosmologicalExpansion:
+        if self.pf['CosmologicalExpansion']:
             hubble = self.HubbleCoolingRate(z)
             compton = self.ComptonHeatingRate(z, n_H, n_He, n_e, x_HII, T)
                                                                                                                       
@@ -417,7 +417,7 @@ class RateCoefficients:
             if species == 0:
                 return 6.28e-11 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 1e6)**0.7)**-1.
             elif species == 1:
-                1.5e-10 * T**-0.6353
+                return 1.5e-10 * T**-0.6353
             elif species == 2:
                 return 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4e6)**0.7)**-1.
         elif self.pf.RecombinationMethod == 'CaseB':

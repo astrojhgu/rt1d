@@ -73,7 +73,7 @@ def ProblemType(ptype):
               "GridDimensions": 1, 
               "StartRadius": 0.99, # cell = 1 milliparsec across
               "StopTime": 800, 
-              "dtDataDump": 1, 
+              "dtDataDump": 20, 
               "ODEMinStep": 1e-15,
               "DensityProfile": 1,
               "InitialRedshift": 400., 

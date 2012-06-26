@@ -64,7 +64,7 @@ class InitializeIntegralTables:
 
         # Column densities - determine automatically
         if pf.CosmologicalExpansion:
-            self.HIColumnMin = np.floor(np.log10(pf.MinimumSpeciesFraction * self.cosm.nH0 * (1. + self.cosm.zf)**3 * self.grid.dx))
+            self.HIColumnMin = np.floor(np.log10(pf.MinimumSpeciesFraction * self.cosm.nH0 * (1. + self.cosm.zf)**3 * min(self.grid.dx)))
             self.HIColumnMax = np.ceil(np.log10(self.cosm.nH0 * (1. + self.cosm.zi)**3 * pf.LengthUnits))
             self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(10**self.HIColumnMin * self.cosm.y))
             self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(10**self.HIColumnMax * self.cosm.y))
@@ -349,6 +349,7 @@ class InitializeIntegralTables:
             if items_missing == 0:            
                 self.itabs = itabs
                 return itabs    
+                
         # Otherwise, make a new lookup table
         else:
             has_keys = []
@@ -464,7 +465,8 @@ class InitializeIntegralTables:
             self.WriteIntegralTable(name, itabs[name])
             del tab   
             
-        self.lookup_tab.close()    
+        if rank == 0:    
+            self.lookup_tab.close()    
             
         self.itabs = itabs    
         return itabs         

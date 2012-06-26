@@ -629,11 +629,11 @@ class Radiate:
                   (gamma[0][0] * nHI + gamma[0][1] * nHeI + gamma[0][2] * nHeII) - \
                    alpha[0] * n_e * q[0]
                 
-        if self.pf.CosmologicalExpansion:
+        if self.pf['CosmologicalExpansion']:
             dqdt[0] -= 3. * q[0] * hubble
 
         # Helium rate equations  
-        if self.pf.MultiSpecies:       
+        if self.pf['MultiSpecies']:       
             dqdt[1] = (Gamma[1] + Beta[1] * n_e) * nHeI + \
                       (gamma[1][0] * nHI + gamma[1][1] * nHeI + gamma[1][2] * nHeII)  + \
                        alpha[2] * n_e * q[2] - \
@@ -642,14 +642,14 @@ class Radiate:
             dqdt[2] = (Gamma[2] + Beta[2] * n_e) * q[1] - alpha[2] * n_e * q[2]
         
         # Temperature evolution - using np.sum is slow :(
-        if not self.pf.Isothermal:
+        if not self.pf['Isothermal']:
             dqdt[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) \
                 + np.sum(eta * nion) + np.sum(psi * nabs) + q[2] * omega[1])      
                                
-            if self.pf.CosmologicalExpansion:
+            if self.pf['CosmologicalExpansion']:
                 dqdt[3] -= 2. * hubble * q[3]
                 
-                if self.pf.ComptonHeating:
+                if self.pf['ComptonHeating']:
                     dqdt[3] += compton
                                                                                                 
         return dqdt

@@ -54,6 +54,16 @@ def EffectiveCrossSection(rs, E1, E2, species = 0):
     Q12 = quad(lambda x: rs.Spectrum(x) / x, E1, E2)[0]
     return quad(lambda x: rs.Spectrum(x) * PhotoIonizationCrossSection(x, species = species) / \
         x, E1, E2)[0] / Q12
+        
+def EnergyWeightedCrossSection(rs, E1, E2, species = 0):
+    """
+    Compute frequency averaged cross-section, as in Aubert & Teyssier 2008.
+    
+        rs: Instance of RadiationSource class.
+    """
+    
+    return quad(lambda x: rs.Spectrum(x) * PhotoIonizationCrossSection(x, species = species) / \
+        x, E1, E2)[0]   
     
     
     

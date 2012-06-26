@@ -124,10 +124,6 @@ class Interpolate:
                     for ll in xrange(2):
                         results[ii][jj][kk][ll] = self.itabs[integral][i + ii][j + jj][k + kk][l + ll]
 
-        
-
-
-
         return np.mean(np.array(results))
                     
     def GetIndices1D(self, value = None):
@@ -156,7 +152,7 @@ class Interpolate:
         j_s = int((value[self.locs[1]] / self.dcolumns[1]) - self.offsets[1])
         k_s = int((value[self.locs[2]] / self.dcolumns[2]) - self.offsets[2])
         
-        # Bracketing coordinates
+        # Bracketing coordinates - this might be slighty wrong. i_b = i_s + 1 always
         if i_s < 0: 
             i_s = i_b = 0
         elif i_s >= (self.dims[0] - 1): 
@@ -207,5 +203,13 @@ class Interpolate:
             min(max(i3, 0), self.dims[2] - 2), min(max(i4, 0), self.dims[3] - 2)
                 
     def GetIndices5D(self, value):
-        pass      
+        i1 = int((value[self.locs[0]] - self.colmin[0]) / self.dcolumns[0])
+        i2 = int((value[self.locs[1]] - self.colmin[1]) / self.dcolumns[1])
+        i3 = int((value[self.locs[2]] - self.colmin[2]) / self.dcolumns[2])
+        i4 = int((value[self.locs[3]] - self.colmin[3]) / self.dcolumns[3])        
+        i5 = int((value[self.locs[4]] - self.colmin[4]) / self.dcolumns[4])        
+                
+        return min(max(i1, 0), self.dims[0] - 2), min(max(i2, 0), self.dims[1] - 2), \
+            min(max(i3, 0), self.dims[2] - 2), min(max(i4, 0), self.dims[3] - 2), \
+            min(max(i5, 0), self.dims[4] - 2)
         

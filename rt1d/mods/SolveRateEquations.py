@@ -87,7 +87,8 @@ class SolveRateEquations:
         else: 
             h = hpre
             
-        x0 = xnow    
+        x0 = xnow  
+        znext = None  
                                   
         i = 1
         ct = 0
@@ -101,11 +102,13 @@ class SolveRateEquations:
                 xnext = xf 
                                                                                                             
             # Solve away
-            znext = self.cosm.TimeToRedshiftConverter(0, xnext - x0, znow)
+            if self.pf["CosmologicalExpansion"]:
+                znext = self.cosm.TimeToRedshiftConverter(0, xnext - x0, znow)
+                
             ynext, tmp = self.solve(f, ynow, xnow, h, Dfun, znext, args)
                                                                                                                                     
             # Check for NaNs, reduce timestep or raise exception if h == hmin
-            if self.pf.CheckForGoofiness:
+            if self.pf['CheckForGoofiness']:
                 everything_ok = self.SolutionCheck(ynext, znow, znext, args)
                                                                                    
                 if not everything_ok[0] and h > self.hmin:
@@ -163,7 +166,7 @@ class SolveRateEquations:
         for i, element in enumerate(yi):
 
             # If isothermal or Hydrogen only, do not change temperature or helium values
-            if (self.pf.MultiSpecies == 0 and (i == 1 or i == 2)) or (self.pf.Isothermal and i == 3):
+            if (self.pf['MultiSpecies'] == 0 and (i == 1 or i == 2)) or (self.pf['Isothermal'] and i == 3):
                 yip1[i] = yi[i]
             else:
                 newargs = list(args)
@@ -192,10 +195,10 @@ class SolveRateEquations:
                 yip1[i], itr[i] = self.rootfinder(ynext, guess, i)
                                                                                                                               
         rtn = yi + h * f(yip1, xi + h, args)
-        if self.pf.MultiSpecies == 0:
+        if self.pf['MultiSpecies'] == 0:
             rtn[1] = yip1[1]
             rtn[2] = yip1[2]
-        if self.pf.Isothermal:
+        if self.pf['Isothermal']:
             rtn[3] = yip1[3]
                             
         return rtn, itr
@@ -248,7 +251,7 @@ class SolveRateEquations:
         
         """   
         
-        if self.pf.CosmologicalExpansion:
+        if self.pf['CosmologicalExpansion']:
             nH = self.cosm.nH0 * (1. + znext)**3
             nHe = self.cosm.nHe0 * (1. + znext)**3
         else:            
@@ -284,7 +287,7 @@ class SolveRateEquations:
                 ok[0] = 0
            
         # Helium if necessary
-        if self.pf.MultiSpecies:
+        if self.pf['MultiSpecies']:
             
             if nHeII < 0:
                 if np.allclose(xHeII, 0, rtol = 0, atol = self.xmin):
