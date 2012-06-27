@@ -55,7 +55,7 @@ class WriteData:
         Write all data to hdf5 file.
         """
                                         
-        f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.pf.OutputDirectory.rstrip('/'), 
+        f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.pf['OutputDirectory'].rstrip('/'), 
             self.GetDataDumpName(wct)), 'w') 
 
         pf_grp = f.create_group("parameters")
@@ -63,11 +63,11 @@ class WriteData:
         
         for par in self.pf.keys(): 
             if par == "CurrentTime": 
-                pf_grp.create_dataset(par, data = t / self.pf.TimeUnits)
+                pf_grp.create_dataset(par, data = t / self.pf['TimeUnits'])
             elif par == "CurrentRedshift":
-                pf_grp.create_dataset(par, data = self.cosm.TimeToRedshiftConverter(0, t, self.pf.InitialRedshift))
+                pf_grp.create_dataset(par, data = self.cosm.TimeToRedshiftConverter(0, t, self.pf['InitialRedshift']))
             elif par == "CurrentTimestep": 
-                pf_grp.create_dataset(par, data = dt / self.pf.TimeUnits)
+                pf_grp.create_dataset(par, data = dt / self.pf['TimeUnits'])
             else: 
                 pf_grp.create_dataset(par, data = self.pf[par])
         
@@ -78,7 +78,7 @@ class WriteData:
         f.close()
         
         if rank == 0: 
-            print "\nWrote %s/%s.h5\n" % (self.pf.OutputDirectory, 
+            print "\nWrote %s/%s.h5\n" % (self.pf['OutputDirectory'], 
                     self.GetDataDumpName(wct))
 
     def WriteASCII(self, data, wc, t, dt):
@@ -93,20 +93,20 @@ class WriteData:
         Return name of data dump to be written
         """
 
-        return "{0}{1:04d}".format(self.pf.DataDumpName, wct)
+        return "{0}{1:04d}".format(self.pf['DataDumpName'], wct)
 
     def WriteParameterFile(self, wct, t, dt):
         """
         Write out parameter file to ASCII format.
         """
                 
-        f = open("{0}/{1}/{2}".format(GlobalDir, self.pf.OutputDirectory, 
+        f = open("{0}/{1}/{2}".format(GlobalDir, self.pf['OutputDirectory'], 
             self.GetDataDumpName(wct)), 'w')
         
         names = self.pf.keys()
         names.sort()
         
-        print >> f, "{0} = {1}".format('ProblemType'.ljust(35, ' '), self.pf.ProblemType)
+        print >> f, "{0} = {1}".format('ProblemType'.ljust(35, ' '), self.pf['ProblemType'])
         
         for par in names:
             
@@ -115,11 +115,11 @@ class WriteData:
                 continue
             
             if par == "CurrentTime": 
-                val = t / self.pf.TimeUnits
+                val = t / self.pf['TimeUnits']
             elif par == "CurrentRedshift":
-                val = self.cosm.TimeToRedshiftConverter(0, t, self.pf.InitialRedshift)
+                val = self.cosm.TimeToRedshiftConverter(0, t, self.pf['InitialRedshift'])
             elif par == "CurrentTimestep": 
-                val = dt / self.pf.TimeUnits
+                val = dt / self.pf['TimeUnits']
             else: 
                 val = self.pf[par]
             

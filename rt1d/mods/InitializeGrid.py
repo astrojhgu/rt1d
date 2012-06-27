@@ -27,12 +27,12 @@ class InitializeGrid:
         self.cosm = Cosmology(pf)
         
         # Deal with log-grid, compute dx
-        self.R0 = pf.StartRadius * pf.LengthUnits
-        if pf.LogarithmicGrid:
+        self.R0 = pf['StartRadius'] * pf['LengthUnits']
+        if pf['LogarithmicGrid']:
             self.r = np.logspace(np.log10(self.R0), \
-                np.log10(pf.LengthUnits), int(pf.GridDimensions) + 1)
+                np.log10(pf['LengthUnits']), int(pf['GridDimensions']) + 1)
         else:
-            self.r = np.linspace(self.R0, pf.LengthUnits, int(pf.GridDimensions) + 1)
+            self.r = np.linspace(self.R0, pf['LengthUnits'], int(pf['GridDimensions']) + 1)
         
         self.dx = np.diff(self.r)   
         self.r = self.r[0:-1]             
@@ -40,7 +40,7 @@ class InitializeGrid:
                             
         # Generic data array                
         self.density = np.array(map(self.InitializeDensity, self.grid))
-        self.ionization = np.array(map(self.InitializeIonization, self.grid)  )
+        self.ionization = np.array(map(self.InitializeIonization, self.grid))
                     
     def InitializeFields(self):
         """
@@ -51,7 +51,7 @@ class InitializeGrid:
         for field in FieldList:
             fields[field] = np.array(eval("map(self.Initialize{0}, self.grid)".format(field)))
         
-        if self.pf.OutputRates:
+        if self.pf['OutputRates']:
             for i in xrange(3):
                 fields['PhotoIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['PhotoHeatingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
@@ -89,19 +89,19 @@ class InitializeGrid:
                 1: Uniform density given by cosmic mean at z = InitialRedshift.
         """        
                 
-        if self.pf.DensityProfile == 0: 
-            density = self.pf.DensityUnits
-        if self.pf.DensityProfile == 1: 
-            density = self.cosm.MeanBaryonDensity(self.pf.InitialRedshift)
+        if self.pf['DensityProfile'] == 0: 
+            density = self.pf['DensityUnits']
+        if self.pf['DensityProfile'] == 1: 
+            density = self.cosm.MeanBaryonDensity(self.pf['InitialRedshift'])
         
-        if self.pf.Clump: 
-            if self.pf.ClumpDensityProfile == 0:
-                if (cell >= self.pf.GridDimensions * (self.pf.ClumpPosition - self.pf.ClumpRadius)) and \
-                   (cell <= self.pf.GridDimensions * (self.pf.ClumpPosition + self.pf.ClumpRadius)):
-                    density *= self.pf.ClumpOverdensity
-            if self.pf.ClumpDensityProfile == 1:
-                density += density * self.pf.ClumpOverdensity * \
-                    np.exp(-(cell - self.pf.ClumpPosition * pf.GridDimensions)**2 / 2. / self.pf.ClumpRadius**2)
+        if self.pf['Clump']: 
+            if self.pf['ClumpDensityProfile'] == 0:
+                if (cell >= self.pf['GridDimensions'] * (self.pf['ClumpPosition'] - self.pf['ClumpRadius'])) and \
+                   (cell <= self.pf['GridDimensions'] * (self.pf['ClumpPosition'] + self.pf['ClumpRadius'])):
+                    density *= self.pf['ClumpOverdensity']
+            if self.pf['ClumpDensityProfile'] == 1:
+                density += density * self.pf['ClumpOverdensity'] * \
+                    np.exp(-(cell - self.pf['ClumpPosition'] * pf['GridDimensions'])**2 / 2. / self.pf['ClumpRadius']**2)
                         
         return density
         
@@ -115,15 +115,15 @@ class InitializeGrid:
                    Tk ~ (1 + z)^2 after decoupling.
         """
                 
-        if self.pf.TemperatureProfile == 0: 
-            temperature = self.pf.InitialTemperature    
-        if self.pf.TemperatureProfile == 1: 
-            temperature = self.cosm.Tgas(self.pf.InitialRedshift)
+        if self.pf['TemperatureProfile'] == 0: 
+            temperature = self.pf['InitialTemperature']    
+        if self.pf['TemperatureProfile'] == 1: 
+            temperature = self.cosm.Tgas(self.pf['InitialRedshift'])
                 
-        if self.pf.Clump:
-            if (cell >= self.pf.GridDimensions * (self.pf.ClumpPosition - self.pf.ClumpRadius)) and \
-               (cell <= self.pf.GridDimensions * (self.pf.ClumpPosition + self.pf.ClumpRadius)):
-                temperature = self.pf.ClumpTemperature
+        if self.pf['Clump']:
+            if (cell >= self.pf['GridDimensions'] * (self.pf['ClumpPosition'] - self.pf['ClumpRadius'])) and \
+               (cell <= self.pf['GridDimensions'] * (self.pf['ClumpPosition'] + self.pf['ClumpRadius'])):
+                temperature = self.pf['ClumpTemperature']
         
         return temperature
         
@@ -138,8 +138,8 @@ class InitializeGrid:
         Returns the HII fraction in 'cell'.
         """
                 
-        if self.pf.IonizationProfile == 0: 
-            ionization = self.pf.InitialHIIFraction 
+        if self.pf['IonizationProfile'] == 0: 
+            ionization = self.pf['InitialHIIFraction']
         
         return ionization    
         

@@ -29,19 +29,19 @@ x_HII = np.array([1.0e-4, 2.318e-4, 4.677e-4, 1.0e-3, 2.318e-3,
 class SecondaryElectrons:
     def __init__(self, pf):
         self.pf = pf
-        self.Method = pf.SecondaryIonization
+        self.Method = pf['SecondaryIonization']
         self.NumberOfEnergyBins = 258
         self.NumberOfXiBins = 14
         
         self.log_xHII = np.linspace(np.log10(min(x_HII)), np.log10(max(x_HII)),
-            pf.IonizedFractionBins)
+            pf['IonizedFractionBins'])
         
         if self.Method >= 2:
             rt1d = os.environ.get("RT1D")
             if rt1d:
                 f = h5py.File("{0}/input/secondary_electron_data.h5".format(rt1d), 'r')
-            elif self.pf["SecondaryElectronDataFile"] is not 'None':
-                f = h5py.File("%s" % self.pf["SecondaryElectronDataFile"], 'r')
+            elif pf["SecondaryElectronDataFile"] is not 'None':
+                f = h5py.File("%s" % pf["SecondaryElectronDataFile"], 'r')
             else:
                 raise Exception('Error loading secondary electron data.')
                 

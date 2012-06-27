@@ -109,7 +109,7 @@ def SetDefaultParameterValues():
         "InfiniteSpeedOfLight": 1,  
         "PlaneParallelField": 0,  
         "ClumpingFactor": 1,
-        "RecombinationMethod": 'CaseB',
+        "RecombinationMethod": 'B',
         
         # Initial conditions
         "InitialRedshift": 20.0, 

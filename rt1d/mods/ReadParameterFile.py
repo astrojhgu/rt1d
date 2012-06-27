@@ -19,7 +19,6 @@ import re, copy, h5py
 import numpy as np
 from .SetDefaultParameterValues import SetDefaultParameterValues
 from .ProblemTypes import ProblemType
-from .Extras import dotdictify
 
 def ReadParameterFile(pf):
     """
@@ -73,7 +72,7 @@ def ReadParameterFile(pf):
         
         pf_dict[parname.strip()] = parval
                     
-    return dotdictify(pf_dict)
+    return pf_dict
     
 def ReadRestartFile(rf):
     
@@ -87,5 +86,5 @@ def ReadRestartFile(rf):
     for field in f["data"]:
         data[field] = f["data"][field].value
             
-    return dotdictify(pf), data       
+    return pf, data       
     

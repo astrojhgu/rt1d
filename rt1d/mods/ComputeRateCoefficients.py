@@ -31,14 +31,14 @@ class RateCoefficients:
         # Initialize integral tables
         self.itabs = iits.itabs
         self.Interpolate = Interpolate(pf, iits)
-        self.TabulateIntegrals = pf.TabulateIntegrals
+        self.TabulateIntegrals = pf['TabulateIntegrals']
         
         # Discretization techniques
         if pf.DiscreteSpectrum:
             
             # Multi-group method
-            if pf.FrequencyAveragedCrossSections:
-                self.N = int(pf.FrequencyGroups)
+            if pf['FrequencyAveragedCrossSections']:
+                self.N = int(pf['eFrequencyGroups'])
                 self.sigma = np.zeros([3, self.N])
                 for i in xrange(3):
                     for j in xrange(self.N):
@@ -283,8 +283,8 @@ class RateCoefficients:
                           
         Phi_N = Phi_N_dN = None
                                         
-        if self.pf.TabulateIntegrals:
-            if self.pf.PhotonConserving:
+        if self.pf['TabulateIntegrals']:
+            if self.pf['PhotonConserving']:
                 Phi_N = self.Interpolate.interp(indices_in, "logPhi%i" % species, 
                     [ncol[0], ncol[1], ncol[2], x_HII, t])
                 Phi_N_dN = self.Interpolate.interp(indices_out, "logPhi%i" % species, 
@@ -316,7 +316,7 @@ class RateCoefficients:
         Psi_N = Psi_N_dN = None
         
         if self.esec.Method < 2:
-            if self.pf.PhotonConserving:
+            if self.pf['PhotonConserving']:
                 Psi_N = self.Interpolate.interp(indices_in, "logPsi%i" % species, 
                     [ncol[0], ncol[1], ncol[2], x_HII, t])
                 Psi_N_dN = self.Interpolate.interp(indices_out, "logPsi%i" % species, 
@@ -330,7 +330,7 @@ class RateCoefficients:
             return A * self.esec.DepositionFraction(0.0, x_HII, channel = 0) * heat, Psi_N, Psi_N_dN    
                 
         else:
-            if self.pf.PhotonConserving:
+            if self.pf['PhotonConserving']:
                 x_HII = np.log10(x_HII)
                 Psi_N = self.Interpolate.interp(indices_in, "logPsiHat%i" % species, 
                     [ncol[0], ncol[1], ncol[2], x_HII, t])
@@ -367,7 +367,7 @@ class RateCoefficients:
             return 0.0 
             
         if self.esec.Method < 2:    
-            if self.pf.PhotonConserving:
+            if self.pf['PhotonConserving']:
                 IonizationRate = (Psi_N - Psi_N_dN - E_th[donor_species] * erg_per_ev * (Phi_N - Phi_N_dN))        
             else:            
                 IonizationRate = (Psi_N - E_th[donor_species] * erg_per_ev * Phi_N)   
@@ -377,7 +377,7 @@ class RateCoefficients:
                 self.esec.DepositionFraction(E = E, xHII = x_HII, channel = species + 1)
         
         else:
-            if self.pf.PhotonConserving:
+            if self.pf['PhotonConserving']:
                 x_HII = np.log10(x_HII)                
                 Psi_N = self.Interpolate.interp(indices_in, "logPsiWiggle%i%i" % (species, donor_species), 
                     [ncol[0], ncol[1], ncol[2], x_HII, t])
@@ -413,14 +413,14 @@ class RateCoefficients:
         refers to HII, HeII, and HeIII.
         """
         
-        if self.pf.RecombinationMethod == 'CaseA':
+        if self.pf['RecombinationMethod'] == 'A':
             if species == 0:
                 return 6.28e-11 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 1e6)**0.7)**-1.
             elif species == 1:
                 return 1.5e-10 * T**-0.6353
             elif species == 2:
                 return 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4e6)**0.7)**-1.
-        elif self.pf.RecombinationMethod == 'CaseB':
+        elif self.pf['RecombinationMethod'] == 'B':
             if species == 0:
                 return 2.6e-13 * (T / 1.e4)**-0.85 
             elif species == 1:
@@ -434,7 +434,7 @@ class RateCoefficients:
                 
                 return alpha
         else:
-            print 'Unrecognized RecombinationMethod.  Should be CaseA or CaseB.'
+            print 'Unrecognized RecombinationMethod.  Should be A or B.'
             return 0.0          
         
     def DielectricRecombinationRate(self, T = None):

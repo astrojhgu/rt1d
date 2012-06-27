@@ -32,40 +32,40 @@ class SolveRateEquations:
         self.pf = pf
         self.cosm = Cosmology(pf)
                 
-        self.AdaptiveODEStep = pf.ODEAdaptiveStep
-        self.hmax = pf.ODEMaxStep * pf.TimeUnits
-        self.hmin = pf.ODEMinStep * pf.TimeUnits   
-        self.maxiter = pf.ODEMaxIter    # Max number of iterations for root finding          
+        self.AdaptiveODEStep = pf['ODEAdaptiveStep']
+        self.hmax = pf['ODEMaxStep'] * pf['TimeUnits']
+        self.hmin = pf['ODEMinStep'] * pf['TimeUnits']
+        self.maxiter = pf['ODEMaxIter']    # Max number of iterations for root finding          
 
         self.solve = self.ImplicitEuler
         self.rootfinder = self.Newton
         
-        self.xmin = pf.MinimumSpeciesFraction # shorthand
+        self.xmin = pf['MinimumSpeciesFraction'] # shorthand
         
         # Set adaptive timestepping method
         if self.AdaptiveODEStep == 1: 
             self.stepper = self.StepDoubling     
         
         # Initial guesses for ODE solver
-        if pf.CosmologicalExpansion:
+        if pf['CosmologicalExpansion']:
             self.guesses = lambda z: np.array([self.cosm.MeanHydrogenNumberDensity(z), 
                                                self.cosm.MeanHeliumNumberDensity(z),
                                                self.cosm.MeanHeliumNumberDensity(z),
                                                3. * self.cosm.Tgas(z) * k_B * self.cosm.MeanBaryonNumberDensity(z) / 2.])
         else:
-            if pf.DensityProfile == 0:
-                tmp = [pf.DensityUnits * (1. - self.cosm.Y) / m_H, 
-                       self.cosm.Y * pf.DensityUnits / 4. / m_H, 
-                       self.cosm.Y * pf.DensityUnits / 4. / m_H]
-            elif pf.DensityProfile == 1:
-                tmp = [self.cosm.MeanHydrogenNumberDensity(pf.InitialRedshift), 
-                       self.cosm.MeanHeliumNumberDensity(pf.InitialRedshift),
-                       self.cosm.MeanHeliumNumberDensity(pf.InitialRedshift)]
+            if pf['DensityProfile'] == 0:
+                tmp = [pf['DensityUnits'] * (1. - self.cosm.Y) / m_H, 
+                       self.cosm.Y * pf['DensityUnits'] / 4. / m_H, 
+                       self.cosm.Y * pf['DensityUnits'] / 4. / m_H]
+            elif pf['DensityProfile'] == 1:
+                tmp = [self.cosm.MeanHydrogenNumberDensity(pf['InitialRedshift']), 
+                       self.cosm.MeanHeliumNumberDensity(pf['InitialRedshift']),
+                       self.cosm.MeanHeliumNumberDensity(pf['InitialRedshift'])]
         
-            if pf.TemperatureProfile == 0:
-                tmp.append(3. * k_B * pf.InitialTemperature * np.sum(tmp[0:2]) / 2.)
+            if pf['TemperatureProfile'] == 0:
+                tmp.append(3. * k_B * pf['InitialTemperature'] * np.sum(tmp[0:2]) / 2.)
             elif pf.TemperatureProfile == 1:
-                tmp.append(3. * k_B * self.cosm.Tgas(pf.InitialRedshift) / np.sum(tmp[0:2]) / 2.)    
+                tmp.append(3. * k_B * self.cosm.Tgas(pf['InitialRedshift']) / np.sum(tmp[0:2]) / 2.)    
                 
             tmp = np.array(tmp)
             self.guesses = lambda z: tmp
@@ -214,7 +214,7 @@ class SolveRateEquations:
             args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi, xi)
         """    
                 
-        if self.pf.CosmologicalExpansion:
+        if self.pf['CosmologicalExpansion']:
             nH = self.cosm.nH0 * (1. + znext)**3
             nHe = self.cosm.nHe0 * (1. + znext)**3
         else:            

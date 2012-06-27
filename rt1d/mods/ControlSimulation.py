@@ -28,10 +28,10 @@ class ControlSimulation:
         self.pf = pf
         self.cosm = Cosmology(pf)
         
-        self.GridDimensions = int(pf.GridDimensions)
+        self.GridDimensions = int(pf['GridDimensions'])
         self.grid = np.arange(self.GridDimensions)
-        self.R0 = pf.LengthUnits * pf.StartRadius
-        self.z0 = pf.InitialRedshift
+        self.R0 = pf['LengthUnits'] * pf['StartRadius']
+        self.z0 = pf['InitialRedshift']
                 
         self.mask = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
                 
@@ -206,7 +206,7 @@ class ControlSimulation:
         
         # If parallelizing over grid, do this so an MPI all-reduce doesn't 
         # add field values together
-        if self.pf.ParallelizationMethod == 1 and size > 1:
+        if self.pf['ParallelizationMethod'] == 1 and size > 1:
             proc_mask = np.zeros(self.GridDimensions)
             solve_arr = np.arange(self.GridDimensions)
             condition = (solve_arr >= lb[rank]) & (solve_arr < lb[rank + 1])
@@ -224,7 +224,7 @@ class ControlSimulation:
             if key == 'PhotonPackages': 
                 continue
             
-            if self.pf.ParallelizationMethod == 1 and size > 1:
+            if self.pf['ParallelizationMethod'] == 1 and size > 1:
                 newdata[key][proc_mask == 0] = 0        
             
         return solve_arr, newdata        

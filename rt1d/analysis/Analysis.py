@@ -43,12 +43,12 @@ class Analyze:
         self.grid = np.arange(self.GridDimensions)
                 
         # Deal with log-grid
-        if self.pf.LogarithmicGrid:
-            self.r = np.logspace(np.log10(self.pf.StartRadius * self.pf.LengthUnits),
-                np.log10(self.pf.LengthUnits), self.GridDimensions + 1)
+        if self.pf['LogarithmicGrid']:
+            self.r = np.logspace(np.log10(self.pf['StartRadius'] * self.pf['LengthUnits']),
+                np.log10(self.pf['LengthUnits']), self.GridDimensions + 1)
         else:
-            self.r = np.linspace(self.pf.StartRadius * self.pf.LengthUnits, 
-                self.pf.LengthUnits, self.GridDimensions + 1)
+            self.r = np.linspace(self.pf['StartRadius'] * self.pf['LengthUnits'], 
+                self.pf['LengthUnits'], self.GridDimensions + 1)
         
         self.dx = np.diff(self.r)   
         self.r = self.r[0:-1]
@@ -90,13 +90,13 @@ class Analyze:
             AHe = 1
             if helium_correction:
                 AHe = 1. / (1. - 3. * self.cosm.Y / 4.)
-            nH = AHe * self.pf.DensityUnits * (1. - self.cosm.Y) / m_H
-            self.Ndot = self.pf.SpectrumPhotonLuminosity
+            nH = AHe * self.pf['DensityUnits'] * (1. - self.cosm.Y) / m_H
+            self.Ndot = self.pf['SpectrumPhotonLuminosity']
             self.alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
             self.trec = 1. / self.alpha_HII / self.data[0].n_HI[-1]                                         # s
             self.rs = (3. * self.Ndot / 4. / np.pi / self.alpha_HII / nH**2)**(1. / 3.)  # cm
         
-        return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) + self.pf.StartRadius
+        return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) + self.pf['StartRadius']
         
     def LocateIonizationFront(self, dd, species = 0):
         """
@@ -249,7 +249,7 @@ class Analyze:
             exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
                 self.data[%i].%s, ls = \'-\', color = \'k\')' % (dd, dd, field))
 
-            ax.set_xlim(self.data[0].r[0] / self.pf.LengthUnits, 1)        
+            ax.set_xlim(self.data[0].r[0] / self.pf['LengthUnits'], 1)        
             ax.set_ylim(mi, ma)    
             ax.set_xscale(xscale) 
             
@@ -277,8 +277,8 @@ class Analyze:
             exec('mp.grid[1].semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
                 self.data[%i].T, ls = \'-\', color = \'k\')' % (dd, dd))
                 
-            mp.grid[0].set_xlim(self.data[0].r[0] / self.pf.LengthUnits, 1)        
-            mp.grid[1].set_xlim(self.data[0].r[0] / self.pf.LengthUnits, 1)        
+            mp.grid[0].set_xlim(self.data[0].r[0] / self.pf['LengthUnits'], 1)        
+            mp.grid[1].set_xlim(self.data[0].r[0] / self.pf['LengthUnits'], 1)        
             mp.grid[1].set_xscale(xscale)     
             mp.grid[0].set_xscale(xscale)     
                         
@@ -310,14 +310,14 @@ class Analyze:
         ct = 0
         ls = ['-', ':', '--', '-.']
         for dd in self.data.keys():
-            if self.data[dd].t / self.pf.TimeUnits not in t: 
+            if self.data[dd].t / self.pf['TimeUnits'] not in t: 
                 continue
                 
-            this_t = int(self.data[dd].t / self.pf.TimeUnits)
+            this_t = int(self.data[dd].t / self.pf['TimeUnits'])
         
-            self.mp.grid[0].semilogy(self.data[dd].r / self.pf.LengthUnits, self.data[dd].x_HI, color = color, ls = ls[ct], 
+            self.mp.grid[0].semilogy(self.data[dd].r / self.pf['LengthUnits'], self.data[dd].x_HI, color = color, ls = ls[ct], 
                 label = r'$t = %i \ \mathrm{Myr}$' % this_t)
-            self.mp.grid[1].semilogy(self.data[dd].r / self.pf.LengthUnits, self.data[dd].T, color = color, ls = ls[ct])
+            self.mp.grid[1].semilogy(self.data[dd].r / self.pf['LengthUnits'], self.data[dd].T, color = color, ls = ls[ct])
             ct += 1
         
         self.mp.grid[0].set_ylim(1e-3, 1.5)
@@ -344,7 +344,7 @@ class Analyze:
         time = []
         value = []
         for dd in self.data.keys():
-            if self.pf.CosmologicalExpansion:
+            if self.pf['CosmologicalExpansion']:
                 time.append(self.data[dd].z)
             else:
                 time.append(self.data[dd].t)
@@ -416,7 +416,7 @@ class Analyze:
         
         self.ax = pl.subplot(111)
         for dd in self.data.keys():
-            if self.data[dd].t / self.pf.TimeUnits != t: 
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
                 continue
             
             exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
@@ -436,7 +436,7 @@ class Analyze:
             legend = False
         
         for dd in self.data.keys():
-            if self.data[dd].t / self.pf.TimeUnits != t: 
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
                 continue
                             
             Gamma = self.data[dd].Gamma[:,species] * self.data[dd].nabs[species,:]
@@ -449,15 +449,15 @@ class Analyze:
             recomb = alpha + xi    
                 
         self.ax = pl.subplot(111)
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, ion, color = color, ls = '-', label = 'Ioniz.')        
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, Gamma, color = color, ls = '--', label = r'$\Gamma$')
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, gamma, color = color, ls = ':', label = r'$\gamma$')
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, Beta, color = color, ls = '-.', label = r'$\beta$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], ion, color = color, ls = '-', label = 'Ioniz.')        
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Gamma, color = color, ls = '--', label = r'$\Gamma$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], gamma, color = color, ls = ':', label = r'$\gamma$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Beta, color = color, ls = '-.', label = r'$\beta$')
                 
         if plot_recomb:
-            self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, recomb, color = 'b', ls = '-', label = 'Recomb.')
-            self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, alpha, color = 'b', ls = '--', label = r'$\alpha$')
-            self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, xi, color = 'b', ls = ':', label = r'$\xi$')
+            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], recomb, color = 'b', ls = '-', label = 'Recomb.')
+            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], alpha, color = 'b', ls = '--', label = r'$\alpha$')
+            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], xi, color = 'b', ls = ':', label = r'$\xi$')
         
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Ionization Rate')
@@ -477,7 +477,7 @@ class Analyze:
             legend = False
         
         for dd in self.data.keys():
-            if self.data[dd].t / self.pf.TimeUnits != t: 
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
                 continue
             
             x_HII = self.data[dd].x_HII
@@ -498,12 +498,12 @@ class Analyze:
         ma = max(np.max(heat), np.max(cool))    
             
         self.ax = pl.subplot(111)
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, heat, color = 'r', ls = '-', label = r'$\mathcal{H}_{\mathrm{tot}}$')
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, cool, color = 'b', ls = '-', label = r'$\mathcal{C}_{\mathrm{tot}}$')
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, zeta, color = 'g', ls = '--', label = r'$\zeta$')
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, psi, color = 'g', ls = ':', label = r'$\psi$')
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, eta, color = 'c', ls = '--', label = r'$\eta$')
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, omega, color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], heat, color = 'r', ls = '-', label = r'$\mathcal{H}_{\mathrm{tot}}$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], cool, color = 'b', ls = '-', label = r'$\mathcal{C}_{\mathrm{tot}}$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], zeta, color = 'g', ls = '--', label = r'$\zeta$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], psi, color = 'g', ls = ':', label = r'$\psi$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], eta, color = 'c', ls = '--', label = r'$\eta$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], omega, color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
                 
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Heating & Cooling Rate $(\mathrm{erg/s/cm^3})$')

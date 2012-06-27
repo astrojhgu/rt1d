@@ -64,7 +64,7 @@ class Inspect:
         # Figure out axes
         if nHI is None:
             x = self.itabs['logNHI']
-            if self.pf.MultiSpecies:
+            if self.pf['MultiSpecies']:
                 i1 = np.argmin(np.abs(self.itabs['logNHeI'] - nHeI))
                 i2 = np.argmin(np.abs(self.itabs['logNHeII'] - nHeII))
                 y = self.itabs[integral][:,i1,i2]
@@ -174,9 +174,9 @@ class Inspect:
         if legend and hasattr(self, 'ax'):
             legend = False
         
-        self.dt = np.zeros([5, self.pf.GridDimensions])
+        self.dt = np.zeros([5, self.pf['GridDimensions']])
         for dd in self.data.keys():
-            if self.data[dd].t / self.pf.TimeUnits != t: 
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
                 continue
         
             dHIIdt = self.data[dd].n_HI * \
@@ -203,11 +203,11 @@ class Inspect:
                 
             defdt = dHIIdt + dHeIIdt + 2. * dHeIIIdt
                                         
-            self.dt[0] = self.pf.MaxHIIChange * self.data[dd].n_HI / np.abs(dHIIdt) / self.pf.TimeUnits
-            self.dt[1] = self.pf.MaxHeIChange * self.data[dd].n_HeI / np.abs(dHeIdt) / self.pf.TimeUnits
-            self.dt[2] = self.pf.MaxHeIIChange * self.data[dd].n_HeII / np.abs(dHeIIdt) / self.pf.TimeUnits
-            self.dt[3] = self.pf.MaxHeIIIChange * self.data[dd].n_HeIII / np.abs(dHeIIIdt) / self.pf.TimeUnits
-            self.dt[4] = self.pf.MaxElectronChange * (self.data[dd].n_e / self.data[dd].n_B) / np.abs(defdt) / self.pf.TimeUnits  
+            self.dt[0] = self.pf['MaxHIIChange'] * self.data[dd].n_HI / np.abs(dHIIdt) / self.pf['TimeUnits']
+            self.dt[1] = self.pf['MaxHeIChange'] * self.data[dd].n_HeI / np.abs(dHeIdt) / self.pf['TimeUnits']
+            self.dt[2] = self.pf['MaxHeIIChange'] * self.data[dd].n_HeII / np.abs(dHeIIdt) / self.pf['TimeUnits']
+            self.dt[3] = self.pf['MaxHeIIIChange'] * self.data[dd].n_HeIII / np.abs(dHeIIIdt) / self.pf['TimeUnits']
+            self.dt[4] = self.pf['MaxElectronChange'] * (self.data[dd].n_e / self.data[dd].n_B) / np.abs(defdt) / self.pf['TimeUnits']  
             
             break
             
@@ -215,44 +215,44 @@ class Inspect:
         ma = 1e2
                         
         self.ax = pl.subplot(111)
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, self.dt[0], color = 'k', label = r'$\Delta t_{\mathrm{HII}}$')
-        i1 = np.argmin(np.abs(self.data[dd].tau[0] - self.pf.OpticalDepthDefiningIFront[0]))
-        self.ax.loglog([self.data[dd].r[i1] / self.pf.LengthUnits] * 2, [mi, ma], color = 'b', ls = '-')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[0], color = 'k', label = r'$\Delta t_{\mathrm{HII}}$')
+        i1 = np.argmin(np.abs(self.data[dd].tau[0] - self.pf['OpticalDepthDefiningIFront'][0]))
+        self.ax.loglog([self.data[dd].r[i1] / self.pf['LengthUnits']] * 2, [mi, ma], color = 'b', ls = '-')
         
-        if self.pf.MultiSpecies:
+        if self.pf['MultiSpecies']:
             
-            if self.pf.HeIRestrictedTimestep:
-                self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, self.dt[1], 
+            if self.pf['HeIRestrictedTimestep']:
+                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[1], 
                     color = 'k', ls = '-.', label = r'$\Delta t_{\mathrm{HeI}}$')
             
-            if self.pf.HeIIRestrictedTimestep:
-                self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, self.dt[2], 
+            if self.pf['HeIIRestrictedTimestep']:
+                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[2], 
                     color = 'k', ls = '--', label = r'$\Delta t_{\mathrm{HeII}}$')
             
-            if self.pf.HeIIIRestrictedTimestep:
-                self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, self.dt[3], 
+            if self.pf['HeIIIRestrictedTimestep']:
+                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[3], 
                     color = 'k', ls = ':', label = r'$\Delta t_{\mathrm{HeIII}}$')
             
-            if self.pf.ElectronFractionRestrictedTimestep:
-                self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, self.dt[4], 
+            if self.pf['ElectronFractionRestrictedTimestep']:
+                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.dt[4], 
                     color = 'k', ls = '-.', label = r'$\Delta t_{e^-}$')
             
-            i2 = np.argmin(np.abs(self.data[dd].tau[1] - self.pf.OpticalDepthDefiningIFront[1]))
-            i3 = np.argmin(np.abs(self.data[dd].tau[2] - self.pf.OpticalDepthDefiningIFront[2]))
-            self.ax.loglog([self.data[dd].r[i2] / self.pf.LengthUnits] * 2, [mi, ma], color = 'b', ls = '--')
-            self.ax.loglog([self.data[dd].r[i3] / self.pf.LengthUnits] * 2, [mi, ma], color = 'b', ls = ':')
+            i2 = np.argmin(np.abs(self.data[dd].tau[1] - self.pf['OpticalDepthDefiningIFront'][1]))
+            i3 = np.argmin(np.abs(self.data[dd].tau[2] - self.pf['OpticalDepthDefiningIFront'][2]))
+            self.ax.loglog([self.data[dd].r[i2] / self.pf['LengthUnits'] * 2], [mi, ma], color = 'b', ls = '--')
+            self.ax.loglog([self.data[dd].r[i3] / self.pf['LengthUnits'] * 2], [mi, ma], color = 'b', ls = ':')
          
         # Minimum dtphot    
-        self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, self.data[dd].dtPhoton, color = 'g', ls = '-', label = r'$\Delta t_{\mathrm{min}}$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.data[dd].dtPhoton, color = 'g', ls = '-', label = r'$\Delta t_{\mathrm{min}}$')
         
         # Timestep chosen for next step   
-        self.ax.loglog([self.data[dd].r[0] / self.pf.LengthUnits, self.data[dd].r[-1] / self.pf.LengthUnits], 
+        self.ax.loglog([self.data[dd].r[0] / self.pf['LengthUnits'], self.data[dd].r[-1] / self.pf['LengthUnits']], 
             [np.min(self.data[dd].dtPhoton)] * 2, color = 'r', ls = '-')        
         
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'$\Delta t_{\mathrm{phot}} / \mathrm{TimeUnits}$') 
         self.ax.annotate(r'$\Delta t_{\mathrm{next}}$', 
-            (self.data[dd].r[self.data[dd].dtPhoton == np.min(self.data[dd].dtPhoton)] / self.pf.LengthUnits,
+            (self.data[dd].r[self.data[dd].dtPhoton == np.min(self.data[dd].dtPhoton)] / self.pf['LengthUnits'],
              0.85 * np.min(self.data[dd].dtPhoton)),
             va = 'top', ha = 'center')
             
@@ -275,21 +275,22 @@ class Inspect:
             legend = False
         
         for dd in self.data.keys():
-            if self.data[dd].t / self.pf.TimeUnits != t: 
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
                 continue
         
             self.ax = pl.subplot(111)
             
             if ode:
-                self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, self.data[dd].odeit, color = color, ls = ls, label = r'$N_{\mathrm{ODE}}$')
+                self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.data[dd].odeit, 
+                    color = color, ls = ls, label = r'$N_{\mathrm{ODE}}$')
             
             if equation >= 0:
                 if norm:
-                    self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, 
+                    self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], 
                         self.data[dd].rootit[0:,equation] / self.data[dd].odeit, 
                         color = color, ls = ls, label = r'$N_{\mathrm{NR}}/N_{\mathrm{ODE}}$')
                 else:
-                    self.ax.loglog(self.data[dd].r / self.pf.LengthUnits, 
+                    self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], 
                         self.data[dd].rootit[0:,equation], 
                         color = color, ls = ls, label = r'$N_{\mathrm{NR}}$')        
             

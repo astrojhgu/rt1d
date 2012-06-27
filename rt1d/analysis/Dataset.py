@@ -44,7 +44,7 @@ class Dataset:
         self.pf = ReadParameterFile(pf)
                         
         # Also need path to parameter file (not including the parameter file itself)
-        self.od = self.pf.OutputDirectory
+        self.od = self.pf['OutputDirectory']
         
         self.data = self.load()
         self.t, self.dt = self.read_timestep_evolution()
@@ -80,13 +80,13 @@ class Dataset:
         Read in t vs. dt. 
         """
         
-        if not self.pf.OutputTimestep:
+        if not self.pf['OutputTimestep']:
             return None, None
         
-        if not os.path.exists('%s/timestep_evolution.dat' % self.pf.OutputDirectory):
+        if not os.path.exists('%s/timestep_evolution.dat' % self.pf['OutputDirectory']):
             return None, None
             
-        f = open('%s/timestep_evolution.dat' % self.pf.OutputDirectory, 'r')
+        f = open('%s/timestep_evolution.dat' % self.pf['OutputDirectory'], 'r')
         t = []
         dt = []
         for line in f:
