@@ -257,7 +257,7 @@ class Radiate:
                                                                          
             # Retrieve coefficients and what not.
             args = [nabs, nion, n_H, n_He, n_e]
-            args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, t, self.z))
+            args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx, t, self.z, cell))
             
             # Unpack so we have everything by name
             nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, \
@@ -434,7 +434,7 @@ class Radiate:
                 
                 # Retrieve coefficients and what not.
                 args = [nabs, nion, n_H, n_He, n_e]                
-                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx * dc, t, self.z))
+                args.extend(self.coeff.ConstructArgs(args, indices, Lbol, r, ncol, T, dx * dc, t, self.z, cell))
            
                 # Unpack so we have everything by name
                 nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, \

@@ -12,7 +12,6 @@ the parameter space.
 """
 
 from .Constants import *
-from .Extras import dotdictify
 
 def SetDefaultParameterValues():
     pf = \
@@ -29,6 +28,8 @@ def SetDefaultParameterValues():
         "ODEMaxStep": 1e-1,  
         "ODEMaxIter": 1e3,  
         "ODEAdaptiveStep": 1,  
+        "ODEConservativeAdaptiveStep": 0,
+        "ODEConservativeTolerance": 1e-2,
         "CheckForGoofiness": 1,  
         "MaximumGlobalTimestep": 500,  
         "MinimumSpeciesFraction": 1e-6,  
@@ -75,7 +76,7 @@ def SetDefaultParameterValues():
         "OutputDirectory": '.',  
         "OutputFormat": 1,  
         "OutputTimestep": 1,  
-        "OutputRates": 1,  
+        "OutputRates": 0,  
         "ProgressBar": 0,  
         "CurrentTimestep": 1e-8,  
         "InitialTimestep": 0,  
@@ -166,4 +167,4 @@ def SetDefaultParameterValues():
           
         }
 
-    return dotdictify(pf)
+    return pf

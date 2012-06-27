@@ -144,7 +144,7 @@ class Interpolate:
         Retrieve set of 9 indices locating the interpolation points.        
         """
         
-        if not self.pf.MultiSpecies:
+        if not self.pf['MultiSpecies']:
             return None
                                                                                                         
         # Smaller indices

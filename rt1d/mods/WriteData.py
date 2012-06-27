@@ -36,7 +36,8 @@ class WriteData:
     def __init__(self, pf):
         self.pf = pf
         self.cosm = Cosmology(pf)
-        self.OutputFormat = pf.OutputFormat and h5
+        self.OutputFormat = pf['OutputFormat'] and h5
+        self.GridDimensions = int(pf['GridDimensions'])
         
     def WriteAllData(self, data, wct, t, dt):
         """
@@ -87,7 +88,7 @@ class WriteData:
         """    
         
         raise ValueError('WriteASCII not yet implemented.')
-
+        
     def GetDataDumpName(self, wct):
         """
         Return name of data dump to be written

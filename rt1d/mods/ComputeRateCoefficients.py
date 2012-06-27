@@ -34,7 +34,7 @@ class RateCoefficients:
         self.TabulateIntegrals = pf['TabulateIntegrals']
         
         # Discretization techniques
-        if pf.DiscreteSpectrum:
+        if pf['DiscreteSpectrum']:
             
             # Multi-group method
             if pf['FrequencyAveragedCrossSections']:
@@ -52,7 +52,7 @@ class RateCoefficients:
                     self.sigma[i] = PhotoIonizationCrossSection(self.rs.E, species = i)
             
         self.mask = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])    
-        if pf.MultiSpecies:
+        if pf['MultiSpecies']:
             self.donors = np.arange(3)
         else:
             self.donors = np.array([0])    
@@ -60,8 +60,10 @@ class RateCoefficients:
         self.zeros_like_E = np.zeros_like(self.rs.E)
         self.zeros_like_Q = np.zeros_like(self.rs.E)
         self.zeros_like_tau = np.zeros([len(self.zeros_like_E), 3])
+        
+        self.Vsh = 4. * np.pi * ((iits.grid.r + iits.grid.dx)**3 - iits.grid.r**3) / 3.   
                 
-    def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dr, t, z):
+    def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dr, t, z, cell):
         """
         Make list of rate coefficients that we'll pass to solver.
         
@@ -96,7 +98,8 @@ class RateCoefficients:
         Psi_N_dN = np.zeros(3)
         
         # Derived quantities we'll need
-        Vsh = self.ShellVolume(r, dr)        
+        #Vsh = self.ShellVolume(r, dr)        
+        Vsh = self.Vsh[cell]        
         ncell = dr * nabs          
                                         
         # Set normalization constant for each species
@@ -218,7 +221,7 @@ class RateCoefficients:
                         # Ionizations of species k by photoelectrons from species i
                         # Neglect HeII until somebody figures out how that works
                         for k in xrange(2):
-                            if not self.pf.MultiSpecies and k > 0:
+                            if not self.pf['MultiSpecies'] and k > 0:
                                 continue
                             
                             # If these photo-electrons dont have enough energy to ionize species k, continue    

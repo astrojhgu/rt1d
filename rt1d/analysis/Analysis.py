@@ -39,7 +39,7 @@ class Analyze:
         self.esec = SecondaryElectrons(self.pf)         
         
         # Convenience
-        self.GridDimensions = int(self.pf.GridDimensions)
+        self.GridDimensions = int(self.pf['GridDimensions'])
         self.grid = np.arange(self.GridDimensions)
                 
         # Deal with log-grid

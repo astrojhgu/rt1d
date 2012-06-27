@@ -63,7 +63,7 @@ class InitializeIntegralTables:
         self.ProgressBar = pf["ProgressBar"] and pb   
 
         # Column densities - determine automatically
-        if pf.CosmologicalExpansion:
+        if pf['CosmologicalExpansion']:
             self.HIColumnMin = np.floor(np.log10(pf['MinimumSpeciesFraction'] * self.cosm.nH0 * (1. + self.cosm.zf)**3 * min(self.grid.dx)))
             self.HIColumnMax = np.ceil(np.log10(self.cosm.nH0 * (1. + self.cosm.zi)**3 * pf['LengthUnits']))
             self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(10**self.HIColumnMin * self.cosm.y))
@@ -85,7 +85,7 @@ class InitializeIntegralTables:
         self.itabs = None
 
         # Set up column density vectors for each absorber
-        if self.pf.MultiSpecies > 0: 
+        if self.pf['MultiSpecies'] > 0: 
             self.HeIColumn = np.linspace(self.HeIColumnMin, self.HeIColumnMax, self.HeINBins)
             self.HeIIColumn = np.linspace(self.HeIIColumnMin, self.HeIIColumnMax, self.HeIINBins)        
         else:
@@ -216,7 +216,7 @@ class InitializeIntegralTables:
             table_from_pf = True
         else:
             if rank == 0:
-                print "Did not find a pre-existing integral table.  Generating {0}/{1} now...".format(self.pf.OutputDirectory, filename)
+                print "Did not find a pre-existing integral table.  Generating {0}/{1} now...".format(self.pf['OutputDirectory'], filename)
                 print "Range of hydrogen column densities: 10^%g < N_H / cm^-2 < 10^%g" % (self.HIColumnMin, self.HIColumnMax)
                 if self.pf['MultiSpecies']:
                     print "Range of helium column densities: 10^%g < N_He / cm^-2 < 10^%g" % (self.HeIColumnMin, self.HeIColumnMax)

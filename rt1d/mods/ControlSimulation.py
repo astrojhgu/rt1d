@@ -60,7 +60,7 @@ class ControlSimulation:
 
         args = [nabs, nion, n_H, n_He, n_e]
         args.extend(r.coeff.ConstructArgs([nabs, nion, n_H, n_He, n_e], 
-            indices_in, Lbol, self.R0, ncol, T, r.dx[0], 0., self.z0))   
+            indices_in, Lbol, self.R0, ncol, T, r.dx[0], 0., self.z0, 0))   
                                                                           
         nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, \
             zeta, eta, psi, xi, omega, hubble, compton = args
@@ -78,7 +78,7 @@ class ControlSimulation:
         
         dtHeII = 1e50
         dHeIIdt = 1e-50
-        if self.pf.MultiSpecies and self.pf['HeIIRestrictedTimestep'] and nabs[2] > 0:
+        if self.pf['MultiSpecies'] and self.pf['HeIIRestrictedTimestep'] and nabs[2] > 0:
             dHeIIdt = nabs[1] * Gamma[1]            
             dtHeII = self.pf['MaxHeIIChange'] * nabs[2] / dHeIIdt   
                          
@@ -115,7 +115,7 @@ class ControlSimulation:
         dtHI = 1e50     
         if self.pf['HIRestrictedTimestep']:
             dHIIdt = nabs[0] * (Gamma[0] + Beta[0] * n_e) + \
-                     np.sum(gamma[0] * nabs) - \
+                     np.sum(gamma[0] * nabs[0]) - \
                      nion[0] * n_e * alpha[0]
             if self.pf['CosmologicalExpansion']:             
                 dHIIdt -= 3. * nabs[0] * hubble

@@ -178,7 +178,7 @@ class InitializeGrid:
         Initialize doubly ionized helium density - assumed to be very small (can't be exactly zero or it will crash the root finder).
         """
         
-        return self.cosm.Y * self.pf.MinimumSpeciesFraction * self.density[cell] / 4. / m_H
+        return self.cosm.Y * self.pf['MinimumSpeciesFraction'] * self.density[cell] / 4. / m_H
         
     def InitializeElectronDensity(self, cell):
         """

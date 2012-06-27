@@ -360,16 +360,16 @@ class RadiationSource:
         if t >= self.tau: 
             return 0.0
             
-        if self.pf.SourceType == 0:
+        if self.pf['SourceType'] == 0:
             return self.Lph / (np.sum(self.F / self.E / erg_per_ev))
         
-        if self.pf.SourceType == 1:
+        if self.pf['SourceType'] == 1:
             return self.Lbol
         
-        if self.pf.SourceType == 2:
+        if self.pf['SourceType'] == 2:
             return 10**SchaererTable["Luminosity"][SchaererTable["Mass"].index(self.M)] * lsun
             
-        if self.pf.SourceType > 2:
+        if self.pf['SourceType'] > 2:
             Mnow = self.BlackHoleMass(t)
             if M is not None:
                 Mnow = M

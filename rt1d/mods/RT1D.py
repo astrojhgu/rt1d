@@ -89,6 +89,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
         iits = rtm.InitializeIntegralTables(pf)
         if pf['TabulateIntegrals'] or not pf['DiscreteSpectrum']:
             itabs = iits.TabulateRateIntegrals()        
+            pf['TabulateIntegrals'] = 1
             
             if pf['ExitAfterIntegralTabulation']: 
                 continue
@@ -155,7 +156,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
         # SOLVE RADIATIVE TRANSFER              
         while t < (pf['StopTime'] * pf['TimeUnits']):
                                     
-            if pf.OutputTimestep: 
+            if pf['OutputTimestep']: 
                 fdt = open('%s/timestep_evolution.dat' % pf['OutputDirectory'], 'a')
                 print >> fdt, t / pf['TimeUnits'], dt / pf['TimeUnits']
                                                                         
@@ -206,8 +207,8 @@ def Shine(pf, r = None, data = None, IsRestart = False):
                     
         elapsed = time.time() - start  
         if i % size == rank:  
-            print "Calculation %i complete (output to %s).  Elapsed time = %g hours." % (i + 1, 
-                pf['OutputDirectory'], round(elapsed / 3600., 4))
+            print "Calculation %i complete (output to %s).  Elapsed time = %g minutes." % (i + 1, 
+                pf['OutputDirectory'], round(elapsed / 60., 3))
     
         f = open('%s/RunComplete' % pf['OutputDirectory'], 'w')
         print >> f, '# walltime (s)'
