@@ -28,7 +28,7 @@ def SetDefaultParameterValues():
         "ODEMaxStep": 1e-1,  
         "ODEMaxIter": 1e3,  
         "ODEAdaptiveStep": 1,  
-        "ODEConservativeAdaptiveStep": 0,
+        "ODEConservativeAdaptiveStep": 1,
         "ODEConservativeTolerance": 1e-2,
         "CheckForGoofiness": 1,  
         "MaximumGlobalTimestep": 500,  
@@ -40,10 +40,10 @@ def SetDefaultParameterValues():
         
         # Algorithm
         "PhotonConserving": 1,  
+        "SmallTauApproximation": 0,
           
         # Integral tabulation
-        "TabulateIntegrals": 0,  
-        "IntegralTableName": 'None',  
+        "IntegralTable": 'None',  
         "RegenerateTable": 0,  
         "ColumnDensityBinsHI": 200,  
         "ColumnDensityBinsHeI": 100,  

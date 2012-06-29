@@ -115,8 +115,9 @@ class ControlSimulation:
         dtHI = 1e50     
         if self.pf['HIRestrictedTimestep']:
             dHIIdt = nabs[0] * (Gamma[0] + Beta[0] * n_e) + \
-                     np.sum(gamma[0] * nabs[0]) - \
+                     gamma[0][0] * nabs[0] + gamma[0][1] * nabs[1] + gamma[0][2] * nabs[2] - \
                      nion[0] * n_e * alpha[0]
+                     
             if self.pf['CosmologicalExpansion']:             
                 dHIIdt -= 3. * nabs[0] * hubble
             if tau[0] >= self.pf['OpticalDepthDefiningIFront'][0]:
@@ -125,7 +126,7 @@ class ControlSimulation:
         dtHeII = 1e50 
         if self.pf['MultiSpecies'] and self.pf['HeIIRestrictedTimestep']:
             dHeIIdt = nabs[1] * (Gamma[1] + Beta[1] * n_e) + \
-                      np.sum(gamma[1] * nabs) + \
+                      gamma[1][0] * nabs[0] + gamma[1][1] * nabs[1] + gamma[1][2] * nabs[2] + \
                       alpha[2] * n_e * nion[2] - \
                       (alpha[1] + Beta[2] + xi[1]) * nion[1] * n_e
             if tau[1] >= self.pf['OpticalDepthDefiningIFront'][1]:

@@ -119,8 +119,8 @@ class InitializeIntegralTables:
         
         """
         
-        if self.pf['IntegralTableName'] != 'None':
-            return self.pf['IntegralTableName']
+        if self.pf['IntegralTable'] != 'None':
+            return self.pf['IntegralTable']
               
         ms = 'ms%i' % self.pf['MultiSpecies']
         pc = 'pc%i' % self.pf['PhotonConserving']
@@ -211,8 +211,8 @@ class InitializeIntegralTables:
             tabloc = "{0}/input/{1}".format(self.rt1d, filename)
         elif os.path.exists("{0}/{1}".format(self.pf['OutputDirectory'], filename)): 
             tabloc = "{0}/{1}".format(self.pf['OutputDirectory'], filename)
-        elif os.path.exists("%s" % self.pf['IntegralTableName']):
-            tabloc = "%s" % self.pf['IntegralTableName']
+        elif os.path.exists("%s" % self.pf['IntegralTable']):
+            tabloc = "%s" % self.pf['IntegralTable']
             table_from_pf = True
         else:
             if rank == 0:

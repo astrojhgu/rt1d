@@ -14,8 +14,6 @@ import numpy as np
 
 known_conflicts = [ \
     (['InfiniteSpeedOfLight', 0], ['ParallelizationMethod', 1]),
-    (['TabulateIntegrals', 0], ['PhotonConserving', 0]),
-    (['DiscreteSpectrum', 0], ['PhotonConserving', 1], ['TabulateIntegrals', 0], ['IntegralTableName', 'None']),
     (['Isothermal', 1], ['SecondaryIonization', 1])]
 
 def CheckForParameterConflicts(pf):

@@ -119,6 +119,7 @@ def ProblemType(ptype):
              "LengthUnits": 6.6 * cm_per_kpc,
              "StopTime": 500.0,
              "dtDataDump": 10.0, 
+             "OutputRates": 1,
              "MinimumSpeciesFraction": 1e-6, 
              "DensityProfile": 0, 
              "TemperatureProfile": 0, 
@@ -133,8 +134,34 @@ def ProblemType(ptype):
              "SpectrumMinNormEnergy": 0.1, 
              "SpectrumMaxNormEnergy": 100., 
              "DiscreteSpectrum": 0,
-             "Isothermal": 0 
+             "Isothermal": 0
             }
+            
+    # RT06-2: Hydrogen + helium, I-front expansion, temperature evolution allowed, *continuous spectrum*
+    if ptype == 12:
+       pf = {"ProblemType": -2, 
+             "DensityUnits": 2.2245547230998267e-27,
+             "LengthUnits": 6.6 * cm_per_kpc,
+             "StopTime": 500.0,
+             "dtDataDump": 10.0, 
+             "OutputRates": 1,
+             "MinimumSpeciesFraction": 1e-6, 
+             "DensityProfile": 0, 
+             "TemperatureProfile": 0, 
+             "InitialTemperature": 1e2,
+             "IonizationProfile": 0, 
+             "InitialHIIFraction": 1.2e-3, 
+             "MultiSpecies": 1,
+             "SourceType": 1, 
+             "SpectrumType": 1,
+             "SpectrumPhotonLuminosity": 5e48, 
+             "SpectrumMinEnergy": 13.6, 
+             "SpectrumMaxEnergy": 100., \
+             "SpectrumMinNormEnergy": 0.1, 
+             "SpectrumMaxNormEnergy": 100., 
+             "DiscreteSpectrum": 0,
+             "Isothermal": 0 
+            }        
             
     # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum of Wise & Abel (2011)
     if ptype == 2.1:

@@ -45,7 +45,7 @@ def ReadParameterFile(pf):
         parname, eq, parval = line.partition("=")
                         
         # ProblemType option
-        if parname.strip() == 'ProblemType' and float(parval) > -1:
+        if parname.strip() == 'ProblemType':
             pf_new = ProblemType(float(parval))
             for param in pf_new: 
                 pf_dict[param] = pf_new[param]

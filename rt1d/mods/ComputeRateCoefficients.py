@@ -18,8 +18,9 @@ from .Interpolate import Interpolate
 from .RadiationSource import RadiationSource
 from .SecondaryElectrons import SecondaryElectrons
 from .ComputeCrossSections import *
+from scipy.integrate import quad
 
-E_th = [13.6, 24.6, 54.4]
+E_th = np.array([13.6, 24.6, 54.4])
 
 class RateCoefficients:
     def __init__(self, pf, iits = None):
@@ -31,7 +32,6 @@ class RateCoefficients:
         # Initialize integral tables
         self.itabs = iits.itabs
         self.Interpolate = Interpolate(pf, iits)
-        self.TabulateIntegrals = pf['TabulateIntegrals']
         
         # Discretization techniques
         if pf['DiscreteSpectrum']:
@@ -61,8 +61,27 @@ class RateCoefficients:
         self.zeros_like_Q = np.zeros_like(self.rs.E)
         self.zeros_like_tau = np.zeros([len(self.zeros_like_E), 3])
         
-        self.Vsh = 4. * np.pi * ((iits.grid.r + iits.grid.dx)**3 - iits.grid.r**3) / 3.   
+        self.Vsh = 4. * np.pi * ((iits.grid.r + iits.grid.dx)**3 - iits.grid.r**3) / 3.
+        
+        if pf['SmallTauApproximation']:
+            self.sigma_bar = np.zeros(3)
+            self.sigma_wiggle = np.zeros(3)
+            for i in xrange(3):
+                self.sigma_bar[i] = EffectiveCrossSection(self.rs.E, E_th[i], self.rs.Emax, species = i)
+                self.sigma_wiggle[i] = EnergyWeightedCrossSection(self.rs.E, E_th[i], self.rs.Emax, species = i)
+                self.hnu_bar[i] = self.rs.FrequencyAveragedBin(species = i, Emin = E_th[i], Emax = self.rs.Emax)
+                self.bol_frac[i] = quad(self.rs.Spectrum, E_th[i], self.rs.Emax)[0]
+        
+            self.Gamma_const = self.sigma_bar * self.bol_frac / self.hnu_bar
+            self.Heat_const = self.Gamma_const * erg_per_ev * \
+                (self.hnu_bar * self.sigma_wiggle / self.sigma_bar - E_th[i])
                 
+            self.gamma_const = np.zeros([3, 3])
+            for i in xrange(3):
+                self.gamma_const[i] = self.Gamma_const * \
+                    ((self.hnu_bar / E_th[i]) * (self.sigma_wiggle / self.sigma_bar) - \
+                    (E_th / self.hnu_bar[i])) 
+        
     def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dr, t, z, cell):
         """
         Make list of rate coefficients that we'll pass to solver.
@@ -115,7 +134,7 @@ class RateCoefficients:
                 A = 3 * [Lbol / 4. / np.pi / r**2]
                                                 
         # Standard - integral tabulation
-        if self.pf['TabulateIntegrals']:
+        if not self.pf['DiscreteSpectrum']:
          
             # Loop over species   
             for i in xrange(3):
@@ -286,7 +305,7 @@ class RateCoefficients:
                           
         Phi_N = Phi_N_dN = None
                                         
-        if self.pf['TabulateIntegrals']:
+        if not self.pf['DiscreteSpectrum']:
             if self.pf['PhotonConserving']:
                 Phi_N = self.Interpolate.interp(indices_in, "logPhi%i" % species, 
                     [ncol[0], ncol[1], ncol[2], x_HII, t])

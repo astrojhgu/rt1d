@@ -623,6 +623,9 @@ class Radiate:
         nHI = n_H - q[0]
         nHeI = n_He - q[1] - q[2]
         nHeII = q[1]
+        
+        # Electrons (current time-step)
+        #n_e = nion[0] + nion[1] + 2. * nion[2]
                 
         # Always solve hydrogen rate equation
         dqdt[0] = (Gamma[0] + Beta[0] * n_e) * nHI + \
@@ -641,10 +644,20 @@ class Radiate:
                               
             dqdt[2] = (Gamma[2] + Beta[2] * n_e) * q[1] - alpha[2] * n_e * q[2]
         
-        # Temperature evolution - using np.sum is slow :(
+        # Temperature evolution - looks dumb but using np.sum is slow
         if not self.pf['Isothermal']:
-            dqdt[3] = np.sum(k_H * nabs) - n_e * (np.sum(zeta * nabs) \
-                + np.sum(eta * nion) + np.sum(psi * nabs) + q[2] * omega[1])      
+            phoheat = k_H[0] * nabs[0] 
+            ioncool = zeta[0] * nabs[0]
+            reccool = eta[0] * nion[0]
+            exccool = psi[0] * nabs[0]
+            
+            if self.pf['MultiSpecies']:
+                phoheat += k_H[1] * nabs[1] + k_H[2] * nabs[2]
+                ioncool += zeta[1] * nabs[1] + zeta[2] * nabs[2]
+                reccool += eta[1] * nion[1] + eta[2] * nion[2]
+                exccool += psi[1] * nabs[1] + psi[2] * nabs[2]
+            
+            dqdt[3] = phoheat - n_e * (ioncool + reccool + exccool + q[2] * omega[1])
                                
             if self.pf['CosmologicalExpansion']:
                 dqdt[3] -= 2. * hubble * q[3]
@@ -661,7 +674,7 @@ class Radiate:
         """
         
         tau_all_arr = np.zeros([3, self.GridDimensions])    
-        if not self.pf['TabulateIntegrals']:
+        if self.pf['DiscreteSpectrum']:
             sigma0 = PhotoIonizationCrossSection(self.rs.E, species = 0)
             tmp_nHI = np.transpose(len(self.rs.E) * [ncol[0]])   
             tau_all_arr[0] = np.sum(tmp_nHI * sigma0, axis = 1)
