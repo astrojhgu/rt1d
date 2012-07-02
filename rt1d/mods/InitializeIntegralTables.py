@@ -274,13 +274,22 @@ class InitializeIntegralTables:
         # If SED time-dependent
         if self.pf['SourceTimeEvolution']:
             itab['Age'] = f["columns"]["Age"].value
+            self.pf['AgeBins'] = len(itab['Age'])
         
         # Override what's in parameter file if there is a preexisting table and
         # all the bounds are OK
-        self.HIColumn = itab["logNHI"]    
+        self.HIColumn = itab["logNHI"]
+        self.HINBins = len(itab["logNHI"])
         if self.pf['MultiSpecies'] > 0:
             self.HeIColumn = itab["logNHeI"]
             self.HeIIColumn = itab["logNHeII"]
+            self.HeINBins = len(itab["logNHeI"])
+            self.HeIINBins = len(itab["logNHeII"])
+            
+        # Re-run table properties    
+        self.Nd, self.Nt, self.dims, self.values, \
+        self.indices, self.columns, self.dcolumns, self.locs = \
+            self.TableProperties() 
                     
         return itab
         

@@ -47,7 +47,6 @@ class Interpolate:
             self.interp = self.InterpolateQuintLinear
             self.GetIndices = self.GetIndices5D    
                     
-    # Do we still need this anywhere?        
     def OpticalDepth(self, value, species):
         return 10**np.interp(value, self.columns[species], self.itabs['logOpticalDepth%i' % species])
                 

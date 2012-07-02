@@ -40,7 +40,7 @@ def SetDefaultParameterValues():
         
         # Algorithm
         "PhotonConserving": 1,  
-        "SmallTauApproximation": 0,
+        "OpticallyThinColumn": [0, 0, 0],
           
         # Integral tabulation
         "IntegralTable": 'None',  
@@ -76,7 +76,7 @@ def SetDefaultParameterValues():
         "OutputDirectory": '.',  
         "OutputFormat": 1,  
         "OutputTimestep": 1,  
-        "OutputRates": 0,  
+        "OutputRates": 1,  
         "ProgressBar": 0,  
         "CurrentTimestep": 1e-8,  
         "InitialTimestep": 0,  

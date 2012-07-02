@@ -63,25 +63,28 @@ class RateCoefficients:
         
         self.Vsh = 4. * np.pi * ((iits.grid.r + iits.grid.dx)**3 - iits.grid.r**3) / 3.
         
-        if pf['SmallTauApproximation']:
+        self.smallcol = pf['OpticallyThinColumn']
+        if self.smallcol[0] > 0:
             self.sigma_bar = np.zeros(3)
             self.sigma_wiggle = np.zeros(3)
+            self.hnu_bar = np.zeros(3)
+            self.bol_frac = np.zeros(3)
             for i in xrange(3):
-                self.sigma_bar[i] = EffectiveCrossSection(self.rs.E, E_th[i], self.rs.Emax, species = i)
-                self.sigma_wiggle[i] = EnergyWeightedCrossSection(self.rs.E, E_th[i], self.rs.Emax, species = i)
-                self.hnu_bar[i] = self.rs.FrequencyAveragedBin(species = i, Emin = E_th[i], Emax = self.rs.Emax)
+                self.sigma_bar[i] = EffectiveCrossSection(self.rs, E_th[i], self.rs.Emax, species = i)
+                self.sigma_wiggle[i] = EnergyWeightedCrossSection(self.rs, E_th[i], self.rs.Emax, species = i)
+                self.hnu_bar[i] = self.rs.FrequencyAveragedBin(species = i, Emin = E_th[i], Emax = self.rs.Emax)[0]
                 self.bol_frac[i] = quad(self.rs.Spectrum, E_th[i], self.rs.Emax)[0]
         
-            self.Gamma_const = self.sigma_bar * self.bol_frac / self.hnu_bar
-            self.Heat_const = self.Gamma_const * erg_per_ev * \
-                (self.hnu_bar * self.sigma_wiggle / self.sigma_bar - E_th[i])
-                
+            self.Gamma_const = self.sigma_bar * self.bol_frac / self.hnu_bar / erg_per_ev
+            self.Heat_const = erg_per_ev * \
+                (self.hnu_bar * self.sigma_wiggle / self.sigma_bar - E_th)               
+                                                                                                            
             self.gamma_const = np.zeros([3, 3])
             for i in xrange(3):
-                self.gamma_const[i] = self.Gamma_const * \
+                self.gamma_const[i] = erg_per_ev * \
                     ((self.hnu_bar / E_th[i]) * (self.sigma_wiggle / self.sigma_bar) - \
                     (E_th / self.hnu_bar[i])) 
-        
+                            
     def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dr, t, z, cell):
         """
         Make list of rate coefficients that we'll pass to solver.
@@ -117,9 +120,9 @@ class RateCoefficients:
         Psi_N_dN = np.zeros(3)
         
         # Derived quantities we'll need
-        #Vsh = self.ShellVolume(r, dr)        
         Vsh = self.Vsh[cell]        
         ncell = dr * nabs          
+        logncell = np.log10(ncell)
                                         
         # Set normalization constant for each species
         if self.pf['PlaneParallelField']:
@@ -132,6 +135,14 @@ class RateCoefficients:
                 A = Lbol / nabs / Vsh
             else:
                 A = 3 * [Lbol / 4. / np.pi / r**2]
+              
+        small_tau = [False, False, False]      
+        if self.smallcol[0] > 0:      
+            tau_small = (ncol[0] <= self.smallcol[0]) & (ncol[1] <= self.smallcol[0]) \
+                & (ncol[2] <= self.smallcol[0])  
+            small_tau = [tau_small, tau_small, tau_small]
+            for i in xrange(3):        
+                small_tau[i] &= (logncell[i] <= self.smallcol[i])
                                                 
         # Standard - integral tabulation
         if not self.pf['DiscreteSpectrum']:
@@ -147,9 +158,12 @@ class RateCoefficients:
                 indices_out = self.Interpolate.GetIndices([nout[0], nout[1], nout[2], np.log10(x_HII), t])
                                                                                                                       
                 # Photo-Ionization - keep integral values too to be used in heating/secondary ionization
-                Gamma[i], Phi_N[i], Phi_N_dN[i] = self.PhotoIonizationRate(species = i, indices_in = indices,  
-                    Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr, x_HII = x_HII,
-                    Vsh = Vsh, ncell = ncell, indices_out = indices_out, A = A[i], nout = nout, t = t)
+                if small_tau[i]:
+                    Gamma[i] = self.Gamma_const[i] * Lbol / 4. / np.pi / r**2
+                else:
+                    Gamma[i], Phi_N[i], Phi_N_dN[i] = self.PhotoIonizationRate(species = i, indices_in = indices,  
+                        Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr, x_HII = x_HII,
+                        Vsh = Vsh, ncell = ncell, indices_out = indices_out, A = A[i], nout = nout, t = t)
                 
                 if self.pf['CollisionalIonization']:
                     Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)    
@@ -164,9 +178,12 @@ class RateCoefficients:
                     
                 # Heating/cooling                            
                 if not self.pf['Isothermal']:
-                    k_H[i], Psi_N[i], Psi_N_dN[i] = self.PhotoElectricHeatingRate(species = i, Lbol = Lbol, r = r, 
-                        x_HII = x_HII, indices_in = indices, indices_out = indices_out, ncol = ncol, dr = dr, 
-                        nout = nout, nabs = nabs, Phi_N = Phi_N[i], Phi_N_dN = Phi_N_dN[i], A = A[i], t = t)
+                    if small_tau[i]:
+                        k_H[i] = Gamma[i] * self.Heat_const[i]
+                    else:
+                        k_H[i], Psi_N[i], Psi_N_dN[i] = self.PhotoElectricHeatingRate(species = i, Lbol = Lbol, r = r, 
+                            x_HII = x_HII, indices_in = indices, indices_out = indices_out, ncol = ncol, dr = dr, 
+                            nout = nout, nabs = nabs, Phi_N = Phi_N[i], Phi_N_dN = Phi_N_dN[i], A = A[i], t = t)
                     zeta[i] = self.CollisionalIonizationCoolingRate(species = i, T = T)    
                     eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
                     psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)    

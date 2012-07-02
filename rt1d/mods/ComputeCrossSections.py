@@ -62,8 +62,8 @@ def EnergyWeightedCrossSection(rs, E1, E2, species = 0):
         rs: Instance of RadiationSource class.
     """
     
-    return quad(lambda x: rs.Spectrum(x) * PhotoIonizationCrossSection(x, species = species) / \
-        x, E1, E2)[0]   
+    L12 = quad(lambda x: rs.Spectrum(x), E1, E2)[0]
+    return quad(lambda x: rs.Spectrum(x) * PhotoIonizationCrossSection(x, species = species), E1, E2)[0] / L12
     
     
     
