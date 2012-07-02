@@ -76,6 +76,11 @@ class InitializeIntegralTables:
             self.HeIColumnMin = self.HeIIColumnMin = np.floor(np.log10(pf['MinimumSpeciesFraction'] * np.min(self.n_He * self.grid.dx)))
             self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(pf['LengthUnits'] * np.max(self.n_He)))            
         
+        # Override limits if allowing optically thin approx
+        if np.any(pf['OpticallyThinColumn'] > 0):
+            self.HIColumnMin = pf['OpticallyThinColumn'][0]
+            self.HeIColumnMin = self.HeIIColumnMin = pf['OpticallyThinColumn'][1]
+            
         self.HINBins = pf['ColumnDensityBinsHI']
         self.HeINBins = pf['ColumnDensityBinsHeI']
         self.HeIINBins = pf['ColumnDensityBinsHeII']

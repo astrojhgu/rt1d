@@ -63,6 +63,7 @@ class RateCoefficients:
         
         self.Vsh = 4. * np.pi * ((iits.grid.r + iits.grid.dx)**3 - iits.grid.r**3) / 3.
         
+        # Optically thin approximations
         self.smallcol = pf['OpticallyThinColumn']
         if self.smallcol[0] > 0:
             self.sigma_bar = np.zeros(3)
@@ -81,8 +82,8 @@ class RateCoefficients:
                                                                                                             
             self.gamma_const = np.zeros([3, 3])
             for i in xrange(3):
-                self.gamma_const[i] = erg_per_ev * \
-                    ((self.hnu_bar / E_th[i]) * (self.sigma_wiggle / self.sigma_bar) - \
+                self.gamma_const[i] = ((self.hnu_bar / E_th[i]) * \
+                    (self.sigma_wiggle / self.sigma_bar) - \
                     (E_th / self.hnu_bar[i])) 
                             
     def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dr, t, z, cell):
@@ -201,11 +202,14 @@ class RateCoefficients:
                         if not self.pf['MultiSpecies'] and j > 0:
                             continue
                             
-                        gamma[i][j] += self.SecondaryIonizationRate(Psi_N = Psi_N[j], Psi_N_dN = Psi_N_dN[j],
-                            Phi_N = Phi_N[j], Phi_N_dN = Phi_N_dN[j], t = t,
-                            Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr,
-                            species = i, donor_species = j, x_HII = x_HII, A = A[j],
-                            indices_in = indices, indices_out = indices_out, nout = nout)
+                        if small_tau[j]:
+                            gamma[i][j] += Gamma[j] * self.gamma_const[i][j]
+                        else:        
+                            gamma[i][j] += self.SecondaryIonizationRate(Psi_N = Psi_N[j], Psi_N_dN = Psi_N_dN[j],
+                                Phi_N = Phi_N[j], Phi_N_dN = Phi_N_dN[j], t = t,
+                                Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr,
+                                species = i, donor_species = j, x_HII = x_HII, A = A[j],
+                                indices_in = indices, indices_out = indices_out, nout = nout)
                                     
                     gamma[i] /= (E_th[i] * erg_per_ev)        
                                                         
