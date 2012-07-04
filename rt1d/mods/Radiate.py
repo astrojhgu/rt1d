@@ -624,9 +624,6 @@ class Radiate:
         nHeI = n_He - q[1] - q[2]
         nHeII = q[1]
         
-        # Electrons (current time-step)
-        #n_e = nion[0] + nion[1] + 2. * nion[2]
-                
         # Always solve hydrogen rate equation
         dqdt[0] = (Gamma[0] + Beta[0] * n_e) * nHI + \
                   (gamma[0][0] * nHI + gamma[0][1] * nHeI + gamma[0][2] * nHeII) - \

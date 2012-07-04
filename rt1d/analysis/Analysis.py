@@ -63,7 +63,8 @@ class Analyze:
         
         # Read integral table if it exists.
         self.tname = self.iits.DetermineTableName()
-        if os.path.exists('%s/%s' % (self.ds.od, self.tname)) and retabulate:
+        if (os.path.exists('%s/%s' % (self.ds.od, self.tname)) and retabulate) or \
+            self.pf['IntegralTable']:
             self.itabs = self.iits.TabulateRateIntegrals()
             self.interp = Interpolate(self.pf, self.iits)
         else:

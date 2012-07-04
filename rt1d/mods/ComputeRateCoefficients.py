@@ -64,8 +64,10 @@ class RateCoefficients:
         self.Vsh = 4. * np.pi * ((iits.grid.r + iits.grid.dx)**3 - iits.grid.r**3) / 3.
         
         # Optically thin approximations
+        self.AllowSmallTauApprox = 0
         self.smallcol = pf['OpticallyThinColumn']
         if self.smallcol[0] > 0:
+            self.AllowSmallTauApprox = 1
             self.sigma_bar = np.zeros(3)
             self.sigma_wiggle = np.zeros(3)
             self.hnu_bar = np.zeros(3)
@@ -137,12 +139,16 @@ class RateCoefficients:
             else:
                 A = 3 * [Lbol / 4. / np.pi / r**2]
               
+        # Check to see if we're in the small tau limit      
         small_tau = [False, False, False]      
-        if self.smallcol[0] > 0:      
-            tau_small = (ncol[0] <= self.smallcol[0]) & (ncol[1] <= self.smallcol[0]) \
-                & (ncol[2] <= self.smallcol[0])  
+        if self.AllowSmallTauApprox:      
+            tau_small = (ncol[0] <= self.smallcol[0]) & (ncol[1] <= self.smallcol[1]) \
+                & (ncol[2] <= self.smallcol[2])  
             small_tau = [tau_small, tau_small, tau_small]
-            for i in xrange(3):        
+            for i in xrange(3): 
+                if i > 0 and not self.pf['MultiSpecies']:
+                    continue
+                           
                 small_tau[i] &= (logncell[i] <= self.smallcol[i])
                                                 
         # Standard - integral tabulation
@@ -167,7 +173,7 @@ class RateCoefficients:
                         Vsh = Vsh, ncell = ncell, indices_out = indices_out, A = A[i], nout = nout, t = t)
                 
                 if self.pf['CollisionalIonization']:
-                    Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)    
+                    Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
                
                 # Recombination
                 alpha[i] = self.RadiativeRecombinationRate(species = i, T = T)
@@ -185,6 +191,7 @@ class RateCoefficients:
                         k_H[i], Psi_N[i], Psi_N_dN[i] = self.PhotoElectricHeatingRate(species = i, Lbol = Lbol, r = r, 
                             x_HII = x_HII, indices_in = indices, indices_out = indices_out, ncol = ncol, dr = dr, 
                             nout = nout, nabs = nabs, Phi_N = Phi_N[i], Phi_N_dN = Phi_N_dN[i], A = A[i], t = t)
+                    
                     zeta[i] = self.CollisionalIonizationCoolingRate(species = i, T = T)    
                     eta[i] = self.RecombinationCoolingRate(species = i, T = T) 
                     psi[i] = self.CollisionalExcitationCoolingRate(species = i, T = T, nabs = nabs, nion = nion)    

@@ -40,7 +40,7 @@ def SetDefaultParameterValues():
         
         # Algorithm
         "PhotonConserving": 1,  
-        "OpticallyThinColumn": [0, 0, 0],
+        "OpticallyThinColumn": [15, 16, 0],
           
         # Integral tabulation
         "IntegralTable": 'None',  
