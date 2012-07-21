@@ -64,7 +64,7 @@ class Analyze:
         # Read integral table if it exists.
         self.tname = self.iits.DetermineTableName()
         if (os.path.exists('%s/%s' % (self.ds.od, self.tname)) and retabulate) or \
-            self.pf['IntegralTable']:
+            os.path.exists(self.pf['IntegralTable']):            
             self.itabs = self.iits.TabulateRateIntegrals()
             self.interp = Interpolate(self.pf, self.iits)
         else:
@@ -190,7 +190,6 @@ class Analyze:
         self.ax.set_xscale('log')
         self.ax.set_yscale('log')
         
-        ct = 0
         for dd in self.data.keys():
             if self.data[dd].t / self.pf['TimeUnits'] not in t: 
                 continue
@@ -207,9 +206,7 @@ class Analyze:
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeII}}$\')' % (dd, dd, 'x_HeII', '--', color))
                 exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeIII}}$\')' % (dd, dd, 'x_HeIII', ':', color))                
-            
-            ct += 1
-            
+                        
         self.ax.set_xscale(xscale)
         self.ax.set_yscale(yscale)    
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 

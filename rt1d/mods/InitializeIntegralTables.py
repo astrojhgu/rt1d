@@ -77,7 +77,7 @@ class InitializeIntegralTables:
             self.HeIColumnMax = self.HeIIColumnMax = np.ceil(np.log10(pf['LengthUnits'] * np.max(self.n_He)))            
         
         # Override limits if allowing optically thin approx
-        if np.any(pf['OpticallyThinColumn'] > 0):
+        if pf['AllowSmallTauApprox']:
             self.HIColumnMin = pf['OpticallyThinColumn'][0]
             self.HeIColumnMin = self.HeIIColumnMin = pf['OpticallyThinColumn'][1]
             
@@ -126,7 +126,10 @@ class InitializeIntegralTables:
         
         if self.pf['IntegralTable'] != 'None':
             return self.pf['IntegralTable']
-              
+            
+        if self.pf['SpectrumFile'] != 'None':
+            return '%s_integral_table.hdf5' % self.pf['SpectrumFile'].partition('.')[0]               
+        
         ms = 'ms%i' % self.pf['MultiSpecies']
         pc = 'pc%i' % self.pf['PhotonConserving']
         si = 'si%i' % self.pf['SecondaryIonization']
@@ -175,7 +178,7 @@ class InitializeIntegralTables:
         Hlim = '%i%i' % (self.HIColumn[0], self.HIColumn[-1])
         Helim = '%i%i' % (self.HeIColumn[0], self.HeIColumn[-1])        
                     
-        return "%s_%s_%s_%s_%s_%s_%s_%s_%s_%s.h5" % (src, prop, pc, ms, sed, td, si, dims, Hlim, Helim)
+        return "%s_%s_%s_%s_%s_%s_%s_%s_%s_%s.hdf5" % (src, prop, pc, ms, sed, td, si, dims, Hlim, Helim)
             
     def DatasetName(self, integral, species, donor_species = None):
         """
@@ -665,7 +668,7 @@ class InitializeIntegralTables:
         if type(E) in [float, np.float32, np.float64]:
             E = [E]
                                            
-        tau = self.zeros
+        tau = np.zeros_like(E)
         for i, energy in enumerate(E):
             tmp = 0
             
@@ -677,19 +680,24 @@ class InitializeIntegralTables:
                 tmp += self.PartialOpticalDepth(energy, ncol[2], 2)
                  
             tau[i] = tmp     
-                        
+        
         return tau
         
     def Phi(self, ncol, species = 0, donor_species = 0, xHII = 0.0, t = None):
         """
         Equation 10 in Mirocha et al. 2012.
-        """      
+        """
                                 
         # Otherwise, continuous spectrum                
         if self.pf['PhotonConserving']:
-            integrand = lambda E: 1e-10 * self.rs.Spectrum(E, t = t) * \
-                np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
-                (E * erg_per_ev)
+            if self.pf['SpectrumFile'] is not 'None':
+                return np.trapz(self.rs.Spectrum(None, t = t)[self.rs.i_Eth[species]:] * \
+                    np.exp(-self.SpecificOpticalDepth(self.rs.E[self.rs.i_Eth[species]:], ncol)) / \
+                    (self.rs.E[self.rs.i_Eth[species]:] * erg_per_ev), self.rs.E[self.rs.i_Eth[species]:])
+            else:
+                integrand = lambda E: 1e-10 * self.rs.Spectrum(E, t = t) * \
+                    np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
+                    (E * erg_per_ev)
         else:
             integrand = lambda E: 1e-10 * PhotoIonizationCrossSection(E, species) * \
                 self.rs.Spectrum(E, t = t) * \
@@ -705,8 +713,13 @@ class InitializeIntegralTables:
         
         # Otherwise, continuous spectrum    
         if self.pf['PhotonConserving']:
-            integrand = lambda E: self.rs.Spectrum(E, t = t) * \
-                np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
+            if self.pf['SpectrumFile'] is not 'None':
+                return np.trapz(self.rs.Spectrum(t = t)[self.rs.i_Eth[species]:] * \
+                    np.exp(-self.SpecificOpticalDepth(self.rs.E[self.rs.i_Eth[species]:], 
+                    ncol)), self.rs.E[self.rs.i_Eth[species]:])
+            else:
+                integrand = lambda E: self.rs.Spectrum(E, t = t) * \
+                    np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
         else:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * \
                 self.rs.Spectrum(E, t = t) * \

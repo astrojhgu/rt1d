@@ -17,6 +17,7 @@ SourceType = 0: Monochromatic/Polychromatic emission of SpectrumPhotonLuminosity
      
 """
 
+import h5py
 import numpy as np
 from scipy.integrate import quad
 from Integrate import simpson as integrate                  # why did scipy.integrate.quad mess up LphotNorm? 
@@ -47,9 +48,16 @@ SpectrumType = 1 (blackbody)
 SpectrumType = 2 (blackbody, but temperature and luminosity from Schaerer)
 SpectrumType = 3 (multi-color disk)
 SpectrumType = 4 (simple power-law)
+SpectrumType = 5 (user-defined)
 """
-                                
-class RadiationSource:
+
+def RadiationSource(pf):
+    if pf['SpectrumFile'] is not 'None':
+        return RadiationSourceFromFile(pf) 
+    else:
+        return RadiationSourceModel(pf)  
+                                                 
+class RadiationSourceModel:
     def __init__(self, pf):
         self.pf = pf
         
@@ -475,6 +483,56 @@ class RadiationSource:
                 
         pl.draw()
         
+class RadiationSourceFromFile:
+    def __init__(self, pf):
+        self.pf = pf
+        self.fn = pf['SpectrumFile']
+        
+        self.tau = pf['SourceLifetime'] * pf['TimeUnits']
+        
+        # Read spectrum - expect hdf5 with (at least) E, L_E, and time_yr datasets.
+        f = h5py.File(self.fn)
+        self.E = f['E'].value
+        self.dE = np.diff(self.E)
+        self.t = self.Age = f['time_yr'].value * s_per_yr
+        self.Nt = len(self.t)
+        self.L_E = f['L_E'].value
+        
+        self.Emin = np.min(self.E)
+        self.Emax = np.max(self.E)
+        
+        # Threshold indices
+        self.i_Eth = np.zeros(3)
+        for i, energy in enumerate(E_th):
+            loc = np.argmin(np.abs(energy - self.E))
+            
+            if self.E[loc] < energy:
+                loc += 1
+            
+            self.i_Eth[i] = loc
+        
+        self.Lbol = self.BolometricLuminosity(0)
+        
+    def Spectrum(self, E = None, t = 0.0):
+        """
+        Return specific luminosity.
+        """
+        
+        i = self.get_time_index(t)        
+        return self.L_E[i] / self.BolometricLuminosity(t = t)
+        
+    def Intensity(self, E = None):
+        i = self.get_time_index(t)
+        return self.L_E[i]
+        
+    def BolometricLuminosity(self, t = 0.0):
+        i = self.get_time_index(t)
+        return np.trapz(self.L_E[i], self.E)
+        
+    def get_time_index(self, t):
+        i = np.argmin(np.abs(t - self.t))
+        return min(i, self.Nt - 2)       
+
 def listify(pf):
     """
     Turn any Spectrum parameter into a list, if it isn't already.

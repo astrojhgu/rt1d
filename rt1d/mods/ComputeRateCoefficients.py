@@ -38,7 +38,7 @@ class RateCoefficients:
             
             # Multi-group method
             if pf['FrequencyAveragedCrossSections']:
-                self.N = int(pf['eFrequencyGroups'])
+                self.N = int(pf['FrequencyGroups'])
                 self.sigma = np.zeros([3, self.N])
                 for i in xrange(3):
                     for j in xrange(self.N):
@@ -64,10 +64,8 @@ class RateCoefficients:
         self.Vsh = 4. * np.pi * ((iits.grid.r + iits.grid.dx)**3 - iits.grid.r**3) / 3.
         
         # Optically thin approximations
-        self.AllowSmallTauApprox = 0
         self.smallcol = pf['OpticallyThinColumn']
-        if self.smallcol[0] > 0:
-            self.AllowSmallTauApprox = 1
+        if self.pf['AllowSmallTauApprox'] > 0:
             self.sigma_bar = np.zeros(3)
             self.sigma_wiggle = np.zeros(3)
             self.hnu_bar = np.zeros(3)
@@ -141,7 +139,7 @@ class RateCoefficients:
               
         # Check to see if we're in the small tau limit      
         small_tau = [False, False, False]      
-        if self.AllowSmallTauApprox:      
+        if self.pf['AllowSmallTauApprox']:      
             tau_small = (ncol[0] <= self.smallcol[0]) & (ncol[1] <= self.smallcol[1]) \
                 & (ncol[2] <= self.smallcol[2])  
             small_tau = [tau_small, tau_small, tau_small]
@@ -152,7 +150,7 @@ class RateCoefficients:
                 small_tau[i] &= (logncell[i] <= self.smallcol[i])
                                                 
         # Standard - integral tabulation
-        if not self.pf['DiscreteSpectrum']:
+        if not self.pf['DiscreteSpectrum'] or self.pf['ForceIntegralTabulation']:
          
             # Loop over species   
             for i in xrange(3):
@@ -171,7 +169,7 @@ class RateCoefficients:
                     Gamma[i], Phi_N[i], Phi_N_dN[i] = self.PhotoIonizationRate(species = i, indices_in = indices,  
                         Lbol = Lbol, r = r, ncol = ncol, nabs = nabs, dr = dr, x_HII = x_HII,
                         Vsh = Vsh, ncell = ncell, indices_out = indices_out, A = A[i], nout = nout, t = t)
-                
+                                
                 if self.pf['CollisionalIonization']:
                     Beta[i] = self.CollisionalIonizationRate(species = i, T = T, n_e = n_e)
                
@@ -333,7 +331,7 @@ class RateCoefficients:
                           
         Phi_N = Phi_N_dN = None
                                         
-        if not self.pf['DiscreteSpectrum']:
+        if self.pf['ForceIntegralTabulation'] or not self.pf['DiscreteSpectrum']:
             if self.pf['PhotonConserving']:
                 Phi_N = self.Interpolate.interp(indices_in, "logPhi%i" % species, 
                     [ncol[0], ncol[1], ncol[2], x_HII, t])

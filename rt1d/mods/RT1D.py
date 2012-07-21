@@ -87,7 +87,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
     
         # Initialize integral tables
         iits = rtm.InitializeIntegralTables(pf)
-        if not pf['DiscreteSpectrum']:
+        if not pf['DiscreteSpectrum'] or pf['ForceIntegralTabulation']:
             itabs = iits.TabulateRateIntegrals()        
             
             if pf['ExitAfterIntegralTabulation']: 

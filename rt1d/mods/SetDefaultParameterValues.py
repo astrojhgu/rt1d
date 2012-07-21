@@ -40,6 +40,7 @@ def SetDefaultParameterValues():
         
         # Algorithm
         "PhotonConserving": 1,  
+        "AllowSmallTauApprox": 0,
         "OpticallyThinColumn": [15, 16, 0],
           
         # Integral tabulation
@@ -152,6 +153,8 @@ def SetDefaultParameterValues():
         "SpectrumPhotonLuminosity": 5e48,  
         "SpectrumAbsorbingColumn": 0,  
         "SpectrumColorCorrectionFactor": 1.7,
+        "SpectrumFile": 'None',
+        "ForceIntegralTabulation": 0,
           
         # Set discrete spectrum manually  
         "DiscreteSpectrumSED": [13.6],  
