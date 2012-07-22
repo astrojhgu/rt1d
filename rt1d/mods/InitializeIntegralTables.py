@@ -102,7 +102,8 @@ class InitializeIntegralTables:
         
         # What will our table look like?
         self.Nd, self.Nt, self.dims, self.values, \
-        self.indices, self.columns, self.dcolumns, self.locs = \
+        self.indices, self.columns, self.dcolumns, self.locs, \
+        self.colnames = \
             self.TableProperties()
                         
         # Retrive rt1d environment - look for tables in rt1d/input
@@ -296,7 +297,8 @@ class InitializeIntegralTables:
             
         # Re-run table properties    
         self.Nd, self.Nt, self.dims, self.values, \
-        self.indices, self.columns, self.dcolumns, self.locs = \
+        self.indices, self.columns, self.dcolumns, self.locs, \
+        self.colnames = \
             self.TableProperties() 
                     
         return itab
@@ -358,10 +360,23 @@ class InitializeIntegralTables:
             for key in ['logNHI', 'logNHeI', 'logNHeII', 'logAge', 'logxHII']:
                 if key in has_keys:
                     has_keys.remove(key)
-                                
+            
+            # Check to see if anything we need is missing                    
             for name in tnames:
                 if name not in has_keys:
                     items_missing += 1
+                    
+            # If tables have higher dimensionality than we require, correct them
+            for tn in tnames:
+                
+                if len(itabs[tn].shape) == self.Nd:
+                    continue
+                
+                if re.search('OpticalDepth', tn):
+                    continue
+                
+                while list(itabs[tn].shape) != self.dims:
+                    itabs[tn] = itabs[tn][...,0]
             
             if items_missing == 0:            
                 self.itabs = itabs
@@ -523,7 +538,8 @@ class InitializeIntegralTables:
         Nd = 1                  # Table dimensions
         Nt = 1. * Ns            # Number of tables (unique quantities)
         dims = [self.HINBins]   # Number of elements in each dimension of each table        
-        columns = [self.HIColumn]                    
+        columns = [self.HIColumn]
+        colnames = ['logNHI']                    
         locs = [0]
                                     
         if not self.pf['Isothermal']:
@@ -532,7 +548,8 @@ class InitializeIntegralTables:
         if self.pf['MultiSpecies'] >= 1:
             Nd += 2
             dims.extend([self.HeINBins, self.HeIINBins]) 
-            columns.extend([self.HeIColumn, self.HeIIColumn]) 
+            columns.extend([self.HeIColumn, self.HeIIColumn])
+            colnames.extend(['logNHeI', 'logNHeII']) 
             locs.extend([1, 2])
           
         if self.pf['SecondaryIonization'] >= 2:
@@ -541,12 +558,14 @@ class InitializeIntegralTables:
             Nt += 2. * Ns                                  # Phi/Psi Hat
             dims.append(self.pf['IonizedFractionBins'])
             columns.append(self.esec.log_xHII)
+            colnames.append('logx')
             locs.append(3)
             
         if self.pf['SourceTimeEvolution']:
             Nd += 1
             dims.append(self.pf['AgeBins'])
             columns.append(self.rs.Age)
+            colnames.append('Age')
             locs.append(4)
             
         indices = []
@@ -575,7 +594,7 @@ class InitializeIntegralTables:
             indices = indices[0]     
             dcol = np.diff(values)[0]    
             
-        return Nd, Nt, dims, values, indices, columns, dcol, locs
+        return Nd, Nt, dims, values, indices, columns, dcol, locs, colnames
                                      
     def ToCompute(self):
         """

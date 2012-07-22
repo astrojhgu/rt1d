@@ -15,6 +15,9 @@ SourceType = 0: Monochromatic/Polychromatic emission of SpectrumPhotonLuminosity
    on your choice of bins.
      
      
+if SpectrumFile != 'None', the contents of the file will override all source / 
+spectrum parameters.     
+     
 """
 
 import h5py
@@ -55,7 +58,7 @@ def RadiationSource(pf):
     if pf['SpectrumFile'] is not 'None':
         return RadiationSourceFromFile(pf) 
     else:
-        return RadiationSourceModel(pf)  
+        return RadiationSourceModel(pf)
                                                  
 class RadiationSourceModel:
     def __init__(self, pf):
@@ -531,7 +534,7 @@ class RadiationSourceFromFile:
         
     def get_time_index(self, t):
         i = np.argmin(np.abs(t - self.t))
-        return min(i, self.Nt - 2)       
+        return max(min(i, self.Nt - 2), 0)
 
 def listify(pf):
     """

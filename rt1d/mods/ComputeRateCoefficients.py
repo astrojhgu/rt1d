@@ -327,7 +327,7 @@ class RateCoefficients:
         """     
                           
         if t >= self.rs.tau:
-            return 0.0, 0.0, 0.0  
+            return 0.0, 0.0, 0.0
                           
         Phi_N = Phi_N_dN = None
                                         
