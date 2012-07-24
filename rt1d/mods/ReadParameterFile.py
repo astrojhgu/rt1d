@@ -17,7 +17,7 @@ monochromatic source of photons).
 
 import re, copy, h5py
 import numpy as np
-from .SetDefaultParameterValues import SetDefaultParameterValues
+from .SetDefaultParameterValues import SetAllDefaults
 from .ProblemTypes import ProblemType
 
 def ReadParameterFile(pf):
@@ -27,7 +27,7 @@ def ReadParameterFile(pf):
     they be floats, tuples, or lists.
     """
     f = open(pf, "r")
-    pf_dict = SetDefaultParameterValues()
+    pf_dict = SetAllDefaults()
     for line in f:
         if not line.split(): 
             continue
@@ -87,4 +87,6 @@ def ReadRestartFile(rf):
         data[field] = f["data"][field].value
             
     return pf, data       
+
+
     
