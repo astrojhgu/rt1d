@@ -84,20 +84,23 @@ def Shine(pf, r = None, data = None, IsRestart = False):
         # Wait here if parallelizing over grid
         if size > 1 and pf['ParallelizationMethod'] == 1: 
             MPI.COMM_WORLD.barrier()
-    
-        # Initialize integral tables
-        iits = rtm.InitializeIntegralTables(pf)
-        if not pf['DiscreteSpectrum'] or pf['ForceIntegralTabulation']:
-            itabs = iits.TabulateRateIntegrals()        
+          
+        # Initialize radiation source class(es)    
+        rs = rtm.RadiationSources(pf)
             
-            if pf['ExitAfterIntegralTabulation']: 
-                continue
-        else:
-            if i % size == rank:
-                msg = 'No integral tabulation necessary!'
-                if IsRestart:
-                    msg += '\n'
-                print msg 
+        # Initialize integral tables
+        #iits = rtm.InitializeIntegralTables(pf)
+        #if not pf['DiscreteSpectrum'] or pf['ForceIntegralTabulation']:
+        #    itabs = iits.TabulateRateIntegrals()        
+        #    
+        #    if pf['ExitAfterIntegralTabulation']: 
+        #        continue
+        #else:
+        #    if i % size == rank:
+        #        msg = 'No integral tabulation necessary!'
+        #        if IsRestart:
+        #            msg += '\n'
+        #        print msg 
                     
         # Initialize radiation and write data classes
         r = rtm.Radiate(pf, iits)

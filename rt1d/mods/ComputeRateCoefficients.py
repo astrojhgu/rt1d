@@ -23,9 +23,9 @@ from scipy.integrate import quad
 E_th = np.array([13.6, 24.6, 54.4])
 
 class RateCoefficients:
-    def __init__(self, pf, iits = None):
+    def __init__(self, pf, rs = None):
         self.pf = pf        
-        self.rs = RadiationSource(pf)
+        self.rs = rs
         self.cosm = Cosmology(pf)
         self.esec = SecondaryElectrons(pf)
         

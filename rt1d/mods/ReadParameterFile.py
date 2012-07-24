@@ -20,14 +20,21 @@ import numpy as np
 from .SetDefaultParameterValues import SetAllDefaults
 from .ProblemTypes import ProblemType
 
-def ReadParameterFile(pf):
+def ReadParameterFile(pf, setdefs = True):
     """
     Read in the parameter file, and parse the parameter names and arguments.
     Return a dictionary that contains all parameters and their values, whether 
     they be floats, tuples, or lists.
     """
-    f = open(pf, "r")
-    pf_dict = SetAllDefaults()
+    
+    # Set defaults (possibly)
+    if setdefs:
+        pf_dict = SetAllDefaults()
+    else:
+        pf_dict = {}
+    
+    # Read file 
+    f = open(pf, "r")   
     for line in f:
         if not line.split(): 
             continue
@@ -65,7 +72,11 @@ def ReadParameterFile(pf):
                 tmp = []                           
                 if parval[0][0] == '[':
                     for element in parval: 
-                        tmp.append(float(element.strip("[,]")))
+                        new_element = element.strip("[,]")
+                        try:
+                            tmp.append(float(new_element.strip()))
+                        except ValueError:
+                            tmp.append(str(new_element.strip()))
                     parval = list(tmp)
                 else:
                     raise ValueError('The format of this parameter is not understood.')

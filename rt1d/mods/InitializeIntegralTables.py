@@ -17,7 +17,6 @@ import h5py, os, re, itertools
 from .Constants import *
 from .Cosmology import Cosmology 
 from .InitializeGrid import InitializeGrid
-from .RadiationSource import RadiationSource
 from .SecondaryElectrons import SecondaryElectrons
 from .ComputeCrossSections import PhotoIonizationCrossSection
 
@@ -53,9 +52,9 @@ negligible_column = 1
 scipy.seterr(all = 'ignore')
 
 class InitializeIntegralTables: 
-    def __init__(self, pf):
+    def __init__(self, pf, rs):
         self.pf = pf
-        self.rs = RadiationSource(pf)
+        self.rs = rs
         self.cosm = Cosmology(pf)
         self.esec = SecondaryElectrons(pf)
         self.grid = InitializeGrid(pf)
@@ -499,6 +498,8 @@ class InitializeIntegralTables:
             
         if rank == 0:    
             self.lookup_tab.close()    
+            
+        print 'Integral tabulation complete.\n'    
             
         self.itabs = itabs    
         return itabs         

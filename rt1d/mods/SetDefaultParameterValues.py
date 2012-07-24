@@ -30,7 +30,7 @@ def SetDefaultSourceParameters():
     pf = \
         {
         "NumberOfSources": 1,
-        "SourceParameters": 'None',
+        "SourceFiles": 0,
         "SourceType": 1,  
         "SourceTemperature": 1e5,  
         "SourceMass": 1e3,  
@@ -73,9 +73,6 @@ def SetDefaultSpectrumParameters():
         "ColumnDensityBinsHeII": 100,  
         "IonizedFractionBins": 20,
         "AgeBins": 20,
-        "ExitAfterIntegralTabulation": 0,  
-        
-        "SecondaryElectronDataFile": 'None',
         }
         
     return pf    
@@ -153,6 +150,7 @@ def SetDefaultControlParameters():
         "MaxRedshiftStep": 1, 
         "AllowSmallTauApprox": 0,
         "OpticallyThinColumn": [15, 16, 0],
+        "ExitAfterIntegralTabulation": 0,
         }
         
     return pf
