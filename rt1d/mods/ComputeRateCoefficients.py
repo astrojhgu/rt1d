@@ -81,7 +81,7 @@ class RateCoefficients:
         # Loop over radiation sources                            
         for rs, source in enumerate(self.rs.all_sources):
             
-            ON = source.SourceOn(t)
+            ON = source.SourceOn(t)    
                                                                 
             # Set normalization constant for each species
             if self.pf['PlaneParallelField']:
@@ -94,7 +94,7 @@ class RateCoefficients:
                     A = Lbol[rs] / nabs / Vsh
                 else:
                     A = 3 * [Lbol[rs] / 4. / np.pi / r**2]
-                                      
+                                                                         
             # Check to see if we're in the small tau limit      
             small_tau = [False, False, False]      
             if self.pf['AllowSmallTauApprox']:      
@@ -213,11 +213,11 @@ class RateCoefficients:
                                                                         
                         # Photo-ionization by *this* energy group
                         Gamma_E[j], tmp, tmp = self.PhotoIonizationRate(rs = source, E = E, 
-                            Qdot = Qdot[j], nabs = nabs, dr = dr, species = i, t = t,
+                            Qdot = Qdot[j], nabs = nabs, dr = dr, species = i, t = t, ON = ON,
                             Vsh = Vsh, tau_E = tau_E, tau_c = tau_c[j][i], A = 1.0)
                             
-                        Gamma_E[j] = Gamma_E[j]    
-                            
+                        Gamma_E[j] = Gamma_E[j] 
+                                                    
                         # Total photo-ionization tally
                         Gamma[i] += Gamma_E[j]
                         
@@ -290,10 +290,10 @@ class RateCoefficients:
             Lbol = Bolometric luminosity of source (erg/s)
                         
         """     
-                          
+                                  
         if not ON:
             return 0.0, 0, 0
-                          
+                                  
         Phi_N = Phi_N_dN = None
                                         
         if rs.pf['ForceIntegralTabulation'] or not rs.pf['DiscreteSpectrum']:
