@@ -9,7 +9,7 @@ Description: Driver script for a 1D radiative transfer code.
 
 """
 
-import sys, os, time, copy
+import sys, os, time, copy, shutil
 import numpy as np
 
 try:
@@ -43,7 +43,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
         if IsRestart: 
             print "Restarting from {0}".format(sys.argv[2])
         print "Press ctrl-C to quit at any time.\n" 
-    
+          
     # Start clock
     start = time.time()
     
@@ -62,7 +62,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
                 print msg
             print '\n'    
             return
-              
+            
         # Initialize grid and file system
         if data is not None:
             data = data
@@ -75,7 +75,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
             data = g.InitializeFields()
                     
             if i % size == rank:
-                if pf['OutputDirectory'] != './':
+                if pf['OutputDirectory'] != '.':
                     try: 
                         os.mkdir(pf['OutputDirectory'])
                     except OSError: 
@@ -87,23 +87,23 @@ def Shine(pf, r = None, data = None, IsRestart = False):
           
         # Initialize radiation source class(es)    
         rs = rtm.RadiationSources(pf)
+        
+        # Copy a few things to OutputDirectory    
+        if pf['OutputDirectory'] != '.':
+        
+            # Copy source files to OutputDirectory
+            if pf['SourceFiles'] != 'None':
+                for fn in pf['SourceFiles']:
+                    shutil.copy(fn, pf['OutputDirectory'])
             
-        # Initialize integral tables
-        #iits = rtm.InitializeIntegralTables(pf)
-        #if not pf['DiscreteSpectrum'] or pf['ForceIntegralTabulation']:
-        #    itabs = iits.TabulateRateIntegrals()        
-        #    
-        #    if pf['ExitAfterIntegralTabulation']: 
-        #        continue
-        #else:
-        #    if i % size == rank:
-        #        msg = 'No integral tabulation necessary!'
-        #        if IsRestart:
-        #            msg += '\n'
-        #        print msg 
-                    
+            # Copy spectrum files to OutputDirectory
+            for src in rs.all_sources:
+                if src.pf['SpectrumFile'] == 'None':
+                    continue
+                shutil.copy(src.pf['SpectrumFile'], pf['OutputDirectory'])
+            
         # Initialize radiation and write data classes
-        r = rtm.Radiate(pf, iits)
+        r = rtm.Radiate(pf, rs, g)
         w = rtm.WriteData(pf)
         
         # Compute initial timestep
@@ -114,7 +114,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
         else:
             dt = r.control.ComputeInitialPhotonTimestep(data, r)
                                                                                                                 
-        # If (probably for testing purposes) we have StopTime << 1, make sure dt <= StopTime        
+        # If (probably for testing purposes) we have StopTime << 1, make sure dt <= StopTime1
         dt = min(dt, pf['StopTime'] * pf['TimeUnits'])
         
         # Figure out data dump times, write out initial dataset (or not, if this is a restart).
@@ -190,7 +190,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
                     wrote = True
                 wct += 1
                 
-            # Raise error if funny stuff happening    
+            # Raise error if any funny stuff happens    
             if dt < 0: 
                 raise ValueError('ERROR: dt < 0.  Exiting.') 
             elif dt == 0:
@@ -213,8 +213,8 @@ def Shine(pf, r = None, data = None, IsRestart = False):
                 pf['OutputDirectory'], round(elapsed / 60., 3))
     
         f = open('%s/RunComplete' % pf['OutputDirectory'], 'w')
-        print >> f, '# walltime (s)'
-        print >> f, elapsed
+        print >> f, '# walltime (s) date'
+        print >> f, elapsed, time.ctime()
         print >> f, ''
         f.close()
             

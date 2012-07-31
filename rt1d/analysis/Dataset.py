@@ -37,14 +37,19 @@ class Dataset:
         # Run directory
         self.rd = pf.rpartition('/')[0]
         
-        if self.rd == '':
+        if not self.rd.strip():
             self.rd = '.'        
                 
         # Read in parameter file
         self.pf = ReadParameterFile(pf)
                         
         # Also need path to parameter file (not including the parameter file itself)
+        # NOTE: THIS IS RELATIVE TO RUN DIRECTORY
         self.od = self.pf['OutputDirectory']
+        
+        # Path to all output - ABSOLUTE PATH
+        self.path_to_output = '%s/%s/%s' % (self.gd, self.rd, self.od)
+        self.path_to_output = self.path_to_output.strip().rstrip('.')
         
         self.data = self.load()
         self.t, self.dt = self.read_timestep_evolution()
@@ -56,7 +61,7 @@ class Dataset:
         
         # List all data*dumps* in this data*set*.
         alldds = []
-        for f in os.listdir("{0}/{1}".format(self.rd, self.od)):
+        for f in os.listdir(self.path_to_output):
             if not re.search('.h5', f): 
                 continue
             if not re.search('dd', f): 
@@ -65,7 +70,7 @@ class Dataset:
             
         ds = {}
         for ddf in alldds:
-            f = h5py.File("{0}/{1}/{2}".format(self.rd, self.od, ddf))
+            f = h5py.File("{0}/{1}".format(self.path_to_output, ddf))
             ID = ddf.partition('.')[0].strip('dd')
             try:
                 ds[int(ID)] = DataDump(f["data"], f["parameters"])
@@ -83,10 +88,10 @@ class Dataset:
         if not self.pf['OutputTimestep']:
             return None, None
         
-        if not os.path.exists('%s/timestep_evolution.dat' % self.pf['OutputDirectory']):
+        if not os.path.exists('%s/timestep_evolution.dat' % self.path_to_output):
             return None, None
             
-        f = open('%s/timestep_evolution.dat' % self.pf['OutputDirectory'], 'r')
+        f = open('%s/timestep_evolution.dat' % self.path_to_output, 'r')
         t = []
         dt = []
         for line in f:

@@ -46,7 +46,7 @@ neglible_tau = 1e-12
 neglible_column = 10
 
 class Radiate:
-    def __init__(self, pf, rs): 
+    def __init__(self, pf, rs, g): 
         self.pf = pf
         
         # Classes
@@ -54,7 +54,7 @@ class Radiate:
         self.cosm = Cosmology(pf)
         self.control = ControlSimulation(pf)
         self.solver = SolveRateEquations(pf)
-        self.coeff = RateCoefficients(pf, rs)
+        self.coeff = RateCoefficients(pf, rs, g)
         
         self.ProgressBar = pf["ProgressBar"] and pb
         
@@ -136,7 +136,13 @@ class Radiate:
         # Retrieve indices used for N-D interpolation
         self.indices_all = []
         for i, col in enumerate(self.ncol_all):
-            self.indices_all.append(self.coeff.Interpolate.GetIndices([col[0], col[1], col[2], np.log10(self.x_HII_arr[i]), t]))
+            tmp = []
+            for rs in self.rs.all_sources:
+                if rs.TableAvailable:
+                    tmp.append(rs.Interpolate.GetIndices([col[0], col[1], col[2], np.log10(self.x_HII_arr[i]), t]))
+                else:
+                    tmp.append(None)
+            self.indices_all.append(tmp)
                                                 
         # Compute tau *between* source and all cells
         tau_all_arr = self.ComputeOpticalDepths([self.ncol_HI, self.ncol_HeI, self.ncol_HeII])
@@ -203,7 +209,9 @@ class Radiate:
             dtphot = dt
         
         # Could change with time for accreting black holes (or not yet implemented sources)
-        Lbol = self.rs.BolometricLuminosity(t)
+        Lbol = []
+        for rs in self.rs.all_sources:
+            Lbol.append(rs.BolometricLuminosity(t))
                                                 
         # Loop over cells radially, solve rate equations, update values in data -> newdata
         for cell in self.grid:   
@@ -261,8 +269,13 @@ class Radiate:
             
             # Unpack so we have everything by name
             nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, \
-                k_H, zeta, eta, psi, xi, omega, hubble, compton = args                                                   
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                k_H, zeta, eta, psi, xi, omega, hubble, compton = args     
+                
+            # Sum ionization + heating over all sources (last axis)            
+            args[5] = np.sum(Gamma, axis = -1) 
+            args[6] = np.sum(gamma, axis = -1)      
+            args[9] = np.sum(k_H, axis = -1)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
             ######################################
             ######## Solve Rate Equations ########
             ######################################        
@@ -567,15 +580,17 @@ class Radiate:
                 
         if self.pf['OutputRates']:
             for i in xrange(3):
-                newdata['PhotoIonizationRate%i' % i][cell] = Gamma[i]
-                newdata['PhotoHeatingRate%i' % i][cell] = k_H[i]
+                
+                for j in xrange(self.rs.Ns):
+                    newdata['PhotoIonizationRate%i_src%i' % (i, j)][cell] = Gamma[i][j]
+                    newdata['PhotoHeatingRate%i_src%i' % (i, j)][cell] = k_H[i][j]
+                    newdata['SecondaryIonizationRate%i_src%i' % (i, j)][cell] = gamma[i,:,j] 
+                
                 newdata['CollisionalIonizationRate%i' % i][cell] = Beta[i] 
                 newdata['RadiativeRecombinationRate%i' % i][cell] = alpha[i] 
                 newdata['CollisionalIonzationCoolingRate%i' % i][cell] = zeta[i] 
                 newdata['RecombinationCoolingRate%i' % i][cell] = eta[i] 
-                newdata['CollisionalExcitationCoolingRate%i' % i][cell] = psi[i]
-                
-                newdata['SecondaryIonizationRate%i' % i][cell] = gamma[i] 
+                newdata['CollisionalExcitationCoolingRate%i' % i][cell] = psi[i]                
                 
                 if i == 2:
                     newdata['DielectricRecombinationRate'][cell] = xi[i]
@@ -666,31 +681,30 @@ class Radiate:
 
     def ComputeOpticalDepths(self, ncol):
         """
-        Compute optical depths *between* source and all cells. 
-        Do we only use this for timestep calculation?
+        Compute optical depths *between* source and all cells.  Used solely (I think)
+        for calculating next timestep. 
         """
         
-        tau_all_arr = np.zeros([3, self.GridDimensions])    
-        if self.pf['DiscreteSpectrum']:
-            sigma0 = PhotoIonizationCrossSection(self.rs.E, species = 0)
-            tmp_nHI = np.transpose(len(self.rs.E) * [ncol[0]])   
-            tau_all_arr[0] = np.sum(tmp_nHI * sigma0, axis = 1)
-                        
-            if self.pf['MultiSpecies']:
-                sigma1 = PhotoIonizationCrossSection(self.rs.E, species = 1)
-                sigma2 = PhotoIonizationCrossSection(self.rs.E, species = 2)
-                tmp_nHeI = np.transpose(len(self.rs.E) * [ncol[1]])
-                tmp_nHeII = np.transpose(len(self.rs.E) * [ncol[2]])
-                tau_all_arr[1] = np.sum(tmp_nHeI * sigma1, axis = 1)
-                tau_all_arr[2] = np.sum(tmp_nHeII * sigma2, axis = 1)
-        else:
-            for i, col in enumerate(np.log10(ncol[0])):
-                tau_all_arr[0][i] = self.coeff.Interpolate.OpticalDepth(col, 0)
-                
+        tau_all_arr = np.zeros([3, self.GridDimensions, self.pf['NumberOfSources']]) 
+        for rs, source in enumerate(self.rs.all_sources):
+            if not source.TableAvailable:
+                tmp_nHI = np.transpose(len(source.E) * [ncol[0]])   
+                tau_all_arr[0,:,rs] = np.sum(tmp_nHI * source.sigma[0, rs], axis = 1)
+                            
                 if self.pf['MultiSpecies']:
-                    tau_all_arr[1][i] = self.coeff.Interpolate.OpticalDepth(np.log10(ncol[1][i]), 1)
-                    tau_all_arr[2][i] = self.coeff.Interpolate.OpticalDepth(np.log10(ncol[2][i]), 2)
+                    tmp_nHeI = np.transpose(len(source.E) * [ncol[1]])
+                    tmp_nHeII = np.transpose(len(source.E) * [ncol[2]])
+                    tau_all_arr[1,:,rs] = np.sum(tmp_nHeI * source.sigma[1, rs], axis = 1)
+                    tau_all_arr[2,:,rs] = np.sum(tmp_nHeII * source.sigma[2, rs], axis = 1)
+            else:
+                for i, col in enumerate(np.log10(ncol[0])):
+                    tau_all_arr[0,i,rs] = source.Interpolate.OpticalDepth(col, 0)
                     
-            tau_all_arr[0][0] = tau_all_arr[1][0] = tau_all_arr[2][0] = neglible_tau 
+                    if self.pf['MultiSpecies']:
+                        tau_all_arr[1,i,rs] = source.Interpolate.OpticalDepth(np.log10(ncol[1][i]), 1)
+                        tau_all_arr[2,i,rs] = source.Interpolate.OpticalDepth(np.log10(ncol[2][i]), 2)
+                        
+                tau_all_arr[0][0][rs] = tau_all_arr[1][0] = tau_all_arr[2][0] = neglible_tau 
 
-        return tau_all_arr
+        # Take minimum optical depth over sources to be conservative with dt
+        return np.min(tau_all_arr, axis = -1)

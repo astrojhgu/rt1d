@@ -128,7 +128,7 @@ class InitializeIntegralTables:
             return self.pf['IntegralTable']
             
         if self.pf['SpectrumFile'] != 'None':
-            return '%s_integral_table.hdf5' % self.pf['SpectrumFile'].partition('.')[0]               
+            return '%s_integral_table.hdf5' % self.pf['SpectrumFile'].rsplit('/')[-1].partition('.')[0]               
         
         ms = 'ms%i' % self.pf['MultiSpecies']
         pc = 'pc%i' % self.pf['PhotonConserving']
@@ -153,18 +153,16 @@ class InitializeIntegralTables:
             src = "bb"
             prop = "T%g" % int(self.pf['SourceTemperature'])
                                                               
-        elif self.pf['SourceType'] == 2:                            
+        if self.pf['SourceType'] == 2:                            
             src = "popIII"                                    
             prop = "M%g" % int(self.pf['SourceMass'])
             
-        elif self.pf['SourceType'] >= 3:
+        if self.pf['SourceType'] == 3:
             src = 'bh_M%i' % int(self.pf['SourceMass'])
             prop = '' 
             if 3 in self.rs.SpectrumPars['Type']:
                 src += 'mcd'
                 prop += "f%g" % self.rs.SpectrumPars['Fraction'][self.rs.SpectrumPars['Type'].index(3)]
-                if self.rs.SpectrumPars['AbsorbingColumn'][self.rs.SpectrumPars['Type'].index(3)] > 0:
-                    prop += "_logN%g" % np.log10(self.rs.SpectrumPars['AbsorbingColumn'][self.rs.SpectrumPars['Type'].index(3)])
             if 4 in self.rs.SpectrumPars['Type']:
                 src += 'pl' 
                 if 3 in self.rs.SpectrumPars['Type']:
@@ -172,7 +170,16 @@ class InitializeIntegralTables:
                 prop += "f%g" % self.rs.SpectrumPars['Fraction'][self.rs.SpectrumPars['Type'].index(4)]
                 prop += "_in%g" % self.rs.SpectrumPars['PowerLawIndex'][self.rs.SpectrumPars['Type'].index(4)]
                 if self.rs.SpectrumPars['AbsorbingColumn'][self.rs.SpectrumPars['Type'].index(4)] > 0:
-                    prop += "_logN%g" % np.log10(self.rs.SpectrumPars['AbsorbingColumn'][self.rs.SpectrumPars['Type'].index(3)])
+                    prop += "_logN%g" % np.log10(self.rs.SpectrumPars['AbsorbingColumn'][self.rs.SpectrumPars['Type'].index(4)])
+
+        if self.pf['SourceType'] == 4:
+            src = 'xrb'
+            if 4 in self.rs.SpectrumPars['Type']:
+                if self.rs.SpectrumPars['AbsorbingColumn'] > 0:
+                    src += 'apl'
+                else:    
+                    src += 'pl'
+            prop = 'fX%g' % self.pf['SourceSFRLXNormalization']
 
         # Limits
         Hlim = '%i%i' % (self.HIColumn[0], self.HIColumn[-1])
@@ -210,7 +217,7 @@ class InitializeIntegralTables:
         we've specified.  
         """
         
-        filename = self.DetermineTableName()
+        filename = self.tname
         itab = {}
         
         # Check tables in rt1d/input directory, then other locations
@@ -343,7 +350,7 @@ class InitializeIntegralTables:
         if size > 1 and self.pf['ParallelizationMethod'] == 1: 
             MPI.COMM_WORLD.barrier()
                             
-    def TabulateRateIntegrals(self):
+    def TabulateRateIntegrals(self, retabulate = True):
         """
         Return a dictionary of lookup tables, and also store a copy as self.itabs.
         """
@@ -384,7 +391,10 @@ class InitializeIntegralTables:
         # Otherwise, make a new lookup table
         else:
             has_keys = []
-            itabs = {}     
+            itabs = {}   
+            
+            if not retabulate:
+                return  
          
         s = ''
         for i in self.dims:

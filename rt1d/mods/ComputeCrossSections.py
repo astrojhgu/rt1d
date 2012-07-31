@@ -50,10 +50,18 @@ def EffectiveCrossSection(rs, E1, E2, species = 0):
     
         rs: Instance of RadiationSource class.
     """
-    
-    Q12 = quad(lambda x: rs.Spectrum(x) / x, E1, E2)[0]
-    return quad(lambda x: rs.Spectrum(x) * PhotoIonizationCrossSection(x, species = species) / \
-        x, E1, E2)[0] / Q12
+        
+    if rs._name == 'RadiationSourceIdealized':
+        Q12 = quad(lambda x: rs.Spectrum(x) / x, E1, E2)[0]
+        return quad(lambda x: rs.Spectrum(x) * PhotoIonizationCrossSection(x, species = species) / \
+            x, E1, E2)[0] / Q12
+    else:
+        i1 = np.argmin(np.abs(E1 - rs.E))
+        i2 = np.argmin(np.abs(E2 - rs.E))            
+        
+        Q12 = np.trapz(rs.L_E[i1:i2] / rs.E[i1:i2], rs.E[i1:i2]) / erg_per_ev          
+        return np.trapz(rs.L_E[i1:i2] * PhotoIonizationCrossSection(rs.E[i1:i2], species = species) / \
+            rs.E[i1:i2]) / Q12
         
 def EnergyWeightedCrossSection(rs, E1, E2, species = 0):
     """
@@ -62,9 +70,15 @@ def EnergyWeightedCrossSection(rs, E1, E2, species = 0):
         rs: Instance of RadiationSource class.
     """
     
-    L12 = quad(lambda x: rs.Spectrum(x), E1, E2)[0]
-    return quad(lambda x: rs.Spectrum(x) * PhotoIonizationCrossSection(x, species = species), E1, E2)[0] / L12
-    
+    if rs._name == 'RadiationSourceIdealized':
+        L12 = quad(lambda x: rs.Spectrum(x), E1, E2)[0]
+        return quad(lambda x: rs.Spectrum(x) * PhotoIonizationCrossSection(x, species = species), E1, E2)[0] / L12
+    else:
+        i1 = np.argmin(np.abs(E1 - rs.E))
+        i2 = np.argmin(np.abs(E2 - rs.E))
+        
+        L12 = np.trapz(rs.L_E[i1:i2], rs.E[i1:i2])
+        return np.trapz(rs.L_E[i1:i2] * PhotoIonizationCrossSection(rs.E[i1:i2], species = species), rs.E[i1:i2]) / L12
     
     
     

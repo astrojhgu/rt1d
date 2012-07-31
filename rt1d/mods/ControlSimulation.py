@@ -53,18 +53,28 @@ class ControlSimulation:
         ncell = r.dx[0] * nabs    
         nout = np.log10(ncell)
         Vsh = r.coeff.ShellVolume(self.R0, r.dx[0])    
-        Lbol = r.rs.BolometricLuminosity(0)
         logxHII = np.log10(nion[0] / n_H)
-                                                                    
-        indices_in = r.coeff.Interpolate.GetIndices([ncol[0], ncol[1], ncol[2], logxHII, 0])
-
+        
+        Lbol = []
+        indices_in = []
+        for source in r.rs.all_sources:
+            Lbol.append(source.BolometricLuminosity(0)) 
+            if source.TableAvailable:
+                indices_in.append(source.Interpolate.GetIndices([ncol[0], ncol[1], ncol[2], logxHII, 0]))
+            else:
+                indices_in.append(None)
+            
         args = [nabs, nion, n_H, n_He, n_e]
         args.extend(r.coeff.ConstructArgs([nabs, nion, n_H, n_He, n_e], 
             indices_in, Lbol, self.R0, ncol, T, r.dx[0], 0., self.z0, 0))   
                                                                           
         nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, \
             zeta, eta, psi, xi, omega, hubble, compton = args
-                                                                                                        
+        
+        Gamma = np.sum(Gamma, -1)    
+        gamma = np.sum(gamma, -1)    
+        k_H = np.sum(k_H, -1)
+                                                                                                                    
         # START TIMESTEP CALCULATION
         dtHI = 1e50   
         dHIdt = 1e-50   
@@ -111,6 +121,10 @@ class ControlSimulation:
         Compute photon timestep based on maximum allowed fractional change
         in hydrogen and helium neutral fractions (Shapiro et al. 2004).
         """          
+                
+        Gamma = np.sum(Gamma, -1)    
+        gamma = np.sum(gamma, -1)    
+        k_H = np.sum(k_H, -1)        
                 
         dtHI = 1e50     
         if self.pf['HIRestrictedTimestep']:

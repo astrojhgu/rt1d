@@ -81,16 +81,16 @@ class DataDump:
         
         self.E = 3. * k_B * self.T * self.n_B / 2.
         
-        self.Gamma = np.zeros([self.GridDimensions, 3])
+        self.Gamma = np.zeros([self.GridDimensions, 3, pf["NumberOfSources"].value])
         self.k_H = np.zeros_like(self.Gamma)
-        self.gamma = np.zeros([self.GridDimensions, 3, 3])
-        self.Beta = np.zeros_like(self.Gamma)
-        self.alpha = np.zeros_like(self.Gamma)
-        self.xi = np.zeros_like(self.Gamma)
-        self.zeta = np.zeros_like(self.Gamma)
-        self.eta = np.zeros_like(self.Gamma)
-        self.psi = np.zeros_like(self.Gamma)
-        self.omega = np.zeros_like(self.Gamma)
+        self.gamma = np.zeros([self.GridDimensions, 3, 3, pf["NumberOfSources"].value])
+        self.Beta = np.zeros([self.GridDimensions, 3])
+        self.alpha = np.zeros_like(self.Beta)
+        self.xi = np.zeros_like(self.Beta)
+        self.zeta = np.zeros_like(self.Beta)
+        self.eta = np.zeros_like(self.Beta)
+        self.psi = np.zeros_like(self.Beta)
+        self.omega = np.zeros_like(self.Beta)
         
         # extra stuff
         self.tau = dd['OpticalDepth'].value            
@@ -103,16 +103,18 @@ class DataDump:
         
         if pf["OutputRates"].value:
             for i in xrange(3):
-                self.Gamma[:,i] = dd['PhotoIonizationRate%i' % i].value
-                self.k_H[:,i] = dd['PhotoHeatingRate%i' % i].value
+                
+                for src in xrange(int(pf["NumberOfSources"].value)):
+                    self.Gamma[:,i,src] = dd['PhotoIonizationRate%i_src%i' % (i, src)].value
+                    self.k_H[:,i,src] = dd['PhotoHeatingRate%i_src%i' % (i, src)].value
+                    for j in xrange(3):
+                        self.gamma[:,i,j,src] = dd['SecondaryIonizationRate%i_src%i' % (i, src)].value[:,j]
+                
                 self.Beta[:,i] = dd['CollisionalIonizationRate%i' % i].value
                 self.alpha[:,i] = dd['RadiativeRecombinationRate%i' % i].value
                 self.zeta[:,i] = dd['CollisionalIonzationCoolingRate%i' % i].value
                 self.eta[:,i] = dd['RecombinationCoolingRate%i' % i].value
                 self.psi[:,i] = dd['CollisionalExcitationCoolingRate%i' % i].value
-                
-                for j in xrange(3):
-                    self.gamma[:,i,j] = dd['SecondaryIonizationRate%i' % i].value[0:,j]
                 
                 if i == 2:
                     self.xi[:,i] = dd['DielectricRecombinationRate'].value

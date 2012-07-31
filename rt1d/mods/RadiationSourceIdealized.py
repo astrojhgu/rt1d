@@ -1,30 +1,19 @@
 """
-RadiationSource.py
+
+RadiationSourceIdealized.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
-Created on 2010-10-26.
+Created on: Sun Jul 22 16:28:08 2012
 
-Description: Radiation source class, contains all functions associated with initializing a 
-radiation source.  Mainly used for calculating and normalizing it's luminosity with time.
+Description: 
 
-Notes: 
-
-SourceType = 0: Monochromatic/Polychromatic emission of SpectrumPhotonLuminosity photons per second.
-  -The difference between this and SourceType > 0 is that the bolometric luminosity may change depending
-   on your choice of bins.
-     
-     
-if SpectrumFile != 'None', the contents of the file will override all source / 
-spectrum parameters.     
-     
 """
 
-import h5py
 import numpy as np
-from scipy.integrate import quad
-from Integrate import simpson as integrate                  # why did scipy.integrate.quad mess up LphotNorm? 
 from .Constants import *
+from scipy.integrate import quad
+from Integrate import simpson as integrate  # why did scipy.integrate.quad mess up LphotNorm? 
 from .ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB - will return 0 as it should for x large
@@ -40,35 +29,23 @@ small_number = 1e-3
 big_number = 1e5
 ls = ['-', '--', ':', '-.']
 
-"""
-SourceType = 0  (monochromatic)     Just need DiscreteSpectrum and PhotonLuminosity
-SourceType = 1  (star)              Need temperature, PhotonLuminosity
-SourceType = 2  (popIII star)       Need mass
-SourceType = 3  (BH)                Need Mass, epsilon
-
-SpectrumType = 0 (monochromatic)    
-SpectrumType = 1 (blackbody)                    
-SpectrumType = 2 (blackbody, but temperature and luminosity from Schaerer)
-SpectrumType = 3 (multi-color disk)
-SpectrumType = 4 (simple power-law)
-SpectrumType = 5 (user-defined)
-"""
-
-def RadiationSource(pf):
-    if pf['SpectrumFile'] is not 'None':
-        return RadiationSourceFromFile(pf) 
-    else:
-        return RadiationSourceModel(pf)
-                                                 
-class RadiationSourceModel:
+class RadiationSourceIdealized:
     def __init__(self, pf):
         self.pf = pf
         
+        # Create SpectrumPars attribute    
         self.SpectrumPars = listify(pf)
         self.N = len(self.SpectrumPars['Type'])
         
         # Cast types to int to avoid indexing complaints
-        self.SpectrumPars['Type'] = map(int, self.SpectrumPars['Type'])
+        self.SpectrumPars['Type'] = map(int, self.SpectrumPars['Type'])      
+        
+        self._name = 'RadiationSourceIdealized'
+        
+    def initialize(self):    
+        """
+        Create attributes we need, normalize, etc.
+        """
         
         self.Emin = min(self.SpectrumPars['MinEnergy'])
         self.Emax = min(self.SpectrumPars['MaxEnergy'])   
@@ -79,38 +56,42 @@ class RadiationSourceModel:
             self.Type = self.SpectrumPars['Type'][0]
                     
         # Correct later if using multi-group approach
-        self.E = np.array(pf['DiscreteSpectrumSED'])
-        self.F = np.array(pf['DiscreteSpectrumRelLum'])
+        self.E = np.array(self.pf['DiscreteSpectrumSED'])
+        self.F = np.array(self.pf['DiscreteSpectrumRelLum'])
         
         self.last_renormalized = 0
-        self.tau = pf['SourceLifetime'] * pf['TimeUnits']
-        
+        self.tau = self.pf['SourceLifetime'] * self.pf['TimeUnits']
+        self.birth = self.pf['SourceBirthtime'] * self.pf['TimeUnits']
+        self.fduty = self.pf['SourceDutyCycle']
+        self.variable = self.fduty < 1
+        self.toff = self.tau * (self.fduty**-1. - 1.)
+                
         # SourceType 0, 1, 2
-        self.Lph = pf['SpectrumPhotonLuminosity']
+        self.Lph = self.pf['SpectrumPhotonLuminosity']
         
         # SourceType = 1, 2
-        self.T = pf['SourceTemperature']
+        self.T = self.pf['SourceTemperature']
         
         # SourceType >= 3
-        self.M = pf['SourceMass']
-        self.M0 = pf['SourceMass']
-        self.epsilon = pf['SourceRadiativeEfficiency']
+        self.M = self.pf['SourceMass']
+        self.M0 = self.pf['SourceMass']
+        self.epsilon = self.pf['SourceRadiativeEfficiency']
         
         if 3 in self.SpectrumPars['Type']:
             self.r_in = self.DiskInnermostRadius(self.M0)
-            self.r_out = pf['SourceDiskMaxRadius'] * self.GravitationalRadius(self.M0)
+            self.r_out = self.pf['SourceDiskMaxRadius'] * self.GravitationalRadius(self.M0)
             self.fcol = self.SpectrumPars['ColorCorrectionFactor'][self.SpectrumPars['Type'].index(3)]
             self.T_in = self.DiskInnermostTemperature(self.M0)
-            self.T_out = self.DiskTemperature(self.M0, self.r_out)
+            self.T_out = self.DiskTemperature(self.M0, self.r_out)    
 
         ### PUT THIS STUFF ELSEWHERE
                                  
         # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
         # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
-        if pf['SourceType'] == 0:
+        if self.pf['SourceType'] == 0:
             self.Lbol = self.Lph * self.F * self.E * erg_per_ev 
             self.Qdot = self.F * self.Lph
-        elif pf['SourceType'] in [1, 2]:
+        elif self.pf['SourceType'] in [1, 2]:
             self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * \
                 integrate(lambda x: x**2 / (np.exp(x) - 1.), 
                 13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
@@ -145,18 +126,18 @@ class RadiationSourceModel:
         self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
         
         # Multi-group treatment
-        Qnorm = pf['SpectrumPhotonLuminosity'] / self.Lbol / \
+        Qnorm = self.pf['SpectrumPhotonLuminosity'] / self.Lbol / \
             quad(lambda x: self.Spectrum(x) / x, self.EminNorm, self.EmaxNorm)[0]
-        if pf['FrequencyAveragedCrossSections']:
-            self.E = np.zeros(pf['FrequencyGroups'])
+        if self.pf['FrequencyAveragedCrossSections']:
+            self.E = np.zeros(self.pf['FrequencyGroups'])
             self.F = np.ones_like(self.E)
             self.Qdot = np.zeros_like(self.E)
-            self.bands = pf['FrequencyBands']
+            self.bands = self.pf['FrequencyBands']
             
             if len(self.bands) == (len(self.E) - 1):
                 self.bands.append(self.Emax)
             
-            for i in xrange(int(pf['FrequencyGroups'])):
+            for i in xrange(int(self.pf['FrequencyGroups'])):
                 L = quad(lambda x: self.Spectrum(x), self.bands[i], self.bands[i + 1])[0]
                 Q = quad(lambda x: self.Spectrum(x) / x, self.bands[i], self.bands[i + 1])[0]
                                 
@@ -164,8 +145,8 @@ class RadiationSourceModel:
                 self.Qdot[i] = Qnorm * self.Lbol * Q
                 
         # Time evolution
-        if pf['SourceTimeEvolution']:
-            self.Age = np.linspace(0, pf['StopTime'] * pf['TimeUnits'], pf['AgeBins'])
+        if self.pf['SourceTimeEvolution']:
+            self.Age = np.linspace(0, self.pf['StopTime'] * self.pf['TimeUnits'], self.pf['AgeBins'])
                                               
     def GravitationalRadius(self, M):
         """
@@ -176,7 +157,7 @@ class RadiationSourceModel:
     def SchwartzchildRadius(self, M):
         return 2. * self.GravitationalRadius(M)    
         
-    def MassAccretionRate(self, M = None):
+    def MassAccretionRate(self, M = None):        
         return self.BolometricLuminosity(0, M = M) / self.epsilon / c**2    
         
     def DiskInnermostRadius(self, M):      
@@ -201,19 +182,48 @@ class RadiationSourceModel:
             8. / np.pi / r**3 / sigma_SB) * \
             (1. - (self.DiskInnermostRadius(M) / r)**0.5))**0.25
             
+    def SourceOn(self, t):
+        """
+        See if source is on.
+        """        
+        
+        if not self.variable:
+            return True
+            
+        if t <= self.tau:
+            return True
+            
+        nacc = t / (self.tau + self.toff)
+        if nacc % 1 < self.fduty:
+            return True
+        else:
+            return False
+            
     def BlackHoleMass(self, t):
         """
         Compute black hole mass after t (seconds) have elapsed.  Relies on 
         initial mass self.M, and (constant) radiaitive efficiency self.epsilon.
         """        
         
-        return self.M0 * np.exp(((1.0 - self.epsilon) / self.epsilon) * t / t_edd)         
+        if self.variable:
+            nlifetimes = int(t / (self.tau + self.toff))
+            dtacc = nlifetimes * self.tau
+            M0 = self.M0 * np.exp(((1.0 - self.epsilon) / self.epsilon) * dtacc / t_edd)  
+            dt = t - nlifetimes * (self.tau + self.toff)
+        else:
+            M0 = self.M0
+            dt = t
+        
+        return M0 * np.exp(((1.0 - self.epsilon) / self.epsilon) * dt / t_edd)         
     
     def BlackHoleAge(self, M):
         """
         Compute age of black hole based on current time, current mass, and initial mass.
         """            
         
+        #if self.variable:
+            
+            
         return np.log(M / self.pf['SourceMass']) * (self.epsilon / (1. - self.epsilon)) * t_edd
                 
     def IonizingPhotonLuminosity(self, t = 0, bin = None):
@@ -368,8 +378,9 @@ class RadiationSourceModel:
         bolometric luminosity will increase with time, hence the optional 't' argument.
         """
         
-        if t >= self.tau: 
-            return 0.0
+        if not self.variable:
+            if t >= self.tau:
+                return 0.0        
             
         if self.pf['SourceType'] == 0:
             return self.Lph / (np.sum(self.F / self.E / erg_per_ev))
@@ -380,11 +391,17 @@ class RadiationSourceModel:
         if self.pf['SourceType'] == 2:
             return 10**SchaererTable["Luminosity"][SchaererTable["Mass"].index(self.M)] * lsun
             
-        if self.pf['SourceType'] > 2:
+        if self.pf['SourceType'] == 3:
+            if not self.SourceOn(t):
+                return 0.0
+                
             Mnow = self.BlackHoleMass(t)
             if M is not None:
                 Mnow = M
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
+    
+        if self.pf['SourceType'] == 4:
+            return self.pf['SourceSFRLXNormalization'] * 3.4e40
     
     def SpectrumCDF(self, E):
         """
@@ -437,13 +454,13 @@ class RadiationSourceModel:
         return L / Q / erg_per_ev, Q
         
     def PlotSpectrum(self, color = 'k', components = True, t = 0, normalized = True,
-        bins = 100, mp = None):
+        bins = 100, mp = None, label = None):
         import pylab as pl
         
         if not normalized:
             Lbol = self.BolometricLuminosity(t)
         else: 
-            Lbol = 1
+            Lbol = 1.
         
         E = np.logspace(np.log10(min(self.SpectrumPars['MinNormEnergy'])), 
             np.log10(max(self.SpectrumPars['MaxNormEnergy'])), bins)
@@ -463,79 +480,28 @@ class RadiationSourceModel:
                     tmpF.append(self.Spectrum(energy, t = t, only = component))
                 
                 EE.append(tmpE)
-                FF.append(tmpF)              
+                FF.append(tmpF)
         
         if mp is None:
             self.ax = pl.subplot(111)
         else:
             self.ax = mp
                     
-        self.ax.loglog(E, np.array(F) * Lbol, color = color, ls = ls[0])
+        self.ax.loglog(E, np.array(F) * Lbol, color = color, ls = ls[0], label = label)
         
         if components and self.N > 1:
             for i in xrange(self.N):
                 self.ax.loglog(EE[i], np.array(FF[i]) * Lbol, color = color, ls = ls[i + 1])
         
-        self.ax.set_ylim(1e-3 * np.max(F), 1.1 * np.max(F))
         self.ax.set_xlabel(r'$h\nu \ (\mathrm{eV})$')
         
         if normalized:
             self.ax.set_ylabel(r'$L_{\nu} / L_{\mathrm{bol}}$')
         else:
-            self.ax.set_ylabel(r'$L_{\nu}$')
+            self.ax.set_ylabel(r'$L_{\nu} \ (\mathrm{erg \ s^{-1}})$')
                 
         pl.draw()
         
-class RadiationSourceFromFile:
-    def __init__(self, pf):
-        self.pf = pf
-        self.fn = pf['SpectrumFile']
-        
-        self.tau = pf['SourceLifetime'] * pf['TimeUnits']
-        
-        # Read spectrum - expect hdf5 with (at least) E, L_E, and time_yr datasets.
-        f = h5py.File(self.fn)
-        self.E = f['E'].value
-        self.dE = np.diff(self.E)
-        self.t = self.Age = f['time_yr'].value * s_per_yr
-        self.Nt = len(self.t)
-        self.L_E = f['L_E'].value
-        
-        self.Emin = np.min(self.E)
-        self.Emax = np.max(self.E)
-        
-        # Threshold indices
-        self.i_Eth = np.zeros(3)
-        for i, energy in enumerate(E_th):
-            loc = np.argmin(np.abs(energy - self.E))
-            
-            if self.E[loc] < energy:
-                loc += 1
-            
-            self.i_Eth[i] = loc
-        
-        self.Lbol = self.BolometricLuminosity(0)
-        
-    def Spectrum(self, E = None, t = 0.0):
-        """
-        Return specific luminosity.
-        """
-        
-        i = self.get_time_index(t)        
-        return self.L_E[i] / self.BolometricLuminosity(t = t)
-        
-    def Intensity(self, E = None):
-        i = self.get_time_index(t)
-        return self.L_E[i]
-        
-    def BolometricLuminosity(self, t = 0.0):
-        i = self.get_time_index(t)
-        return np.trapz(self.L_E[i], self.E)
-        
-    def get_time_index(self, t):
-        i = np.argmin(np.abs(t - self.t))
-        return max(min(i, self.Nt - 2), 0)
-
 def listify(pf):
     """
     Turn any Spectrum parameter into a list, if it isn't already.
@@ -552,5 +518,5 @@ def listify(pf):
         else:
             Spectrum[new_name] = pf[par]
             
-    return Spectrum         
-    
+    return Spectrum             
+        

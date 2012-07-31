@@ -14,7 +14,7 @@ from .Constants import *
 
 defaults = []
 pgroups = ['Grid', 'Source', 'Spectrum', 'Physics', 
-           'Cosmology',  'Solver', 'Control']
+           'Cosmology', 'Solver', 'Control']
 for grp in pgroups:
     defaults.append('SetDefault%sParameters()' % grp)
     
@@ -30,15 +30,18 @@ def SetDefaultSourceParameters():
     pf = \
         {
         "NumberOfSources": 1,
-        "SourceFiles": 0,
+        "SourceFiles": 'None',
         "SourceType": 1,  
         "SourceTemperature": 1e5,  
         "SourceMass": 1e3,  
+        "SourceDutyCycle": 1,
+        "SourceBirthtime": 0,
         "SourceLifetime": 1e10,  
         "SourceRadiativeEfficiency": 0.1,
         "SourceISCO": 0,  
         "SourceDiskMaxRadius": 1e3,
         "SourceTimeEvolution": 0,
+        "SourceSFRLXNormalization": 1.0,
         }
         
     return pf

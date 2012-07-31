@@ -53,17 +53,18 @@ class InitializeGrid:
         
         if self.pf['OutputRates']:
             for i in xrange(3):
-                fields['PhotoIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
-                fields['PhotoHeatingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                for j in xrange(3):
+                    fields['PhotoIonizationRate%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
+                    fields['PhotoHeatingRate%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
+                    fields['SecondaryIonizationRate%i_src%i' % (i, j)] = np.zeros([len(fields[fields.keys()[0]]), 3])    
+                    
                 fields['CollisionalIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['RadiativeRecombinationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['CollisionalIonzationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['RecombinationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
-                    
-                fields['SecondaryIonizationRate%i' % i] = np.zeros([len(fields[fields.keys()[0]]), 3])    
-                                
+                                    
                 if i == 2:
                     fields['DielectricRecombinationRate'] = np.zeros_like(fields[fields.keys()[0]])
                     fields['DielectricRecombinationCoolingRate'] = np.zeros_like(fields[fields.keys()[0]])

@@ -19,13 +19,13 @@ from ..mods.Constants import *
 from ..mods.Cosmology import *
 from ..mods.Interpolate import Interpolate
 from ..mods.InitializeGrid import InitializeGrid
-from ..mods.RadiationSource import RadiationSource
+from ..mods.RadiationSources import RadiationSources
 from ..mods.SecondaryElectrons import SecondaryElectrons
 from ..mods.ComputeCrossSections import PhotoIonizationCrossSection
 from ..mods.InitializeIntegralTables import InitializeIntegralTables
 
 class Analyze:
-    def __init__(self, pf, retabulate = True):
+    def __init__(self, pf, retabulate = False):
         self.ds = Dataset(pf)
         self.data = self.ds.data
         self.t = self.ds.t
@@ -34,8 +34,7 @@ class Analyze:
         self.pf = self.ds.pf        # dict
         self.g = InitializeGrid(self.pf)   
         self.cosm = Cosmology(self.pf)
-        self.rs = RadiationSource(self.pf)
-        self.iits = InitializeIntegralTables(self.pf)      
+        self.rs = RadiationSources(self.pf, retabulate = retabulate, path = self.ds.path_to_output)
         self.esec = SecondaryElectrons(self.pf)         
         
         # Convenience
@@ -53,7 +52,7 @@ class Analyze:
         self.dx = np.diff(self.r)   
         self.r = self.r[0:-1]
                 
-        self.Vsh = 4. * np.pi * ((self.r + self.dx)**3 - self.r**3) / 3. / cm_per_mpc**3        
+        self.Vsh = 4. * np.pi * ((self.r + self.dx)**3 - self.r**3) / 3. / cm_per_mpc**3
                 
         # Shift radii to cell-centered values
         self.r += self.dx / 2.   
@@ -61,17 +60,8 @@ class Analyze:
         # Store bins used for PDFs/CDFs
         self.bins = {}
         
-        # Read integral table if it exists.
-        self.tname = self.iits.DetermineTableName()
-        if (os.path.exists('%s/%s' % (self.ds.od, self.tname)) and retabulate) or \
-            os.path.exists(self.pf['IntegralTable']):            
-            self.itabs = self.iits.TabulateRateIntegrals()
-            self.interp = Interpolate(self.pf, self.iits)
-        else:
-            self.itabs = self.interp = None    
-            
         # Inspect instance    
-        self.inspect = Inspect(self)    
+        #self.inspect = Inspect(self)    
         
     def StromgrenSphere(self, t, sol = 0, T0 = None, helium_correction = 0):
         """
@@ -221,7 +211,7 @@ class Analyze:
         pl.draw()
         
     def RadialProfileMovie(self, field = 'x_HI', out = 'frames', xscale = 'linear',
-        title = True):
+        title = True, t_start = 0):
         """
         Save time-series images of 'field' to 'out' directory.
         
@@ -243,6 +233,9 @@ class Analyze:
         ax.set_yscale('log')  
          
         for dd in self.data.keys():
+            
+            if self.data[dd].t / self.pf['TimeUnits'] < t_start:
+                continue
             
             exec('ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
                 self.data[%i].%s, ls = \'-\', color = \'k\')' % (dd, dd, field))
@@ -381,7 +374,8 @@ class Analyze:
         
         pl.draw()    
         
-    def InspectRateCoefficients(self, t = 1, coeff = 'Gamma', species = 0, color = 'k', ls = '-'):
+    def InspectRateCoefficients(self, t = 1, coeff = 'Gamma', species = 0, color = 'k', 
+        ls = '-', src = 0):
         """
         Plot given rate coefficient as function of r.
         """
@@ -418,14 +412,14 @@ class Analyze:
                 continue
             
             exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                self.data[%i].%s[%i], ls = \'%s\', color = \'%s\')' % (dd, dd, coeff, species, ls, color))                
+                self.data[%i].%s[%i][%i], ls = \'%s\', color = \'%s\')' % (dd, dd, coeff, species, src, ls, color))                
             
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(ylabel)         
                                 
         pl.draw()      
         
-    def IonizationRate(self, t = 1, species = 0, color = 'k', legend = True, plot_recomb = False):
+    def IonizationRate(self, t = 1, species = 0, color = 'k', legend = True, plot_recomb = False, src = 0):
         """
         Plot total ionization rate, and lines for primary, secondary, and collisional.
         """ 
@@ -437,8 +431,8 @@ class Analyze:
             if self.data[dd].t / self.pf['TimeUnits'] != t: 
                 continue
                             
-            Gamma = self.data[dd].Gamma[:,species] * self.data[dd].nabs[species,:]
-            gamma = np.sum(self.data[dd].gamma[:,species,:] * np.transpose(self.data[dd].nabs), axis = 1)
+            Gamma = self.data[dd].Gamma[:,species,src] * self.data[dd].nabs[species,:]
+            gamma = np.sum(self.data[dd].gamma[:,species,:,src] * np.transpose(self.data[dd].nabs), axis = 1)
             Beta = self.data[dd].Beta[:,species] * self.data[dd].nabs[species,:] * self.data[dd].n_e            
             ion = Gamma + Beta + gamma
             
@@ -466,7 +460,7 @@ class Analyze:
         
         pl.draw()    
         
-    def HeatingRate(self, t = 1, color = 'k', legend = True):
+    def HeatingRate(self, t = 1, color = 'k', legend = True, src = 0):
         """
         Plot total heating rate, and lines for primary, secondary, and collisional.
         """ 
@@ -485,7 +479,7 @@ class Analyze:
                 
             tranabs = np.transpose(self.data[dd].nabs)             
             
-            heat = fheat * np.sum(self.data[dd].k_H * tranabs, axis = 1)
+            heat = fheat * np.sum(self.data[dd].k_H[...,src] * tranabs, axis = 1)
             zeta = np.sum(self.data[dd].zeta * tranabs, axis = 1) * self.data[dd].n_e # collisional ionization
             eta = np.sum(self.data[dd].eta * tranabs, axis = 1) * self.data[dd].n_e  # recombination
             psi = np.sum(self.data[dd].psi * tranabs, axis = 1) * self.data[dd].n_e  # collisional excitation
@@ -501,7 +495,9 @@ class Analyze:
         self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], zeta, color = 'g', ls = '--', label = r'$\zeta$')
         self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], psi, color = 'g', ls = ':', label = r'$\psi$')
         self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], eta, color = 'c', ls = '--', label = r'$\eta$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], omega, color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
+        
+        if self.pf['MultiSpecies']:
+            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], omega, color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
                 
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Heating & Cooling Rate $(\mathrm{erg/s/cm^3})$')
@@ -585,11 +581,7 @@ class Analyze:
         
         rmin = min(self.ax.get_xticks())
         rmax = max(self.ax.get_xticks())
-        
-        #if rmin == 0 and rmax == 1:
-            
-                         
-        
+                                     
         if species == 0:
             s = 'HI'
             lab = r'$N_{\mathrm{HI}} \ (\mathrm{cm}^{-2})$'
