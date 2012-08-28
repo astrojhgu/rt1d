@@ -106,7 +106,7 @@ class RadiationSources:
         quantities (if parameter file says to do so).
         """    
         
-        ### THESE ROUTINES BELONG IN RS CLASSES TheMSELVES
+        ### THESE ROUTINES BELONG IN RS CLASSES TheMSELVES - eh, doesn't really matter
         
         
         # Multi-group treatment
@@ -195,5 +195,11 @@ class RadiationSources:
     
         return rs    
                         
+    def PlotCompositeSpectrum(self):
+        """
+        Loop over RadiationSource instances and construct a composite spectrum.
+        """
+        pass                    
+            
     
         
