@@ -23,6 +23,8 @@ from .ComputeRateCoefficients import RateCoefficients
 from .SolveRateEquations import SolveRateEquations
 from .ControlSimulation import ControlSimulation
 
+from scipy.integrate import odeint
+
 try:
     from progressbar import *
     pb = True
@@ -275,16 +277,20 @@ class Radiate:
             args[5] = np.sum(Gamma, axis = -1) 
             args[6] = np.sum(gamma, axis = -1)      
             args[9] = np.sum(k_H, axis = -1)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
             ######################################
             ######## Solve Rate Equations ########
-            ######################################        
-                                                          
-            tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, 
-                self.q_all[cell], t, t + dt, self.z, self.z - self.dz, None, h, *args)
-                                                                                                                                                                                 
-            # Unpack results of coupled equations
-            newHII, newHeII, newHeIII, newE = qnew 
+            ###################################### 
+                  
+            if self.pf['UseScipy']:  
+                qnew = odeint(self.RateEquations, self.q_all[cell], [t, t + dt], args = tuple(args), full_output = False)       
+                odeitr = rootitr = 0  
+                newHII, newHeII, newHeIII, newE = qnew[-1] 
+                                                       
+            else:    
+                tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, 
+                    self.q_all[cell], t, t + dt, self.z, self.z - self.dz, None, h, args)
+                newHII, newHeII, newHeIII, newE = qnew                 
             
             # Convert from internal energy back to temperature
             if self.pf['Isothermal']:
@@ -598,7 +604,7 @@ class Radiate:
                     
         return newdata            
         
-    def RateEquations(self, q, t, args):    
+    def RateEquations(self, q, t, *args):    
         """
         This function returns the right-hand side of our ODE's (Equations 1, 2, 3 and 9 in Mirocha et al. 2012).
 
@@ -612,7 +618,7 @@ class Radiate:
         returns ionizations / second / cm^3
         
         """
-                
+        
         nabs = args[0]
         nion = args[1]
         n_H = args[2]

@@ -71,7 +71,7 @@ class SolveRateEquations:
             tmp = np.array(tmp)
             self.guesses = lambda z: tmp
                 
-    def integrate(self, f, ynow, xnow, xf, znow, zf, Dfun, hpre, *args):
+    def integrate(self, f, ynow, xnow, xf, znow, zf, Dfun, hpre, args):
         """
         This routine does all the work.
         
@@ -82,7 +82,7 @@ class SolveRateEquations:
             *args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, Heat, zeta, eta, psi)
                         
         """
-                
+                        
         if hpre is None: 
             h = self.hmax
         else: 
@@ -95,6 +95,7 @@ class SolveRateEquations:
         ct = 0
         itr = None#np.zeros(4)
         while xnow < xf: 
+                        
             xnext = xnow + h
                                                                                                                                         
             # Ensure we end exactly at xf.        
@@ -106,11 +107,11 @@ class SolveRateEquations:
             if self.pf["CosmologicalExpansion"]:
                 znext = self.cosm.TimeToRedshiftConverter(0, xnext - x0, znow)
                 
-            ynext, tmp = self.solve(f, ynow, xnow, h, Dfun, znext, args)
+            ynext, tmp = self.solve(f, ynow, xnow, h, Dfun, znext, *args)
                                                                                                                                     
             # Check for NaNs, reduce timestep or raise exception if h == hmin
             if self.pf['CheckForGoofiness']:
-                everything_ok = self.SolutionCheck(ynext, znow, znext, args)
+                everything_ok = self.SolutionCheck(ynext, znow, znext, *args)
                                                                                    
                 if not everything_ok[0] and h > self.hmin:
                     h = max(self.hmin, 0.5 * h)
@@ -122,7 +123,7 @@ class SolveRateEquations:
                 # (i.e. positive, species fractions <= 1)        
                 if not (everything_ok[1] and everything_ok[2] and everything_ok[3]):
                                         
-                    ynext, ok = self.ApplyFloor(ynext, znow, znext, args)
+                    ynext, ok = self.ApplyFloor(ynext, znow, znext, *args)
                                                                                                                 
                     if not (ok[0] and ok[1] and ok[2] and ok[3]):
                         if h > self.hmin:
@@ -140,7 +141,7 @@ class SolveRateEquations:
             # Adaptive time-stepping
             if self.stepper and not skip:
                 
-                tol_met, ok = self.stepper(f, ynow, xnow, ynext, xnext, h, Dfun, znow, znext, args)
+                tol_met, ok = self.stepper(f, ynow, xnow, ynext, xnext, h, Dfun, znow, znext, *args)
                           
                 if not (tol_met[0] and tol_met[1] and tol_met[2] and tol_met[3]):  
                     if h == self.hmin: 
@@ -161,13 +162,13 @@ class SolveRateEquations:
                 
         return xnow, ynow, h, i, itr
            
-    def ImplicitEuler(self, f, yi, xi, h, Dfun, znext, args):
+    def ImplicitEuler(self, f, yi, xi, h, Dfun, znext, *args):
         """
         Integrate ODE using backward (implicit) Euler method.  Must apply
         minimization technique separately for each yi, hence the odd array
         manipulation and loop.
         """                
-        
+                
         yip1 = [yi[0], yi[1], yi[2], yi[3]]
         itr = [0, 0, 0, 0]
         for i, element in enumerate(yi):
@@ -181,13 +182,13 @@ class SolveRateEquations:
                 
                 def ynext(y):
                     if i == 0: 
-                        return y - h * f([y, yi[1], yi[2], yi[3]], xi + h, newargs)[i] - yi[i]
+                        return y - h * f([y, yi[1], yi[2], yi[3]], xi + h, *newargs)[i] - yi[i]
                     if i == 1: 
-                        return y - h * f([yi[0], y, yi[2], yi[3]], xi + h, newargs)[i] - yi[i]
+                        return y - h * f([yi[0], y, yi[2], yi[3]], xi + h, *newargs)[i] - yi[i]
                     if i == 2: 
-                        return y - h * f([yi[0], yi[1], y, yi[3]], xi + h, newargs)[i] - yi[i]
+                        return y - h * f([yi[0], yi[1], y, yi[3]], xi + h, *newargs)[i] - yi[i]
                     if i == 3: 
-                        return y - h * f([yi[0], yi[1], yi[2], y], xi + h, newargs)[i] - yi[i]
+                        return y - h * f([yi[0], yi[1], yi[2], y], xi + h, *newargs)[i] - yi[i]
                 
                 # Guesses = 0 or for example a guess for n_HI > n_H will mess things up                
                 if yi[i] <= 0: 
@@ -201,7 +202,7 @@ class SolveRateEquations:
 
                 yip1[i], itr[i] = self.rootfinder(ynext, guess, i)
                                                                                                                               
-        rtn = yi + h * f(yip1, xi + h, args)
+        rtn = yi + h * f(yip1, xi + h, *args)
         if self.pf['MultiSpecies'] == 0:
             rtn[1] = yip1[1]
             rtn[2] = yip1[2]
@@ -210,7 +211,7 @@ class SolveRateEquations:
                             
         return rtn, itr
         
-    def SolutionCheck(self, ynext, znow, znext, args):
+    def SolutionCheck(self, ynext, znow, znext, *args):
         """
         Return four-element array representing things that could be wrong with
         our solutions. 
@@ -251,7 +252,7 @@ class SolveRateEquations:
         
         return everything_ok                      
                                                         
-    def ApplyFloor(self, ynext, znow, znext, args):
+    def ApplyFloor(self, ynext, znow, znext, *args):
         """
         Apply floors in ionization (and potentially, but not implemented) internal energy.
         
@@ -319,17 +320,17 @@ class SolveRateEquations:
                     
         return ynext, ok
         
-    def StepDoubling(self, f, yi, xi, yip1, xip1, h, Dfun, znow, znext, args):    
+    def StepDoubling(self, f, yi, xi, yip1, xip1, h, Dfun, znow, znext, *args):    
         """
         Calculate y_n+1 in two ways - first via a single step spanning 2h, and second
         using two steps spanning h each.  The difference gives an estimate of the 
         truncation error, which we can use to adapt our step size in self.integrate.
         """
                 
-        ynp2_os, tmp = self.solve(f, yi, xi, 2. * h, Dfun, znext, args) # y_n+2 using one step        
-        ynp2_ts, tmp = self.solve(f, yip1, xip1, h, Dfun, znext, args)  # y_n+2 using two steps
+        ynp2_os, tmp = self.solve(f, yi, xi, 2. * h, Dfun, znext, *args) # y_n+2 using one step        
+        ynp2_ts, tmp = self.solve(f, yip1, xip1, h, Dfun, znext, *args)  # y_n+2 using two steps
             
-        ynp2_os, ok = self.ApplyFloor(ynp2_os, znow, znext, args)  
+        ynp2_os, ok = self.ApplyFloor(ynp2_os, znow, znext, *args)  
                 
         err_abs = np.abs(ynp2_ts - ynp2_os)        
         err_tol = 1e-8 + 1e-5 * ynp2_ts
