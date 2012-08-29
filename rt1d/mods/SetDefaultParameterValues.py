@@ -189,7 +189,7 @@ def SetDefaultGridParameters():
 def SetDefaultSolverParameters():    
     pf = \
         {
-        "UseScipy": 0,
+        "UseScipy": 1,
         "InterpolationMethod": 0,  
         "ODEMinStep": 1e-8,  
         "ODEMaxStep": 1e-1,  

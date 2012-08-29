@@ -5,7 +5,9 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on 2011-01-31.
 
-Description: Subset of my homemade odeint routine made special for rt1d.  
+Description: Subset of my homemade odeint routine made special for rt1d. 
+
+Note: If UseScipy == 1, this class will not be used. 
          
 """
 
