@@ -63,9 +63,13 @@ class RadiationSourceIdealized:
         self.tau = self.pf['SourceLifetime'] * self.pf['TimeUnits']
         self.birth = self.pf['SourceBirthtime'] * self.pf['TimeUnits']
         self.fduty = self.pf['SourceDutyCycle']
+        
         self.variable = self.fduty < 1
-        self.toff = self.tau * (self.fduty**-1. - 1.)
+        if self.fduty == 1:
+            self.variable = self.tau < (self.pf['StopTime'] * self.pf['TimeUnits'])
                 
+        self.toff = self.tau * (self.fduty**-1. - 1.)
+                        
         # SourceType 0, 1, 2
         self.Lph = self.pf['SpectrumPhotonLuminosity']
         
@@ -192,6 +196,9 @@ class RadiationSourceIdealized:
             
         if t <= self.tau:
             return True
+            
+        if self.fduty == 1:
+            return False    
             
         nacc = t / (self.tau + self.toff)
         if nacc % 1 < self.fduty:
@@ -376,7 +383,7 @@ class RadiationSourceIdealized:
         """
         Returns the bolometric luminosity of a source in units of erg/s.  For accreting black holes, the 
         bolometric luminosity will increase with time, hence the optional 't' argument.
-        """
+        """        
         
         if not self.variable:
             if t >= self.tau:

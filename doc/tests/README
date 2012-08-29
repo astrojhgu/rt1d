@@ -1,7 +1,7 @@
 These subdirectories contain parameter files to run various tests of the code,
-like convergence with spatial resolution (e.g. rt06_*_resolution) and physics 
-modules (e.g. secondary_ionization).  The more the better.
+like the standard RT06 tests (rt06*) and physics 
+modules (e.g. secondary_ionization, rt06_2_He, etc.).  The more the better.
 
-To run all test problems, copy the contents of $RT1D/doc/tests to a new 
-directory (or don't, I guess), and execute the RunAllTests.py script.
+To run all test problems, copy $RT1D/scripts/RunAllTests.py to a new 
+directory and execute it.  Will copy everything it needs from $RT1D/doc/tests.
 

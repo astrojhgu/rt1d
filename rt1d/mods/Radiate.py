@@ -284,7 +284,8 @@ class Radiate:
             ###################################### 
                                     
             if self.pf['UseScipy']:  
-                qnew = odeint(self.RateEquations, self.q_all[cell], [t, t + dt], args = tuple(args), full_output = False)       
+                qnew = odeint(self.RateEquations, self.q_all[cell], [t, t + dt], 
+                    args = tuple(args), full_output = False, atol = 1e-12, rtol = 1e-12)       
                 odeitr = rootitr = 0  
                 newxHII, newxHeII, newxHeIII, newE = qnew[-1] 
             else:    
@@ -297,7 +298,7 @@ class Radiate:
                 newT = T
             else:
                 newT = newE * 2. / 3. / k_B / n_B
-            
+                            
             #if self.pf['CosmologicalExpansion']:
             #    n_H = self.cosm.nH0 * (1. + (self.z - self.dz))**3
             #    n_He = self.cosm.nHe0 * (1. + (self.z - self.dz))**3  
@@ -658,7 +659,7 @@ class Radiate:
         # Always solve hydrogen rate equation
         dqdt[0] = (Gamma[0] + Beta[0] * n_e) * xHI + \
                   (gamma[0][0] * xHI + gamma[0][1] * xHeI + gamma[0][2] * xHeII) - \
-                   alpha[0] * n_e * xHII
+                   alpha[0] * n_e * xHII        
                 
         #if self.pf['CosmologicalExpansion']:    
         #    dqdt[0] -= 3. * q[0] * hubble
@@ -687,12 +688,13 @@ class Radiate:
             
             dqdt[3] = phoheat - n_e * (ioncool + reccool + exccool + nHeIII * omega[1])
                                
-            if self.pf['CosmologicalExpansion']:
-                dqdt[3] -= 2. * hubble * q[3]
-                
-                if self.pf['ComptonHeating']:
-                    dqdt[3] += compton
-                                           
+            #if self.pf['CosmologicalExpansion']:
+            #    dqdt[3] -= 2. * hubble * q[3]
+            #    
+            #    if self.pf['ComptonHeating']:
+            #        dqdt[3] += compton
+            
+        print t / self.pf['TimeUnits'], dqdt
         return dqdt
         
     def Jacobian(self, q, *args):

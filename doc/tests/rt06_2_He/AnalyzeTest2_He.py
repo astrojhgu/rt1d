@@ -53,7 +53,7 @@ mp.grid[3].semilogy(dsHe.data[0].r / rta.cm_per_kpc / 6.6, dsHe.data[10].T,
     color = 'b', ls = '-', label = 'He included')    
 
 for i in np.arange(2, 4):
-    mp.grid[i].set_ylim(1e2, 4e4)    
+    mp.grid[i].set_ylim(1e2, 5e4)    
     mp.grid[i].set_xlim(0, 1)
         
 mp.fix_ticks()

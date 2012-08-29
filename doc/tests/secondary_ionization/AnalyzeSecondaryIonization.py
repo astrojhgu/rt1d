@@ -58,12 +58,12 @@ for i in xrange(2):
     mp.grid[i + 2].set_ylim(1e2, 5e4)
     
 mp.grid[1].set_yticklabels([])    
-mp.global_xlabel(r'$r / L_{\mathrm{box}}$')
-mp.grid[0].set_ylabel(r'Species Fraction')
-mp.grid[2].set_ylabel(r'$T (\mathrm{K})$')
+mp.global_xlabel(r'$r / L_{\mathrm{box}}$', xy = (0.5, 0.075), size = 'xx-large')
+mp.grid[0].set_ylabel(r'Species Fraction', size = 'xx-large')
+mp.grid[2].set_ylabel(r'$T (\mathrm{K})$', size = 'xx-large')
 
-mp.grid[0].set_title(r'$t = 10 \ \mathrm{Myr}$')
-mp.grid[1].set_title(r'$t = 100 \ \mathrm{Myr}$')
+mp.grid[0].set_title(r'$t = 10 \ \mathrm{Myr}$', size = 'xx-large')
+mp.grid[1].set_title(r'$t = 100 \ \mathrm{Myr}$', size = 'xx-large')
 
 mp.grid[1].legend(loc = 'lower right', frameon = False)
 mp.grid[3].legend(loc = 'lower right', frameon = False)

@@ -17,6 +17,9 @@ way:
     Initial conditions
     Source parameters
     Physics parameters
+    
+More notes:
+10 + ProblemType = same as ProblemType but MultiSpecies = 1    
 
 """
 
@@ -39,12 +42,12 @@ def ProblemType(ptype):
               "StopTime": 10, 
               "LogarithmicDataDump": 1,
               "InitialLogDataDump": 1e-12,
-              "ElectronRestrictedTimestep": 1,
+              "ElectronRestrictedTimestep": 0,
               "NlogDataDumps": 100,
               "dtDataDump": 0.1, 
               "ODEMinStep": 1e-15,
               "MinimumSpeciesFraction": 1e-9, 
-              "ColumnDensityBinsHI": 20,
+              "ColumnDensityBinsHI": 100,
               "DensityProfile": 0,
               "InitialDensity": 1., 
               "TemperatureProfile": 0, 
@@ -139,7 +142,7 @@ def ProblemType(ptype):
             
     # RT06-2: Hydrogen + helium, I-front expansion, temperature evolution allowed, *continuous spectrum*
     if ptype == 12:
-       pf = {"ProblemType": -2, 
+       pf = {"ProblemType": 12, 
              "DensityUnits": 2.2245547230998267e-27,
              "LengthUnits": 6.6 * cm_per_kpc,
              "StopTime": 500.0,

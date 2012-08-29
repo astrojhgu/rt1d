@@ -1,15 +1,4 @@
-ProblemType = 2
-MultiSpecies = 1
+ProblemType = 12
 StopTime = 100
-DensityUnits = 2.2245547230998267e-27
 SecondaryIonization = 3
-ExitAfterIntegralTabulation = 1
-ColumnDensityBinsHI = 2
-ColumnDensityBinsHeI = 2
-ColumnDensityBinsHeII = 2
-IonizedFractionBins = 2
-ProgressBar = 0
-MinimumSpeciesFraction = 1e-5
-ExitAfterIntegralTabulation = 0
-TabulateIntegrals = 1
-IntegralTable = bb_T100000_pc1_ms1_C_tdep0_si3_2x2x2x2_1620_1519.h5
+
