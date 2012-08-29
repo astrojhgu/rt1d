@@ -16,8 +16,7 @@ To clone a copy and install: ::
 
 or visit the 'Downloads' page for a tarball.
 
-Currently, rt1d depends on h5py, numpy, and scipy, though the scipy dependence is small and 
-I am in the process of removing it.  The built-in analysis module also relies on matplotlib, 
+Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis module also relies on matplotlib, 
 though if you'd rather write your own analysis scripts, this dependence is not necessary.
 
 Example

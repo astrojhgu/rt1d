@@ -1,5 +1,5 @@
 ProblemType = 3
 GridDimensions = 200
 OutputDirectory = rt06_3_c200
-dtDataDump = 0.1
+dtDataDump = 1
 StopTime = 30
