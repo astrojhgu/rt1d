@@ -24,6 +24,7 @@ from .SolveRateEquations import SolveRateEquations
 from .ControlSimulation import ControlSimulation
 
 from scipy.integrate import odeint
+from scipy.integrate import ode
 
 try:
     from progressbar import *
@@ -55,7 +56,6 @@ class Radiate:
         self.rs = rs
         self.cosm = Cosmology(pf)
         self.control = ControlSimulation(pf)
-        self.solver = SolveRateEquations(pf)
         self.coeff = RateCoefficients(pf, rs, g)
         
         self.ProgressBar = pf["ProgressBar"] and pb
@@ -87,6 +87,13 @@ class Radiate:
                 
         # For convenience 
         self.zeros_tmp = np.zeros(4)
+        
+        # Initialize solver
+        if self.pf['UseScipy']:
+            self.solver = ode(self.RateEquations).set_integrator('vode', 
+                method = 'bdf', nsteps = 5e3, with_jacobian = True)
+        else:
+            self.solver = SolveRateEquations(pf)
 
     def EvolvePhotons(self, data, t, dt, h, lb):
         """
@@ -282,12 +289,15 @@ class Radiate:
             ######################################
             ######## Solve Rate Equations ########
             ###################################### 
-                                    
+                                                                                                
             if self.pf['UseScipy']:  
-                qnew = odeint(self.RateEquations, self.q_all[cell], [t, t + dt], 
-                    args = tuple(args), full_output = False, atol = 1e-12, rtol = 1e-12)       
+                self.solver.set_initial_value(self.q_all[cell], t).set_f_params(args).set_jac_params(args)
+                self.solver.integrate(t + dt)
+                qnew = self.solver.y
+                #qnew, output = odeint(self.RateEquations, self.q_all[cell], [t, t + dt], 
+                #    args = tuple(args), full_output = True)       
                 odeitr = rootitr = 0  
-                newxHII, newxHeII, newxHeIII, newE = qnew[-1] 
+                newxHII, newxHeII, newxHeIII, newE = qnew 
             else:    
                 tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, 
                     self.q_all[cell], t, t + dt, self.z, self.z - self.dz, None, h, args)
@@ -608,7 +618,7 @@ class Radiate:
                     
         return newdata            
         
-    def RateEquations(self, q, t, *args):    
+    def RateEquations(self, t, q, args):    
         """
         This function returns the right-hand side of our ODE's (Equations 1, 2, 3 and 9 in Mirocha et al. 2012).
 
@@ -622,7 +632,7 @@ class Radiate:
         returns ionizations / second / cm^3
         
         """
-        
+                
         nabs = args[0]
         nion = args[1]
         n_H = args[2]
@@ -646,6 +656,7 @@ class Radiate:
         
         # Neutrals (current time-step)
         nHI = n_H * (1. - q[0])
+        nHII = n_H * q[0]
         nHeI = n_He * (1. - q[1] - q[2])
         nHeII = n_He * q[1]
         nHeIII = n_He * q[2]
@@ -658,7 +669,7 @@ class Radiate:
         
         # Always solve hydrogen rate equation
         dqdt[0] = (Gamma[0] + Beta[0] * n_e) * xHI + \
-                  (gamma[0][0] * xHI + gamma[0][1] * xHeI + gamma[0][2] * xHeII) - \
+                  (gamma[0][0] * xHI + gamma[0][1] * nHeI / n_H + gamma[0][2] * nHeII / n_H) - \
                    alpha[0] * n_e * xHII        
                 
         #if self.pf['CosmologicalExpansion']:    
@@ -667,18 +678,18 @@ class Radiate:
         # Helium rate equations  
         if self.pf['MultiSpecies']:       
             dqdt[1] = (Gamma[1] + Beta[1] * n_e) * xHeI + \
-                      (gamma[1][0] * xHI + gamma[1][1] * xHeI + gamma[1][2] * xHeII)  + \
+                      (gamma[1][0] * nHI / n_He + gamma[1][1] * nHeI / n_He + gamma[1][2] * xHeII / n_He)  + \
                        alpha[2] * n_e * xHeIII - \
-                      (Beta[1] + alpha[1] + xi[1]) * n_e * xHeII
+                      (Beta[1] + alpha[1] + xi[1]) * n_e * nHeII / n_He
                               
-            dqdt[2] = (Gamma[2] + Beta[2] * n_e) * xHeII - alpha[2] * n_e * xHeIII
+            dqdt[2] = (Gamma[2] + Beta[2] * n_e) * xHeII - alpha[2] * n_e * nHeIII / n_He
         
         # Temperature evolution - looks dumb but using np.sum is slow
         if not self.pf['Isothermal']:
-            phoheat = k_H[0] * nabs[0] 
-            ioncool = zeta[0] * nabs[0]
-            reccool = eta[0] * nion[0]
-            exccool = psi[0] * nabs[0]
+            phoheat = k_H[0] * nHI#nabs[0] 
+            ioncool = zeta[0] * nHI#nabs[0]
+            reccool = eta[0] * nHII#nion[0]
+            exccool = psi[0] * nHI#nabs[0]
             
             if self.pf['MultiSpecies']:
                 phoheat += k_H[1] * nabs[1] + k_H[2] * nabs[2]
@@ -694,10 +705,9 @@ class Radiate:
             #    if self.pf['ComptonHeating']:
             #        dqdt[3] += compton
             
-        print t / self.pf['TimeUnits'], dqdt
         return dqdt
         
-    def Jacobian(self, q, *args):
+    def Jacobian(self, t, q, args):
         """
         Jacobian of the rate equations.
         """    
@@ -720,53 +730,36 @@ class Radiate:
         omega = args[14]
         hubble = args[15]
         compton = args[16]
+                                
+        # Neutrals (current time-step)
+        nHI = n_H * (1. - q[0])
+        nHII = n_H * q[0]
+        nHeI = n_He * (1. - q[1] - q[2])
+        nHeII = n_He * q[1]
+        nHeIII = n_He * q[2]
+        
+        xHI = 1. - q[0]
+        xHII = q[0]
+        xHeI = 1. - q[1] - q[2]
+        xHeII = q[1]
+        xHeIII = q[2]
         
         J = np.zeros([4, 4])
         
-        # Neutrals (current time-step)
-        nHI = n_H - q[0]
-        nHeI = n_He - q[1] - q[2]
-        nHeII = q[1]
-        
-        # Always solve hydrogen rate equation
-        dqdt[0] = (Gamma[0] + Beta[0] * n_e) * nHI + \
-                  (gamma[0][0] * nHI + gamma[0][1] * nHeI + gamma[0][2] * nHeII) - \
-                   alpha[0] * n_e * q[0]
-                
-        if self.pf['CosmologicalExpansion']:
-            dqdt[0] -= 3. * q[0] * hubble
-
-        # Helium rate equations  
-        if self.pf['MultiSpecies']:       
-            dqdt[1] = (Gamma[1] + Beta[1] * n_e) * nHeI + \
-                      (gamma[1][0] * nHI + gamma[1][1] * nHeI + gamma[1][2] * nHeII)  + \
-                       alpha[2] * n_e * q[2] - \
-                      (Beta[1] + alpha[1] + xi[1]) * n_e * q[1]
-                              
-            dqdt[2] = (Gamma[2] + Beta[2] * n_e) * q[1] - alpha[2] * n_e * q[2]
-        
-        # Temperature evolution - looks dumb but using np.sum is slow
-        if not self.pf['Isothermal']:
-            phoheat = k_H[0] * nabs[0] 
-            ioncool = zeta[0] * nabs[0]
-            reccool = eta[0] * nion[0]
-            exccool = psi[0] * nabs[0]
-            
-            if self.pf['MultiSpecies']:
-                phoheat += k_H[1] * nabs[1] + k_H[2] * nabs[2]
-                ioncool += zeta[1] * nabs[1] + zeta[2] * nabs[2]
-                reccool += eta[1] * nion[1] + eta[2] * nion[2]
-                exccool += psi[1] * nabs[1] + psi[2] * nabs[2]
-            
-            dqdt[3] = phoheat - n_e * (ioncool + reccool + exccool + q[2] * omega[1])
-                               
-            if self.pf['CosmologicalExpansion']:
-                dqdt[3] -= 2. * hubble * q[3]
-                
-                if self.pf['ComptonHeating']:
-                    dqdt[3] += compton
-                                                                                                
-        return dqdt
+        J[0][0] = -(Gamma[0] + Beta[0] * n_e - gamma[0][0]) - alpha[0] * n_e
+        J[0][1] = -gamma[0][1] / n_H + gamma[0][2] / n_H
+        J[0][2] = -gamma[0][1] / n_H
+        J[1][0] = -gamma[1][0] / n_He
+        J[1][1] = -(Gamma[1] + Beta[0] * n_e + gamma[1][1] / n_He - gamma[1][2] / n_He) \
+                  +(Beta[1] + alpha[1] + xi[1]) * n_e / n_He
+        J[1][2] = -gamma[1][1] / n_He + alpha[2] * n_e
+        J[2][1] = (Gamma[2] + Beta[2] * n_e)
+        J[2][2] = -alpha[2] * n_e / n_He
+        J[3][0] = n_e * (zeta[0] - eta[0] + psi[0]) - k_H[0]
+        J[3][1] = n_e * (zeta[1] - eta[1] + psi[1]) - k_H[1]
+        J[3][2] = n_e * (zeta[2] - eta[2] + psi[2] - omega[1]) - k_H[2]          
+                                                               
+        return J
         
     def ComputeOpticalDepths(self, ncol):
         """

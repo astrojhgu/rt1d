@@ -131,7 +131,7 @@ class ControlSimulation:
             dHIIdt = nabs[0] * (Gamma[0] + Beta[0] * n_e) + \
                      gamma[0][0] * nabs[0] + gamma[0][1] * nabs[1] + gamma[0][2] * nabs[2] - \
                      nion[0] * n_e * alpha[0]
-                     
+                                          
             if self.pf['CosmologicalExpansion']:             
                 dHIIdt -= 3. * nabs[0] * hubble
             if tau[0] >= self.pf['OpticalDepthDefiningIFront'][0]:
@@ -182,7 +182,7 @@ class ControlSimulation:
                 3. * hubble * T / 2.)
             dtT = self.pf['MaxTemperatureChange'] * T / dTdt
         
-        return min(dtHI, dtHeII, dtHeIII, dtHeI, dtne, dtT)        
+        return min(dtHI, dtHeII, dtHeIII, dtHeI, dtne, dtT)
         
     def LoadBalance(self, dtphot):
         """

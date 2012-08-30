@@ -19,7 +19,9 @@ RT1D = os.environ.get('RT1D')
 os.system('cp -r %s/doc/tests/* .' % RT1D)
 
 testdir = os.getcwd()
-os.mkdir('frames')
+
+if not os.path.exists('frames'):
+    os.mkdir('frames')
 
 for fn in os.listdir(os.getcwd()):
     if not os.path.isdir(fn):

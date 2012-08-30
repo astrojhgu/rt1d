@@ -84,7 +84,7 @@ def SetDefaultPhysicsParameters():
     pf = \
         {
         "PhotonConserving": 1,  
-        "Isothermal": 1,  
+        "Isothermal": 0,  
         "MultiSpecies": 0,  
         "CollisionalIonization": 1,  
         "CollisionalExcitation": 1,  
@@ -152,7 +152,7 @@ def SetDefaultControlParameters():
         "MaxTemperatureChange": 0.05,
         "MaxRedshiftStep": 1, 
         "AllowSmallTauApprox": 0,
-        "OpticallyThinColumn": [15, 16, 0],
+        "OpticallyThinColumn": [15, 16, 16],
         "ExitAfterIntegralTabulation": 0,
         }
         

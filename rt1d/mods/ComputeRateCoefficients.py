@@ -75,8 +75,8 @@ class RateCoefficients:
         
         # Derived quantities we'll need
         Vsh = self.Vsh[cell]        
-        ncell = dr * nabs          
-        logncell = np.log10(ncell)
+        Ncell = dr * nabs          
+        logNcell = np.log10(Ncell)
         
         # Loop over radiation sources                            
         for rs, source in enumerate(self.rs.all_sources):
@@ -86,7 +86,7 @@ class RateCoefficients:
             # Set normalization constant for each species
             if self.pf['PlaneParallelField']:
                 if self.pf['PhotonConserving']:
-                    A = Lbol[rs] / ncell
+                    A = Lbol[rs] / Ncell
                 else:
                     A = 3 * [Lbol[rs]]
             else:    
@@ -94,18 +94,19 @@ class RateCoefficients:
                     A = Lbol[rs] / nabs / Vsh
                 else:
                     A = 3 * [Lbol[rs] / 4. / np.pi / r**2]
-                                                                         
+                                                                                                         
             # Check to see if we're in the small tau limit      
             small_tau = [False, False, False]      
             if self.pf['AllowSmallTauApprox']:      
                 tau_small = (ncol[0] <= self.smallcol[0]) & (ncol[1] <= self.smallcol[1]) \
                     & (ncol[2] <= self.smallcol[2])  
+                    
                 small_tau = [tau_small, tau_small, tau_small]
                 for i in xrange(3): 
                     if i > 0 and not self.pf['MultiSpecies']:
                         continue
                                
-                    small_tau[i] &= (logncell[i] <= self.smallcol[i])
+                    small_tau[i] &= (logNcell[i] <= self.smallcol[i])
                                                     
             # Standard - integral tabulation
             if not self.pf['DiscreteSpectrum'] or self.pf['ForceIntegralTabulation']:
@@ -117,17 +118,20 @@ class RateCoefficients:
                         continue
                                     
                     # A few quantities that are better to just compute once   
-                    nout = np.log10(10**ncol + ncell * self.mask[i])
+                    nout = np.log10(10**ncol + Ncell * self.mask[i])
                     indices_out = source.Interpolate.GetIndices([nout[0], nout[1], nout[2], np.log10(x_HII), t])
-                                                                                                                          
+                                                                                                                                                 
                     # Photo-Ionization - keep integral values too to be used in heating/secondary ionization
                     if small_tau[i]:
-                        Gamma[i][rs] = source.Gamma_const[i] * Lbol[rs] / 4. / np.pi / r**2
+                        if self.pf['PlaneParallelField']:
+                            Gamma[i][rs] = int(ON) * source.Gamma_const[i] * Lbol[rs]
+                        else:    
+                            Gamma[i][rs] = int(ON) * source.Gamma_const[i] * Lbol[rs] / 4. / np.pi / r**2
                     else:
                         Gamma[i][rs], Phi_N[i], Phi_N_dN[i] = self.PhotoIonizationRate(rs = source, 
                             species = i, indices_in = indices[rs], ON = ON,
                             Lbol = Lbol[rs], r = r, ncol = ncol, nabs = nabs, dr = dr, x_HII = x_HII,
-                            Vsh = Vsh, ncell = ncell, indices_out = indices_out, A = A[i], nout = nout, t = t)
+                            Vsh = Vsh, Ncell = Ncell, indices_out = indices_out, A = A[i], nout = nout, t = t)
                     
                     # Source independent terms
                     if rs == 0:                                             
@@ -277,7 +281,7 @@ class RateCoefficients:
 
     def PhotoIonizationRate(self, rs = None, species = None, E = None, Qdot = None, Lbol = None, 
         ncol = None, n_e = None, nabs = None, x_HII = None, indices_out = None,
-        T = None, r = None, dr = None, indices_in = None, Vsh = None, ncell = None, nout = None,
+        T = None, r = None, dr = None, indices_in = None, Vsh = None, Ncell = None, nout = None,
         A = None, tau_E = None, tau_c = None, t = None, ON = None):
         """
         Returns photo-ionization rate coefficient which we denote elsewhere as Gamma.  
