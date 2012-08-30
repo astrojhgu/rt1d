@@ -20,6 +20,9 @@ from .InitializeGrid import InitializeGrid
 from .SecondaryElectrons import SecondaryElectrons
 from .ComputeCrossSections import PhotoIonizationCrossSection
 
+import scipy
+from scipy.integrate import quad as integrate
+
 try:
     from progressbar import *
     pb = True
@@ -36,13 +39,6 @@ except ImportError:
     print "Module mpi4py not found.  No worries, we'll just run in serial."
     rank = 0
     size = 1
-
-try:
-    import scipy
-    from scipy.integrate import quad as integrate
-except ImportError:
-    print 'Module scipy not found.  Replacement integration routines are much slower :('
-    from Integrate import simpson as integrate    
 
 E_th = [13.6, 24.6, 54.4]
 

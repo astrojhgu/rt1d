@@ -64,6 +64,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
             return
             
         # Initialize grid and file system
+        print 'Initializing grid...'
         if data is not None:
             data = data
             g = rtm.InitializeGrid(pf)
@@ -86,6 +87,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
             MPI.COMM_WORLD.barrier()
           
         # Initialize radiation source class(es)    
+        print 'Initializing radiation source(s)...\n'
         rs = rtm.RadiationSources(pf)
         
         # Copy a few things to OutputDirectory    
@@ -153,7 +155,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
             lb = list(np.linspace(pf['GridDimensions'] / size, pf['GridDimensions'], size))
             lb.insert(0, 0)
         else: 
-            lb = None
+            lb = None                
                     
         # SOLVE RADIATIVE TRANSFER              
         while t < (pf['StopTime'] * pf['TimeUnits']):

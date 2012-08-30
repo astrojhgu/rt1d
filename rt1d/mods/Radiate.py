@@ -23,7 +23,6 @@ from .ComputeRateCoefficients import RateCoefficients
 from .SolveRateEquations import SolveRateEquations
 from .ControlSimulation import ControlSimulation
 
-from scipy.integrate import odeint
 from scipy.integrate import ode
 
 try:
@@ -89,12 +88,9 @@ class Radiate:
         self.zeros_tmp = np.zeros(4)
         
         # Initialize solver
-        if self.pf['UseScipy']:
-            self.solver = ode(self.RateEquations).set_integrator('vode', 
-                method = 'bdf', nsteps = 5e3, with_jacobian = True)
-        else:
-            self.solver = SolveRateEquations(pf)
-
+        self.solver = ode(self.RateEquations).set_integrator('vode', 
+            method = 'bdf', nsteps = 5e3, with_jacobian = True)
+        
     def EvolvePhotons(self, data, t, dt, h, lb):
         """
         This routine calls our solvers and updates 'data' -> 'newdata'
@@ -290,19 +286,10 @@ class Radiate:
             ######## Solve Rate Equations ########
             ###################################### 
                                                                                                 
-            if self.pf['UseScipy']:  
-                self.solver.set_initial_value(self.q_all[cell], t).set_f_params(args).set_jac_params(args)
-                self.solver.integrate(t + dt)
-                qnew = self.solver.y
-                #qnew, output = odeint(self.RateEquations, self.q_all[cell], [t, t + dt], 
-                #    args = tuple(args), full_output = True)       
-                odeitr = rootitr = 0  
-                newxHII, newxHeII, newxHeIII, newE = qnew 
-            else:    
-                tarr, qnew, h, odeitr, rootitr = self.solver.integrate(self.RateEquations, 
-                    self.q_all[cell], t, t + dt, self.z, self.z - self.dz, None, h, args)
-                newxHII, newxHeII, newxHeIII, newE = qnew
-            
+            self.solver.set_initial_value(self.q_all[cell], t).set_f_params(args).set_jac_params(args)
+            self.solver.integrate(t + dt)
+            newxHII, newxHeII, newxHeIII, newE = self.solver.y 
+                     
             # Convert from internal energy back to temperature
             if self.pf['Isothermal']:
                 newT = T
@@ -324,8 +311,7 @@ class Radiate:
                                                             
             # Store data
             newdata = self.StoreData(newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
-                tau, odeitr, h, rootitr, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, 
-                omega, hubble, compton)
+                tau, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, omega, hubble, compton)
                                                                                                             
             ######################################
             ################ DONE ################
@@ -579,8 +565,8 @@ class Radiate:
         return np.array(packs)
        
     def StoreData(self, newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
-        tau, odeitr, h, rootitr, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, 
-        omega, hubble, compton, packs = None):
+        tau, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, omega, hubble, compton, 
+        packs = None):
         """
         Copy fields to newdata dictionary.
         """
@@ -594,9 +580,6 @@ class Radiate:
         newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
         newdata["Temperature"][cell] = newT    
         newdata["OpticalDepth"][cell] = tau
-        newdata["ODEIterations"][cell] = odeitr
-        #newdata["ODEIterationRate"][cell] = odeitr / (h / self.pf.TimeUnits)
-        newdata["RootFinderIterations"][cell] = rootitr
                 
         if self.pf['OutputRates']:
             for i in xrange(3):
@@ -622,35 +605,17 @@ class Radiate:
         """
         This function returns the right-hand side of our ODE's (Equations 1, 2, 3 and 9 in Mirocha et al. 2012).
 
-        q = [n_HII, n_HeII, n_HeIII, E] - our four coupled equations. q = generalized quantity I guess.
+        q = [x_HII, x_HeII, x_HeIII, E] - our four coupled equations. q = generalized quantity I guess.
         
         args = (nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega)
         
         where nabs, nion, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi = 3 element arrays 
             (one entry per species)
-            
-        returns ionizations / second / cm^3
-        
+                    
         """
-                
-        nabs = args[0]
-        nion = args[1]
-        n_H = args[2]
-        n_He = args[3]
-        n_e = args[4]
         
-        Gamma = args[5]
-        gamma = args[6]
-        Beta = args[7]
-        alpha = args[8]
-        k_H = args[9]
-        zeta = args[10]
-        eta = args[11]
-        psi = args[12]
-        xi = args[13]
-        omega = args[14]
-        hubble = args[15]
-        compton = args[16]
+        nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, \
+            psi, xi, omega, hubble, compton = args
                         
         dqdt = self.zeros_tmp
         
@@ -686,10 +651,10 @@ class Radiate:
         
         # Temperature evolution - looks dumb but using np.sum is slow
         if not self.pf['Isothermal']:
-            phoheat = k_H[0] * nHI#nabs[0] 
-            ioncool = zeta[0] * nHI#nabs[0]
-            reccool = eta[0] * nHII#nion[0]
-            exccool = psi[0] * nHI#nabs[0]
+            phoheat = k_H[0] * nHI
+            ioncool = zeta[0] * nHI
+            reccool = eta[0] * nHII
+            exccool = psi[0] * nHI
             
             if self.pf['MultiSpecies']:
                 phoheat += k_H[1] * nabs[1] + k_H[2] * nabs[2]
@@ -712,24 +677,8 @@ class Radiate:
         Jacobian of the rate equations.
         """    
         
-        nabs = args[0]
-        nion = args[1]
-        n_H = args[2]
-        n_He = args[3]
-        n_e = args[4]
-        
-        Gamma = args[5]
-        gamma = args[6]
-        Beta = args[7]
-        alpha = args[8]
-        k_H = args[9]
-        zeta = args[10]
-        eta = args[11]
-        psi = args[12]
-        xi = args[13]
-        omega = args[14]
-        hubble = args[15]
-        compton = args[16]
+        nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, \
+            psi, xi, omega, hubble, compton = args
                                 
         # Neutrals (current time-step)
         nHI = n_H * (1. - q[0])

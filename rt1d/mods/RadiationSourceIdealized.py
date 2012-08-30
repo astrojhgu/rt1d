@@ -12,11 +12,11 @@ Description:
 
 import numpy as np
 from .Constants import *
-from scipy.integrate import quad
-from Integrate import simpson as integrate  # why did scipy.integrate.quad mess up LphotNorm? 
+from scipy.integrate import quad, romberg
 from .ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
-np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB - will return 0 as it should for x large
+np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB
+                            # will return 0 as it should for x large
 
 SchaererTable = {
                 "Mass": [5, 9, 15, 25, 40, 60, 80, 120, 200, 300, 400, 500, 1000], 
@@ -97,8 +97,8 @@ class RadiationSourceIdealized:
             self.Qdot = self.F * self.Lph
         elif self.pf['SourceType'] in [1, 2]:
             self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * \
-                integrate(lambda x: x**2 / (np.exp(x) - 1.), 
-                13.6 * erg_per_ev / k_B / self.T, big_number, epsrel = 1e-12)[0] / h**3 / c**2 
+                romberg(lambda x: x**2 / (np.exp(x) - 1.), 
+                13.6 * erg_per_ev / k_B / self.T, big_number, divmax = 100) / h**3 / c**2 
             self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
             self.Qdot = self.Lbol * self.F / self.E / erg_per_ev
