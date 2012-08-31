@@ -177,8 +177,7 @@ def SetDefaultGridParameters():
         "ClumpRadius": 0.05,  
         "ClumpDensityProfile": 0,  
         "ClumpOverdensity": 100,  
-        "ClumpTemperature": 100,  
-          
+        "ClumpTemperature": 100,    
         "DensityUnits": 1e-3 * m_H,
         "LengthUnits": cm_per_kpc,  
         "TimeUnits": s_per_myr,  
@@ -199,7 +198,7 @@ def SetDefaultSolverParameters():
         "ODEConservativeTolerance": 1e-2,
         "CheckForGoofiness": 1,  
         "MaximumGlobalTimestep": 500,  
-        "MinimumSpeciesFraction": 1e-6,  
+        "MinimumSpeciesFraction": 1e-8,  
         }
         
     return pf

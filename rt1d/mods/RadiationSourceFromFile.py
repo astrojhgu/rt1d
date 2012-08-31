@@ -59,6 +59,15 @@ class RadiationSourceFromFile:
         
         self.Lbol = self.BolometricLuminosity(0)
         
+    def SourceOn(self, t):
+        i = self.get_time_index(t)
+        
+        if i in np.arange(self.Nt):
+            return True
+        else:
+            print 'WARNING: Current time lies outside bounds of spectrum table. Source now OFF.'
+            return False
+        
     def Spectrum(self, E = None, t = 0.0):
         """
         Return specific luminosity.

@@ -144,7 +144,7 @@ class Interpolate:
         """
         
         if not self.pf['MultiSpecies']:
-            return None
+            return None    
                                                                                                         
         # Smaller indices
         i_s = int((value[self.locs[0]] / self.dcolumns[0]) - self.offsets[0])

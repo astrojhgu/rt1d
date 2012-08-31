@@ -89,7 +89,8 @@ class Radiate:
         
         # Initialize solver
         self.solver = ode(self.RateEquations).set_integrator('vode', 
-            method = 'bdf', nsteps = 5e3, with_jacobian = True)
+            method = 'bdf', nsteps = 1e4, with_jacobian = True,
+            atol = 1e-12, rtol = 1e-8)
         
     def EvolvePhotons(self, data, t, dt, h, lb):
         """
@@ -138,7 +139,7 @@ class Radiate:
         
         self.q_all = np.transpose([self.x_HII_arr, self.x_HeII_arr, self.x_HeIII_arr, 
             3. * k_B * self.nB_all * data["Temperature"] / 2.])
-                                                            
+                                                                                                     
         # Retrieve indices used for N-D interpolation
         self.indices_all = []
         for i, col in enumerate(self.ncol_all):
@@ -253,7 +254,7 @@ class Radiate:
             n_H = n_HI + n_HII
             n_He = n_HeI + n_HeII + n_HeIII                
             n_B = n_H + n_He + n_e
-                                              
+                                                                                            
             # Read in temperature and internal energy for this cell
             T = self.data["Temperature"][cell]
                                                                                           
@@ -285,17 +286,18 @@ class Radiate:
             ######################################
             ######## Solve Rate Equations ########
             ###################################### 
-                                                                                                
+                                                                                                                                    
             self.solver.set_initial_value(self.q_all[cell], t).set_f_params(args).set_jac_params(args)
             self.solver.integrate(t + dt)
             newxHII, newxHeII, newxHeIII, newE = self.solver.y 
-                     
+            newxHII, newxHeII, newxHeIII, newE = self.ConserveParticleNumber(newxHII, newxHeII, newxHeIII, newE) 
+                                     
             # Convert from internal energy back to temperature
             if self.pf['Isothermal']:
                 newT = T
             else:
                 newT = newE * 2. / 3. / k_B / n_B
-                            
+                                            
             #if self.pf['CosmologicalExpansion']:
             #    n_H = self.cosm.nH0 * (1. + (self.z - self.dz))**3
             #    n_He = self.cosm.nHe0 * (1. + (self.z - self.dz))**3  
@@ -308,7 +310,7 @@ class Radiate:
             newHeI = n_He * (1. - newxHeII - newxHeIII)
             newHeII = n_He * newxHeII
             newHeIII = n_He * newxHeIII
-                                                            
+                                                                        
             # Store data
             newdata = self.StoreData(newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
                 tau, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, omega, hubble, compton)
@@ -547,6 +549,24 @@ class Radiate:
         newdata['PhotonPackages'] = np.array(self.UpdatePhotonPackages(packs, t + dt))
                 
         return newdata, dtphot
+        
+    def ConserveParticleNumber(self, newxHII, newxHeII, newxHeIII, newE):
+        """
+        Take solver.y and make sure ion fractions sum to 1 - MinimumSpeciesFraction.
+        """    
+        
+        if newxHII >= 1:
+            newxHII = 1. - self.pf['MinimumSpeciesFraction']
+            
+        if (newxHeII + newxHeIII) >= 1:
+            if newxHeII > newxHeIII:
+                newxHeII += 1. - (newxHeII + newxHeIII)
+                newxHeIII -= self.pf['MinimumSpeciesFraction']
+            else:
+                newxHeIII += 1. - (newxHeII + newxHeIII)
+                newxHeII -= self.pf['MinimumSpeciesFraction']
+    
+        return newxHII, newxHeII, newxHeIII, newE
     
     def UpdatePhotonPackages(self, packs, t_next):
         """
@@ -626,11 +646,16 @@ class Radiate:
         nHeII = n_He * q[1]
         nHeIII = n_He * q[2]
         
+        nabs = [nHI, nHeI, nHeII]
+        nion = [nHII, nHeII, nHeIII]
+        
         xHI = 1. - q[0]
         xHII = q[0]
         xHeI = 1. - q[1] - q[2]
         xHeII = q[1]
         xHeIII = q[2]
+        
+        n_e = q[0] * n_H + q[1] * n_He + 2. * q[2] * n_He
         
         # Always solve hydrogen rate equation
         dqdt[0] = (Gamma[0] + Beta[0] * n_e) * xHI + \

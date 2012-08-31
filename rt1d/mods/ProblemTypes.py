@@ -162,7 +162,7 @@ def ProblemType(ptype):
              "SpectrumType": 1,
              "SpectrumPhotonLuminosity": 5e48, 
              "SpectrumMinEnergy": 13.6, 
-             "SpectrumMaxEnergy": 100., \
+             "SpectrumMaxEnergy": 100.,
              "SpectrumMinNormEnergy": 0.1, 
              "SpectrumMaxNormEnergy": 100., 
              "DiscreteSpectrum": 0,

@@ -87,7 +87,7 @@ def Shine(pf, r = None, data = None, IsRestart = False):
             MPI.COMM_WORLD.barrier()
           
         # Initialize radiation source class(es)    
-        print 'Initializing radiation source(s)...\n'
+        print 'Initializing radiation source...'
         rs = rtm.RadiationSources(pf)
         
         # Copy a few things to OutputDirectory    
