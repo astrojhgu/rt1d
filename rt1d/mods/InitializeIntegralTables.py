@@ -109,7 +109,7 @@ class InitializeIntegralTables:
         else:
             self.zeros = np.zeros(1)
             
-        self.tname = self.DetermineTableName()    
+        self.tname = self.DetermineTableName() 
                                     
     def DetermineTableName(self):    
         """
@@ -122,10 +122,7 @@ class InitializeIntegralTables:
         
         if self.pf['IntegralTable'] != 'None':
             return self.pf['IntegralTable']
-            
-        if self.pf['SpectrumFile'] != 'None':
-            return '%s_integral_table.hdf5' % self.pf['SpectrumFile'].rsplit('/')[-1].partition('.')[0]               
-        
+             
         ms = 'ms%i' % self.pf['MultiSpecies']
         pc = 'pc%i' % self.pf['PhotonConserving']
         si = 'si%i' % self.pf['SecondaryIonization']
@@ -179,8 +176,14 @@ class InitializeIntegralTables:
 
         # Limits
         Hlim = '%i%i' % (self.HIColumn[0], self.HIColumn[-1])
-        Helim = '%i%i' % (self.HeIColumn[0], self.HeIColumn[-1])        
+        Helim = '%i%i' % (self.HeIColumn[0], self.HeIColumn[-1])     
+        
+        # SpectrumFile provided
+        if self.pf['SpectrumFile'] != 'None':
+            prefix = self.pf['SpectrumFile'].rsplit('/')[-1].partition('.')[0]
+            return '%s_%s_%s_%s_%s_%s_%s_%s.hdf5' % (prefix, pc, ms, td, si, dims, Hlim, Helim)    
                     
+        # Otherwise            
         return "%s_%s_%s_%s_%s_%s_%s_%s_%s_%s.hdf5" % (src, prop, pc, ms, sed, td, si, dims, Hlim, Helim)
             
     def DatasetName(self, integral, species, donor_species = None):
