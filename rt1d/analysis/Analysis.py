@@ -160,8 +160,14 @@ class Analyze:
             if self.data[dd].t / self.pf['TimeUnits'] != t: 
                 continue
             
-            exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                self.data[%i].T, ls = \'%s\', color = \'%s\')' % (dd, dd, ls, color))                
+            break
+            
+        r = self.data[dd].r / self.pf['LengthUnits']
+        self.ax.loglog(r, self.data[dd].T, ls = ls, color = color)
+            
+        if self.pf['CosmologicalExpansion']:
+            self.ax.loglog([min(r), max(r)], [self.pf['CMBTemperatureNow'] * (1. + self.data[dd].z)] * 2,
+                color = 'k', ls = ':') 
             
         self.ax.set_xscale(xscale)    
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
@@ -329,19 +335,22 @@ class Analyze:
         
     def CellTimeEvolution(self, cell = 0, field = 'x_HI'):
         """
-        Return time evolution of cell.
+        Return time evolution of a given quantity in one cell.
         """    
         
+        z = []
         time = []
         value = []
         for dd in self.data.keys():
             if self.pf['CosmologicalExpansion']:
-                time.append(self.data[dd].z)
+                z.append(self.data[dd].z)
             else:
-                time.append(self.data[dd].t)
+                z.append(None)
+
+            time.append(self.data[dd].t)
             exec('value.append(self.data[%i].%s[%i])' % (dd, field, cell))
         
-        return np.array(time), np.array(value)
+        return np.array(time), np.array(z), np.array(value)
         
     def CellTimeSeries(self, cell = 0, species = 0, field = 'x_HI', color = 'k', ls = '-'):
         """
@@ -441,7 +450,7 @@ class Analyze:
             recomb = alpha + xi    
                 
         self.ax = pl.subplot(111)
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], ion, color = color, ls = '-', label = 'Ioniz.')        
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], ion, color = color, ls = '-', label = 'Total')        
         self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Gamma, color = color, ls = '--', label = r'$\Gamma$')
         self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], gamma, color = color, ls = ':', label = r'$\gamma$')
         self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Beta, color = color, ls = '-.', label = r'$\beta$')
@@ -485,6 +494,9 @@ class Analyze:
             psi = np.sum(self.data[dd].psi * tranabs, axis = 1) * self.data[dd].n_e  # collisional excitation
             omega = np.sum(self.data[dd].omega * tranabs, axis = 1) * self.data[dd].n_e # dielectric
             cool = (zeta + eta + psi + omega)
+            
+            if self.pf['CosmologicalExpansion']:
+                cool += self.data[dd].hubble * 3. * self.data[dd].T * k_B * self.data[dd].n_B
 
         mi = min(np.min(heat), np.min(cool))    
         ma = max(np.max(heat), np.max(cool))    
@@ -498,6 +510,10 @@ class Analyze:
         
         if self.pf['MultiSpecies']:
             self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], omega, color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
+                
+        if self.pf['CosmologicalExpansion']:
+            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.data[dd].hubble * 3. * self.data[dd].T * k_B * self.data[dd].n_B, 
+                color = 'm', ls = '--', label = r'$H(z)$')
                 
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Heating & Cooling Rate $(\mathrm{erg/s/cm^3})$')

@@ -72,7 +72,7 @@ class Cosmology:
         if z >= self.zdec:
             return self.TCMB(z)
         else:
-            return self.TCMB(self.zdec) * (1. + z)**2
+            return self.TCMB(self.zdec) * (1. + z)**2 / (1. + self.zdec)**2
         
     def ScaleFactor(self, z):
         return 1.0 / (1.0 + z)

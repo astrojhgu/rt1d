@@ -91,6 +91,7 @@ class DataDump:
         self.eta = np.zeros_like(self.Beta)
         self.psi = np.zeros_like(self.Beta)
         self.omega = np.zeros_like(self.Beta)
+        self.hubble = np.zeros(self.GridDimensions)
         
         # extra stuff
         self.tau = dd['OpticalDepth'].value            
@@ -112,13 +113,15 @@ class DataDump:
                 
                 self.Beta[:,i] = dd['CollisionalIonizationRate%i' % i].value
                 self.alpha[:,i] = dd['RadiativeRecombinationRate%i' % i].value
-                self.zeta[:,i] = dd['CollisionalIonzationCoolingRate%i' % i].value
+                self.zeta[:,i] = dd['CollisionalIonizationCoolingRate%i' % i].value
                 self.eta[:,i] = dd['RecombinationCoolingRate%i' % i].value
                 self.psi[:,i] = dd['CollisionalExcitationCoolingRate%i' % i].value
                 
                 if i == 2:
                     self.xi[:,i] = dd['DielectricRecombinationRate'].value
                     self.omega[:,i] = dd['DielectricRecombinationCoolingRate'].value
+                    
+            self.hubble = dd['HubbleCoolingRate'].value        
 
     def __getitem__(self, name):
         """

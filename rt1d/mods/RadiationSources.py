@@ -79,7 +79,6 @@ class RadiationSources:
             rs.initialize()   
             
             # Initialize integral tables
-            print 'Initializing integral tables...'
             rs.iits = InitializeIntegralTables(sf, rs)
                         
             if self.path is not '.':

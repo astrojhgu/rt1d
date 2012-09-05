@@ -53,7 +53,7 @@ class InitializeGrid:
         
         if self.pf['OutputRates']:
             for i in xrange(3):
-                for j in xrange(3):
+                for j in xrange(self.pf['NumberOfSources']):
                     fields['PhotoIonizationRate%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
                     fields['PhotoHeatingRate%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
                     fields['SecondaryIonizationRate%i_src%i' % (i, j)] = np.zeros([len(fields[fields.keys()[0]]), 3])    
@@ -61,7 +61,7 @@ class InitializeGrid:
                 fields['CollisionalIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['RadiativeRecombinationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
-                fields['CollisionalIonzationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                fields['CollisionalIonizationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['RecombinationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                                     
@@ -78,6 +78,7 @@ class InitializeGrid:
         fields['Radius'] = self.r
         fields['ShellThickness'] = self.dx  
         fields['PhotonPackages'] = np.zeros(3)
+        fields['HubbleCoolingRate'] = np.ones_like(fields[fields.keys()[0]])
                 
         return fields                
                         
@@ -90,9 +91,9 @@ class InitializeGrid:
                 1: Uniform density given by cosmic mean at z = InitialRedshift.
         """        
                 
-        if self.pf['DensityProfile'] == 0: 
+        if self.pf['CosmologicalExpansion'] == 0: 
             density = self.pf['DensityUnits']
-        if self.pf['DensityProfile'] == 1: 
+        elif self.pf['CosmologicalExpansion'] == 1: 
             density = self.cosm.MeanBaryonDensity(self.pf['InitialRedshift'])
         
         if self.pf['Clump']: 
@@ -116,9 +117,9 @@ class InitializeGrid:
                    Tk ~ (1 + z)^2 after decoupling.
         """
                 
-        if self.pf['TemperatureProfile'] == 0: 
+        if self.pf['CosmologicalExpansion'] == 0: 
             temperature = self.pf['InitialTemperature']    
-        if self.pf['TemperatureProfile'] == 1: 
+        elif self.pf['CosmologicalExpansion'] == 1: 
             temperature = self.cosm.Tgas(self.pf['InitialRedshift'])
                 
         if self.pf['Clump']:

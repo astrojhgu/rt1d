@@ -86,8 +86,9 @@ def Shine(pf, r = None, data = None, IsRestart = False):
         if size > 1 and pf['ParallelizationMethod'] == 1: 
             MPI.COMM_WORLD.barrier()
           
-        # Initialize radiation source class(es)    
-        print 'Initializing radiation source...'
+        # Initialize radiation source class(es) 
+        if rank == 0:   
+            print 'Initializing radiation source...'
         rs = rtm.RadiationSources(pf)
         
         # Copy a few things to OutputDirectory    

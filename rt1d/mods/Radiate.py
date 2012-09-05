@@ -55,7 +55,7 @@ class Radiate:
         self.rs = rs
         self.cosm = Cosmology(pf)
         self.control = ControlSimulation(pf)
-        self.coeff = RateCoefficients(pf, rs, g)
+        self.coeff = RateCoefficients(pf, rs, g)     
         
         self.ProgressBar = pf["ProgressBar"] and pb
         
@@ -103,6 +103,13 @@ class Radiate:
         # Figure out which processors will solve which cells and create newdata dict
         self.solve_arr, newdata = self.control.DistributeDataAcrossProcessors(data, lb)
                           
+        # If we're in an expanding universe, prepare to dilute densities by (1 + z)**3
+        self.z = 0 
+        self.dz = 0   
+        if self.pf['CosmologicalExpansion']: 
+            self.z = self.cosm.TimeToRedshiftConverter(0., t, self.pf['InitialRedshift'])
+            self.dz = dt / self.cosm.dtdz(self.z)
+               
         # Nice names for densities, ionized fractions
         self.n_H_arr = data["HIDensity"] + data["HIIDensity"]
         self.x_HI_arr = data["HIDensity"] / self.n_H_arr
@@ -116,13 +123,6 @@ class Radiate:
         else: 
             self.n_He_arr = self.x_HeI_arr = self.x_HeII_arr = self.x_HeIII_arr = np.zeros_like(self.x_HI_arr)
                                                         
-        # If we're in an expanding universe, prepare to dilute densities by (1 + z)**3
-        self.z = 0 
-        self.dz = 0   
-        if self.pf['CosmologicalExpansion']: 
-            self.z = self.cosm.TimeToRedshiftConverter(0., t, self.pf['InitialRedshift'])
-            self.dz = dt / self.cosm.dtdz(self.z)
-            
         # Compute column densities - meaning column density *between* source and cell
         self.ncol_HI = np.roll(np.cumsum(data["HIDensity"] * self.dx), 1)
         self.ncol_HeI = np.roll(np.cumsum(data["HeIDensity"] * self.dx), 1)
@@ -291,19 +291,19 @@ class Radiate:
             self.solver.integrate(t + dt)
             newxHII, newxHeII, newxHeIII, newE = self.solver.y 
             newxHII, newxHeII, newxHeIII, newE = self.ConserveParticleNumber(newxHII, newxHeII, newxHeIII, newE) 
-                                     
+                                            
             # Convert from internal energy back to temperature
             if self.pf['Isothermal']:
                 newT = T
             else:
-                newT = newE * 2. / 3. / k_B / n_B
+                newT = newE * 2. / 3. / k_B / n_B                                
                                             
-            #if self.pf['CosmologicalExpansion']:
-            #    n_H = self.cosm.nH0 * (1. + (self.z - self.dz))**3
-            #    n_He = self.cosm.nHe0 * (1. + (self.z - self.dz))**3  
-            #    n_e = newHII + newHeII + 2.0 * newHeIII
-            #    n_B = n_H + n_He + n_e                       
-         
+            if self.pf['CosmologicalExpansion']:
+                n_H = self.cosm.nH0 * (1. + (self.z - self.dz))**3
+                n_He = self.cosm.nHe0 * (1. + (self.z - self.dz))**3  
+                n_e = newxHII * n_H + newxHeII * n_He + 2.0 * newxHeIII * n_He
+                n_B = n_H + n_He + n_e
+                 
             # Calculate neutral fractions
             newHI = n_H * (1. - newxHII)
             newHII = n_H * newxHII
@@ -322,8 +322,9 @@ class Radiate:
             # Adjust timestep based on maximum allowed neutral fraction change     
             if self.AdaptiveGlobalStep:
                 dtphot[cell] = self.control.ComputePhotonTimestep(tau, 
-                    nabs, nion, ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, k_H, 
-                        zeta, eta, psi, xi, omega, hubble, compton, newT, self.z, dt) 
+                    [newHI, newHeI, newHeII], [newHII, newHeII, newHeIII], 
+                    ncol, n_H, n_He, n_e, n_B, Gamma, gamma, Beta, alpha, k_H, 
+                    zeta, eta, psi, xi, omega, hubble, compton, newT, self.z, dt) 
         
         return newdata, dtphot
         
@@ -611,13 +612,15 @@ class Radiate:
                 
                 newdata['CollisionalIonizationRate%i' % i][cell] = Beta[i] 
                 newdata['RadiativeRecombinationRate%i' % i][cell] = alpha[i] 
-                newdata['CollisionalIonzationCoolingRate%i' % i][cell] = zeta[i] 
+                newdata['CollisionalIonizationCoolingRate%i' % i][cell] = zeta[i] 
                 newdata['RecombinationCoolingRate%i' % i][cell] = eta[i] 
                 newdata['CollisionalExcitationCoolingRate%i' % i][cell] = psi[i]                
                 
                 if i == 2:
                     newdata['DielectricRecombinationRate'][cell] = xi[i]
-                    newdata['DielectricRecombinationCoolingRate'][cell] = omega[i]                 
+                    newdata['DielectricRecombinationCoolingRate'][cell] = omega[i]   
+                    
+            newdata['HubbleCoolingRate'][cell] = hubble                      
                     
         return newdata            
         
@@ -662,9 +665,6 @@ class Radiate:
                   (gamma[0][0] * xHI + gamma[0][1] * nHeI / n_H + gamma[0][2] * nHeII / n_H) - \
                    alpha[0] * n_e * xHII        
                 
-        #if self.pf['CosmologicalExpansion']:    
-        #    dqdt[0] -= 3. * q[0] * hubble
-
         # Helium rate equations  
         if self.pf['MultiSpecies']:       
             dqdt[1] = (Gamma[1] + Beta[1] * n_e) * xHeI + \
@@ -689,11 +689,11 @@ class Radiate:
             
             dqdt[3] = phoheat - n_e * (ioncool + reccool + exccool + nHeIII * omega[1])
                                
-            #if self.pf['CosmologicalExpansion']:
-            #    dqdt[3] -= 2. * hubble * q[3]
-            #    
-            #    if self.pf['ComptonHeating']:
-            #        dqdt[3] += compton
+            if self.pf['CosmologicalExpansion']:
+                dqdt[3] -= 2. * hubble * q[3]
+               
+                #if self.pf['ComptonHeating']:
+                #    dqdt[3] += compton
             
         return dqdt
         

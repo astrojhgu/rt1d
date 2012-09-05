@@ -75,7 +75,10 @@ class Dataset:
             try:
                 ds[int(ID)] = DataDump(f["data"], f["parameters"])
             except KeyError: # backwards compatibility
-                ds[int(ID)] = DataDump(f["Data"], f["ParameterFile"])
+                try:
+                    ds[int(ID)] = DataDump(f["Data"], f["ParameterFile"])
+                except KeyError:
+                    print 'Data in %s likely corrupted.' % ddf
             f.close()
             
         return ds

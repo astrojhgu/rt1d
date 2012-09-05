@@ -508,7 +508,7 @@ class InitializeIntegralTables:
         if rank == 0:    
             self.lookup_tab.close()    
             
-        print 'Integral tabulation complete.\n'    
+        print 'Integral tabulation complete.'    
             
         self.itabs = itabs    
         return itabs         
