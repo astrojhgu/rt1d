@@ -73,10 +73,14 @@ class RadiationSources:
             if sf['SpectrumFile'] != 'None':
                 rs = RadiationSourceFromFile(sf)
             else:
-                rs = RadiationSourceIdealized(sf)
+                rs = RadiationSourceIdealized(sf)    
                                 
             # Initialize class
             rs.initialize()   
+            
+            # Warn if LymanAlpha = 1 but Emin > 10.2
+            if self.pf['LymanAlphaContinuum'] and (rs.Emin > 10.2):
+                print 'WARNING: LymanAlphaContinuum = 1 but rs[%i].Emin = %g eV!' % (i, rs.Emin)
             
             # Initialize integral tables
             rs.iits = InitializeIntegralTables(sf, rs)

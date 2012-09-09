@@ -84,11 +84,14 @@ def SetDefaultPhysicsParameters():
     pf = \
         {
         "PhotonConserving": 1,  
+        "LymanAlphaContinuum": 0,
+        "LymanAlphaInjection": 0,
         "Isothermal": 0,  
         "MultiSpecies": 0,  
         "CollisionalIonization": 1,  
         "CollisionalExcitation": 1,  
         "SecondaryIonization": 0,  
+        "SecondaryLymanAlpha": 0,
         "ComptonHeating": 0,  
         "FreeFreeEmission": 0,  
         "CosmologicalExpansion": 0,  
@@ -122,7 +125,8 @@ def SetDefaultControlParameters():
         "CurrentTime": 0.0,  
         "CurrentRedshift": 'None',
         "StopTime": 50.0,  
-        "dtDataDump": 5.0,  
+        "dtDataDump": 5.0,
+        "dzDataDump": 0.0,  
         "LogarithmicDataDump": 0,
         "InitialLogDataDump": 1e-6,
         "NlogDataDumps": 100, 
@@ -189,14 +193,7 @@ def SetDefaultSolverParameters():
     pf = \
         {
         "UseScipy": 1,
-        "InterpolationMethod": 0,  
-        "ODEMinStep": 1e-8,  
-        "ODEMaxStep": 1e-1,  
-        "ODEMaxIter": 1e3,  
-        "ODEAdaptiveStep": 1,  
-        "ODEConservativeAdaptiveStep": 1,
-        "ODEConservativeTolerance": 1e-2,
-        "CheckForGoofiness": 1,  
+        "InterpolationMethod": 0,   
         "MaximumGlobalTimestep": 500,  
         "MinimumSpeciesFraction": 1e-8,  
         }

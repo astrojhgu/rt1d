@@ -12,7 +12,8 @@ Description:
 
 import numpy as np
 
-from .Constants import erg_per_ev, k_B, c, m_e, sigma_SB, sigma_T 
+from .Constants import erg_per_ev, k_B, c, m_e, sigma_SB, \
+    sigma_T, h, nu_alpha, E_LyA
 from .Cosmology import Cosmology
 from .Interpolate import Interpolate
 from .RadiationSource import RadiationSource
@@ -44,7 +45,8 @@ class RateCoefficients:
         Make list of rate coefficients that we'll pass to solver.
         
             incoming args: [nabs, nion, n_H, n_He, n_e]
-            outgoing args: [nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, theta]
+            outgoing args: [nabs, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, 
+                k_H, zeta, eta, psi, xi, omega, theta, Jc, Ji]
             
             ***REMEMBER: ncol is really np.log10(ncol)!
             
@@ -67,11 +69,14 @@ class RateCoefficients:
         psi = np.zeros(3)
         xi = np.zeros(3)
         omega = np.zeros(3)
-        theta = 0
+        theta = 0           # reserved for compton heating
         Phi_N = np.zeros(3)
         Phi_N_dN = np.zeros(3)
         Psi_N = np.zeros(3)
         Psi_N_dN = np.zeros(3)
+        
+        Jc = np.zeros(self.rs.Ns)
+        Ji = np.zeros([3, self.rs.Ns])
         
         # Derived quantities we'll need
         Vsh = self.Vsh[cell]        
@@ -81,7 +86,7 @@ class RateCoefficients:
         # Loop over radiation sources                            
         for rs, source in enumerate(self.rs.all_sources):
             
-            ON = source.SourceOn(t)    
+            ON = source.SourceOn(t)
                                                                 
             # Set normalization constant for each species
             if self.pf['PlaneParallelField']:
@@ -94,6 +99,9 @@ class RateCoefficients:
                     A = Lbol[rs] / nabs / Vsh
                 else:
                     A = 3 * [Lbol[rs] / 4. / np.pi / r**2]
+                    
+            if self.pf['LymanAlphaContinuum']:
+                Jc[rs] = ON * Lbol[rs] * source.Spectrum(E_LyA) / (4. * np.pi * r)**2
                                                                                                          
             # Check to see if we're in the small tau limit      
             small_tau = [False, False, False]      
@@ -155,6 +163,10 @@ class RateCoefficients:
                                 species = i, Lbol = Lbol[rs], r = r, ON = ON,
                                 x_HII = x_HII, indices_in = indices[rs], indices_out = indices_out, ncol = ncol, dr = dr, 
                                 nout = nout, nabs = nabs, Phi_N = Phi_N[i], Phi_N_dN = Phi_N_dN[i], A = A[i], t = t)
+                        
+                        if self.pf['LymanAlphaInjection']:
+                            f_lya = self.esec.DepositionFraction(0.0, x_HII, channel = 4)
+                            Ji[i][rs] = ON * c * f_lya * k_H[i][rs] * nabs[i] / 4. / np.pi / self.cosm.HubbleParameter(z) / nu_alpha
                         
                         if rs == 0:
                             zeta[i] = self.CollisionalIonizationCoolingRate(species = i, T = T)    
@@ -277,7 +289,7 @@ class RateCoefficients:
             hubble = self.HubbleCoolingRate(z)
             compton = self.ComptonHeatingRate(z, n_H, n_He, n_e, x_HII, T)
                                                                                                                       
-        return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, hubble, compton]
+        return [Gamma, gamma, Beta, alpha, k_H, zeta, eta, psi, xi, omega, hubble, compton, Jc, Ji]
 
     def PhotoIonizationRate(self, rs = None, species = None, E = None, Qdot = None, Lbol = None, 
         ncol = None, n_e = None, nabs = None, x_HII = None, indices_out = None,
@@ -545,4 +557,3 @@ class RateCoefficients:
         
         return 4. * np.pi * ((r + dr)**3 - r**3) / 3.    
         
-          

@@ -70,7 +70,7 @@ class Dataset:
             
         ds = {}
         for ddf in alldds:
-            f = h5py.File("{0}/{1}".format(self.path_to_output, ddf))
+            f = h5py.File("%s/%s" % (self.path_to_output, ddf))
             ID = ddf.partition('.')[0].strip('dd')
             try:
                 ds[int(ID)] = DataDump(f["data"], f["parameters"])

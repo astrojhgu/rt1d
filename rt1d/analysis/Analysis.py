@@ -59,7 +59,7 @@ class Analyze:
                                 
         # Store bins used for PDFs/CDFs
         self.bins = {}
-        
+          
         # Inspect instance    
         #self.inspect = Inspect(self)    
         
@@ -145,13 +145,16 @@ class Analyze:
         if mp is None: 
             self.mp.fix_ticks()  
      
-    def TemperatureProfile(self, t = 10, color = 'k', ls = '-', xscale = 'linear'):
+    def TemperatureProfile(self, t = 10, color = 'k', ls = '-', xscale = 'linear', legend = True):
         """
         Plot radial profiles of temperature at times t (Myr).
         """  
         
         if not hasattr(self, 'ax'):
             self.ax = pl.subplot(111)
+        else:
+            if legend:
+                legend = False
         
         self.ax.set_xscale('log')
         self.ax.set_yscale('log')
@@ -163,16 +166,41 @@ class Analyze:
             break
             
         r = self.data[dd].r / self.pf['LengthUnits']
-        self.ax.loglog(r, self.data[dd].T, ls = ls, color = color)
+        self.ax.loglog(r, self.data[dd].T, ls = ls, color = color, label = r'$T_K$')
+                
+        if self.pf['LymanAlphaContinuum'] or self.pf['LymanAlphaInjection']:
+            self.ax.loglog(r, self.data[dd].Ts, color = color, ls = '--', label = r'$T_S$') 
             
         if self.pf['CosmologicalExpansion']:
             self.ax.loglog([min(r), max(r)], [self.pf['CMBTemperatureNow'] * (1. + self.data[dd].z)] * 2,
-                color = 'k', ls = ':') 
+                color = 'k', ls = ':', label = r'$T_{\gamma}$')         
+            
+            if legend:
+                self.ax.legend(loc = 'upper right', frameon = False)
             
         self.ax.set_xscale(xscale)    
         self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
         self.ax.set_ylabel(r'Temperature $(K)$')  
         pl.draw()        
+        
+    def BrightnessTemperatureProfile(self, t, color = 'k', ls = '-'):
+        """
+        dTb(r)
+        """   
+        
+        self.ax = pl.subplot(111)
+        
+        for dd in self.data.keys():
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
+                continue
+            
+            break
+                    
+        self.ax.plot(self.data[dd].r / cm_per_kpc, self.data[dd].dTb, color = color, ls = ls)
+        
+        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
+        self.ax.set_ylabel(r'$\delta T_b \ (\mathrm{mK})$')
+        pl.draw()
         
     def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k', 
         annotate = False, xscale = 'linear', yscale = 'log'):
@@ -381,52 +409,7 @@ class Analyze:
         self.ax = pl.subplot(111)
         self.ax.loglog(t / s_per_yr, val, color = color, ls = ls)  
         
-        pl.draw()    
-        
-    def InspectRateCoefficients(self, t = 1, coeff = 'Gamma', species = 0, color = 'k', 
-        ls = '-', src = 0):
-        """
-        Plot given rate coefficient as function of r.
-        """
-        
-        if species == 0:
-            s = 'HI'
-        elif species == 1:
-            s = 'HeI'
-        else:
-            s = 'HeII'
-            
-        if coeff == 'Gamma':
-            ylabel = r'$\Gamma_{\mathrm{%s}}$' % s
-        elif coeff == 'gamma':
-            ylabel = r'$\gamma_{\mathrm{%s}}$' % s
-        elif coeff == 'Beta':
-            ylabel = r'$\beta_{\mathrm{%s}}$' % s    
-        elif coeff == 'k_H':
-            ylabel = r'$\mathcal{H}_{\mathrm{%s}}$' % s
-        elif coeff == 'zeta':
-            ylabel = r'$\zeta_{\mathrm{%s}}$' % s
-        elif coeff == 'eta':
-            ylabel = r'$\eta_{\mathrm{%s}}$' % s 
-        elif coeff == 'psi':
-            ylabel = r'$\psi_{\mathrm{%s}}$' % s       
-        elif coeff == 'omega':
-            ylabel = r'$\omega_{\mathrm{HeIII}}$'   
-        elif coeff == 'alpha':
-            ylabel = r'$\alpha_{\mathrm{%s}}$' % s               
-        
-        self.ax = pl.subplot(111)
-        for dd in self.data.keys():
-            if self.data[dd].t / self.pf['TimeUnits'] != t: 
-                continue
-            
-            exec('self.ax.loglog(self.data[%i].r / self.pf[\'LengthUnits\'], \
-                self.data[%i].%s[%i][%i], ls = \'%s\', color = \'%s\')' % (dd, dd, coeff, species, src, ls, color))                
-            
-        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
-        self.ax.set_ylabel(ylabel)         
-                                
-        pl.draw()      
+        pl.draw()       
         
     def IonizationRate(self, t = 1, species = 0, color = 'k', legend = True, plot_recomb = False, src = 0):
         """
@@ -527,101 +510,51 @@ class Analyze:
         # Save heating and cooling rates
         self.heat = heat
         self.cool = cool
-            
-    def ComputeDistributionFunctions(self, field, normalize = True, bins = 20, volume = False):
+        
+    def LyAFlux(self, t = 1, color = 'k', src = 0, legend = True):
         """
-        Histogram all fields.
-        """            
-                
-        pdf = []
-        cdf = []
-        icdf = []
+        Plot Lyman-alpha flux from the continuum and 'injected' photons.
+        """    
+        
         for dd in self.data.keys():
-            exec('hist, bin_edges = np.histogram(self.data[{0}].{1}, bins = bins)'.format(dd, field))                
-                            
-            if volume: 
-                hist = hist**3                
-                            
-            if normalize: 
-                norm = float(np.sum(hist))
-            else: 
-                norm = 1.
+            if self.data[dd].t / self.pf['TimeUnits'] != t: 
+                continue
+                
+            break
             
-            pdf.append(hist / norm)
-            cdf.append(np.cumsum(hist) / float(np.sum(hist)))
-            icdf.append(1. - np.array(cdf[dd]))
+        if legend and hasattr(self, 'ax'):
+            legend = False    
+            
+        r = self.data[dd].r / self.pf['LengthUnits']    
         
-        bins = self.rebin(bin_edges)
-                
-        return {'bins': bins, 'pdf': pdf, 'cdf': cdf, 'icdf': icdf}
-                
-    def PlotDistributionFunction(self, dd, field = 'x_HI', df = 'pdf', color = 'k'):
-        """
-        Make nice plot of distribution functions.
-        """
         
+            
         self.ax = pl.subplot(111)
+        if self.pf['LymanAlphaContinuum']:
+            self.ax.semilogy(r, self.data[dd].Jc[...,src], color = color, ls = '-', label = r'$J_c$')        
         
-        if df == 'pdf': 
-            hist = self.pdf
-        else: 
-            hist = self.cdf
+        if self.pf['LymanAlphaInjection']:
+            Ji_HI = np.array(zip(*self.data[dd].Ji[...,src])[0])
+            self.ax.semilogy(r, Ji_HI, color = color, ls = '--', label = r'$J_{i,\mathrm{HI}}$')        
         
-        self.ax.plot(self.bins[field], hist[field][dd], color = color, drawstyle = 'steps-mid')
-        self.ax.set_xscale('log')
+            if self.pf['MultiSpecies']:
+                Ji_HeI = np.array(zip(*self.data[dd].Ji[...,src])[1])
+                Ji_HeII = np.array(zip(*self.data[dd].Ji[...,src])[2])
+                self.ax.semilogy(r, Ji_HeI, color = color, ls = ':', label = r'$J_{i,\mathrm{HeI}}$')
+                self.ax.semilogy(r, Ji_HeII, color = color, ls = '-.', label = r'$J_{i,\mathrm{HeII}}$')
+            
+        self.ax.semilogy([0, 1], [self.J0(self.data[dd].z)] * 2, color = 'b', ls = ':')    
+        
+        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
+        self.ax.set_ylabel(r'$J_{\alpha} \ (\mathrm{erg \ s^{-1} \ cm^{-2} \ sr^{-1} \ Hz^{-1}})$')
+        
+        if legend:
+            self.ax.legend(frameon = False, loc = 'upper right')
         pl.draw()
-        
-    def rebin(self, bins, center = False):
-        """
-        Take in an array of bin edges (centers) and convert them to bin centers (edges).
-        
-            center: Input bin values refer to bin centers?
-            
-        """
-        
-        bins = np.array(bins)
-        
-        if center:
-            result = 0
-        else:
-            result = np.zeros(bins.size - 1)
-            for i, element in enumerate(result): 
-                result[i] = (bins[i] + bins[i + 1]) / 2.
-                
-        return result
-        
-    def add_Ncol_axis(self, dd, species = 0, units = '1'):     
-        """
-        Add column density on top axis.
-        """
-        
-        rmin = min(self.ax.get_xticks())
-        rmax = max(self.ax.get_xticks())
-                                     
-        if species == 0:
-            s = 'HI'
-            lab = r'$N_{\mathrm{HI}} \ (\mathrm{cm}^{-2})$'
-        elif species == 1:
-            s = 'HeI'
-            lab = r'$N_{\mathrm{HeI}} \ (\mathrm{cm}^{-2})$'
-        else:
-            s = 'HeII'
-            lab = r'$N_{\mathrm{HeII}} \ (\mathrm{cm}^{-2})$'
-                         
-        self.freq_ax = self.ax.twiny()
-        self.freq_ax.set_xscale('log')
-        self.freq_ax.set_xlabel(lab)
-        
-        if species == 0:
-            self.freq_ax.set_xlim(min(self.data[dd].ncol_HI[1:]), max(self.data[dd].ncol_HI))
-        elif species == 1:
-            self.freq_ax.set_xlim(min(self.data[dd].ncol_HeI[1:]), max(self.data[dd].ncol_HeI))
-        else:
-            self.freq_ax.set_xlim(min(self.data[dd].ncol_HeII[1:]), max(self.data[dd].ncol_HeII))       
-        
-        pl.draw()    
-            
-        
 
-    
-    
+    def J0(self, z):
+        """
+        Lyman-alpha flux corresponding to 1 photon per hydrogen atom.
+        """
+        return h * nu_alpha * c * self.cosm.nH0 * (1. + z)**3 / 4. / np.pi / nu_alpha
+        

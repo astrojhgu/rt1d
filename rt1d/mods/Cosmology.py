@@ -30,10 +30,12 @@ class Cosmology:
         self.CriticalDensityNow = (3 * self.HubbleParameterNow**2) / (8 * np.pi * G)
         self.CMBTemperatureNow = pf['CMBTemperatureNow']
         
-        self.Y = pf['PrimordialHeliumByMass'] * pf['MultiSpecies']
+        self.h_70 = pf['HubbleParameterNow']
+        
+        self.Y = pf['PrimordialHeliumByMass'] * 0 #1min(1, pf['MultiSpecies'] + pf['CosmologicalExpansion'])
         self.y = self.Y / 4. / (1. - self.Y) 
         self.X = 1. - self.Y
-        
+                
         self.zdec = 150. * (self.OmegaBaryonNow * pf['HubbleParameterNow']**2 / 0.023)**0.4 - 1.
 
         # Hydrogen, helium, electron, and baryon densities today (z = 0)

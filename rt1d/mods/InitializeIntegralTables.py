@@ -876,7 +876,14 @@ class InitializeIntegralTables:
             y.append(integrand(E))
              
         return 1e-20 * \
-            np.trapz(np.array(y), self.esec.Energies[c])   
+            np.trapz(np.array(y), self.esec.Energies[c])  
+            
+    def PsiBreve(self, ncol, species = 0, donor_species = 0, x_HII = 0.0, t = None):
+        """
+        Return fractional Lyman-alpha excitation.
+        """         
+        
+        pass
                                   
                     
             

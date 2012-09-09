@@ -81,6 +81,9 @@ class DataDump:
         
         self.E = 3. * k_B * self.T * self.n_B / 2.
         
+        self.Ts = dd['SpinTemperature'].value
+        self.dTb = dd['BrightnessTemperature'].value
+        
         self.Gamma = np.zeros([self.GridDimensions, 3, pf["NumberOfSources"].value])
         self.k_H = np.zeros_like(self.Gamma)
         self.gamma = np.zeros([self.GridDimensions, 3, 3, pf["NumberOfSources"].value])
@@ -92,24 +95,24 @@ class DataDump:
         self.psi = np.zeros_like(self.Beta)
         self.omega = np.zeros_like(self.Beta)
         self.hubble = np.zeros(self.GridDimensions)
+        self.Jc = np.zeros([self.GridDimensions, pf['NumberOfSources'].value])
+        self.Ji = np.zeros([self.GridDimensions, 3, pf['NumberOfSources'].value])
         
         # extra stuff
         self.tau = dd['OpticalDepth'].value            
-        self.odeit = dd['ODEIterations'].value
-        self.odeitrate = dd['ODEIterationRate'].value
-        
-        # This is total in a given ODE step - the ratio of this to 
-        # odeit is more interesting than rootit alone.
-        self.rootit = dd['RootFinderIterations'].value
-        
+                
         if pf["OutputRates"].value:
             for i in xrange(3):
                 
                 for src in xrange(int(pf["NumberOfSources"].value)):
                     self.Gamma[:,i,src] = dd['PhotoIonizationRate%i_src%i' % (i, src)].value
                     self.k_H[:,i,src] = dd['PhotoHeatingRate%i_src%i' % (i, src)].value
+                    self.Ji[:,i,src] = dd['InjectedLyAFlux%i_src%i' % (i, src)].value
                     for j in xrange(3):
                         self.gamma[:,i,j,src] = dd['SecondaryIonizationRate%i_src%i' % (i, src)].value[:,j]
+                
+                    if i == 0:
+                        self.Jc[:,src] = dd['ContinuumLyAFlux_src%i' % src].value
                 
                 self.Beta[:,i] = dd['CollisionalIonizationRate%i' % i].value
                 self.alpha[:,i] = dd['RadiativeRecombinationRate%i' % i].value
@@ -121,7 +124,7 @@ class DataDump:
                     self.xi[:,i] = dd['DielectricRecombinationRate'].value
                     self.omega[:,i] = dd['DielectricRecombinationCoolingRate'].value
                     
-            self.hubble = dd['HubbleCoolingRate'].value        
+            self.hubble = dd['HubbleCoolingRate'].value            
 
     def __getitem__(self, name):
         """

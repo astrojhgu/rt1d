@@ -22,6 +22,8 @@ from .Interpolate import Interpolate
 from .ComputeRateCoefficients import RateCoefficients
 from .SolveRateEquations import SolveRateEquations
 from .ControlSimulation import ControlSimulation
+from .SpinTemperature import SpinTemperature
+from .Hydrogen import Hydrogen
 
 from scipy.integrate import ode
 
@@ -55,7 +57,9 @@ class Radiate:
         self.rs = rs
         self.cosm = Cosmology(pf)
         self.control = ControlSimulation(pf)
-        self.coeff = RateCoefficients(pf, rs, g)     
+        self.coeff = RateCoefficients(pf, rs, g)
+        self.Ts = SpinTemperature(pf)   
+        self.HI = Hydrogen(pf)  
         
         self.ProgressBar = pf["ProgressBar"] and pb
         
@@ -238,7 +242,7 @@ class Radiate:
             n_HII = self.data["HIIDensity"][cell]
             n_HeI = self.data["HeIDensity"][cell]
             n_HeII = self.data["HeIIDensity"][cell]
-            n_HeIII = self.data["HeIIIDensity"][cell] 
+            n_HeIII = self.data["HeIIIDensity"][cell]
                     
             # Read in ionized fractions for this cell
             x_HI = self.x_HI_arr[cell]
@@ -276,7 +280,7 @@ class Radiate:
             
             # Unpack so we have everything by name
             nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, \
-                k_H, zeta, eta, psi, xi, omega, hubble, compton = args     
+                k_H, zeta, eta, psi, xi, omega, hubble, compton, Jc, Ji = args     
                 
             # Sum ionization + heating over all sources (last axis)            
             args[5] = np.sum(Gamma, axis = -1) 
@@ -310,10 +314,16 @@ class Radiate:
             newHeI = n_He * (1. - newxHeII - newxHeIII)
             newHeII = n_He * newxHeII
             newHeIII = n_He * newxHeIII
+            
+            # Derive Ts, dTb
+            delta = 0
+            Ts = self.Ts.Ts(self.z, n_H, n_e, newT, newxHII, np.sum(Jc), np.sum(Ji))
+            dTb = self.HI.BrightnessTemperature(self.z, newxHII, delta, Ts)
                                                                         
             # Store data
             newdata = self.StoreData(newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
-                tau, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, omega, hubble, compton)
+                tau, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, omega, hubble, compton, 
+                Jc, Ji, Ts, dTb)
                                                                                                             
             ######################################
             ################ DONE ################
@@ -587,7 +597,7 @@ class Radiate:
        
     def StoreData(self, newdata, cell, newHI, newHII, newHeI, newHeII, newHeIII, newT,
         tau, Gamma, k_H, Beta, alpha, zeta, eta, psi, gamma, xi, omega, hubble, compton, 
-        packs = None):
+        Jc, Ji, Ts, dTb, packs = None):
         """
         Copy fields to newdata dictionary.
         """
@@ -601,6 +611,8 @@ class Radiate:
         newdata["ElectronDensity"][cell] = newHII + newHeII + 2.0 * newHeIII
         newdata["Temperature"][cell] = newT    
         newdata["OpticalDepth"][cell] = tau
+        newdata["SpinTemperature"][cell] = Ts
+        newdata["BrightnessTemperature"][cell] = dTb
                 
         if self.pf['OutputRates']:
             for i in xrange(3):
@@ -609,6 +621,11 @@ class Radiate:
                     newdata['PhotoIonizationRate%i_src%i' % (i, j)][cell] = Gamma[i][j]
                     newdata['PhotoHeatingRate%i_src%i' % (i, j)][cell] = k_H[i][j]
                     newdata['SecondaryIonizationRate%i_src%i' % (i, j)][cell] = gamma[i,:,j] 
+                    
+                    newdata['InjectedLyAFlux%i_src%i' % (i, j)][cell] = Ji[i][j]
+                    
+                    if i == 0:
+                        newdata['ContinuumLyAFlux_src%i' % j][cell] = Jc[j]
                 
                 newdata['CollisionalIonizationRate%i' % i][cell] = Beta[i] 
                 newdata['RadiativeRecombinationRate%i' % i][cell] = alpha[i] 
@@ -638,7 +655,7 @@ class Radiate:
         """
         
         nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, zeta, eta, \
-            psi, xi, omega, hubble, compton = args
+            psi, xi, omega, hubble, compton, Jc, Ji = args
                         
         dqdt = self.zeros_tmp
         

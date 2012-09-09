@@ -101,8 +101,10 @@ class SecondaryElectrons:
                 return 0.3908 * pow(1. - pow(xHII, 0.4092), 1.7592)
             if channel == 2: 
                 return 0.0554 * pow(1. - pow(xHII, 0.4614), 1.6660) 
-            if channel >= 3: 
+            if channel == 3: 
                 return 0.0
+            if channel == 4: # Assuming that ALL excitations lead to a LyA photon
+                return 0.4766 * pow(1. - pow(xHII, 0.2735), 1.5221)
             
         # Ricotti, Gnedin, & Shull (2002)
         if self.Method == 2:
@@ -131,7 +133,7 @@ class SecondaryElectrons:
                         0.0554 * (1. - pow(xHII, 0.4614))**1.6660
                 else:
                     return 0.0    
-            if channel >= 3: 
+            if channel == 3: 
                 return 0.0
         
         # Furlanetto & Stoever (2010)

@@ -69,7 +69,7 @@ class ControlSimulation:
             indices_in, Lbol, self.R0, ncol, T, r.dx[0], 0., self.z0, 0))   
                                                                           
         nabs, nion, n_H, n_He, n_e, Gamma, gamma, Beta, alpha, k_H, \
-            zeta, eta, psi, xi, omega, hubble, compton = args
+            zeta, eta, psi, xi, omega, hubble, compton, Jc, Ji = args
         
         Gamma = np.sum(Gamma, -1)    
         gamma = np.sum(gamma, -1)    

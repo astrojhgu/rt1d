@@ -64,7 +64,8 @@ def Shine(pf, r = None, data = None, IsRestart = False):
             return
             
         # Initialize grid and file system
-        print 'Initializing grid...'
+        if rank == 0:
+            print 'Initializing grid...'
         if data is not None:
             data = data
             g = rtm.InitializeGrid(pf)

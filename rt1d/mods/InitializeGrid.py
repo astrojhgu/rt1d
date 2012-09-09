@@ -57,6 +57,11 @@ class InitializeGrid:
                     fields['PhotoIonizationRate%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
                     fields['PhotoHeatingRate%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
                     fields['SecondaryIonizationRate%i_src%i' % (i, j)] = np.zeros([len(fields[fields.keys()[0]]), 3])    
+                        
+                    fields['InjectedLyAFlux%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
+                    
+                    if i == 0:
+                        fields['ContinuumLyAFlux_src%i' % j] = np.zeros_like(fields[fields.keys()[0]])
                     
                 fields['CollisionalIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
                 fields['RadiativeRecombinationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
@@ -71,14 +76,13 @@ class InitializeGrid:
         
         # Additional fields
         fields['dtPhoton'] = np.ones_like(fields[fields.keys()[0]])
-        fields["ODEIterations"] = np.zeros_like(fields[fields.keys()[0]])        
-        fields['ODEIterationRate'] = np.zeros_like(fields[fields.keys()[0]])        
-        fields['RootFinderIterations'] = np.zeros([len(fields[fields.keys()[0]]), 4])
         fields['OpticalDepth'] = np.zeros([len(fields[fields.keys()[0]]), 3])        
         fields['Radius'] = self.r
         fields['ShellThickness'] = self.dx  
         fields['PhotonPackages'] = np.zeros(3)
         fields['HubbleCoolingRate'] = np.ones_like(fields[fields.keys()[0]])
+        fields['SpinTemperature'] = np.ones_like(fields[fields.keys()[0]])
+        fields['BrightnessTemperature'] = np.ones_like(fields[fields.keys()[0]])
                 
         return fields                
                         
