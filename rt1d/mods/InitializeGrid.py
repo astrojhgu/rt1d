@@ -53,7 +53,7 @@ class InitializeGrid:
         
         if self.pf['OutputRates']:
             for i in xrange(3):
-                for j in xrange(self.pf['NumberOfSources']):
+                for j in xrange(int(self.pf['NumberOfSources'])):
                     fields['PhotoIonizationRate%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
                     fields['PhotoHeatingRate%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
                     fields['SecondaryIonizationRate%i_src%i' % (i, j)] = np.zeros([len(fields[fields.keys()[0]]), 3])    
