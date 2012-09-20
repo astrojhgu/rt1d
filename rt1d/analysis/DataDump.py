@@ -104,6 +104,9 @@ class DataDump:
         if pf["OutputRates"].value:
             for i in xrange(3):
                 
+                if i > 0 and not pf['MultiSpecies'].value:
+                    continue
+                
                 for src in xrange(int(pf["NumberOfSources"].value)):
                     self.Gamma[:,i,src] = dd['PhotoIonizationRate%i_src%i' % (i, src)].value
                     self.k_H[:,i,src] = dd['PhotoHeatingRate%i_src%i' % (i, src)].value

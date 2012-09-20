@@ -690,7 +690,7 @@ class Radiate:
                       (Beta[1] + alpha[1] + xi[1]) * n_e * nHeII / n_He
                               
             dqdt[2] = (Gamma[2] + Beta[2] * n_e) * xHeII - alpha[2] * n_e * nHeIII / n_He
-        
+                
         # Temperature evolution - looks dumb but using np.sum is slow
         if not self.pf['Isothermal']:
             phoheat = k_H[0] * nHI

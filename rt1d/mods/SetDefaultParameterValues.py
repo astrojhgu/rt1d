@@ -53,7 +53,7 @@ def SetDefaultSpectrumParameters():
         "FrequencyAveragedCrossSections": 0,
         "FrequencyGroups": 1,
         "FrequencyBands": [13.6, 24.6, 54.4],
-        "SpectrumType": 1, 
+        "SpectrumType": 1,
         "SpectrumFraction": 1,   
         "SpectrumPowerLawIndex": 1.5,  
         "SpectrumMinEnergy": 13.6,  

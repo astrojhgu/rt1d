@@ -203,7 +203,8 @@ class RadiationSources:
         """
         Loop over RadiationSource instances and construct a composite spectrum.
         """
-        pass                    
+        
+        pass
             
     
         

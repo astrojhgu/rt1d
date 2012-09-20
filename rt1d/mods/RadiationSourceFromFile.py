@@ -41,6 +41,7 @@ class RadiationSourceFromFile:
         f = h5py.File(self.fn)
         self.E = f['E'].value
         self.t = self.Age = f['time_yr'].value * s_per_yr
+        self.maxAge = np.max(self.Age)
         self.Nt = len(self.t)
         self.L_E = f['L_E'].value
         
@@ -60,9 +61,7 @@ class RadiationSourceFromFile:
         self.Lbol = self.BolometricLuminosity(0)
         
     def SourceOn(self, t):
-        i = self.get_time_index(t)
-        
-        if i in np.arange(self.Nt):
+        if t <= self.maxAge:
             return True
         else:
             print 'WARNING: Current time lies outside bounds of spectrum table. Source now OFF.'

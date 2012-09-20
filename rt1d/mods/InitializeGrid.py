@@ -37,6 +37,7 @@ class InitializeGrid:
         self.dx = np.diff(self.r)   
         self.r = self.r[0:-1]             
         self.grid = np.arange(len(self.r))
+        self.fgrid = map(float, self.grid)      
                             
         # Generic data array                
         self.density = np.array(map(self.InitializeDensity, self.grid))
@@ -54,35 +55,35 @@ class InitializeGrid:
         if self.pf['OutputRates']:
             for i in xrange(3):
                 for j in xrange(int(self.pf['NumberOfSources'])):
-                    fields['PhotoIonizationRate%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
-                    fields['PhotoHeatingRate%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
-                    fields['SecondaryIonizationRate%i_src%i' % (i, j)] = np.zeros([len(fields[fields.keys()[0]]), 3])    
+                    fields['PhotoIonizationRate%i_src%i' % (i, j)] = np.zeros_like(self.fgrid)
+                    fields['PhotoHeatingRate%i_src%i' % (i, j)] = np.zeros_like(self.fgrid)
+                    fields['SecondaryIonizationRate%i_src%i' % (i, j)] = np.zeros([len(self.fgrid), 3])    
                         
-                    fields['InjectedLyAFlux%i_src%i' % (i, j)] = np.zeros_like(fields[fields.keys()[0]])
+                    fields['InjectedLyAFlux%i_src%i' % (i, j)] = np.zeros_like(self.fgrid)
                     
                     if i == 0:
-                        fields['ContinuumLyAFlux_src%i' % j] = np.zeros_like(fields[fields.keys()[0]])
+                        fields['ContinuumLyAFlux_src%i' % j] = np.zeros_like(self.fgrid)
                     
-                fields['CollisionalIonizationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
-                fields['RadiativeRecombinationRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
-                fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
-                fields['CollisionalIonizationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
-                fields['RecombinationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
-                fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(fields[fields.keys()[0]])
+                fields['CollisionalIonizationRate%i' % i] = np.zeros_like(self.fgrid)
+                fields['RadiativeRecombinationRate%i' % i] = np.zeros_like(self.fgrid)
+                fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(self.fgrid)
+                fields['CollisionalIonizationCoolingRate%i' % i] = np.zeros_like(self.fgrid)
+                fields['RecombinationCoolingRate%i' % i] = np.zeros_like(self.fgrid)
+                fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(self.fgrid)
                                     
                 if i == 2:
-                    fields['DielectricRecombinationRate'] = np.zeros_like(fields[fields.keys()[0]])
-                    fields['DielectricRecombinationCoolingRate'] = np.zeros_like(fields[fields.keys()[0]])
+                    fields['DielectricRecombinationRate'] = np.zeros_like(self.fgrid)
+                    fields['DielectricRecombinationCoolingRate'] = np.zeros_like(self.fgrid)
         
         # Additional fields
-        fields['dtPhoton'] = np.ones_like(fields[fields.keys()[0]])
-        fields['OpticalDepth'] = np.zeros([len(fields[fields.keys()[0]]), 3])        
+        fields['dtPhoton'] = np.ones_like(self.fgrid)
+        fields['OpticalDepth'] = np.zeros([len(self.fgrid), 3])        
         fields['Radius'] = self.r
         fields['ShellThickness'] = self.dx  
         fields['PhotonPackages'] = np.zeros(3)
-        fields['HubbleCoolingRate'] = np.ones_like(fields[fields.keys()[0]])
-        fields['SpinTemperature'] = np.ones_like(fields[fields.keys()[0]])
-        fields['BrightnessTemperature'] = np.ones_like(fields[fields.keys()[0]])
+        fields['HubbleCoolingRate'] = np.ones_like(self.fgrid)
+        fields['SpinTemperature'] = np.ones_like(self.fgrid)
+        fields['BrightnessTemperature'] = np.ones_like(self.fgrid)
                 
         return fields                
                         

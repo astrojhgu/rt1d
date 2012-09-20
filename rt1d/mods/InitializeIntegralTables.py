@@ -125,8 +125,12 @@ class InitializeIntegralTables:
              
         ms = 'ms%i' % self.pf['MultiSpecies']
         pc = 'pc%i' % self.pf['PhotonConserving']
-        si = 'si%i' % self.pf['SecondaryIonization']
         td = 'tdep%i' % self.pf['SourceTimeEvolution']
+        
+        if self.pf['SecondaryIonization'] < 2:
+            si = 'si01'
+        else:
+            si = 'si%i' % self.pf['SecondaryIonization']
                 
         if self.pf['DiscreteSpectrum']:
             sed = 'D'

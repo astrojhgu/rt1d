@@ -219,21 +219,21 @@ class Analyze:
                 continue
             
             if species == 'H':
-                exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                exec('self.ax.semilogy(self.data[%i].r / cm_per_kpc, \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HI}}$\')' % (dd, dd, 'x_HI', '-', color))
-                exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                exec('self.ax.semilogy(self.data[%i].r / cm_per_kpc, \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HII}}$\')' % (dd, dd, 'x_HII', '--', color))
             if species == 'He':
-                exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                exec('self.ax.semilogy(self.data[%i].r / cm_per_kpc, \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeI}}$\')' % (dd, dd, 'x_HeI', '-', color))
-                exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                exec('self.ax.semilogy(self.data[%i].r / cm_per_kpc, \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeII}}$\')' % (dd, dd, 'x_HeII', '--', color))
-                exec('self.ax.semilogy(self.data[%i].r / self.pf[\'LengthUnits\'], \
+                exec('self.ax.semilogy(self.data[%i].r / cm_per_kpc, \
                     self.data[%i].%s, ls = \'%s\', color = \'%s\', label = r\'$x_{\mathrm{HeIII}}$\')' % (dd, dd, 'x_HeIII', ':', color))                
                         
         self.ax.set_xscale(xscale)
         self.ax.set_yscale(yscale)    
-        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
+        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
         self.ax.set_ylabel(r'Species Fraction')  
         
         if annotate:
@@ -385,25 +385,25 @@ class Analyze:
         Plot cell evolution.
         """    
         
-        t, val = self.CellTimeEvolution(cell = cell, field = field)
+        t, z, val = self.CellTimeEvolution(cell = cell, field = field)
         
         if len(val.shape) > 1:
             val = zip(*val)[species]
             
         if field in ['Gamma', 'gamma']:
-            t, nabs = self.CellTimeEvolution(cell = cell, field = 'nabs')
+            t, z, nabs = self.CellTimeEvolution(cell = cell, field = 'nabs')
             val *= zip(*nabs)[species]
         elif field in ['Beta']:
-            t, nabs = self.CellTimeEvolution(cell = cell, field = 'nabs')
-            t, ne = self.CellTimeEvolution(cell = cell, field = 'n_e')
+            t, z, nabs = self.CellTimeEvolution(cell = cell, field = 'nabs')
+            t, z, ne = self.CellTimeEvolution(cell = cell, field = 'n_e')
             val *= zip(*nabs)[species] * ne
         elif field in ['zeta', 'psi']:
-            t, nabs = self.CellTimeEvolution(cell = cell, field = 'nabs')
-            t, ne = self.CellTimeEvolution(cell = cell, field = 'n_e')
+            t, z, nabs = self.CellTimeEvolution(cell = cell, field = 'nabs')
+            t, z, ne = self.CellTimeEvolution(cell = cell, field = 'n_e')
             val *= zip(*nabs)[species] * ne
         elif field in ['eta']:
-            t, nion = self.CellTimeEvolution(cell = cell, field = 'nion')
-            t, ne = self.CellTimeEvolution(cell = cell, field = 'n_e')
+            t, z, nion = self.CellTimeEvolution(cell = cell, field = 'nion')
+            t, z, ne = self.CellTimeEvolution(cell = cell, field = 'n_e')
             val *= zip(*nion)[species] * ne
             
         self.ax = pl.subplot(111)
@@ -411,7 +411,8 @@ class Analyze:
         
         pl.draw()       
         
-    def IonizationRate(self, t = 1, species = 0, color = 'k', legend = True, plot_recomb = False, src = 0):
+    def IonizationRate(self, t = 1, species = 0, color = 'k', ls = '-', legend = True, 
+        plot_recomb = False, total_only = False, src = 0):
         """
         Plot total ionization rate, and lines for primary, secondary, and collisional.
         """ 
@@ -433,18 +434,19 @@ class Analyze:
             recomb = alpha + xi    
                 
         self.ax = pl.subplot(111)
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], ion, color = color, ls = '-', label = 'Total')        
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Gamma, color = color, ls = '--', label = r'$\Gamma$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], gamma, color = color, ls = ':', label = r'$\gamma$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], Beta, color = color, ls = '-.', label = r'$\beta$')
+        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], ion, color = color, ls = ls, label = 'Total')  
+        if not total_only:      
+            self.ax.loglog(self.data[dd].r / cm_per_kpc, Gamma, color = color, ls = '--', label = r'$\Gamma$')
+            self.ax.loglog(self.data[dd].r / cm_per_kpc, gamma, color = color, ls = ':', label = r'$\gamma$')
+            self.ax.loglog(self.data[dd].r / cm_per_kpc, Beta, color = color, ls = '-.', label = r'$\beta$')
                 
         if plot_recomb:
-            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], recomb, color = 'b', ls = '-', label = 'Recomb.')
-            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], alpha, color = 'b', ls = '--', label = r'$\alpha$')
-            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], xi, color = 'b', ls = ':', label = r'$\xi$')
+            self.ax.loglog(self.data[dd].r / cm_per_kpc, recomb, color = 'b', ls = '-', label = 'Recomb.')
+            self.ax.loglog(self.data[dd].r / cm_per_kpc, alpha, color = 'b', ls = '--', label = r'$\alpha$')
+            self.ax.loglog(self.data[dd].r / cm_per_kpc, xi, color = 'b', ls = ':', label = r'$\xi$')
         
-        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
-        self.ax.set_ylabel(r'Ionization Rate')
+        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
+        self.ax.set_ylabel(r'Ionization Rate $(\mathrm{s}^{-1})$')
         self.ax.set_ylim(0.01 * 10**np.floor(np.log10(np.min(ion))), 10**np.ceil(np.log10(np.max(ion))))
         
         if legend:
@@ -452,7 +454,8 @@ class Analyze:
         
         pl.draw()    
         
-    def HeatingRate(self, t = 1, color = 'k', legend = True, src = 0):
+    def HeatingRate(self, t = 1, color = 'r', ls = '-', legend = True, src = 0, 
+        plot_cooling = False, label = None):
         """
         Plot total heating rate, and lines for primary, secondary, and collisional.
         """ 
@@ -484,22 +487,34 @@ class Analyze:
         mi = min(np.min(heat), np.min(cool))    
         ma = max(np.max(heat), np.max(cool))    
             
+        if label is None:
+            heat_label = r'$\mathcal{H}_{\mathrm{tot}}$'    
+        else:
+            heat_label = label    
+            
         self.ax = pl.subplot(111)
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], heat, color = 'r', ls = '-', label = r'$\mathcal{H}_{\mathrm{tot}}$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], cool, color = 'b', ls = '-', label = r'$\mathcal{C}_{\mathrm{tot}}$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], zeta, color = 'g', ls = '--', label = r'$\zeta$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], psi, color = 'g', ls = ':', label = r'$\psi$')
-        self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], eta, color = 'c', ls = '--', label = r'$\eta$')
+        self.ax.loglog(self.data[dd].r / cm_per_kpc, heat, color = color, ls = ls, label = heat_label)
         
-        if self.pf['MultiSpecies']:
-            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], omega, color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
+        if plot_cooling:
+            self.ax.loglog(self.data[dd].r / cm_per_kpc, cool, color = 'b', ls = '-', label = r'$\mathcal{C}_{\mathrm{tot}}$')
+            self.ax.loglog(self.data[dd].r / cm_per_kpc, zeta, color = 'g', ls = '--', label = r'$\zeta$')
+            self.ax.loglog(self.data[dd].r / cm_per_kpc, psi, color = 'g', ls = ':', label = r'$\psi$')
+            self.ax.loglog(self.data[dd].r / cm_per_kpc, eta, color = 'c', ls = '--', label = r'$\eta$')
+        
+            if self.pf['MultiSpecies']:
+                self.ax.loglog(self.data[dd].r / cm_per_kpc, omega, color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
+                    
+            if self.pf['CosmologicalExpansion']:
+                self.ax.loglog(self.data[dd].r / cm_per_kpc, self.data[dd].hubble * 3. * self.data[dd].T * k_B * self.data[dd].n_B, 
+                    color = 'm', ls = '--', label = r'$H(z)$')
                 
-        if self.pf['CosmologicalExpansion']:
-            self.ax.loglog(self.data[dd].r / self.pf['LengthUnits'], self.data[dd].hubble * 3. * self.data[dd].T * k_B * self.data[dd].n_B, 
-                color = 'm', ls = '--', label = r'$H(z)$')
+        if plot_cooling:
+            ax_label = r'Heating & Cooling Rate $(\mathrm{erg/s/cm^3})$'        
+        else:    
+            ax_label = r'Heating Rate $(\mathrm{erg/s/cm^3})$'        
                 
-        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
-        self.ax.set_ylabel(r'Heating & Cooling Rate $(\mathrm{erg/s/cm^3})$')
+        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
+        self.ax.set_ylabel(ax_label)
         self.ax.set_ylim(0.001 * 10**np.floor(np.log10(mi)), 10**np.ceil(np.log10(ma)))
         
         if legend:
@@ -525,10 +540,8 @@ class Analyze:
         if legend and hasattr(self, 'ax'):
             legend = False    
             
-        r = self.data[dd].r / self.pf['LengthUnits']    
-        
-        
-            
+        r = self.data[dd].r / cm_per_kpc  
+                    
         self.ax = pl.subplot(111)
         if self.pf['LymanAlphaContinuum']:
             self.ax.semilogy(r, self.data[dd].Jc[...,src], color = color, ls = '-', label = r'$J_c$')        
@@ -545,7 +558,7 @@ class Analyze:
             
         self.ax.semilogy([0, 1], [self.J0(self.data[dd].z)] * 2, color = 'b', ls = ':')    
         
-        self.ax.set_xlabel(r'$r / L_{\mathrm{box}}$') 
+        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
         self.ax.set_ylabel(r'$J_{\alpha} \ (\mathrm{erg \ s^{-1} \ cm^{-2} \ sr^{-1} \ Hz^{-1}})$')
         
         if legend:
