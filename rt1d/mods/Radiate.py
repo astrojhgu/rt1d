@@ -748,7 +748,7 @@ class Radiate:
         J[2][2] = -alpha[2] * n_e / n_He
         J[3][0] = n_e * (zeta[0] - eta[0] + psi[0]) - k_H[0]
         J[3][1] = n_e * (zeta[1] - eta[1] + psi[1]) - k_H[1]
-        J[3][2] = n_e * (zeta[2] - eta[2] + psi[2] - omega[1]) - k_H[2]          
+        J[3][2] = n_e * (zeta[2] - eta[2] + psi[2] - omega[1]) - k_H[2]
                                                                
         return J
         
