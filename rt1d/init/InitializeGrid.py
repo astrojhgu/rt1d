@@ -24,23 +24,6 @@ class Grid:
     def __init__(self, dims = 64):
         self.dims = int(dims)
                 
-        # Deal with log-grid, compute dx
-        #self.R0 = pf['StartRadius'] * pf['LengthUnits']
-        #if pf['LogarithmicGrid']:
-        #    self.r = np.logspace(np.log10(self.R0), \
-        #        np.log10(pf['LengthUnits']), int(pf['GridDimensions']) + 1)
-        #else:
-        #    self.r = np.linspace(self.R0, pf['LengthUnits'], int(pf['GridDimensions']) + 1)
-        #
-        #self.dx = np.diff(self.r)   
-        #self.r = self.r[0:-1]             
-        #self.grid = np.arange(len(self.r))
-        #self.fgrid = map(float, self.grid)      
-        #                    
-        ## Generic data array                
-        #self.density = np.array(map(self.InitializeDensity, self.grid))
-        #self.ionization = np.array(map(self.InitializeIonization, self.grid))
-                    
     def set_chem(self, Z = [1], abundance = 'cosmic', isothermal = False):
         """
         Initialize chemistry - which species we'll be solving for and their 
@@ -213,112 +196,6 @@ class Grid:
         for species in self.all_species:
             self.qmap.append(species)
 
-    def InitializeFields(self):
-        """
-        Return dictionary of all fields.
-        """
- 
-        fields = {}
-        for field in FieldList:
-            fields[field] = np.array(eval("map(self.Initialize{0}, self.grid)".format(field)))
-        
-        if self.pf['OutputRates']:
-            for i in xrange(3):
-                for j in xrange(int(self.pf['NumberOfSources'])):
-                    fields['PhotoIonizationRate%i_src%i' % (i, j)] = np.zeros_like(self.fgrid)
-                    fields['PhotoHeatingRate%i_src%i' % (i, j)] = np.zeros_like(self.fgrid)
-                    fields['SecondaryIonizationRate%i_src%i' % (i, j)] = np.zeros([len(self.fgrid), 3])    
-                        
-                    fields['InjectedLyAFlux%i_src%i' % (i, j)] = np.zeros_like(self.fgrid)
-                    
-                    if i == 0:
-                        fields['ContinuumLyAFlux_src%i' % j] = np.zeros_like(self.fgrid)
-                    
-                fields['CollisionalIonizationRate%i' % i] = np.zeros_like(self.fgrid)
-                fields['RadiativeRecombinationRate%i' % i] = np.zeros_like(self.fgrid)
-                fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(self.fgrid)
-                fields['CollisionalIonizationCoolingRate%i' % i] = np.zeros_like(self.fgrid)
-                fields['RecombinationCoolingRate%i' % i] = np.zeros_like(self.fgrid)
-                fields['CollisionalExcitationCoolingRate%i' % i] = np.zeros_like(self.fgrid)
-                                    
-                if i == 2:
-                    fields['DielectricRecombinationRate'] = np.zeros_like(self.fgrid)
-                    fields['DielectricRecombinationCoolingRate'] = np.zeros_like(self.fgrid)
-        
-        # Additional fields
-        fields['dtPhoton'] = np.ones_like(self.fgrid)
-        fields['OpticalDepth'] = np.zeros([len(self.fgrid), 3])        
-        fields['Radius'] = self.r
-        fields['ShellThickness'] = self.dx  
-        fields['PhotonPackages'] = np.zeros(3)
-        fields['HubbleCoolingRate'] = np.ones_like(self.fgrid)
-        fields['SpinTemperature'] = np.ones_like(self.fgrid)
-        fields['BrightnessTemperature'] = np.ones_like(self.fgrid)
-                
-        return fields                
-                        
-    def InitializeDensity(self, cell):
-        """
-        Initialize the gas density - depends on parameter DensityProfile as follows:
-        
-            DensityProfile:
-                0: Uniform density given by InitialDensity parameter.
-                1: Uniform density given by cosmic mean at z = InitialRedshift.
-        """        
-                
-        if self.pf['CosmologicalExpansion'] == 0: 
-            density = self.pf['DensityUnits']
-        elif self.pf['CosmologicalExpansion'] == 1: 
-            density = self.cosm.MeanBaryonDensity(self.pf['InitialRedshift'])
-        
-        if self.pf['Clump']: 
-            if self.pf['ClumpDensityProfile'] == 0:
-                if (cell >= self.pf['GridDimensions'] * (self.pf['ClumpPosition'] - self.pf['ClumpRadius'])) and \
-                   (cell <= self.pf['GridDimensions'] * (self.pf['ClumpPosition'] + self.pf['ClumpRadius'])):
-                    density *= self.pf['ClumpOverdensity']
-            if self.pf['ClumpDensityProfile'] == 1:
-                density += density * self.pf['ClumpOverdensity'] * \
-                    np.exp(-(cell - self.pf['ClumpPosition'] * pf['GridDimensions'])**2 / 2. / self.pf['ClumpRadius']**2)
-                        
-        return density
-        
-    def InitializeTemperature(self, cell):
-        """
-        Initialize temperature - depends on parameter TemperatureProfile as follows:
-        
-            TemperatureProfile:
-                0: Uniform temperature given by InitialTemperature
-                1: Uniform temperature assuming Tk = Tcmb before decoupling, and
-                   Tk ~ (1 + z)^2 after decoupling.
-        """
-                
-        if self.pf['CosmologicalExpansion'] == 0: 
-            temperature = self.pf['InitialTemperature']    
-        elif self.pf['CosmologicalExpansion'] == 1: 
-            temperature = self.cosm.Tgas(self.pf['InitialRedshift'])
-                
-        if self.pf['Clump']:
-            if (cell >= self.pf['GridDimensions'] * (self.pf['ClumpPosition'] - self.pf['ClumpRadius'])) and \
-               (cell <= self.pf['GridDimensions'] * (self.pf['ClumpPosition'] + self.pf['ClumpRadius'])):
-                temperature = self.pf['ClumpTemperature']
-        
-        return temperature
-        
-    def InitializeIonization(self, cell):
-        """
-        Initialize ionization state - depends on parameter IonizationProfile as follows:
-        
-            IonizationProfile:
-                0: Uniform ionization state given by InitialHIIFraction
-                1: Gas within 'StartRadius' has x_i = 0.9999, InitialHIIFraction elsewhere
-                   
-        Returns the HII fraction in 'cell'.
-        """
-                
-        if self.pf['IonizationProfile'] == 0: 
-            ionization = self.pf['InitialHIIFraction']
-        
-        return ionization    
         
 
         
