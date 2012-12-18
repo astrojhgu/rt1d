@@ -14,7 +14,6 @@ Notes:
 from math import pi
 
 # Unit conversions
-g_per_amu = 1.660538921e-24           
 km_per_pc = 3.08568e13
 km_per_mpc = km_per_pc*1e6
 km_per_gpc = km_per_mpc*1e3

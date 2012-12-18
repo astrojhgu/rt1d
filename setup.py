@@ -9,7 +9,7 @@ setup(name='rt1d',
       author='Jordan Mirocha',
       author_email='mirochaj@gmail.com',
       url='https://bitbucket.org/mirochaj/rt1d',
-      packages=['rt1d', 'rt1d.mods', 'rt1d.analysis'],
+      packages=['rt1d', 'rt1d.mods', 'rt1d.analysis', 'rt1d.init'],
      )
      
 if not os.path.exists('bin'): 

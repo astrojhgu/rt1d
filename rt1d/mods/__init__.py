@@ -11,3 +11,4 @@ from .ReadParameterFile import *
 from .CheckForParameterConflicts import *
 from .WriteData import WriteData
 from .SecondaryElectrons import SecondaryElectrons
+from .Chemistry import Chemistry

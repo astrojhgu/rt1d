@@ -32,7 +32,7 @@ class Cosmology:
         
         self.h_70 = pf['HubbleParameterNow']
         
-        self.Y = pf['PrimordialHeliumByMass'] * 1 #1min(1, pf['MultiSpecies'] + pf['CosmologicalExpansion'])
+        self.Y = pf['PrimordialHeliumByMass'] * 0 #1min(1, pf['MultiSpecies'] + pf['CosmologicalExpansion'])
         self.y = self.Y / 4. / (1. - self.Y) 
         self.X = 1. - self.Y
                 
