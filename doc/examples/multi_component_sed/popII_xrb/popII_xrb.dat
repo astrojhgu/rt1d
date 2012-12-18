@@ -1,0 +1,9 @@
+ProblemType = 2
+NumberOfSources = 2
+SourceFiles = [popII.dat, xrb.dat]
+OutputDirectory = popII_xrb
+dtDataDump = 1
+GridDimensions = 200
+LengthUnits = 3.08568e23
+StartRadius = 0.01
+StopTime = 50

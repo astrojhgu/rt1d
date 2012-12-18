@@ -1,0 +1,15 @@
+SourceType                    = 3
+SourceMass                    = 1e4
+SourceDiskRadius              = 1e5
+AgeBins                       = 20
+SourceTimeEvolution           = 0
+SpectrumType                  = [3, 4]
+SpectrumFraction              = [0.5, 0.5]
+SpectrumPowerLawIndex         = [0, 1.2]
+SpectrumMinEnergy             = [13.6, 50]
+SpectrumMaxEnergy             = [1e4, 1e4]
+SpectrumMinNormEnergy         = [13.6, 50]
+SpectrumMaxNormEnergy         = [1e4, 1e4]
+SpectrumAbsorbingColumn       = [0, 1e20]
+SpectrumColorCorrectionFactor = [1, 0]
+#OpticalDepthDefiningIFront   = [0, 0, 0]

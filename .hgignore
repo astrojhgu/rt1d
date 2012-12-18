@@ -1,0 +1,30 @@
+syntax: glob
+
+rt1d.tmproj
+
+# General things
+*.pyc
+*~
+*.hdf5
+*.h5
+build/*
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.log
+*.pdf
+*.ps
+*.synctex.gz
+*.out
+*.toc
+*.DS_Store
+bin/*
+dd*
+RunComplete
+timestep_evolution.dat
+*.png
+*.eps
+MANIFEST
+dist/*
+*.bst

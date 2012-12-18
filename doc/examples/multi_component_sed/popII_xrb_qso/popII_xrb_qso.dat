@@ -1,0 +1,10 @@
+ProblemType = 2
+NumberOfSources = 3
+SourceFiles = [popII.dat, xrb.dat, qso.dat]
+OutputDirectory = popII_xrb_qso
+dtDataDump = 1
+GridDimensions = 200
+LengthUnits = 3.08568e23
+StartRadius = 0.01
+StopTime = 50
+ProgressBar = 1

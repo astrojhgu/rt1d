@@ -1,0 +1,60 @@
+====
+rt1d
+====
+
+rt1d is a 1D radiative transfer code developed for the purpose of studying ionization 
+(hydrogen and helium) and temperature evolution of gas in the vicinity of stars, accreting 
+black holes, or really any source of ultraviolet and/or X-ray photons you can think of.
+
+Getting started
+---------------
+To clone a copy and install: ::
+
+    hg clone https://bitbucket.org/mirochaj/rt1d rt1d
+    cd rt1d
+    python setup.py install
+
+or visit the 'Downloads' page for a tarball.
+
+Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis module also relies on matplotlib, 
+though if you'd rather write your own analysis scripts, this dependence is not necessary.
+
+Example
+-------
+
+rt1d can be run from the command line or in batch.  To run a simple test in batch mode, 
+first create a parameter file (let's call it 'pf.dat') containing a single line: ::
+
+    ProblemType = 1
+
+To run the simulation, copy the rt1d driver script (rt1d/bin/RT1D.py) to your current 
+working directory, and type: ::
+
+    python RT1D.py pf.dat
+
+This will simulate the expansion of an I-front around a source of monochromatic 13.6 eV 
+photons in an isothermal, hydrogen only medium (test #1 from the Radiative Transfer Comparison
+Project; Iliev et al. 2006).
+
+To do some simple analysis of the output, open up a python (or ipython) session and use 
+built-in analysis routines, or look at the raw data itself:
+
+>>>
+>>> import rt1d.analysis as rta
+>>> 
+>>> # Supply parameter file to initialize dataset ('ds') object
+>>> ds = rta.Analyze('./pf.dat') 
+>>> 
+>>> # Some built-in analysis routines
+>>> ds.PlotIFrontEvolution()               # Plot the I-front radius vs. time
+>>> ds.IonizationProfile(t = [1, 10, 100]) # Plot neutral/ionized fractions vs. radius at 1, 10, 100 Myr
+>>> 
+>>> # Note: since 1D datasets are small, the 'ds' object contains 
+>>> # the simulation data for all data dumps.
+>>> 
+>>> # Look at min and max values of the neutral fraction in data dump 50
+>>> print min(ds.data[50].x_HI), max(ds.data[50].x_HI)
+>>>
+
+For more examples, see the `current documentation <https://bitbucket.org/mirochaj/rt1d/downloads/rt1d_manual.pdf>`_,
+which is very much a work in progress.
