@@ -14,8 +14,7 @@ import copy
 import numpy as np
 import chianti.core as cc
 import chianti.util as util
-from scipy.optimize import fsolve
-from ..mods.Constants import g_per_amu
+from ..physics.Constants import g_per_amu
 from periodic.table import element as ELEMENT
 
 tiny_number = 1e-8  # A relatively small species fraction
@@ -23,49 +22,100 @@ tiny_number = 1e-8  # A relatively small species fraction
 class Grid:
     def __init__(self, dims = 64):
         self.dims = int(dims)
+                        
+    @property            
+    def neutrals(self):
+        """ Return list of all neutral species. """            
+        if not hasattr(self, 'neutral_species'):
+            self.neutral_species = []
+            for element in self.elements:
+                self.neutral_species.append('%s_1' % element)
+
+        return self.neutral_species
+                    
+    @property            
+    def ions(self):
+        """ Return list of all ionized species. """     
+        if not hasattr(self, 'ionized_species'):
+            neutrals = self.neutrals
+            self.ionized_species = []
+            for ion in self.all_ions:
+                if ion in neutrals:
+                    continue
                 
-    def set_chem(self, Z = [1], abundance = 'cosmic', isothermal = False):
+                self.ionized_species.append(ion)
+                
+        return self.ionized_species
+    
+    @property
+    def types(self):
+        """
+        Return list (matching all_species) with integers describing
+        species type:
+            0 = neutral
+           +1 = ion
+           -1 = other
+        """
+        
+        if not hasattr(self, 'species_types'):
+            self.species_types = []
+            for species in self.all_species:
+                if species in self.neutrals:
+                    self.species_types.append(0)
+                elif species in self.ions:
+                    self.species_types.append(1)
+                else:
+                    self.species_types.append(-1) 
+        
+        return self.species_types   
+                
+    def set_chem(self, Z = 1, abundance = None, isothermal = False):
         """
         Initialize chemistry - which species we'll be solving for and their 
-        abundances ('cosmic', 'solar_photospheric', 'solar_coronal', etc.).
+        abundances ('cosmic', 'sun_photospheric', 'sun_coronal', etc.).
         """                
         
+        if type(Z) is not list:
+            Z = [Z]
+        
+        self.abundance = abundance
         self.isothermal = isothermal
         
         self.Z = np.array(Z)
-        self.ions = {}              # Ions sorted by parent element in dictionary
+        self.ions_by_ion = {}       # Ions sorted by parent element in dictionary
         self.elements = []          # Just a list of element names
-        self.ion_species = []       # All ion species
+        self.all_ions = []          # All ion species
         self.all_species = []       # Anything with an ODE we'll later solve
         self.fields = ['T', 'de', 'rho']    # Anything we want to store for easy analysis
           
         for element in self.Z:
             element_name = util.z2element(element)
-            self.ions[element_name] = []
+            self.ions_by_ion[element_name] = []
             self.elements.append(element_name)
             for ion in xrange(element + 1):
                 name = util.zion2name(element, ion + 1)
                 self.fields.append(name)
-                self.ion_species.append(name)
+                self.all_ions.append(name)
                 self.all_species.append(name)
-                self.ions[element_name].append(name)
+                self.ions_by_ion[element_name].append(name)
       
         self.all_species.append('de')          
         if not isothermal:
             self.fields.append('ge')
             self.all_species.append('ge')
-              
+            
         # Create blank data fields        
         self.data = {}
         for field in self.fields:
             self.data[field] = np.zeros(self.dims) 
             
         # Read abundances from chianti
-        self.abundances_by_number = util.abundanceRead(abundance)['abundance']
+        if abundance is not None:
+            self.abundances_by_number = util.abundanceRead(abundance)['abundance']
         
-        self.element_abundances = []
-        for i, Z in enumerate(self.Z):
-            self.element_abundances.append(self.abundances_by_number[Z - 1])
+            self.element_abundances = []
+            for i, Z in enumerate(self.Z):
+                self.element_abundances.append(self.abundances_by_number[Z - 1])
                        
         # Initialize mapping between q-vector and physical quantities                
         self._set_qmap()
@@ -92,7 +142,7 @@ class Grid:
         else:
             self.data['T'].fill(T0)
             
-    def set_x(self, state = None, Z = None, perturb = 0):
+    def set_x(self, Z = None, x = None, state = None, perturb = 0):
         """
         Set initial ionization state.  If Z is None, assume constant ion fraction 
         of 1 / (1 + Z) for all elements.  Can be overrideen by 'state', which can be
@@ -100,7 +150,11 @@ class Grid:
         equilibrium slightly perhaps).
         """       
         
-        if state == 'equilibrium':
+        if x is not None:
+            self.data[util.zion2name(Z, Z)].fill(1. - x)
+            self.data[util.zion2name(Z, Z + 1)].fill(x)
+            
+        elif state == 'equilibrium':
             np.seterr(all = 'ignore')   # This tends to produce divide by zero errors
             for Z in self.Z:
                 eq = cc.ioneq(Z, self.data['T'])
@@ -139,12 +193,12 @@ class Grid:
                     name = util.zion2name(Z, i + 1)
                     
                     if i == 0:
-                        self.data[name] = np.ones(self.dims)
+                        self.data[name] = np.ones(self.dims) - tiny_number
                     else:
                         self.data[name] = tiny_number * np.ones(self.dims)
         
         else:
-            for species in self.ion_species:
+            for species in self.all_ions:
                 self.data[species].fill(1. / (1. + util.convertName(species)['Z']))
         
         # Set electron density
@@ -160,8 +214,14 @@ class Grid:
             self.data['rho'] = rho0
         else:
             self.data['rho'].fill(rho0)   
+                    
+        if len(self.Z) == 1:
+            if self.Z == np.ones(1):
+                self.abundances_by_number = self.element_abundances = np.ones(1)
+                self.n_H = self.data['rho'] / g_per_amu
+                return
             
-        # Set hydrogen number density (which normalizes all other species)
+        # Set hydrogen number density (which normalizes all other species)    
         X = 0
         for i in xrange(len(self.abundances_by_number) - 1):
             name = util.z2element(i + 1)

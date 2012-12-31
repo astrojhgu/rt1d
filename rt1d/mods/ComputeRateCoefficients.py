@@ -24,7 +24,7 @@ from scipy.integrate import quad
 E_th = np.array([13.6, 24.6, 54.4])
 
 class RateCoefficients:
-    def __init__(self, pf, rs = None, grid = None):
+    def __init__(self, pf = None, rs = None, grid = None):
         self.pf = pf        
         self.rs = rs
         self.cosm = Cosmology(pf)
@@ -39,7 +39,7 @@ class RateCoefficients:
         self.Vsh = 4. * np.pi * ((grid.r + grid.dx)**3 - grid.r**3) / 3.
         
         self.smallcol = pf['OpticallyThinColumn']
-                                    
+            
     def ConstructArgs(self, args, indices, Lbol, r, ncol, T, dr, t, z, cell):
         """
         Make list of rate coefficients that we'll pass to solver.

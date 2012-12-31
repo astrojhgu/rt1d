@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import os
 from distutils.core import setup
 
 setup(name='rt1d',
@@ -9,11 +8,9 @@ setup(name='rt1d',
       author='Jordan Mirocha',
       author_email='mirochaj@gmail.com',
       url='https://bitbucket.org/mirochaj/rt1d',
-      packages=['rt1d', 'rt1d.mods', 'rt1d.analysis', 'rt1d.init'],
+      packages=['rt1d', 'rt1d.analysis', 'rt1d.init', 'rt1d.physics', 
+                'rt1d.sources', 'rt1d.evolve', 'rt1d.util', 'rt1d.run'],
      )
      
-if not os.path.exists('bin'): 
-    os.mkdir('bin')     
-os.system('cp rt1d/mods/RT1D.py bin')
 
      

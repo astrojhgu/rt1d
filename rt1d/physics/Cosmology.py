@@ -17,10 +17,13 @@ Notes:
 
 import numpy as np
 from .Constants import c, G, km_per_mpc, m_H, m_He
-from .Integrate import simpson
 
 class Cosmology:
     def __init__(self, pf):
+        if pf is None:
+            from ..util.SetDefaultParameterValues import SetDefaultCosmologyParameters
+            pf = SetDefaultCosmologyParameters()
+            
         self.pf = pf
         self.OmegaMatterNow = pf['OmegaMatterNow']
         self.OmegaBaryonNow = pf['OmegaBaryonNow']
@@ -44,10 +47,6 @@ class Cosmology:
         self.nHe0 = self.y * self.nH0
         self.ne0 = self.nH0 + 2. * self.nHe0
         self.rho_n_z0 = self.nH0 + self.nHe0 + self.ne0
-        
-        self.InitialRedshift = self.zi = pf["InitialRedshift"]
-        self.FinalRedshift = self.zf = \
-            self.TimeToRedshiftConverter(0., pf["StopTime"] * pf['TimeUnits'], self.zi)
         
     def TimeToRedshiftConverter(self, t_i, t_f, z_i):
         """

@@ -50,7 +50,7 @@ neglible_tau = 1e-12
 neglible_column = 10
 
 class Radiate:
-    def __init__(self, pf, rs, g): 
+    def __init__(self, pf, rs, g):
         self.pf = pf
         
         # Classes
