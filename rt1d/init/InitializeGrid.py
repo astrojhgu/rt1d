@@ -14,14 +14,47 @@ import copy
 import numpy as np
 import chianti.core as cc
 import chianti.util as util
+from ..util import parse_kwargs, rebin
 from ..physics.Constants import g_per_amu
 from periodic.table import element as ELEMENT
 
 tiny_number = 1e-8  # A relatively small species fraction
 
 class Grid:
-    def __init__(self, dims = 64):
+    def __init__(self, dims = 64, **kwargs):
         self.dims = int(dims)
+        self.pf = parse_kwargs(**kwargs)
+        
+        self.r_edg = self.r = \
+            np.linspace(self.R0, self.pf['LengthUnits'], self.dims + 1)
+        self.dr = np.diff(self.r_edg)
+        self.r_mid = rebin(self.r_edg)
+        
+    @property
+    def zeros_grid_x_absorbers(self):
+        return np.zeros([self.dims, len(self.absorbers)])
+        
+    @property
+    def zeros_grid_x_absorbers2(self):
+        return np.zeros([self.dims, len(self.absorbers), len(self.absorbers)])     
+                
+    @property
+    def R0(self):
+        return self.pf['StartRadius'] * self.pf['LengthUnits']    
+        
+    @property
+    def dr(self):
+        """ Return cell widths. """
+        if not hasattr(self, 'dr_all'):
+            self.dr_all = [np.diff(self.x) * self.pf['LengthUnits']]
+            self.dr_all.append()
+            
+    @property
+    def Vsh(self):
+        if not hasattr(self, 'Vsh_all'):
+            self.Vsh_all = self.ShellVolume(self.r_edg[0:-1], self.dr)
+            
+        return self.Vsh_all
                         
     @property            
     def neutrals(self):
@@ -48,6 +81,31 @@ class Grid:
         return self.ionized_species
     
     @property
+    def absorbers(self):    
+        """ Return list of absorbers (don't include electrons). """
+        if not hasattr(self, 'absorbing_species'):
+            self.absorbing_species = self.neutrals
+            for ion in self.ions_by_ion:
+                self.absorbing_species.extend(ion[1:-1])
+            
+        return self.absorbing_species
+        
+    @property
+    def species_abundances(self):
+        """
+        Return dictionary containing abundances of all ions' parent
+        element.
+        """
+        if not hasattr(self, 'species_abundances'):
+            self.species_abundances = {}
+            for ion in self.ions_by_ion:
+                for state in self.ions_by_ion[ion]:
+                    self.species_abundances[state] = \
+                        self.element_abundances[self.elements.index(ion)]
+    
+        return self.species_abundances
+    
+    @property
     def types(self):
         """
         Return list (matching all_species) with integers describing
@@ -68,7 +126,13 @@ class Grid:
                     self.species_types.append(-1) 
         
         return self.species_types   
-                
+        
+    @property
+    def cross_sections(self):
+        """
+        Return bound-free absorption cross-sections for all absorbers.
+        """    
+        
     def set_chem(self, Z = 1, abundance = None, isothermal = False):
         """
         Initialize chemistry - which species we'll be solving for and their 
@@ -255,6 +319,13 @@ class Grid:
         self.qmap = []
         for species in self.all_species:
             self.qmap.append(species)
+            
+    def ShellVolume(self, r, dr):
+        """
+        Return volume of shell at distance r, thickness dr.
+        """
+        
+        return 4. * np.pi * ((r + dr)**3 - r**3) / 3.            
 
         
 

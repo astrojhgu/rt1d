@@ -37,7 +37,7 @@ class Chemistry:
             method = 'bdf', nsteps = 1e4, with_jacobian = True,
             atol = 1e-12, rtol = 1e-8)
             
-    def Evolve(self, data, dt):
+    def Evolve(self, data, dt, **kwargs):
         """
         Evolve all cells by dt.
         """
@@ -47,19 +47,24 @@ class Chemistry:
         
         newdata = {}
         for species in data:
-            newdata[species] = copy.deepcopy(data[species])
+            newdata[species] = copy.deepcopy(data[species])#np.zeros_like(data[species])
+               
+        kwargs_by_cell = self.sort_kwargs_by_cell(kwargs)       
                
         # Loop over grid and solve chemistry
         for cell in xrange(self.grid.dims):
-                                
+
             # Construct q vector
             q = np.zeros(len(self.grid.all_species))
             for i, species in enumerate(self.grid.all_species):
                 q[i] = data[species][cell]
-            
-            self.solver.set_initial_value(q, 0.0).set_f_params([cell]).set_jac_params([cell])
+                
+            kwargs = kwargs_by_cell[cell]
+            args = (cell, kwargs['Gamma'], kwargs['gamma'], kwargs['Heat'])
+                            
+            self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)
-                                    
+                                                
             for i, value in enumerate(self.solver.y):
                 newdata[self.grid.all_species[i]][cell] = value
         
@@ -83,14 +88,7 @@ class Chemistry:
                 val = network.reactions[reaction].coeff_fn(network)
                 kwargs[reaction] = val
                                         
-        # Organize by cell                        
-        kwargs_by_cell = []
-        for cell in xrange(self.grid.dims):
-            new_kwargs = {}
-            for key in kwargs.keys():
-                new_kwargs[key] = kwargs[key][cell]
-                
-            kwargs_by_cell.append(new_kwargs)
+        kwargs_by_cell = self.sort_kwargs_by_cell(kwargs)
         
         # Loop over grid and solve chemistry            
         for cell in xrange(self.grid.dims):
@@ -98,7 +96,7 @@ class Chemistry:
             # Construct q vector
             q = np.zeros(len(self.grid.qmap))
             for i, species in enumerate(self.grid.qmap):
-                q[i] = data[species][cell]
+                q[i] = data[species][cell]            
                         
             self.solver.set_initial_value(q, 0.0).set_f_params(kwargs_by_cell[cell]).set_jac_params(kwargs_by_cell[cell])
             self.solver.integrate(dt)
@@ -108,6 +106,20 @@ class Chemistry:
                 newdata[self.grid.qmap[i]][cell] = value
         
         return newdata
+    
+    def sort_kwargs_by_cell(self, kwargs):
+        """
+        Convert kwargs dictionary to list - entries correspond to cells, a dictionary
+        of values for each.
+        """    
         
+        # Organize by cell                        
+        kwargs_by_cell = []
+        for cell in xrange(self.grid.dims):
+            new_kwargs = {}
+            for key in kwargs.keys():
+                new_kwargs[key] = kwargs[key][cell]
+                
+            kwargs_by_cell.append(new_kwargs)
         
-
+        return kwargs_by_cell

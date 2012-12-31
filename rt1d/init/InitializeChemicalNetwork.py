@@ -172,9 +172,9 @@ class SimpleChemicalNetwork:
          
         self.q = q
         self.dqdt = np.zeros_like(self.zeros_q)
-            
-        cell = args[0]
-                
+        
+        cell, Gamma, gamma, k_H = args
+                    
         n_H = self.grid.n_H[cell]
         
         if 1 in self.grid.Z:
@@ -202,27 +202,27 @@ class SimpleChemicalNetwork:
         
         # Source-dependent coefficients    
         # Gamma, gamma, k_H = args
-        Gamma, k_H = [np.zeros(3)] * 2
-        gamma = np.zeros([3, 3])
+        #Gamma, k_H = [np.zeros(3)] * 2
+        #gamma = np.zeros([3, 3])
                                             
         # Hydrogen rate equations
         if 1 in self.grid.Z:
-            self.dqdt[h1] = -(Gamma[0] + self.Beta[0][cell] * n_e) * xHI \
-                          +   self.alpha[0][cell] * n_e * xHII
+            self.dqdt[h1] = -(Gamma[0] + self.Beta[cell][0] * n_e) * xHI \
+                          +   self.alpha[cell][0] * n_e * xHII
             self.dqdt[h2] = -self.dqdt[0]   
             self.dqdt[e] = self.dqdt[h2] * n_H             
                                 
         # Helium rate equations  
         if 2 in self.grid.Z:
-            self.dqdt[he1] = -(Gamma[1] + self.Beta[1][cell] * n_e) * xHeI \
-                           +  (self.alpha[1][cell] + self.xi[cell]) * n_e * xHeII
-            self.dqdt[he2] = (Gamma[1] + self.Beta[1][cell] * n_e) * xHeI \
-                           +  self.alpha[2][cell] * n_e * xHeIII \
-                           - (self.Beta[1][cell] + self.alpha[1][cell] \
+            self.dqdt[he1] = -(Gamma[1] + self.Beta[cell][1] * n_e) * xHeI \
+                           +  (self.alpha[cell][1] + self.xi[cell]) * n_e * xHeII
+            self.dqdt[he2] = (Gamma[1] + self.Beta[cell][1] * n_e) * xHeI \
+                           +  self.alpha[cell][2] * n_e * xHeIII \
+                           - (self.Beta[cell][1] + self.alpha[cell][1] \
                            +  self.xi[cell]) * n_e * xHeII \
                            -  Gamma[2] * xHeII
-            self.dqdt[he3] = (Gamma[2] + self.Beta[2][cell] * n_e) * xHeII \
-                           - self.alpha[2][cell] * n_e * xHeIII
+            self.dqdt[he3] = (Gamma[2] + self.Beta[cell][2] * n_e) * xHeII \
+                           - self.alpha[cell][2] * n_e * xHeIII
             self.dqdt[e] += (self.dqdt[he2] + self.dqdt[he3]) * n_He
                             
         # Temperature evolution - looks dumb but using np.sum is slow
@@ -247,7 +247,7 @@ class SimpleChemicalNetwork:
         Jacobian of the rate equations.
         """    
                     
-        cell = args[0]            
+        cell, Gamma, gamma, k_H = args       
                               
         Gamma, k_H = [np.zeros(3)] * 2
         gamma = np.zeros([3, 3])  
@@ -285,67 +285,67 @@ class SimpleChemicalNetwork:
 
         # Hydrogen terms - diagonal
         if 1 in self.grid.Z:
-            J[h1][h1] = -(Gamma[0] + self.Beta[0][cell] * n_e) \
-                      -   self.alpha[0][cell] * n_e
+            J[h1][h1] = -(Gamma[0] + self.Beta[cell][0] * n_e) \
+                      -   self.alpha[cell][0] * n_e
             J[h2][h2] = J[h1][h1]
             
             # Hydrogen - off-diagonal
             J[h1][h2] = -J[h1][h1]
-            J[h1][e] = -self.Beta[0][cell] * xHI \
-                     +  self.alpha[0][cell] * xHII
+            J[h1][e] = -self.Beta[cell][0] * xHI \
+                     +  self.alpha[cell][0] * xHII
             J[h2][h1] = -J[h1][h1]
             J[h2][e] = -J[h1][e]
             
             # Electron elements
-            J[e][h1] = Gamma[0] * n_H + self.Beta[0][cell] * n_e * n_H \
-                     + self.alpha[0][cell] * n_e * n_H
+            J[e][h1] = Gamma[0] * n_H + self.Beta[cell][0] * n_e * n_H \
+                     + self.alpha[cell][0] * n_e * n_H
             J[e][h2] = -J[e][h2]
-            J[e][e] = self.Beta[0][cell] * n_H * xHI \
-                    - self.alpha[0][cell] * n_H * xHII
+            J[e][e] = self.Beta[cell][0] * n_H * xHI \
+                    - self.alpha[cell][0] * n_H * xHII
         
         if 2 in self.grid.Z:
             
             # First - diagonal elements
-            J[he1][he1] = -(Gamma[1] + self.Beta[1][cell] * n_e) \
-                        -  (self.alpha[1][cell] + self.xi[cell]) * n_e
-            J[he2][he2] = -(Gamma[1] + self.Beta[0][cell] * n_e) \
-                        -  (self.Beta[1][cell] + self.alpha[1][cell] \
+            J[he1][he1] = -(Gamma[1] + self.Beta[cell][1] * n_e) \
+                        -  (self.alpha[cell][1] + self.xi[cell]) * n_e
+            J[he2][he2] = -(Gamma[1] + self.Beta[cell][0] * n_e) \
+                        -  (self.Beta[cell][1] + self.alpha[cell][1] \
                         +   self.xi[cell]) * n_e \
-                        -   self.alpha[2][cell] * n_e \
+                        -   self.alpha[cell][2] * n_e \
                         -   Gamma[2]
-            J[he3][he3] = -(Gamma[2] + self.Beta[2][cell] * n_e) \
-                        -   self.alpha[2][cell] * n_e
+            J[he3][he3] = -(Gamma[2] + self.Beta[cell][2] * n_e) \
+                        -   self.alpha[cell][2] * n_e
             
             # Off-diagonal elements HeI
-            J[he1][he2] = (Gamma[1] + self.Beta[0][cell] * n_e) \
-                        + (self.alpha[1][cell] + self.xi[cell]) * n_e
-            J[he1][he3] = (Gamma[1] + self.Beta[0][cell] * n_e) \
-                        - (self.alpha[1][cell] + self.xi[cell]) * n_e 
-            J[he1][e] = -self.Beta[0][cell] * xHeI \
-                      + (self.alpha[1][cell] + self.xi[cell]) * xHeII                
+            J[he1][he2] = (Gamma[1] + self.Beta[cell][0] * n_e) \
+                        + (self.alpha[cell][1] + self.xi[cell]) * n_e
+            J[he1][he3] = (Gamma[1] + self.Beta[cell][0] * n_e) \
+                        - (self.alpha[cell][1] + self.xi[cell]) * n_e 
+            J[he1][e] = -self.Beta[cell][0] * xHeI \
+                      + (self.alpha[cell][1] + self.xi[cell]) * xHeII                
             
             # Off-diagonal elements HeII
-            J[he2][he1] = (Gamma[1] + self.Beta[0][cell] * n_e) \
-                        - (self.alpha[1][cell] + self.xi[cell]) * n_e \
-                        + (self.Beta[1][cell] + self.alpha[1][cell] \
+            J[he2][he1] = (Gamma[1] + self.Beta[cell][0] * n_e) \
+                        - (self.alpha[cell][1] + self.xi[cell]) * n_e \
+                        + (self.Beta[cell][1] + self.alpha[cell][1] \
                         +  self.xi[cell]) * n_e
             J[he2][he3] = -J[3][2]
-            J[he2][e] = self.Beta[2][cell] * xHeIII \
-                      - self.alpha[2][cell] * xHeIII
+            J[he2][e] = self.Beta[cell][2] * xHeIII \
+                      - self.alpha[cell][2] * xHeIII
             
             # Off-diagonal elements HeIII
-            J[he3][he1] = -(Gamma[1] + self.Beta[0][cell] * n_e) \
-                        +   self.alpha[2][cell] * n_e
-            J[he3][he2] = (Gamma[1] + self.Beta[0][cell] * n_e) \
-                        +   self.alpha[2][cell] * n_e
-            J[he3][e] = self.Beta[2][cell] * xHeII \
-                      - self.alpha[2][cell] * xHeIII            
+            J[he3][he1] = -(Gamma[1] + self.Beta[cell][0] * n_e) \
+                        +   self.alpha[cell][2] * n_e
+            J[he3][he2] = (Gamma[1] + self.Beta[cell][0] * n_e) \
+                        +   self.alpha[cell][2] * n_e
+            J[he3][e] = self.Beta[cell][2] * xHeII \
+                      - self.alpha[cell][2] * xHeIII            
             
             # Electrons
-            J[e][e] += self.Beta[1][cell] * xHeI \
-                    + self.Beta[2][cell] * xHeII \
-                    - self.alpha[1][cell] * xHeII \
-                    - self.alpha[2][cell] * xHeIII \
+            J[e][e] += self.Beta[cell][1] * xHeI \
+                    + self.Beta[cell][2] * xHeII \
+                    - self.alpha[cell][1] * xHeII \
+                    - self.alpha[cell][2] * xHeIII \
                     - self.xi[cell] * xHeII 
                     
             #J[e][he1] = Gamma[1] - Gamma[2] \
@@ -363,7 +363,7 @@ class SimpleChemicalNetwork:
             
             J[e][e] *= n_He
                                 
-            # Gas energy          
+            # Gas energy
                                                    
         return J
                 
@@ -374,8 +374,8 @@ class SimpleChemicalNetwork:
         """    
         
         self.T = T
-        self.Beta = np.zeros_like(self.zeros_3xgrid)
-        self.alpha = np.zeros_like(self.zeros_3xgrid)
+        self.Beta = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+        self.alpha = np.zeros_like(self.grid.zeros_grid_x_absorbers)
         #self.zeta = np.zeros_like(self.zeros_3xgrid)
         #self.eta = np.zeros_like(self.zeros_3xgrid)
         #self.psi = np.zeros_like(self.zeros_3xgrid)
@@ -388,9 +388,12 @@ class SimpleChemicalNetwork:
             if i > 0 and (2 not in self.grid.Z):
                 continue
                 
-            self.Beta[i,...] = self.coeff.CollisionalIonizationRate(i, T)
-            self.alpha[i,...] = self.coeff.RadiativeRecombinationRate(i, T)
+            self.Beta[...,i] = self.coeff.CollisionalIonizationRate(i, T)
+            self.alpha[...,i] = self.coeff.RadiativeRecombinationRate(i, T)
                         
         # Di-electric recombination
         self.xi = self.coeff.DielectricRecombinationRate(T)
+        
+        return {'Beta': self.Beta, 'alpha': self.alpha, 'xi': self.xi}
+        
                     

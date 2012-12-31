@@ -16,7 +16,7 @@ defaults = []
 pgroups = ['Grid', 'Source', 'Spectrum', 'Physics', 
            'Cosmology', 'Solver', 'Control']
 for grp in pgroups:
-    defaults.append('SetDefault%sParameters()' % grp)
+    defaults.append('%sParameters()' % grp)
     
 def SetAllDefaults():
     pf = {'ProblemType': 1}
@@ -25,6 +25,84 @@ def SetAllDefaults():
         eval('pf.update(%s)' % pset)
         
     return pf
+    
+def SpectrumParameters(): 
+    pf = \
+        {
+        "spectrum_discrete": 0,
+        "FrequencyAveragedCrossSections": 0,
+        "FrequencyGroups": 1,
+        "bands": [13.6, 24.6, 54.4],
+        "spectrum_type": 1,
+        "spectrum_fraction": 1,   
+        "spectrum_alpha": 1.5,  
+        "spectrum_Emin": 13.6,  
+        "spectrum_Emax": 1e2,  
+        "spectrum_EminNorm": 0.01,  
+        "spectrum_EmaxNorm": 5e2,  
+        "spectrum_qdot": 5e48,  
+        "spectrum_N": 0,
+        "spectrum_fcol": 1.7,
+        "spectrum_file": 'None',
+        "ForceIntegralTabulation": 0,
+          
+        "spectrum_E": [13.6],  
+        "spectrum_LE": [1.],  
+        
+        "IntegralTable": 'None',  
+        "RegenerateTable": 0,  
+        "ColumnDensityBinsHI": 200,  
+        "ColumnDensityBinsHeI": 100,  
+        "ColumnDensityBinsHeII": 100,  
+        "IonizedFractionBins": 20,
+        "AgeBins": 20,
+        }
+        
+    return pf       
+
+def SourceParameters():
+    pf = \
+        {
+        "source_N": 1,
+        "source_files": 'None',
+        "source_type": 1,  
+        "source_temperature": 1e5,  
+        "source_mass": 1e3,  
+        "source_fduty": 1,
+        "source_tbirth": 0,
+        "source_lifetime": 1e10,  
+        "source_eta": 0.1,
+        "source_isco": 0,  
+        "source_rmax": 1e3,
+        "source_evolving": 0,
+        "source_cX": 1.0,
+        }
+        
+    return pf
+    
+def PhysicsParameters():
+    pf = \
+        {
+        "PhotonConserving": 1,  
+        "LymanAlphaContinuum": 0,
+        "LymanAlphaInjection": 0,
+        "Isothermal": 0,  
+        "MultiSpecies": 0,  
+        "CollisionalIonization": 1,  
+        "CollisionalExcitation": 1,  
+        "SecondaryIonization": 0,  
+        "SecondaryLymanAlpha": 0,
+        "ComptonHeating": 0,  
+        "FreeFreeEmission": 0,  
+        "CosmologicalExpansion": 0,  
+        "InfiniteSpeedOfLight": 1,  
+        "PlaneParallelField": 0,  
+        "ClumpingFactor": 1,
+        "RecombinationMethod": 'B', 
+        "SecondaryElectronDataFile": 'None',        
+        }
+        
+    return pf    
         
 def SetDefaultSourceParameters():
     pf = \
@@ -104,7 +182,7 @@ def SetDefaultPhysicsParameters():
         
     return pf
     
-def SetDefaultCosmologyParameters():
+def CosmologyParameters():
     pf = \
         {
         "OmegaMatterNow": 0.272,  
@@ -117,7 +195,7 @@ def SetDefaultCosmologyParameters():
         
     return pf
     
-def SetDefaultControlParameters():
+def ControlParameters():
     pf = \
         {
         "ParallelizationMethod": 1,  
@@ -162,7 +240,7 @@ def SetDefaultControlParameters():
         
     return pf
     
-def SetDefaultGridParameters():
+def GridParameters():
     pf = \
         {
         "GridDimensions": 100,  
@@ -189,7 +267,7 @@ def SetDefaultGridParameters():
 
     return pf
     
-def SetDefaultSolverParameters():    
+def SolverParameters():    
     pf = \
         {
         "UseScipy": 1,

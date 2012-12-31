@@ -21,8 +21,8 @@ from .Constants import c, G, km_per_mpc, m_H, m_He
 class Cosmology:
     def __init__(self, pf):
         if pf is None:
-            from ..util.SetDefaultParameterValues import SetDefaultCosmologyParameters
-            pf = SetDefaultCosmologyParameters()
+            from ..util.SetDefaultParameterValues import CosmologyParameters
+            pf = CosmologyParameters()
             
         self.pf = pf
         self.OmegaMatterNow = pf['OmegaMatterNow']

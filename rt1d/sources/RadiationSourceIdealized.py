@@ -11,9 +11,12 @@ Description:
 """
 
 import numpy as np
-from .Constants import *
+from ..physics.Constants import *
 from scipy.integrate import quad, romberg
-from .ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
+from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
+
+from ..util import parse_kwargs
+
 
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB
                             # will return 0 as it should for x large
@@ -30,39 +33,46 @@ big_number = 1e5
 ls = ['-', '--', ':', '-.']
 
 class RadiationSourceIdealized:
-    def __init__(self, pf):
-        self.pf = pf
+    def __init__(self, **kwargs):
+        self.pf = parse_kwargs(**kwargs)
         
-        # Create SpectrumPars attribute    
-        self.SpectrumPars = listify(pf)
-        self.N = len(self.SpectrumPars['Type'])
+        # Create Source/SpectrumPars attributes    
+        self.SourcePars = sort(self.pf, prefix = 'source', make_list = False)
+        self.SpectrumPars = sort(self.pf, prefix = 'spectrum')
+        
+        # Number of spectral components
+        self.N = len(self.SpectrumPars['type'])
         
         # Cast types to int to avoid indexing complaints
-        self.SpectrumPars['Type'] = map(int, self.SpectrumPars['Type'])
+        self.SpectrumPars['type'] = map(int, self.SpectrumPars['type'])
         
         self._name = 'RadiationSourceIdealized'
+        self.discrete = self.SpectrumPars['discrete']
+        
+        self.initialize()
         
     def initialize(self):    
         """
         Create attributes we need, normalize, etc.
         """
         
-        self.Emin = min(self.SpectrumPars['MinEnergy'])
-        self.Emax = min(self.SpectrumPars['MaxEnergy'])   
-        self.EminNorm = min(self.SpectrumPars['MinNormEnergy'])
-        self.EmaxNorm = min(self.SpectrumPars['MaxNormEnergy'])
+        self.Emin = min(self.SpectrumPars['Emin'])
+        self.Emax = min(self.SpectrumPars['Emax'])
+        self.EminNorm = min(self.SpectrumPars['EminNorm'])
+        self.EmaxNorm = min(self.SpectrumPars['EmaxNorm'])
         
         if self.N == 1:
-            self.Type = self.SpectrumPars['Type'][0]
+            self.Type = self.SpectrumPars['type'][0]
                     
         # Correct later if using multi-group approach
-        self.E = np.array(self.pf['DiscreteSpectrumSED'])
-        self.F = np.array(self.pf['DiscreteSpectrumRelLum'])
+        self.E = np.array(self.SpectrumPars['E'])
+        self.LE = np.array(self.SpectrumPars['LE'])
+        self.Nfreq = len(self.E)
         
         self.last_renormalized = 0
-        self.tau = self.pf['SourceLifetime'] * self.pf['TimeUnits']
-        self.birth = self.pf['SourceBirthtime'] * self.pf['TimeUnits']
-        self.fduty = self.pf['SourceDutyCycle']
+        self.tau = self.SourcePars['lifetime'] * self.pf['TimeUnits']
+        self.birth = self.SourcePars['tbirth'] * self.pf['TimeUnits']
+        self.fduty = self.SourcePars['fduty']
         
         self.variable = self.fduty < 1
         if self.fduty == 1:
@@ -71,20 +81,20 @@ class RadiationSourceIdealized:
         self.toff = self.tau * (self.fduty**-1. - 1.)
                         
         # SourceType 0, 1, 2
-        self.Lph = self.pf['SpectrumPhotonLuminosity']
+        self.Lph = self.SpectrumPars['qdot']
         
         # SourceType = 1, 2
-        self.T = self.pf['SourceTemperature']
+        self.T = self.SourcePars['temperature']
         
         # SourceType >= 3
-        self.M = self.pf['SourceMass']
-        self.M0 = self.pf['SourceMass']
-        self.epsilon = self.pf['SourceRadiativeEfficiency']
+        self.M = self.SourcePars['mass']
+        self.M0 = self.SourcePars['mass']
+        self.epsilon = self.SourcePars['eta']
         
-        if 3 in self.SpectrumPars['Type']:
+        if 3 in self.SpectrumPars['type']:
             self.r_in = self.DiskInnermostRadius(self.M0)
-            self.r_out = self.pf['SourceDiskMaxRadius'] * self.GravitationalRadius(self.M0)
-            self.fcol = self.SpectrumPars['ColorCorrectionFactor'][self.SpectrumPars['Type'].index(3)]
+            self.r_out = self.SourcePars['rmax'] * self.GravitationalRadius(self.M0)
+            self.fcol = self.SpectrumPars['fcol'][self.SpectrumPars['type'].index(3)]
             self.T_in = self.DiskInnermostTemperature(self.M0)
             self.T_out = self.DiskTemperature(self.M0, self.r_out)    
 
@@ -92,16 +102,17 @@ class RadiationSourceIdealized:
                                  
         # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
         # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
-        if self.pf['SourceType'] == 0:
-            self.Lbol = self.Lph * self.F * self.E * erg_per_ev 
-            self.Qdot = self.F * self.Lph
-        elif self.pf['SourceType'] in [1, 2]:
+        if self.SourcePars['type'] == 0:
+            self.Lbol = np.sum(self.Lph * self.LE * self.E * erg_per_ev)
+            self.Qdot = self.LE * self.Lph
+            self.sigma = sigma_E(self.E)
+        elif self.SourcePars['type'] in [1, 2]:
             self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * \
                 romberg(lambda x: x**2 / (np.exp(x) - 1.), 
                 13.6 * erg_per_ev / k_B / self.T, big_number, divmax = 100) / h**3 / c**2 
             self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
-            self.Qdot = self.Lbol * self.F / self.E / erg_per_ev
+            self.Qdot = self.Lbol * self.LE / self.E / erg_per_ev
         else:
             self.Lbol = self.BolometricLuminosity(0.0)    
                 
@@ -130,11 +141,11 @@ class RadiationSourceIdealized:
         self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
         
         # Multi-group treatment
-        Qnorm = self.pf['SpectrumPhotonLuminosity'] / self.Lbol / \
+        Qnorm = self.SpectrumPars['qdot'] / self.Lbol / \
             quad(lambda x: self.Spectrum(x) / x, self.EminNorm, self.EmaxNorm)[0]
         if self.pf['FrequencyAveragedCrossSections']:
             self.E = np.zeros(self.pf['FrequencyGroups'])
-            self.F = np.ones_like(self.E)
+            self.LE = np.ones_like(self.E)
             self.Qdot = np.zeros_like(self.E)
             self.bands = self.pf['FrequencyBands']
             
@@ -149,7 +160,7 @@ class RadiationSourceIdealized:
                 self.Qdot[i] = Qnorm * self.Lbol * Q
                 
         # Time evolution
-        if self.pf['SourceTimeEvolution']:
+        if self.SourcePars['evolving']:
             self.Age = np.linspace(0, self.pf['StopTime'] * self.pf['TimeUnits'], self.pf['AgeBins'])
                                               
     def GravitationalRadius(self, M):
@@ -241,7 +252,7 @@ class RadiationSourceIdealized:
         if self.pf['SourceType'] in [0, 1, 2]:
             return self.Qdot[bin]
         else:
-            return self.BolometricLuminosity(t) * self.F[bin] / self.E[bin] / erg_per_ev          
+            return self.BolometricLuminosity(t) * self.LE[bin] / self.E[bin] / erg_per_ev          
               
     def Intensity(self, E, i, Type, t):
         """
@@ -250,7 +261,7 @@ class RadiationSourceIdealized:
         """
         
         if Type == 0:
-            Lnu = self.F[0]
+            Lnu = self.LE[0]
         elif Type in [1, 2]:
             Lnu = self.BlackBody(E)
         elif Type == 3:
@@ -262,8 +273,8 @@ class RadiationSourceIdealized:
         else:
             Lnu = 0.0
             
-        if self.SpectrumPars['AbsorbingColumn'][i] > 0:
-            return Lnu * np.exp(-self.SpectrumPars['AbsorbingColumn'][i] * (sigma_E(E, 0) + y * sigma_E(E, 1)))   
+        if self.SpectrumPars['N'][i] > 0:
+            return Lnu * np.exp(-self.SpectrumPars['N'][i] * (sigma_E(E, 0) + y * sigma_E(E, 1)))   
         else:
             return Lnu     
                 
@@ -277,15 +288,15 @@ class RadiationSourceIdealized:
             self.last_renormalized = t
             self.M = self.BlackHoleMass(t)
             self.r_in = self.DiskInnermostRadius(self.M)
-            self.r_out = self.pf['SourceDiskMaxRadius'] * self.GravitationalRadius(self.M)
+            self.r_out = self.SpectrumPars['rmax'] * self.GravitationalRadius(self.M)
             self.T_in = self.DiskInnermostTemperature(self.M)
             self.T_out = self.DiskTemperature(self.M, self.r_out)
             self.Lbol = self.BolometricLuminosity(t)
             self.LuminosityNormalizations = self.NormalizeSpectrumComponents(t)    
         
         emission = 0
-        for i, Type in enumerate(self.SpectrumPars['Type']):
-            if not (self.SpectrumPars['MinEnergy'][i] <= E <= self.SpectrumPars['MaxEnergy'][i]):
+        for i, Type in enumerate(self.SpectrumPars['type']):
+            if not (self.SpectrumPars['Emin'][i] <= E <= self.SpectrumPars['Emax'][i]):
                 continue
                 
             if only is not None and Type != only:
@@ -372,10 +383,10 @@ class RadiationSourceIdealized:
         Lbol = self.BolometricLuminosity(t)
         
         normalizations = np.zeros(self.N)
-        for i, component in enumerate(self.SpectrumPars['Type']):            
-            integral, err = quad(self.Intensity, self.SpectrumPars['MinNormEnergy'][i], 
-                self.SpectrumPars['MaxNormEnergy'][i], args = (i, component, t,))
-            normalizations[i] = self.SpectrumPars['Fraction'][i] * Lbol / integral
+        for i, component in enumerate(self.SpectrumPars['type']):            
+            integral, err = quad(self.Intensity, self.SpectrumPars['EminNorm'][i], 
+                self.SpectrumPars['EmaxNorm'][i], args = (i, component, t,))
+            normalizations[i] = self.SpectrumPars['fraction'][i] * Lbol / integral
             
         return normalizations
         
@@ -389,16 +400,16 @@ class RadiationSourceIdealized:
             if t >= self.tau:
                 return 0.0        
             
-        if self.pf['SourceType'] == 0:
-            return self.Lph / (np.sum(self.F / self.E / erg_per_ev))
+        if self.SourcePars['type'] == 0:
+            return self.Lph / (np.sum(self.LE / self.E / erg_per_ev))
         
-        if self.pf['SourceType'] == 1:
+        if self.SourcePars['type'] == 1:
             return self.Lbol
         
-        if self.pf['SourceType'] == 2:
+        if self.SourcePars['type'] == 2:
             return 10**SchaererTable["Luminosity"][SchaererTable["Mass"].index(self.M)] * lsun
             
-        if self.pf['SourceType'] == 3:
+        if self.SourcePars['type'] == 3:
             if not self.SourceOn(t):
                 return 0.0
                 
@@ -407,8 +418,8 @@ class RadiationSourceIdealized:
                 Mnow = M
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
     
-        if self.pf['SourceType'] == 4:
-            return self.pf['SourceSFRLXNormalization'] * 3.4e40
+        if self.SourcePars['type'] == 4:
+            return self.pf['cX'] * 3.4e40
     
     def SpectrumCDF(self, E):
         """
@@ -509,21 +520,21 @@ class RadiationSourceIdealized:
                 
         pl.draw()
         
-def listify(pf):
+def sort(pf, prefix = 'spectrum', make_list = True):
     """
-    Turn any Spectrum parameter into a list, if it isn't already.
+    Turn any Source/Spectrum parameter into a list, if it isn't already.
     """            
     
-    Spectrum = {}
+    result = {}
     for par in pf.keys():
-        if par[0:8] != 'Spectrum':
+        if par[0:len(prefix)] != prefix:
             continue
         
-        new_name = par.lstrip('Spectrum')
-        if type(pf[par]) is not list:
-            Spectrum[new_name] = [pf[par]]
+        new_name = par.partition('_')[-1]
+        if type(pf[par]) is not list and make_list:
+            result[new_name] = [pf[par]]
         else:
-            Spectrum[new_name] = pf[par]
+            result[new_name] = pf[par]
             
-    return Spectrum             
+    return result             
         

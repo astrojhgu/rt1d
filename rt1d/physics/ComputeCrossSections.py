@@ -43,7 +43,8 @@ def PhotoIonizationCrossSection(E, species = 0):
         (1.0 + np.sqrt(y / params[species][2]))**-params[species][3]
                                 
     return params[species][1] * F_y * 1e-18
-                                                                                                               
+                                               
+# MOVE TO RS classes                                                                                                               
 def EffectiveCrossSection(rs, E1, E2, species = 0):
     """
     Compute frequency averaged cross-section, as in Aubert & Teyssier 2008.

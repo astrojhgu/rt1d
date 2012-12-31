@@ -14,10 +14,11 @@ import rt1d
 import numpy as np
 import pylab as pl
 
-dims = 32
+dims = 64
 
 # Initialize grid object
-grid = rt1d.Grid(dims = dims)
+grid = rt1d.Grid(dims = dims, 
+    **{'LengthUnits': 6.6 * rt1d.Constants.cm_per_kpc})
 
 # Set initial conditions
 grid.set_chem(isothermal = True)
@@ -26,7 +27,8 @@ grid.set_T(1e4)
 grid.set_x(Z = 1, x = 1.2e-3)  
 
 # Initialize radiation source and radiative transfer solver
-rs = rt1d.sources.RadiationSourceIdealized(**{'qdot': 5e48, 'sed': [13.60001]})
+rs = rt1d.sources.RadiationSourceIdealized(**{'source_type': 0,
+    'spectrum_type': 0, 'spectrum_qdot': 5e48, 'spectrum_E': [13.60001]})
 rt = rt1d.Radiation(grid, rs)
 
 # To compute timestep
@@ -42,16 +44,16 @@ tf = 5e2 * rt1d.Constants.s_per_myr
 pb = rt1d.run.ProgressBar(tf)
 
 # Only need to calculate coefficients once for this test
-chem.chemnet.SourceIndependentCoefficients(chem.grid.data['T'])
+nothing = rt.chem.chemnet.SourceIndependentCoefficients(rt.chem.grid.data['T'])
 
 while t <= tf:
 
-    data = rt.Evolve(data, dt = dt)
+    data = rt.Evolve(data, t = t, dt = dt)
     pb.update(t)
     
     t += dt 
     
-    new_dt = timestep.IonLimited(chem.chemnet.q, chem.chemnet.dqdt)
+    new_dt = timestep.IonLimited(rt.chem.chemnet.q, rt.chem.chemnet.dqdt)
     dt = min(min(min(new_dt, 2 * dt), dt_max), tf - t)
 
     if dt == 0:
@@ -59,11 +61,9 @@ while t <= tf:
 
 pb.finish()    
         
-ax.scatter(T, data['h_1'], color = 'b', s = 50, 
-    marker = 'o')
-ax.scatter(T, data['h_2'], color = 'b', s = 50, 
-    facecolors='none', marker = 'o')
-pl.draw()    
+pl.semilogy(grid.r_mid / grid.pf['LengthUnits'], data['h_1'], color = 'k', ls = '-')
+pl.semilogy(grid.r_mid / grid.pf['LengthUnits'], data['h_2'], color = 'k', ls = '--')
+pl.ylim(1e-3, 1.5)
 raw_input('')
 
 
