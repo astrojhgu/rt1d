@@ -29,7 +29,8 @@ def SetAllDefaults():
 def SpectrumParameters(): 
     pf = \
         {
-        "spectrum_discrete": 0,
+        "spectrum_multifreq": 0,
+        "spectrum_multigrp": 0,
         "FrequencyAveragedCrossSections": 0,
         "FrequencyGroups": 1,
         "bands": [13.6, 24.6, 54.4],

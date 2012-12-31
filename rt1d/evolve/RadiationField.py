@@ -64,37 +64,40 @@ class RadiationField:
         for i, absorber in enumerate(self.grid.absorbers):
             Gamma[...,i] = np.zeros(self.grid.dims)
             
-            n = data[absorber] * self.x_to_n[absorber]
-                        
-            if not self.src.discrete: 
-                continue   
+            n = data[absorber] * self.x_to_n[absorber] 
                 
             """
             Photo-ionization for discrete spectrum (multi-freq. approach).
             """    
+            
+            if self.src.multi_freq:
                             
-            # Loop over energy groups
-            Gamma_E = np.zeros([self.grid.dims, self.src.Nfreq])
-            for j, E in enumerate(self.src.E):
-                
-                #if E < E_th[i]:
-                #    continue    
-                
-                #A = self.src.Qdot[j] / n / self.grid.Vsh
+                # Loop over energy groups
+                Gamma_E = np.zeros([self.grid.dims, self.src.Nfreq])
+                for j, E in enumerate(self.src.E):
                     
-                # Optical depth up to cells at energy E
-                tau_r = N[absorber] * self.src.sigma[j]
+                    if E < self.grid.ioniz_thresholds[i]:
+                        continue    
+                                        
+                    # Optical depth up to cells at energy E
+                    tau_r = N[absorber] * self.src.sigma[j]
+                    
+                    # Optical depth of cells (at this photon energy)                                                           
+                    tau_c = self.grid.dr * n * self.src.sigma[j]
+                                                                    
+                    # Photo-ionization by *this* energy group
+                    Gamma_E[...,j] = \
+                        self.PhotoIonizationRateMultiFreq(self.src.Qdot[j], n, 
+                        tau_r, tau_c)
+                                                                    
+                    # Total photo-ionization tally
+                Gamma[...,i] = np.sum(Gamma_E, axis = 1)
                 
-                # Optical depth of cells (at this photon energy)                                                           
-                tau_c = self.grid.dr * n * self.src.sigma[j]
-                                                                
-                # Photo-ionization by *this* energy group
-                Gamma_E[...,j] = \
-                    self.PhotoIonizationRateMultiFreq(self.src.Qdot[j], n, 
-                    tau_r, tau_c)
-                                                                
-                # Total photo-ionization tally
-                Gamma[...,i] += Gamma_E[...,j]
+            elif self.src.multi_grp:
+                pass
+            
+            else:
+                pass
                 
                 #fheat = self.esec.DepositionFraction(E = E, xHII = x_HII, channel = 0)
                 

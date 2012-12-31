@@ -127,11 +127,23 @@ class Grid:
         
         return self.species_types   
         
-    @property
-    def cross_sections(self):
+    @property # MUST GENERALIZE THIS
+    def ioniz_thresholds(self):
         """
         Return bound-free absorption cross-sections for all absorbers.
         """    
+        
+        if not hasattr(self, 'all_thresholds'):
+            self.all_thresholds = []
+            for absorber in self.absorbers:
+                if absorber == 'h_1':
+                    self.all_thresholds.append(13.6)
+                elif absorber == 'he_1':
+                    self.all_thresholds.append(24.4)
+                elif absorber == 'he_2':
+                    self.all_thresholds.append(54.4)
+                    
+        return self.all_thresholds
         
     def set_chem(self, Z = 1, abundance = None, isothermal = False):
         """

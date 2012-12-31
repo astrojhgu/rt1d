@@ -47,8 +47,9 @@ class RadiationSourceIdealized:
         self.SpectrumPars['type'] = map(int, self.SpectrumPars['type'])
         
         self._name = 'RadiationSourceIdealized'
-        self.discrete = self.SpectrumPars['discrete']
-        
+        self.multi_freq = self.SpectrumPars['multifreq']
+        self.multi_grp = self.SpectrumPars['multigrp']
+                
         self.initialize()
         
     def initialize(self):    

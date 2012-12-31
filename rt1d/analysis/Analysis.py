@@ -12,19 +12,107 @@ Description: Functions to calculate various quantities from our rt1d datasets.
 import os
 import numpy as np
 import pylab as pl
-from .Multiplot import *
-from .Dataset import Dataset
-from .Inspection import Inspect
-from ..mods.Constants import *
-from ..mods.Cosmology import *
-from ..mods.Interpolate import Interpolate
-from ..mods.InitializeGrid import InitializeGrid
-from ..mods.RadiationSources import RadiationSources
-from ..mods.SecondaryElectrons import SecondaryElectrons
-from ..mods.ComputeCrossSections import PhotoIonizationCrossSection
-from ..mods.InitializeIntegralTables import InitializeIntegralTables
+#from .Multiplot import *
+#from .Dataset import Dataset
+#from .Inspection import Inspect
+#from ..mods.Constants import *
+#from ..mods.Cosmology import *
+#from ..mods.Interpolate import Interpolate
+#from ..mods.InitializeGrid import InitializeGrid
+#from ..mods.RadiationSources import RadiationSources
+#from ..mods.SecondaryElectrons import SecondaryElectrons
+#from ..mods.ComputeCrossSections import PhotoIonizationCrossSection
+#from ..mods.InitializeIntegralTables import InitializeIntegralTables
 
 class Analyze:
+    def __init__(self, checkpoints):
+        self.checkpoints
+        
+    def StromgrenSphere(self, t, sol = 0, T0 = None, helium_correction = 0):
+        """
+        Classical analytic solution for expansion of an HII region in an isothermal medium.  Given the time
+        in seconds, will return the I-front radius in centimeters.
+        
+        Future: sol = 1 will be the better "analytic" solution.
+        """
+        
+        # Stuff for analytic solution
+        if sol == 0:
+            if T0 is not None: 
+                T = T0
+            else: 
+                T = self.data[0].T[0]
+                
+            AHe = 1
+            if helium_correction:
+                AHe = 1. / (1. - 3. * self.cosm.Y / 4.)
+            nH = AHe * self.pf['DensityUnits'] * (1. - self.cosm.Y) / m_H
+            self.Ndot = self.pf['SpectrumPhotonLuminosity']
+            self.alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
+            self.trec = 1. / self.alpha_HII / self.data[0].n_HI[-1]                                         # s
+            self.rs = (3. * self.Ndot / 4. / np.pi / self.alpha_HII / nH**2)**(1. / 3.)  # cm
+        
+        return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) + self.pf['StartRadius']
+        
+    def LocateIonizationFront(self, dd, species = 0):
+        """
+        Find the position of the ionization front in data dump 'dd'.
+        """
+        
+        if species == 0:
+            return np.interp(0.5, self.data[dd].x_HI, self.data[dd].r)
+        else:
+            return np.interp(0.5, self.data[dd].x_HeI, self.data[dd].r)
+        
+    def ComputeIonizationFrontEvolution(self, T0 = None, helium_correction = 0):
+        """
+        Find the position of the I-front at all times, and compute value of analytic solution.
+        """    
+                
+        # First locate I-front for all data dumps and compute analytic solution
+        self.t = np.zeros(len(self.data) - 1) # Exclude dd0000
+        self.rIF = np.zeros_like(self.t)
+        self.ranl = np.zeros_like(self.t)
+        for i, dd in enumerate(self.data.keys()[1:]): 
+            self.t[i] = self.data[dd].t
+            self.rIF[i] = self.LocateIonizationFront(dd) / cm_per_kpc
+            self.ranl[i] = self.StromgrenSphere(self.data[dd].t, T0 = T0, 
+                helium_correction = helium_correction) / cm_per_kpc
+                
+    def PlotIonizationFrontEvolution(self, mp = None, anl = True, T0 = None, helium_correction = 0,
+        color = 'k', ls = '--'):
+        """
+        Compute analytic and numerical I-front radii vs. time and plot.
+        """    
+
+        self.ComputeIonizationFrontEvolution(T0 = T0, helium_correction = helium_correction)
+
+        if mp is not None: 
+            self.mp = mp    
+        else: 
+            self.mp = multiplot(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
+
+        if anl: 
+            self.mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle = '-', color = 'k')
+        
+        self.mp.grid[0].plot(self.t / self.trec, self.rIF, color = color, ls = ls)
+        self.mp.grid[0].set_xlim(0, max(self.t / self.trec))
+        self.mp.grid[0].set_ylim(0, 1.1 * max(max(self.rIF), max(self.ranl)))
+        self.mp.grid[0].set_ylabel(r'$r \ (\mathrm{kpc})$')  
+        self.mp.grid[1].plot(self.t / self.trec, self.rIF / self.ranl, color = color, ls = ls)
+        self.mp.grid[1].set_xlim(0, max(self.t / self.trec))
+        self.mp.grid[1].set_ylim(0.95, 1.05)
+        self.mp.grid[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
+        self.mp.grid[1].set_ylabel(r'$r_{\mathrm{num}} / r_{\mathrm{anl}}$') 
+        self.mp.grid[0].xaxis.set_ticks(np.linspace(0, 4, 5))
+        self.mp.grid[1].xaxis.set_ticks(np.linspace(0, 4, 5))
+        
+        if mp is None: 
+            self.mp.fix_ticks()      
+        
+        
+
+class AnalyzeOld:
     def __init__(self, pf, retabulate = False):
         self.ds = Dataset(pf)
         self.data = self.ds.data

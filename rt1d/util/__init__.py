@@ -3,6 +3,7 @@ Conversions between different naming conventions and other random stuff.
 """
 
 import numpy as np
+from .WriteData import CheckPoints
 from .SetDefaultParameterValues import *
 
 def parse_kwargs(**kwargs):
