@@ -117,7 +117,7 @@ class Grid:
             for i, Z in enumerate(self.Z):
                 self.element_abundances.append(self.abundances_by_number[Z - 1])
                        
-        # Initialize mapping between q-vector and physical quantities                
+        # Initialize mapping between q-vector and physical quantities (dengo)                
         self._set_qmap()
                         
         # Add RT fields here    

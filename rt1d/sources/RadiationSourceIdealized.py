@@ -38,7 +38,7 @@ class RadiationSourceIdealized:
         self.N = len(self.SpectrumPars['Type'])
         
         # Cast types to int to avoid indexing complaints
-        self.SpectrumPars['Type'] = map(int, self.SpectrumPars['Type'])      
+        self.SpectrumPars['Type'] = map(int, self.SpectrumPars['Type'])
         
         self._name = 'RadiationSourceIdealized'
         

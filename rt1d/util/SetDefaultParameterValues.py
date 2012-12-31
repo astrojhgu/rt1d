@@ -61,7 +61,7 @@ def SetDefaultSpectrumParameters():
         "SpectrumMinNormEnergy": 0.01,  
         "SpectrumMaxNormEnergy": 5e2,  
         "SpectrumPhotonLuminosity": 5e48,  
-        "SpectrumAbsorbingColumn": 0,  
+        "SpectrumAbsorbingColumn": 0,
         "SpectrumColorCorrectionFactor": 1.7,
         "SpectrumFile": 'None',
         "ForceIntegralTabulation": 0,

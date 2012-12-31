@@ -52,9 +52,9 @@ pl.draw()
 # Evolve chemistry
 data = grid.data
 dt = rt1d.Constants.s_per_myr / 1e3
-dt_max = 2 * rt1d.Constants.s_per_myr
+dt_max = 1e2 * rt1d.Constants.s_per_myr
 t = 0.0
-tf = 1e2 * rt1d.Constants.s_per_myr
+tf = 10 * rt1d.Constants.s_per_gyr
 
 # Initialize progress bar
 pb = rt1d.run.ProgressBar(tf)

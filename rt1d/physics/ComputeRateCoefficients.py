@@ -6,7 +6,7 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Wed Dec 26 20:59:24 2012
 
-Description: Empirical fits to hydrogen and helium rate coefficients.
+Description: Rate coefficients for hydrogen and helium.  
 
 """
 
@@ -14,7 +14,7 @@ import numpy as np
 from .Cosmology import Cosmology
 
 class RateCoefficients:
-    def __init__(self, pf = None):
+    def __init__(self, pf = None, source = 'fk94'):
         self.pf = pf        
         self.cosm = Cosmology(pf)          
         
@@ -57,9 +57,9 @@ class RateCoefficients:
                 return 2.6e-13 * (T / 1.e4)**-0.85 
             elif species == 1:
                 return 9.94e-11 * T**-0.6687
-            else:
-                alpha = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1
-                alpha[T < 2.2e4] *= (1.11 - 0.044 * np.log(T[T < 2.2e4]))   # To n >= 1                       
+            elif species == 2:
+                alpha = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1 # To n >= 1
+                alpha[T < 2.2e4] *= (1.11 - 0.044 * np.log(T[T < 2.2e4]))   # To n >= 2                   
                 alpha[T >= 2.2e4] *= (1.43 - 0.076 * np.log(T[T >= 2.2e4])) # To n >= 2
                 
                 return alpha

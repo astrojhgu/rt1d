@@ -22,7 +22,7 @@ T = np.logspace(np.log10(3e3), 6, dims)
 grid = rt1d.Grid(dims = dims)
 
 # Set initial conditions
-grid.set_chem(Z = [1, 2], abundance = 'cosmic', isothermal = True)
+grid.set_chem(Z = [2], abundance = 'cosmic', isothermal = True)
 grid.set_rho(rho0 = 1e-3 * rt1d.Constants.m_H)
 grid.set_T(T)
 grid.set_x(state = 'neutral')
@@ -39,14 +39,14 @@ timestep = rt1d.run.ComputeTimestep(grid)
 # Plot Equilibrium solution
 np.seterr(all = 'ignore')
 Teq = np.logspace(np.log10(np.min(T)), np.log10(np.max(T)), 500)
-eqH = cc.ioneq(1, Teq)
+#eqH = cc.ioneq(1, Teq)
 eqHe = cc.ioneq(2, Teq)
 ax = pl.subplot(111)
 #ax.loglog(Teq, eqH.Ioneq[0], color = 'k', ls = '-')
 #ax.loglog(Teq, eqH.Ioneq[1], color = 'k', ls = '--')
-ax.loglog(Teq, eqHe.Ioneq[0], color = 'b', ls = '-')
-ax.loglog(Teq, eqHe.Ioneq[1], color = 'b', ls = '--')
-ax.loglog(Teq, eqHe.Ioneq[2], color = 'b', ls = ':')
+ax.loglog(Teq, eqHe.Ioneq[0], color = 'k', ls = '-')
+ax.loglog(Teq, eqHe.Ioneq[1], color = 'k', ls = '--')
+ax.loglog(Teq, eqHe.Ioneq[2], color = 'k', ls = ':')
 ax.set_xlabel(r'$T \ (\mathrm{K})$')
 ax.set_ylabel('Species Fraction')
 ax.set_xlim(min(T), max(T))
@@ -56,9 +56,9 @@ pl.draw()
 # Evolve chemistry
 data = grid.data
 dt = rt1d.Constants.s_per_myr / 1e3
-dt_max = 5. * rt1d.Constants.s_per_myr
+dt_max = 1e2 * rt1d.Constants.s_per_myr
 t = 0.0
-tf = 0.5e2 * rt1d.Constants.s_per_myr
+tf = 10 * rt1d.Constants.s_per_gyr
 
 # Initialize progress bar
 pb = rt1d.run.ProgressBar(tf)
@@ -75,11 +75,11 @@ while t <= tf:
         break
 
 pb.finish()    
-        
-#ax.scatter(T, data['h_1'], color = 'k', s = 50, 
+
+#ax.scatter(T, data['h_1'], color = 'b', s = 50, 
 #    marker = 'o')
-#ax.scatter(T, data['h_2'], color = 'k', s = 50, 
-#    facecolors='none', marker = 'o')
+#ax.scatter(T, data['h_2'], color = 'b', s = 50, 
+#    alpha = 0.5, marker = 'o')         
 ax.scatter(T, data['he_1'], color = 'b', s = 50, 
     marker = 'o')
 ax.scatter(T, data['he_2'], color = 'b', s = 50, 
@@ -88,6 +88,4 @@ ax.scatter(T, data['he_3'], color = 'b', s = 50,
     facecolors='none', marker = 'o')            
 pl.draw()    
 raw_input('')
-
-
 

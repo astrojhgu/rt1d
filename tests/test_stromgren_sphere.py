@@ -25,28 +25,28 @@ grid.set_rho(rho0 = 1e-3 * rt1d.Constants.m_H)
 grid.set_T(1e4)
 grid.set_x(Z = 1, x = 1.2e-3)  
 
-# Initialize chemistry network / solver
-chem = rt1d.Chemistry(grid)
+# Initialize radiation source and radiative transfer solver
+rs = rt1d.sources.RadiationSourceIdealized(**{'qdot': 5e48, 'sed': [13.60001]})
+rt = rt1d.Radiation(grid, rs)
 
 # To compute timestep
 timestep = rt1d.run.ComputeTimestep(grid)
 
 # Evolve chemistry + radiation
 data = grid.data
-dt = rt1d.Constants.s_per_myr / 1e3
-dt_max = 2 * rt1d.Constants.s_per_myr
-x = []
+dt = rt1d.Constants.s_per_myr / 1e6
+dt_max = 10 * rt1d.Constants.s_per_myr
 t = 0.0
-tf = 1e2 * rt1d.Constants.s_per_myr
+tf = 5e2 * rt1d.Constants.s_per_myr
 
 pb = rt1d.run.ProgressBar(tf)
 
-while t <= tf:
-    
-    # Only need to calculate coefficients once for this test
-    chem.chemnet.SourceIndependentCoefficients(chem.grid.data['T'])
+# Only need to calculate coefficients once for this test
+chem.chemnet.SourceIndependentCoefficients(chem.grid.data['T'])
 
-    data = chem.Evolve(data, dt = dt)
+while t <= tf:
+
+    data = rt.Evolve(data, dt = dt)
     pb.update(t)
     
     t += dt 

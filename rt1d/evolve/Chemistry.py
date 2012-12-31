@@ -34,7 +34,7 @@ class Chemistry:
         
         self.solver = ode(self.chemnet.RateEquations, 
             jac = self.chemnet.Jacobian).set_integrator('vode', 
-            method = 'bdf', nsteps = 1e4, with_jacobian = False,
+            method = 'bdf', nsteps = 1e4, with_jacobian = True,
             atol = 1e-12, rtol = 1e-8)
             
     def Evolve(self, data, dt):
