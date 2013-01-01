@@ -18,48 +18,34 @@ To do: check in on i_low.
 
 import h5py, os
 import numpy as np
-from ..util import parse_kwargs
 
 tiny_number = 1e-30
 
-# Furlanetto & Stoever ionized fractions (default)
-x_HII = np.array([1.0e-4, 2.318e-4, 4.677e-4, 1.0e-3, 2.318e-3, 
-                  4.677e-3, 1.0e-2, 2.318e-2, 4.677e-2, 1.0e-1, 
-                  0.5, 0.9, 0.99, 0.999])
-
 class SecondaryElectrons:
-    def __init__(self, **kwargs):
-        self.pf = parse_kwargs(**kwargs)
-        self.Method = self.pf['SecondaryIonization']
-        self.NumberOfEnergyBins = 258
-        self.NumberOfXiBins = 14
-        
-        self.log_xHII = np.linspace(np.log10(min(x_HII)), np.log10(max(x_HII)),
-            self.pf['IonizedFractionBins'])
-        
-        if self.Method >= 2:
+    def __init__(self, method = 0):
+        self.Method = method
+
+        if self.Method == 3:
             rt1d = os.environ.get("RT1D")
             if rt1d:
                 f = h5py.File("{0}/input/secondary_electron_data.h5".format(rt1d), 'r')
             elif pf["SecondaryElectronDataFile"] is not 'None':
                 f = h5py.File("%s" % pf["SecondaryElectronDataFile"], 'r')
             else:
-                raise Exception('Error loading secondary electron data.')
+                raise Exception('Error loading secondary electron data.')    
                 
             # Read in Furlanetto & Stoever lookup tables
-            self.Energies = f["electron_energy"].value
-            self.IonizedFractions = f["ionized_fraction"].value
-            self.LogIonizedFractions = np.log10(self.IonizedFractions)    
-            self.fheat = f["f_heat"].value
-            self.fion_HI = f["fion_HI"].value
-            self.fion_HeI = f["fion_HeI"].value
-            self.fion_HeII = f["fion_HeII"].value
-            self.fexc = f['fexc'].value
-            self.f_Lya = f['f_Lya'].value
-            self.fion = f['fion'].value
+            self.E = f["electron_energy"].value
+            self.x = f["ionized_fraction"].value
             
-            self.xmin = min(self.IonizedFractions)
-            self.xmax = max(self.IonizedFractions)
+            from scipy.interpolate import RectBivariateSpline
+            
+            self.fh = RectBivariateSpline(self.E, self.x, f["f_heat"].value)
+            self.fHI = RectBivariateSpline(self.E, self.x, f["fion_HI"].value)
+            self.fHeI = RectBivariateSpline(self.E, self.x, f["fion_HeI"].value)
+            self.fHeII = RectBivariateSpline(self.E, self.x, f["fion_HeII"].value)
+            self.fexc = RectBivariateSpline(self.E, self.x, f["fexc"].value)
+            self.flya = RectBivariateSpline(self.E, self.x, f['f_Lya'].value)
             
             f.close()        
 
@@ -139,64 +125,22 @@ class SecondaryElectrons:
         # Just set up a spline
         if self.Method == 3:
             
-            if channel == 'heat': 
-                InterpolationTable = self.fheat
-            if channel == 'h_1': 
-                InterpolationTable = self.fion_HI
-            if channel == 'he_1': 
-                InterpolationTable = self.fion_HeI
-            if channel == 'he_2': 
-                InterpolationTable = self.fion_HeII
-            if channel == 'lya':
-                InterpolationTable = self.f_Lya
+            f = np.zeros_like(xHII)
             
-            # Determine if E is within energy boundaries.  If not, set to closest boundary.
-            if (E > 0.999 * self.Energies[self.NumberOfEnergyBins - 1]):
-                E = self.Energies[self.NumberOfEnergyBins - 1] * 0.999
-            elif(E < self.Energies[0]):
-                if channel == 0:
-                    return np.ones_like(xHII)
-                else:
-                    return np.zeros_like(xHII)
-                
-            # Find lower index in energy table analytically.
-            if (E < 1008.88):
-                i_low = int(np.log(E / 10.0) / 1.98026273e-2)
-            else:
-                i_low = 232 + int(np.log(E / 1008.88) / 9.53101798e-2)
-              
-            i_high = i_low + 1
-                        
-            # Determine if ionized fraction is within energy boundaries.  If not, set to closest boundary.   
-            if (xHII > self.IonizedFractions[self.NumberOfXiBins - 1] * 0.9999999):
-                xHII = self.IonizedFractions[self.NumberOfXiBins - 1] * 0.9999999
-            elif (xHII < self.IonizedFractions[0]):
-                xHII = 1.0000001 * self.IonizedFractions[0];
+            for i, x in enumerate(xHII):
             
-            # Determine lower index in ionized fraction table iteratively.
-            j_low = self.NumberOfXiBins - 1;
-            while (xHII < self.IonizedFractions[j_low]):
-                j_low -= 1
+                if channel == 'heat': 
+                    f[i] = self.fh(E, x)
+                    #InterpolationTable = self.fheat
+                if channel == 'h_1': 
+                    f[i] = self.fHI(E, x)
+                    #InterpolationTable = self.fion_HI
+                if channel == 'he_1': 
+                    InterpolationTable = self.fion_HeI
+                if channel == 'he_2': 
+                    InterpolationTable = self.fion_HeII
+                if channel == 'lya':
+                    InterpolationTable = self.f_Lya
             
-            j_high = j_low + 1
-            
-            # First linear interpolation in energy
-            elow_result = ((InterpolationTable[i_high][j_low] - InterpolationTable[i_high][j_low]) / \
-              	 (self.Energies[i_high] - self.Energies[i_low]))
-            elow_result *= (E - self.Energies[i_low])
-            elow_result += InterpolationTable[i_low][j_low]
-            
-            # Second linear interpolation in energy
-            ehigh_result = ((InterpolationTable[i_high][j_high] - InterpolationTable[i_low][j_high]) / \
-              	  (self.Energies[i_high] - self.Energies[i_low]))
-            ehigh_result *= (E - self.Energies[i_low])
-            ehigh_result += InterpolationTable[i_low][j_high]
-            
-            # Final interpolation over the ionized fraction
-            final_result = (ehigh_result - elow_result) / (self.IonizedFractions[j_high] - self.IonizedFractions[j_low])
-            final_result *= (xHII - self.IonizedFractions[j_low])
-            final_result += elow_result
-            
-            return final_result
-                
+            return f
             

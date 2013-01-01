@@ -16,17 +16,22 @@ import chianti.core as cc
 import chianti.util as util
 from ..util import parse_kwargs, rebin
 from periodic.table import element as ELEMENT
-from ..physics.Constants import g_per_amu, k_B
+from ..physics.Constants import g_per_amu, k_B, cm_per_kpc, s_per_myr
 
 tiny_number = 1e-8  # A relatively small species fraction
 
 class Grid:
-    def __init__(self, dims = 64, **kwargs):
+    def __init__(self, dims = 64, time_units = s_per_myr, 
+        length_units = cm_per_kpc, start_radius = 0.01):
+        """ Initialize grid object. """
+        
         self.dims = int(dims)
-        self.pf = parse_kwargs(**kwargs)
+        self.time_units = time_units
+        self.length_units = length_units
+        self.start_radius = start_radius
         
         self.r_edg = self.r = \
-            np.linspace(self.R0, self.pf['LengthUnits'], self.dims + 1)
+            np.linspace(self.R0, length_units, self.dims + 1)
         self.dr = np.diff(self.r_edg)
         self.r_mid = rebin(self.r_edg)
         
@@ -44,13 +49,13 @@ class Grid:
                 
     @property
     def R0(self):
-        return self.pf['StartRadius'] * self.pf['LengthUnits']    
+        return self.start_radius * self.length_units
         
     @property
     def dr(self):
         """ Return cell widths. """
         if not hasattr(self, 'dr_all'):
-            self.dr_all = [np.diff(self.x) * self.pf['LengthUnits']]
+            self.dr_all = [np.diff(self.x) * self.length_units]
             self.dr_all.append()
             
     @property
@@ -159,7 +164,8 @@ class Grid:
         
         return self.x_to_n_converter              
         
-    def set_chem(self, Z = 1, abundance = None, isothermal = False):
+    def set_chem(self, Z = 1, abundance = None, isothermal = False,
+        secondary_electrons = False):
         """
         Initialize chemistry - which species we'll be solving for and their 
         abundances ('cosmic', 'sun_photospheric', 'sun_coronal', etc.).
@@ -170,6 +176,7 @@ class Grid:
         
         self.abundance = abundance
         self.isothermal = isothermal
+        self.secondary_electrons = secondary_electrons
         
         self.Z = np.array(Z)
         self.ions_by_ion = {}       # Ions sorted by parent element in dictionary

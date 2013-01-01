@@ -64,8 +64,8 @@ while t < tf:
 pb.finish()    
         
 # Plot up radial profiles at t = 500 Myr        
-pl.semilogy(grid.r_mid / grid.pf['LengthUnits'], data['h_1'], color = 'k', ls = '-')
-pl.semilogy(grid.r_mid / grid.pf['LengthUnits'], data['h_2'], color = 'k', ls = '--')
+pl.semilogy(grid.r_mid / grid.length_units, data['h_1'], color = 'k', ls = '-')
+pl.semilogy(grid.r_mid / grid.length_units, data['h_2'], color = 'k', ls = '--')
 pl.ylim(1e-5, 1.5)
 raw_input('')
 

@@ -20,7 +20,7 @@ class RadiationField:
         self.pf = parse_kwargs(**kwargs)
         self.grid = grid
         self.src = source
-        self.esec = SecondaryElectrons(**kwargs)
+        self.esec = SecondaryElectrons(method = self.pf['SecondaryIonization'])
     
     def ColumnDensity(self, data):
         """
@@ -120,7 +120,7 @@ class RadiationField:
                         
                         fion = self.esec.DepositionFraction(E = E, 
                             xHII = data['h_2'], channel = absorber)
-                                                    
+                                                                                
                         # (This k) = i from paper, and (this i) = j from paper
                         gamma[...,k,i] += ee * fion \
                             / (self.grid.ioniz_thresholds[k] * erg_per_ev)
@@ -148,7 +148,7 @@ class RadiationField:
                           
         return IonizationRate
         
-    def PhotoIonizationRateMultiGrp(self):
+    def PhotoIonizationRateMultiGroup(self):
         pass    
         
     def PhotoIonizationRate(self, n, qdot, tau_r, tau_c):
