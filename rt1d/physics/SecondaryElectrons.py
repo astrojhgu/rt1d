@@ -63,19 +63,15 @@ class SecondaryElectrons:
             
             f.close()        
 
-    def DepositionFraction(self, E, xHII, channel = 0):
+    def DepositionFraction(self, E, xHII, channel = 'heat'):
         """
         Return the fraction of secondary electron energy deposited as heat, or further ionizations.
-        The parameter 'channel' determines which we want, with:
+        The parameter 'channel' determines which we want, and could be:
         
-            channel = 0: heat
-            channel = 1: ionization of HI
-            channel = 2: ionization of HeI
-            channel = 3: ionization of HeII
-            channel = 4: lyman-alpha excitation
-            
-        and
+            channel = (heat, h_1, he_1, he_2, lya)
         
+        also,
+                    
             Method = 0: OFF - all secondary electron energy goes to heat.
             Method = 1: Empirical fits of Shull & vanSteenberg 1985.
             Method = 2: Empirical Fits of Ricotti et al. 2002.
@@ -87,68 +83,71 @@ class SecondaryElectrons:
             E = tiny_number
         
         if self.Method == 0:
-            if channel == 0: 
-                return 1.0
+            if channel == 'heat':
+                return np.ones_like(xHII)
             else: 
-                return 0.0
+                return np.zeros_like(xHII)
             
         if self.Method == 1: 
-            if channel == 0: 
-                if xHII <= 1e-4: 
-                    return 0.15 # This is what they do in Thomas & Zaroubi (2008).
-                else: 
-                    return 0.9971 * (1. - pow(1 - pow(xHII, 0.2663), 1.3163))
-            if channel == 1: 
+            if channel == 'heat': 
+                tmp = np.zeros_like(xHII)
+                tmp[xHII <= 1e-4] = 0.15 * np.ones(len(tmp[xHII <= 1e-4]))
+                tmp[xHII > 1e-4] = 0.9971 * (1. - pow(1 - 
+                    pow(xHII[xHII > 1e-4], 0.2663), 1.3163))
+                return tmp
+            if channel == 'h_1': 
                 return 0.3908 * pow(1. - pow(xHII, 0.4092), 1.7592)
-            if channel == 2: 
+            if channel == 'he_1': 
                 return 0.0554 * pow(1. - pow(xHII, 0.4614), 1.6660) 
-            if channel == 3: 
-                return 0.0
-            if channel == 4: # Assuming that ALL excitations lead to a LyA photon
+            if channel == 'he_2': 
+                return np.zeros_like(xHII)
+            if channel == 'lya': # Assuming that ALL excitations lead to a LyA photon
                 return 0.4766 * pow(1. - pow(xHII, 0.2735), 1.5221)
             
         # Ricotti, Gnedin, & Shull (2002)
         if self.Method == 2:
-            if channel == 0: 
+            if channel == 'heat': 
                 if xHII <= 1e-4: 
-                    return 0.15 # This is what they do in Thomas & Zaroubi (2008).
+                    # This is what they do in Thomas & Zaroubi (2008).
+                    return 0.15 * np.ones_like(xHII) 
                 else: 
                     if E >= 11:
                         return 3.9811 * (11. / E)**0.7 * pow(xHII, 0.4) * \
                             (1. - pow(xHII, 0.34))**2 + \
                             (1. - (1. - pow(xHII, 0.2663))**1.3163)
                     else:
-                        return 1.0
+                        return np.ones_like(xHII)
                     
-            if channel == 1: 
+            if channel == 'h_1': 
                 if E >= 28:
                     return -0.6941 * (28. / E)**0.4 * pow(xHII, 0.2) * \
                         (1. - pow(xHII, 0.38))**2 + \
                         0.3908 * (1. - pow(xHII, 0.4092))**1.7592
                 else:
-                    return 0.0    
-            if channel == 2: 
+                    return np.zeros_like(xHII)
+            if channel == 'he_1': 
                 if E >= 28:
                     return -0.0984 * (28. / E)**0.4 * pow(xHII, 0.2) * \
                         (1. - pow(xHII, 0.38))**2 + \
                         0.0554 * (1. - pow(xHII, 0.4614))**1.6660
                 else:
-                    return 0.0    
-            if channel == 3: 
-                return 0.0
+                    return np.zeros_like(xHII)
+            if channel == 'he_2': 
+                return np.zeros_like(xHII)
         
-        # Furlanetto & Stoever (2010)
+        # Furlanetto & Stoever (2010) - fix to handle array of xHII
+        # Just set up a spline
         if self.Method == 3:
             
-            if channel == 0: 
+            if channel == 'heat': 
                 InterpolationTable = self.fheat
-            if channel == 1: 
+            if channel == 'h_1': 
                 InterpolationTable = self.fion_HI
-            if channel == 2: 
+            if channel == 'he_1': 
                 InterpolationTable = self.fion_HeI
-            if channel == 3: 
+            if channel == 'he_2': 
                 InterpolationTable = self.fion_HeII
-            if channel == 4:
+            if channel == 'lya':
                 InterpolationTable = self.f_Lya
             
             # Determine if E is within energy boundaries.  If not, set to closest boundary.
@@ -156,9 +155,9 @@ class SecondaryElectrons:
                 E = self.Energies[self.NumberOfEnergyBins - 1] * 0.999
             elif(E < self.Energies[0]):
                 if channel == 0:
-                    return 1.0
+                    return np.ones_like(xHII)
                 else:
-                    return 0.0
+                    return np.zeros_like(xHII)
                 
             # Find lower index in energy table analytically.
             if (E < 1008.88):

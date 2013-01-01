@@ -1,6 +1,6 @@
 """
 
-test_hydrogen_chemistry.py
+test_HII_region_isoT.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder

@@ -48,16 +48,22 @@ class RadiationField:
     #        tau[absorber] = N[absorber] * sigma
     #    
     
-    def SourceDependentCoefficients(self, data):
+    def SourceDependentCoefficients(self, data, t):
         """
         Compute rate coefficients for photo-ionization, secondary ionization, 
         and photo-heating.
         """
 
-        N = self.ColumnDensity(data)
-
         k_H = np.zeros_like(self.grid.zeros_grid_x_absorbers)
         Gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+        gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers2)
+                
+        if not self.src.SourceOn(t):
+            return Gamma, gamma, k_H
+            
+        N = self.ColumnDensity(data)    
+        
+        # Loop over absorbing species
         for i, absorber in enumerate(self.grid.absorbers):
             
             n = data[absorber] * self.grid.x_to_n[absorber] 
@@ -87,15 +93,38 @@ class RadiationField:
                         tau_r, tau_c)
                      
                     # Heating    
-                    if not self.grid.isothermal:    
-                        fheat = self.esec.DepositionFraction(E = E, xHII = x_HII, channel = 0)
-                        
-                        # Total energy deposition rate per atom i via photo-electrons 
-                        # due to ionizations by *this* energy group. 
-                        ee = Gamma_E[...,j] * (E - self.grid.ioniz_thresholds[i]) * erg_per_ev 
+                    if self.grid.isothermal:
+                        continue
+                         
+                    fheat = self.esec.DepositionFraction(E = E,
+                        xHII = data['h_2'], channel = 'heat')
                     
-                        k_H[...,i] += ee * fheat
-                                                                                            
+                    # Total energy deposition rate per atom i via photo-electrons 
+                    # due to ionizations by *this* energy group. 
+                    ee = Gamma_E[...,j] * (E - self.grid.ioniz_thresholds[i]) * erg_per_ev 
+                    
+                    k_H[...,i] += ee * fheat
+                        
+                    if not self.pf['SecondaryIonization']:
+                        continue
+                                                
+                    # Ionizations of species k by photoelectrons from species i
+                    # Neglect HeII until somebody figures out how that works
+                    for k, otherabsorber in enumerate(self.grid.absorbers):
+                    
+                        # If these photo-electrons don't have enough 
+                        # energy to ionize species k, continue    
+                        if (E - self.grid.ioniz_thresholds[i]) < \
+                            self.grid.ioniz_thresholds[k]:
+                            continue    
+                        
+                        fion = self.esec.DepositionFraction(E = E, 
+                            xHII = data['h_2'], channel = absorber)
+                                                    
+                        # (This k) = i from paper, and (this i) = j from paper
+                        gamma[...,k,i] += ee * fion \
+                            / (self.grid.ioniz_thresholds[k] * erg_per_ev)
+                                                                                   
                 # Total photo-ionization tally
                 Gamma[...,i] = np.sum(Gamma_E, axis = 1)
                 
@@ -105,31 +134,7 @@ class RadiationField:
             else:
                 pass                
                 
-                #    
-                #if self.pf['SecondaryIonization']:
-                #    
-                #    # Ionizations of species k by photoelectrons from species i
-                #    # Neglect HeII until somebody figures out how that works
-                #    for k in xrange(2):
-                #        if not self.pf['MultiSpecies'] and k > 0:
-                #            continue
-                #        
-                #        # If these photo-electrons dont have enough energy to ionize species k, continue    
-                #        if (E - E_th[i]) < E_th[k]:
-                #            continue    
-                #        
-                #        fion = self.esec.DepositionFraction(E = E, xHII = x_HII, channel = k + 1)
-                #        
-                #        # (This k) = i from paper, and (this i) = j from paper
-                #        gamma[k][i] += ee * fion / (E_th[k] * erg_per_ev)
-                #                                                                                      
-                #if self.pf['Isothermal']:
-                #    continue                           
-                #                                    
-                ## Heating rate coefficient        
-                #k_H[i] += ee * fheat
-        
-        return Gamma, k_H
+        return Gamma, gamma, k_H
         
     def PhotoIonizationRateMultiFreq(self, qdot, n, tau_r, tau_c):
         """

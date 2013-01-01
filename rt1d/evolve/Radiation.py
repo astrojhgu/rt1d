@@ -81,21 +81,12 @@ class Radiation:
         #tau_all_arr = self.ComputeOpticalDepths([self.ncol_HI, self.ncol_HeI, self.ncol_HeII])
         #self.tau_all = zip(*tau_all_arr)
         
-        ON = self.src.SourceOn(t)
-        if ON: 
-        
-            # Compute column densities
-            #N = self.rfield.ColumnDensity(data)
-            
-            Gamma, Heat = self.rfield.SourceDependentCoefficients(data)
-            gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers2)
-            
-        else:
-            Gamma = Heat = np.zeros_like(self.grid.zeros_grid_x_absorbers)
-            gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers2)
+        # Compute source dependent rate coefficients
+        Gamma, gamma, Heat = self.rfield.SourceDependentCoefficients(data, t)            
 
         kwargs = {'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma}
-        
+                
+        # Compute source independent rate coefficients
         if (not self.grid.isothermal) or (t == 0):
             kwargs.update(self.chem.chemnet.SourceIndependentCoefficients(data['T']))
 

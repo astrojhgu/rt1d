@@ -65,17 +65,9 @@ class Chemistry:
                             
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)
-            
-            #if cell == 3:
-            #    print cell, self.chemnet.T[cell]
-            #    print q
-            #    print self.solver.y
-            #    print kwargs
-            #    raw_input('')
 
             for i, value in enumerate(self.solver.y):
                 newdata[self.grid.all_species[i]][cell] = value
-                
                 
         # Convert ge to T
         if not self.grid.isothermal:

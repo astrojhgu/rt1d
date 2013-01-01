@@ -199,16 +199,12 @@ class SimpleChemicalNetwork:
             xHeIII = q[he3]
         
         n_e = q[e]
-        
-        # Source-dependent coefficients    
-        # Gamma, gamma, k_H = args
-        #Gamma, k_H = [np.zeros(3)] * 2
-        #gamma = np.zeros([3, 3])
                                             
         # Hydrogen rate equations
         if 1 in self.grid.Z:
             self.dqdt[h1] = -(Gamma[0] + self.Beta[cell][0] * n_e) * xHI \
-                          +   self.alpha[cell][0] * n_e * xHII
+                          +   self.alpha[cell][0] * n_e * xHII \
+                          -   gamma[0][0] * xHI
             self.dqdt[h2] = -self.dqdt[0]   
             self.dqdt[e] = self.dqdt[h2] * n_H             
                                 
@@ -292,7 +288,8 @@ class SimpleChemicalNetwork:
         # Hydrogen terms - diagonal
         if 1 in self.grid.Z:
             J[h1][h1] = -(Gamma[0] + self.Beta[cell][0] * n_e) \
-                      -   self.alpha[cell][0] * n_e
+                      -   self.alpha[cell][0] * n_e \
+                      -   gamma[0][0]
             J[h2][h2] = J[h1][h1]
             
             # Hydrogen - off-diagonal
@@ -304,14 +301,19 @@ class SimpleChemicalNetwork:
             
             # Electron elements
             J[e][h1] = Gamma[0] * n_H + self.Beta[cell][0] * n_e * n_H \
-                     + self.alpha[cell][0] * n_e * n_H
+                     + self.alpha[cell][0] * n_e * n_H \
+                     + np.sum(gamma[0]) * n_H
             J[e][h2] = -J[e][h2]
             J[e][e] = self.Beta[cell][0] * n_H * xHI \
                     - self.alpha[cell][0] * n_H * xHII
                     
             # Gas energy
-            J[-1][-1] = 0.0      
-        
+            J[-1][h1] = n_H * (k_H[h1] \
+                      - n_e * (self.zeta[cell][h1] + self.psi[cell][h1]
+                      - self.eta[cell][h1]))
+            J[-1][h2] = -J[-1][h1]
+            J[-1][-1] = 0
+
         if 2 in self.grid.Z:
             
             # First - diagonal elements
