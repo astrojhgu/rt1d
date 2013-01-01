@@ -45,7 +45,7 @@ class ComputeTimestep:
         in ionized fractions.
         """        
         dt = epsilon * q / np.abs(dqdt)
-        return np.max(dt[self.grid.types == 1])
+        return np.min(dt[self.grid.types == 1])
     
     def NeutralFractionLimited(self, q, dqdt, epsilon = 0.1):
         """
@@ -53,7 +53,7 @@ class ComputeTimestep:
         in neutral fractions.
         """
         dt = epsilon * q / np.abs(dqdt)
-        return np.max(dt[self.grid.types == 0])
+        return np.min(dt[self.grid.types == 0])
     
     def EvolutionLimited(self, q, dqdt, epsilon = 0.1):
         """
@@ -61,6 +61,6 @@ class ComputeTimestep:
         in all evolving species.
         """
         dt = epsilon * q / np.abs(dqdt)
-        return np.max(dt)
+        return np.min(dt)
     
      
