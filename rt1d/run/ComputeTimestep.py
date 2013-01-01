@@ -23,6 +23,22 @@ class ComputeTimestep:
         else:
             return self.NeutralFractionLimited(q, dqdt, epsilon = 0.1)
         
+    def EnergyLimited(self, q, dqdt, epsilon = 0.1):
+        """
+        Compute next timestep based on maximum allowed change ('epsilon')
+        in neutral fractions.
+        """
+        dt = epsilon * q / np.abs(dqdt)
+        return dt[self.grid.all_species.index('ge')]           
+    
+    def ElectronLimited(self, q, dqdt, epsilon = 0.1):
+        """
+        Compute next timestep based on maximum allowed change ('epsilon')
+        in neutral fractions.
+        """
+        dt = epsilon * q / np.abs(dqdt)
+        return dt[self.grid.all_species.index('de')]               
+        
     def IonizedFractionLimited(self, q, dqdt, epsilon = 0.1):
         """
         Compute next timestep based on maximum allowed change ('epsilon')
@@ -37,4 +53,14 @@ class ComputeTimestep:
         in neutral fractions.
         """
         dt = epsilon * q / np.abs(dqdt)
-        return np.max(dt[self.grid.types == 0])    
+        return np.max(dt[self.grid.types == 0])
+    
+    def EvolutionLimited(self, q, dqdt, epsilon = 0.1):
+        """
+        Compute next timestep based on maximum allowed change ('epsilon')
+        in all evolving species.
+        """
+        dt = epsilon * q / np.abs(dqdt)
+        return np.max(dt)
+    
+     

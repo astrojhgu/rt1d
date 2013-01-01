@@ -15,8 +15,8 @@ import numpy as np
 import chianti.core as cc
 import chianti.util as util
 from ..util import parse_kwargs, rebin
-from ..physics.Constants import g_per_amu
 from periodic.table import element as ELEMENT
+from ..physics.Constants import g_per_amu, k_B
 
 tiny_number = 1e-8  # A relatively small species fraction
 
@@ -30,6 +30,10 @@ class Grid:
         self.dr = np.diff(self.r_edg)
         self.r_mid = rebin(self.r_edg)
         
+    @property
+    def zeros_absorbers(self):
+        return np.zeros(len(self.absorbers))
+    
     @property
     def zeros_grid_x_absorbers(self):
         return np.zeros([self.dims, len(self.absorbers)])
@@ -145,6 +149,16 @@ class Grid:
                     
         return self.all_thresholds
         
+    @property
+    def x_to_n(self):
+        if not hasattr(self, 'x_to_n_converter'):
+            self.x_to_n_converter = {}
+            for ion in self.all_ions:
+                self.x_to_n_converter[ion] = self.n_H \
+                    * self.species_abundances[ion]  
+        
+        return self.x_to_n_converter              
+        
     def set_chem(self, Z = 1, abundance = None, isothermal = False):
         """
         Initialize chemistry - which species we'll be solving for and their 
@@ -162,7 +176,6 @@ class Grid:
         self.elements = []          # Just a list of element names
         self.all_ions = []          # All ion species
         self.all_species = []       # Anything with an ODE we'll later solve
-        self.fields = ['T', 'de', 'rho']    # Anything we want to store for easy analysis
           
         for element in self.Z:
             element_name = util.z2element(element)
@@ -170,20 +183,18 @@ class Grid:
             self.elements.append(element_name)
             for ion in xrange(element + 1):
                 name = util.zion2name(element, ion + 1)
-                self.fields.append(name)
                 self.all_ions.append(name)
                 self.all_species.append(name)
                 self.ions_by_ion[element_name].append(name)
       
         self.all_species.append('de')          
         if not isothermal:
-            self.fields.append('ge')
             self.all_species.append('ge')
             
-        # Create blank data fields        
+        # Create blank data fields
         self.data = {}
-        for field in self.fields:
-            self.data[field] = np.zeros(self.dims) 
+        for field in self.all_species:
+            self.data[field] = np.zeros(self.dims)
             
         # Read abundances from chianti
         if abundance is not None:
@@ -216,7 +227,13 @@ class Grid:
         if hasattr(T0, 'size'):
             self.data['T'] = T0
         else:
+            self.data['T'] = np.zeros(self.dims)
             self.data['T'].fill(T0)
+                        
+        # Initialize gas energy    
+        if not self.isothermal:
+            self.data['ge'] = 1.5 * k_B * self.particle_density(self.data) \
+                / self.data['T']                
             
     def set_x(self, Z = None, x = None, state = None, perturb = 0):
         """
@@ -289,6 +306,7 @@ class Grid:
         if hasattr(rho0, 'size'):
             self.data['rho'] = rho0
         else:
+            self.data['rho'] = np.zeros(self.dims)
             self.data['rho'].fill(rho0)   
                     
         if len(self.Z) == 1:
@@ -297,7 +315,7 @@ class Grid:
                 self.n_H = self.data['rho'] / g_per_amu
                 return
             
-        # Set hydrogen number density (which normalizes all other species)    
+        # Set hydrogen number density (which normalizes all other species)
         X = 0
         for i in xrange(len(self.abundances_by_number) - 1):
             name = util.z2element(i + 1)
@@ -308,6 +326,17 @@ class Grid:
             X += self.abundances_by_number[i] * ele.mass
                                                           
         self.n_H = self.data['rho'] / g_per_amu / X
+        
+    def particle_density(self, data):
+        """
+        Compute total particle number density.
+        """    
+        
+        n = data['de'].copy()
+        for ion in self.all_ions:
+             n += data[ion] * self.x_to_n[ion]
+             
+        return n 
 
     def _set_de(self):
         """

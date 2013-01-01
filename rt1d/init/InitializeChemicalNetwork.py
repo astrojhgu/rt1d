@@ -226,19 +226,27 @@ class SimpleChemicalNetwork:
             self.dqdt[e] += (self.dqdt[he2] + self.dqdt[he3]) * n_He
                             
         # Temperature evolution - looks dumb but using np.sum is slow
-        #if not self.Isothermal:
-        #    phoheat = k_H[0] * nHI
-        #    ioncool = zeta[0] * nHI
-        #    reccool = eta[0] * nHII
-        #    exccool = psi[0] * nHI
-        #    
-        #    if self.MultiSpecies:
-        #        phoheat += k_H[1] * nabs[1] + k_H[2] * nabs[2]
-        #        ioncool += zeta[1] * nabs[1] + zeta[2] * nabs[2]
-        #        reccool += eta[1] * nion[1] + eta[2] * nion[2]
-        #        exccool += psi[1] * nabs[1] + psi[2] * nabs[2]
-        #    
-        #    self.dqdt[-1] = phoheat - n_e * (ioncool + reccool + exccool + nHeIII * omega[1])
+        if not self.Isothermal:
+            phoheat = 0.0
+            ioncool = 0.0
+            reccool = 0.0
+            exccool = 0.0
+            
+            if 1 in self.grid.Z:
+                phoheat += k_H[h1] * xHI * n_H
+                ioncool += self.zeta[cell][h1] * xHI * n_H
+                reccool += self.eta[cell][h1] * xHII * n_H
+                exccool += self.psi[cell][h1] * xHI * n_H
+            
+            #if 2 in self.grid.Z:
+            #    phoheat += k_H[1] * nabs[1] + k_H[2] * nabs[2]
+            #    ioncool += zeta[1] * nabs[1] + zeta[2] * nabs[2]
+            #    reccool += eta[1] * nion[1] + eta[2] * nion[2]
+            #    exccool += psi[1] * nabs[1] + psi[2] * nabs[2]
+            
+            self.dqdt[-1] = phoheat - n_e * (ioncool + reccool + exccool)
+
+            # Multispecies : dqdt[-1] += n_e * xHeIII * n_He * omega
 
         return self.dqdt
         
@@ -248,9 +256,6 @@ class SimpleChemicalNetwork:
         """    
                     
         cell, Gamma, gamma, k_H = args       
-                              
-        Gamma, k_H = [np.zeros(3)] * 2
-        gamma = np.zeros([3, 3])  
         
         n_H = self.grid.n_H[cell]
         
@@ -279,6 +284,7 @@ class SimpleChemicalNetwork:
             nHeII = n_He * xHeII
             nHeIII = n_He * xHeIII
         
+        ge = q[-1]
         n_e = q[e]
             
         J = np.zeros_like(self.zeros_jac)
@@ -302,6 +308,9 @@ class SimpleChemicalNetwork:
             J[e][h2] = -J[e][h2]
             J[e][e] = self.Beta[cell][0] * n_H * xHI \
                     - self.alpha[cell][0] * n_H * xHII
+                    
+            # Gas energy
+            J[-1][-1] = 0.0      
         
         if 2 in self.grid.Z:
             
@@ -364,6 +373,7 @@ class SimpleChemicalNetwork:
             J[e][e] *= n_He
                                 
             # Gas energy
+            
                                                    
         return J
                 
@@ -376,11 +386,10 @@ class SimpleChemicalNetwork:
         self.T = T
         self.Beta = np.zeros_like(self.grid.zeros_grid_x_absorbers)
         self.alpha = np.zeros_like(self.grid.zeros_grid_x_absorbers)
-        #self.zeta = np.zeros_like(self.zeros_3xgrid)
-        #self.eta = np.zeros_like(self.zeros_3xgrid)
-        #self.psi = np.zeros_like(self.zeros_3xgrid)
-        self.xi = np.zeros(self.grid.dims)
-        #self.omega = np.zeros_like(self.zeros_3xgrid)
+        self.zeta = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+        self.eta = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+        self.psi = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+        
         for i in xrange(3):
             if (i == 0) and (1 not in self.grid.Z):
                 continue
@@ -390,10 +399,16 @@ class SimpleChemicalNetwork:
                 
             self.Beta[...,i] = self.coeff.CollisionalIonizationRate(i, T)
             self.alpha[...,i] = self.coeff.RadiativeRecombinationRate(i, T)
+            self.zeta[...,i] = self.coeff.CollisionalIonizationCoolingRate(i, T)
+            self.eta[...,i] = self.coeff.RecombinationCoolingRate(i, T)
+            self.psi[...,i] = self.coeff.CollisionalExcitationCoolingRate(i, T)
                         
         # Di-electric recombination
         self.xi = self.coeff.DielectricRecombinationRate(T)
+        self.omega = self.coeff.DielectricRecombinationCoolingRate(T)
         
-        return {'Beta': self.Beta, 'alpha': self.alpha, 'xi': self.xi}
+        return {'Beta': self.Beta, 'alpha': self.alpha,  
+                'zeta': self.zeta, 'eta': self.eta, 'psi': self.psi, 
+                'xi': self.xi, 'omega': self.omega}
         
                     

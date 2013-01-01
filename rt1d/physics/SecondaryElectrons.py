@@ -18,6 +18,7 @@ To do: check in on i_low.
 
 import h5py, os
 import numpy as np
+from ..util import parse_kwargs
 
 tiny_number = 1e-30
 
@@ -27,14 +28,14 @@ x_HII = np.array([1.0e-4, 2.318e-4, 4.677e-4, 1.0e-3, 2.318e-3,
                   0.5, 0.9, 0.99, 0.999])
 
 class SecondaryElectrons:
-    def __init__(self, pf):
-        self.pf = pf
-        self.Method = pf['SecondaryIonization']
+    def __init__(self, **kwargs):
+        self.pf = parse_kwargs(**kwargs)
+        self.Method = self.pf['SecondaryIonization']
         self.NumberOfEnergyBins = 258
         self.NumberOfXiBins = 14
         
         self.log_xHII = np.linspace(np.log10(min(x_HII)), np.log10(max(x_HII)),
-            pf['IonizedFractionBins'])
+            self.pf['IonizedFractionBins'])
         
         if self.Method >= 2:
             rt1d = os.environ.get("RT1D")

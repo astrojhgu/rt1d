@@ -12,19 +12,15 @@ Description:
 
 import numpy as np
 from ..util import parse_kwargs
-
-#E_th = {'h_1': 13.6, 'he_1': 24.6, 'he_2': 54.4}
+from ..physics.SecondaryElectrons import *
+from ..physics.Constants import erg_per_ev
 
 class RadiationField:
     def __init__(self, grid, source, **kwargs):
         self.pf = parse_kwargs(**kwargs)
         self.grid = grid
         self.src = source
-        
-        self.x_to_n = {}
-        for absorber in self.grid.absorbers:
-            self.x_to_n[absorber] = self.grid.n_H \
-                * self.grid.species_abundances[absorber]
+        self.esec = SecondaryElectrons(**kwargs)
     
     def ColumnDensity(self, data):
         """
@@ -34,7 +30,7 @@ class RadiationField:
         N = {}
         for absorber in self.grid.absorbers:
             N[absorber] = np.cumsum(data[absorber] \
-                * self.x_to_n[absorber] * self.grid.dr)
+                * self.grid.x_to_n[absorber] * self.grid.dr)
                     
         return N            
                     
@@ -60,11 +56,11 @@ class RadiationField:
 
         N = self.ColumnDensity(data)
 
+        k_H = np.zeros_like(self.grid.zeros_grid_x_absorbers)
         Gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers)
         for i, absorber in enumerate(self.grid.absorbers):
-            Gamma[...,i] = np.zeros(self.grid.dims)
             
-            n = data[absorber] * self.x_to_n[absorber] 
+            n = data[absorber] * self.grid.x_to_n[absorber] 
                 
             """
             Photo-ionization for discrete spectrum (multi-freq. approach).
@@ -89,21 +85,26 @@ class RadiationField:
                     Gamma_E[...,j] = \
                         self.PhotoIonizationRateMultiFreq(self.src.Qdot[j], n, 
                         tau_r, tau_c)
-                                                                    
-                    # Total photo-ionization tally
+                     
+                    # Heating    
+                    if not self.grid.isothermal:    
+                        fheat = self.esec.DepositionFraction(E = E, xHII = x_HII, channel = 0)
+                        
+                        # Total energy deposition rate per atom i via photo-electrons 
+                        # due to ionizations by *this* energy group. 
+                        ee = Gamma_E[...,j] * (E - self.grid.ioniz_thresholds[i]) * erg_per_ev 
+                    
+                        k_H[...,i] += ee * fheat
+                                                                                            
+                # Total photo-ionization tally
                 Gamma[...,i] = np.sum(Gamma_E, axis = 1)
                 
             elif self.src.multi_grp:
                 pass
             
             else:
-                pass
+                pass                
                 
-                #fheat = self.esec.DepositionFraction(E = E, xHII = x_HII, channel = 0)
-                
-                # Total energy deposition rate per atom i via photo-electrons 
-                # due to ionizations by *this* energy group. 
-                #ee = Gamma_E[j] * (E - E_th[i]) * erg_per_ev 
                 #    
                 #if self.pf['SecondaryIonization']:
                 #    
@@ -128,7 +129,7 @@ class RadiationField:
                 ## Heating rate coefficient        
                 #k_H[i] += ee * fheat
         
-        return Gamma    
+        return Gamma, k_H
         
     def PhotoIonizationRateMultiFreq(self, qdot, n, tau_r, tau_c):
         """

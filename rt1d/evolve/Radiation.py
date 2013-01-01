@@ -87,8 +87,7 @@ class Radiation:
             # Compute column densities
             #N = self.rfield.ColumnDensity(data)
             
-            Gamma = self.rfield.SourceDependentCoefficients(data)
-            Heat = np.zeros_like(self.grid.zeros_grid_x_absorbers)  
+            Gamma, Heat = self.rfield.SourceDependentCoefficients(data)
             gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers2)
             
         else:
@@ -97,11 +96,10 @@ class Radiation:
 
         kwargs = {'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma}
         
-        if not (self.grid.isothermal or t == 0):
+        if (not self.grid.isothermal) or (t == 0):
             kwargs.update(self.chem.chemnet.SourceIndependentCoefficients(data['T']))
 
         # SOLVE
-        #args = [] # Pass kwargs containing rate coefficients?
         newdata = self.chem.Evolve(data, dt, **kwargs)
                 
         ### 

@@ -74,7 +74,7 @@ class RateCoefficients:
         
         return 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
         
-    def CollisionalIonizationCoolingRate(self, species = 0, T = None):
+    def CollisionalIonizationCoolingRate(self, species, T):
         """
         Returns coefficient for cooling by collisional ionization.  These are equations B4.1a, b, and d respectively
         from FK96.
@@ -89,7 +89,7 @@ class RateCoefficients:
         if species == 2: 
             return 4.95e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-6.31e5 / T)
             
-    def CollisionalExcitationCoolingRate(self, species = 0, T = None, nabs = None, nion = None):
+    def CollisionalExcitationCoolingRate(self, species, T, nabs = None, nion = None):
         """
         Returns coefficient for cooling by collisional excitation.  These are equations B4.3a, b, and c respectively
         from FK96.
@@ -104,7 +104,7 @@ class RateCoefficients:
         if species == 2: 
             return 5.54e-17 * T**-0.397 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-4.73e5 / T)    
         
-    def RecombinationCoolingRate(self, species = 0, T = None):
+    def RecombinationCoolingRate(self, species, T):
         """
         Returns coefficient for cooling by recombination.  These are equations B4.2a, b, and d respectively
         from FK96.

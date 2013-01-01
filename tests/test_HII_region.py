@@ -21,14 +21,16 @@ grid = rt1d.Grid(dims = dims,
     **{'LengthUnits': 6.6 * rt1d.Constants.cm_per_kpc})
 
 # Set initial conditions
-grid.set_chem(isothermal = True)
+grid.set_chem(isothermal = False)
 grid.set_rho(rho0 = 1e-3 * rt1d.Constants.m_H)
-grid.set_T(1e4)
-grid.set_x(Z = 1, x = 1.2e-3)  
+grid.set_x(Z = 1, x = 1.2e-3)
+grid.set_T(1e2)
 
 # Initialize radiation source and radiative transfer solver
 rt06_1_src = {'source_type': 0, 'spectrum_type': 0, 
-    'spectrum_qdot': 5e48, 'spectrum_E': [13.60001],
+    'spectrum_qdot': 5e48, 
+    'spectrum_E': [17.98, 31.15, 49.09, 76.98],
+    'spectrum_LE': [0.23, 0.36, 0.24, 0.06],
     'spectrum_multifreq': 1}
 rs = rt1d.sources.RadiationSourceIdealized(**rt06_1_src)
 rt = rt1d.Radiation(grid, rs)
@@ -42,9 +44,12 @@ checkpoints.store_ics(grid.data)
 
 # Evolve chemistry + RT
 data = grid.data
-dt = rt1d.Constants.s_per_myr / 1e6
+dt = rt1d.Constants.s_per_myr / 1e8
 t = 0.0
-tf = 5e2 * rt1d.Constants.s_per_myr
+tf = 1e2 * rt1d.Constants.s_per_myr
+
+# Only need to calculate coefficients once for this test
+nothing = rt.chem.chemnet.SourceIndependentCoefficients(rt.chem.grid.data['T'])
 
 pb = rt1d.run.ProgressBar(tf)
 while t < tf:
@@ -55,7 +60,7 @@ while t < tf:
     pb.update(t)
     
     # Figure out next dt based on max allowed change in ion fractions
-    new_dt = timestep.IonLimited(rt.chem.chemnet.q, rt.chem.chemnet.dqdt)
+    new_dt = timestep.EvolutionLimited(rt.chem.chemnet.q, rt.chem.chemnet.dqdt)
 
     # Limit timestep further based on next DD and max allowed increase
     dt = min(new_dt, 2 * dt)
@@ -68,8 +73,6 @@ pl.semilogy(grid.r_mid / grid.pf['LengthUnits'], data['h_1'], color = 'k', ls = 
 pl.semilogy(grid.r_mid / grid.pf['LengthUnits'], data['h_2'], color = 'k', ls = '--')
 pl.ylim(1e-5, 1.5)
 raw_input('')
-
-# I-front evolution PLEASE
 
 
 
