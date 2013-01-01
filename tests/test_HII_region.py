@@ -44,7 +44,7 @@ checkpoints.store_ics(grid.data)
 
 # Evolve chemistry + RT
 data = grid.data
-dt = rt1d.Constants.s_per_myr / 1e10
+dt = rt1d.Constants.s_per_myr / 1e8
 t = 0.0
 tf = 1e2 * rt1d.Constants.s_per_myr
 
