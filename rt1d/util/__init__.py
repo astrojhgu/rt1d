@@ -4,7 +4,10 @@ Conversions between different naming conventions and other random stuff.
 
 import numpy as np
 from .WriteData import CheckPoints
+from .ProblemTypes import ProblemType
 from .SetDefaultParameterValues import *
+from .ReadParameterFile import ReadParameterFile, ReadRestartFile
+from .CheckForParameterConflicts import CheckForParameterConflicts
 
 def parse_kwargs(**kwargs):
     """
@@ -12,7 +15,16 @@ def parse_kwargs(**kwargs):
     """    
     
     pf = SetAllDefaults()
+    
+    if 'problem_type' in kwargs:
+        pf.update(ProblemType(kwargs['problem_type']))
+    
     pf.update(kwargs)
+    
+    conflicts = CheckForParameterConflicts(pf)
+
+    if conflicts:
+        raise Exception('Parameter combination not allowed.')
 
     return pf
 

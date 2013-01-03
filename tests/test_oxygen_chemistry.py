@@ -35,7 +35,7 @@ timestep = rt1d.run.ComputeTimestep(grid)
 
 # Plot Equilibrium solution
 np.seterr(all = 'ignore')
-Teq = np.logspace(np.log10(np.min(T)), np.log10(np.max(T)), 500)
+Teq = np.logspace(np.log10(np.min(T)), np.log10(np.max(T)), 128)
 eq = cc.ioneq(8, Teq)
 ax = pl.subplot(111)
 for i in xrange(eq.Ioneq.shape[0]):
@@ -72,7 +72,7 @@ pb.finish()
 for ion in grid.all_ions:
     ax.scatter(T, data[ion], color = 'b', s = 50, 
         facecolors='none', marker = 'o')
-pl.draw()    
+pl.draw()   
 raw_input('')
 
 

@@ -16,7 +16,7 @@ import chianti.core as cc
 import chianti.util as util
 from ..util import parse_kwargs, rebin
 from periodic.table import element as ELEMENT
-from ..physics.Constants import g_per_amu, k_B, cm_per_kpc, s_per_myr
+from ..physics.Constants import k_B, cm_per_kpc, s_per_myr, m_H
 
 tiny_number = 1e-8  # A relatively small species fraction
 
@@ -162,10 +162,28 @@ class Grid:
                 self.x_to_n_converter[ion] = self.n_H \
                     * self.species_abundances[ion]  
         
-        return self.x_to_n_converter              
+        return self.x_to_n_converter    
+        
+    def ColumnDensity(self, data):
+        """
+        Compute column densities for all absorbing species.
+        """    
+        
+        N = {}
+        for absorber in self.absorbers:
+            N[absorber] = np.cumsum(data[absorber] \
+                        * self.x_to_n[absorber] * self.dr)
+                    
+        return N      
+        
+    def initialize(self, pf):
+        """
+        Use parameter file to set all initial conditions and grid properties.
+        """              
+        pass
         
     def set_chem(self, Z = 1, abundance = None, isothermal = False,
-        secondary_electrons = False):
+        secondary_ionization = False):
         """
         Initialize chemistry - which species we'll be solving for and their 
         abundances ('cosmic', 'sun_photospheric', 'sun_coronal', etc.).
@@ -176,7 +194,7 @@ class Grid:
         
         self.abundance = abundance
         self.isothermal = isothermal
-        self.secondary_electrons = secondary_electrons
+        self.secondary_ionization = secondary_ionization
         
         self.Z = np.array(Z)
         self.ions_by_ion = {}       # Ions sorted by parent element in dictionary
@@ -205,12 +223,17 @@ class Grid:
             
         # Read abundances from chianti
         if abundance is not None:
-            self.abundances_by_number = util.abundanceRead(abundance)['abundance']
-        
-            self.element_abundances = []
-            for i, Z in enumerate(self.Z):
-                self.element_abundances.append(self.abundances_by_number[Z - 1])
-                       
+            if type(abundance) is str:
+                self.abundances_by_number = util.abundanceRead(abundance)['abundance']
+                self.element_abundances = []
+                for i, Z in enumerate(self.Z):
+                    self.element_abundances.append(self.abundances_by_number[Z - 1])
+            else:
+                self.abundances_by_number = self.abundance
+                self.element_abundances = []
+                for i, Z in enumerate(self.Z):
+                    self.element_abundances.append(self.abundances_by_number[i])
+                               
         # Initialize mapping between q-vector and physical quantities (dengo)                
         self._set_qmap()
                         
@@ -234,8 +257,7 @@ class Grid:
         if hasattr(T0, 'size'):
             self.data['T'] = T0
         else:
-            self.data['T'] = np.zeros(self.dims)
-            self.data['T'].fill(T0)
+            self.data['T'] = T0 * np.ones(self.dims)
                         
         # Initialize gas energy    
         if not self.isothermal:
@@ -313,15 +335,14 @@ class Grid:
         if hasattr(rho0, 'size'):
             self.data['rho'] = rho0
         else:
-            self.data['rho'] = np.zeros(self.dims)
-            self.data['rho'].fill(rho0)   
+            self.data['rho'] = rho0 * np.ones(self.dims)   
                     
         if len(self.Z) == 1:
             if self.Z == np.ones(1):
                 self.abundances_by_number = self.element_abundances = np.ones(1)
-                self.n_H = self.data['rho'] / g_per_amu
+                self.n_H = self.data['rho'] / m_H
                 return
-            
+                            
         # Set hydrogen number density (which normalizes all other species)
         X = 0
         for i in xrange(len(self.abundances_by_number) - 1):
@@ -332,7 +353,7 @@ class Grid:
             ele = ELEMENT(name)
             X += self.abundances_by_number[i] * ele.mass
                                                           
-        self.n_H = self.data['rho'] / g_per_amu / X
+        self.n_H = self.data['rho'] / m_H / X
         
     def particle_density(self, data):
         """

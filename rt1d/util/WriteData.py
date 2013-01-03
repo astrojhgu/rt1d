@@ -34,13 +34,19 @@ except ImportError:
 GlobalDir = os.getcwd()
 
 class CheckPoints:
-    def __init__(self, data = {}, dtDataDump = 5., time_units = s_per_myr):
+    def __init__(self, pf = None, grid = None, dtDataDump = 5., time_units = s_per_myr):
+        
+        self.pf = pf
         self.data = {}
+        self.grid = grid
         self.dtDD = dtDataDump * time_units
         self.time_units = time_units
         
         self.basename = 'dd'
         self.fill = 4
+        
+        if self.grid is not None:
+            self.store_ics(grid.data)
         
     def store_ics(self, data):
         nothing = self.update(data, 0., 1)

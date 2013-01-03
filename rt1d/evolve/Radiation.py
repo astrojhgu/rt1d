@@ -29,12 +29,6 @@ class Radiation:
         # Initialize RT solver
         self.rfield = RadiationField(grid, source, **kwargs)
         
-        # Pick RT solver
-        #if self.finite_c:
-        #    self.Evolve = self.rad.EvolvePhotonsAtFiniteSpeed
-        #else:
-        #    self.Evolve = self.rad.EvolvePhotonsAtInfiniteSpeed   
-        
     @property
     def finite_c(self):
         """
@@ -84,6 +78,7 @@ class Radiation:
         # Compute source dependent rate coefficients
         Gamma, gamma, Heat = self.rfield.SourceDependentCoefficients(data, t)            
 
+        # Each is (grid x absorbers)
         kwargs = {'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma}
                 
         # Compute source independent rate coefficients

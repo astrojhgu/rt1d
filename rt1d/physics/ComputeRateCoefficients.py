@@ -21,7 +21,7 @@ class RateCoefficients:
     @property
     def RecombinationMethod(self):    
         if self.pf is not None:
-            return self.pf['RecombinationMethod']
+            return self.pf['recombination']
         else:
             return 'B'          
         

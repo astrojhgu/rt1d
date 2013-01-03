@@ -13,8 +13,10 @@ Description: Check to make sure there are no conflicts between parameters.
 import numpy as np
 
 known_conflicts = [ \
-    (['InfiniteSpeedOfLight', 0], ['ParallelizationMethod', 1]),
-    (['Isothermal', 1], ['SecondaryIonization', 1])]
+    (['infinite_c', 0], ['parallel', 1]),
+    (['isothermal', 1], ['secondary_ionization', 1]),
+    (['isothermal', 1], ['secondary_ionization', 2]),
+    (['isothermal', 1], ['secondary_ionization', 3])]
 
 def CheckForParameterConflicts(pf):
     """
@@ -26,24 +28,42 @@ def CheckForParameterConflicts(pf):
         
         ok = []
         for element in conflict:
-            if pf[element[0]] == element[1]:
-                ok.append(False)
+            if type(pf[element[0]]) is list:
+                if int(element[1] in pf[element[0]]) == element[2]:
+                    ok.append(False)
+                else:
+                    ok.append(True)
             else:
-                ok.append(True)
+            
+                if pf[element[0]] == element[1]:
+                    ok.append(False)
+                else:
+                    ok.append(True)
                                 
         if not np.any(ok):
             probs.append(conflict)
         
     if probs:
-        msg = []
+        errmsg = []
         for i, con in enumerate(probs):
             for element in con:
-                msg.append('%s = %g' % (element[0], element[1]))
+                try:
+                    errmsg.append('%s = %g' % (element[0], element[1]))
+                except TypeError:
+                    errmsg.append('%s = %s' % (element[0], element[1]))
             
             if len(probs) > 1 and i != len(probs):
-                msg.append('\nAND\n')
+                errmsg.append('\nAND\n')
         
-        return True, msg
+        conflicts = True
     else:
-        return False, None      
+        conflicts = False
+            
+    if conflicts:
+        print 'ERROR -- PARAMETER VALUES IN CONFLICT:'
+        for msg in errmsg:
+            print msg
+        print '\n'    
+    
+    return conflicts
             

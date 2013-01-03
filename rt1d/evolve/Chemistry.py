@@ -38,6 +38,8 @@ class Chemistry:
             method = 'bdf', nsteps = 1e4, with_jacobian = True,
             atol = 1e-12, rtol = 1e-8)
             
+        self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.all_species)])    
+            
     def Evolve(self, data, dt, **kwargs):
         """
         Evolve all cells by dt.
@@ -48,9 +50,12 @@ class Chemistry:
         
         newdata = {}
         for species in data:
-            newdata[species] = np.zeros_like(data[species])
+            newdata[species] = data[species].copy()
                
         kwargs_by_cell = self.sort_kwargs_by_cell(kwargs)
+               
+        self.q_grid = np.zeros_like(self.zeros_gridxq)
+        self.dqdt_grid = np.zeros_like(self.zeros_gridxq)
                
         # Loop over grid and solve chemistry
         for cell in xrange(self.grid.dims):
@@ -60,11 +65,15 @@ class Chemistry:
             for i, species in enumerate(self.grid.all_species):
                 q[i] = data[species][cell]
                 
-            kwargs = kwargs_by_cell[cell]
-            args = (cell, kwargs['Gamma'], kwargs['gamma'], kwargs['Heat'])
+            kwargs_cell = kwargs_by_cell[cell]
+            args = (cell, kwargs_cell['Gamma'], kwargs_cell['gamma'], 
+                    kwargs_cell['Heat'])
                             
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)
+            
+            self.q_grid[cell] = q.copy()
+            self.dqdt_grid[cell] = self.chemnet.dqdt.copy()
 
             for i, value in enumerate(self.solver.y):
                 newdata[self.grid.all_species[i]][cell] = value

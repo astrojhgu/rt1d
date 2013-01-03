@@ -44,8 +44,8 @@ m_n = 1.67492729e-24            # Neutron mass - [m_n] = g
 sigma_T = 6.65e-25			    # Cross section for Thomson scattering - [sigma_T] = cm^2
 alpha = 1 / 137.035999070 		# Fine structure constant - unitless
 
-erg_per_ev = e/erg_per_j
-erg_per_kev = erg_per_ev*1e3
+erg_per_ev = e / erg_per_j
+erg_per_kev = 1e3 * erg_per_ev
 
 # Stefan-Boltzmann constant - [sigma_SB] = erg / cm^2 / deg^4 / s
 sigma_SB = 2.0 * pi**5 * k_B**4 / 15.0 / c**2 / h**3     
@@ -53,7 +53,7 @@ sigma_SB = 2.0 * pi**5 * k_B**4 / 15.0 / c**2 / h**3
 # Hydrogen 
 A10 = 2.85e-15 				    # HI 21cm spontaneous emission coefficient - [A10] = Hz
 E10 = 5.9e-6 				    # Energy difference between hyperfine states - [E10] = eV
-m_H = 1.674e-24 			    # Mass of a hydrogen atom - [m_H] = g
+m_H = m_p + m_e 			    # Mass of a hydrogen atom - [m_H] = g
 nu_0 = 1420.4057e6 			    # Rest frequency of HI 21cm line - [nu_0] = Hz
 nu_alpha = 2.47e15              # Rest frequency of Lyman-alpha - [nu_alpha] = Hz
 T_star = 0.068 				    # Corresponding temperature difference between HI hyperfine states - [T_star] = K

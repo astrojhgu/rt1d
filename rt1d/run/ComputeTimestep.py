@@ -12,55 +12,46 @@ Description:
 
 import numpy as np
 
+huge_dt = 1e30  # seconds
+
 class ComputeTimestep:
-    def __init__(self, grid, pf = None):
-        self.pf = pf
+    def __init__(self, grid, epsilon = 0.1):
         self.grid = grid
-        
-    def IonLimited(self, q, dqdt, epsilon = 0.1, limit = 'ions'):
-        if limit == 'ions':
-            return self.IonizedFractionLimited(q, dqdt, epsilon = 0.1)
-        else:
-            return self.NeutralFractionLimited(q, dqdt, epsilon = 0.1)
-        
-    def EnergyLimited(self, q, dqdt, epsilon = 0.1):
-        """
-        Compute next timestep based on maximum allowed change ('epsilon')
-        in neutral fractions.
-        """
-        dt = epsilon * q / np.abs(dqdt)
-        return dt[self.grid.all_species.index('ge')]           
+        self.epsilon = epsilon
     
-    def ElectronLimited(self, q, dqdt, epsilon = 0.1):
+    def Limit(self, q, dqdt, tau, tau_ifront = 0.5, method = ['ions']):
         """
-        Compute next timestep based on maximum allowed change ('epsilon')
-        in neutral fractions.
+        Limit timestep based on maximum allowed change in fields.  Which 
+        fields determined by method parameter.
         """
-        dt = epsilon * q / np.abs(dqdt)
-        return dt[self.grid.all_species.index('de')]               
         
-    def IonizedFractionLimited(self, q, dqdt, epsilon = 0.1):
-        """
-        Compute next timestep based on maximum allowed change ('epsilon')
-        in ionized fractions.
-        """        
-        dt = epsilon * q / np.abs(dqdt)
-        return np.min(dt[self.grid.types == 1])
-    
-    def NeutralFractionLimited(self, q, dqdt, epsilon = 0.1):
-        """
-        Compute next timestep based on maximum allowed change ('epsilon')
-        in neutral fractions.
-        """
-        dt = epsilon * q / np.abs(dqdt)
-        return np.min(dt[self.grid.types == 0])
-    
-    def EvolutionLimited(self, q, dqdt, epsilon = 0.1):
-        """
-        Compute next timestep based on maximum allowed change ('epsilon')
-        in all evolving species.
-        """
-        dt = epsilon * q / np.abs(dqdt)
-        return np.min(dt)
+        # Projected timestep for each cell and field (dt.shape = grid x species)
+        dt = self.epsilon * q / np.abs(dqdt)
+        
+        # Isolate cells beyond I-front
+        dt[tau <= tau_ifront, ...] = huge_dt
+                
+        new_dt = huge_dt
+        for mth in method:
+        
+            if mth == 'ions':
+                new_dt = min(new_dt, 
+                    np.min(dt[..., self.grid.types == 1]))
+            elif mth == 'neutrals':
+                new_dt = min(new_dt, 
+                    np.min(dt[..., self.grid.types == 0]))
+            elif mth == 'electrons':
+                new_dt = min(new_dt, 
+                    np.min(dt[..., self.grid.all_species.index('de')]))
+            elif mth == 'energy':
+                new_dt = min(new_dt, 
+                    np.min(dt[..., self.grid.all_species.index('ge')]))
+            else:
+                new_dt = min(new_dt, np.min(dt))
+        
+        return new_dt
+        
+            
+        
     
      

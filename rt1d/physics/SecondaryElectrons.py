@@ -5,15 +5,11 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on 2010-11-07.
 
-Description: Read in Furlanetto & Stoever results, provide functions for interpolation of heating ionization deposition
-fractions for fast secondary electrons.  Fits of Shull & vanSteenberg (1985) and
-Ricotti, Gnedin, & Shull (2002) also available.
-     
-Notes:
-FJS10 logx_HII values interpolated first to grid where dlogx = const.     
-     
-To do: check in on i_low. 
-     
+Description: Read in Furlanetto & Stoever results, provide functions for 
+interpolation of heating and ionization deposition fractions for fast 
+secondary electrons.  Fits of Shull & vanSteenberg (1985) and Ricotti, 
+Gnedin, & Shull (2002) also available.
+
 """
 
 import h5py, os
@@ -28,9 +24,7 @@ class SecondaryElectrons:
         if self.Method == 3:
             rt1d = os.environ.get("RT1D")
             if rt1d:
-                f = h5py.File("{0}/input/secondary_electron_data.h5".format(rt1d), 'r')
-            elif pf["SecondaryElectronDataFile"] is not 'None':
-                f = h5py.File("%s" % pf["SecondaryElectronDataFile"], 'r')
+                f = h5py.File("%s/input/secondary_electron_data.h5" % rt1d, 'r')
             else:
                 raise Exception('Error loading secondary electron data.')    
                 

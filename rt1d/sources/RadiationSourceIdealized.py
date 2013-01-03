@@ -47,9 +47,13 @@ class RadiationSourceIdealized:
         self.SpectrumPars['type'] = map(int, self.SpectrumPars['type'])
         
         self._name = 'RadiationSourceIdealized'
-        self.multi_freq = self.SpectrumPars['multifreq']
-        self.multi_grp = self.SpectrumPars['multigrp']
-                
+        
+        self.discrete = self.SourcePars['type'] == 0
+        
+        # We don't allow multi-component discrete spectra...for now
+        self.multi_group = self.discrete and self.SpectrumPars['multigroup'][0] 
+        self.multi_freq = self.discrete and not self.SpectrumPars['multigroup'][0] 
+
         self.initialize()
         
     def initialize(self):    
@@ -61,9 +65,6 @@ class RadiationSourceIdealized:
         self.Emax = min(self.SpectrumPars['Emax'])
         self.EminNorm = min(self.SpectrumPars['EminNorm'])
         self.EmaxNorm = min(self.SpectrumPars['EmaxNorm'])
-        
-        if self.N == 1:
-            self.Type = self.SpectrumPars['type'][0]
                     
         # Correct later if using multi-group approach
         self.E = np.array(self.SpectrumPars['E'])
@@ -71,13 +72,13 @@ class RadiationSourceIdealized:
         self.Nfreq = len(self.E)
         
         self.last_renormalized = 0
-        self.tau = self.SourcePars['lifetime'] * self.pf['TimeUnits']
-        self.birth = self.SourcePars['tbirth'] * self.pf['TimeUnits']
+        self.tau = self.SourcePars['lifetime'] * self.pf['time_units']
+        self.birth = self.SourcePars['tbirth'] * self.pf['time_units']
         self.fduty = self.SourcePars['fduty']
         
         self.variable = self.fduty < 1
         if self.fduty == 1:
-            self.variable = self.tau < (self.pf['StopTime'] * self.pf['TimeUnits'])
+            self.variable = self.tau < (self.pf['stop_time'] * self.pf['time_units'])
                 
         self.toff = self.tau * (self.fduty**-1. - 1.)
                         
@@ -103,7 +104,7 @@ class RadiationSourceIdealized:
                                  
         # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
         # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
-        if self.SourcePars['type'] == 0:
+        if self.multi_freq:
             self.Lbol = np.sum(self.Lph * self.LE * self.E * erg_per_ev)
             self.Qdot = self.LE * self.Lph
             self.sigma = sigma_E(self.E)
@@ -142,27 +143,27 @@ class RadiationSourceIdealized:
         self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
         
         # Multi-group treatment
-        Qnorm = self.SpectrumPars['qdot'] / self.Lbol / \
-            quad(lambda x: self.Spectrum(x) / x, self.EminNorm, self.EmaxNorm)[0]
-        if self.pf['FrequencyAveragedCrossSections']:
-            self.E = np.zeros(self.pf['FrequencyGroups'])
-            self.LE = np.ones_like(self.E)
-            self.Qdot = np.zeros_like(self.E)
-            self.bands = self.pf['FrequencyBands']
-            
-            if len(self.bands) == (len(self.E) - 1):
-                self.bands.append(self.Emax)
-            
-            for i in xrange(int(self.pf['FrequencyGroups'])):
-                L = quad(lambda x: self.Spectrum(x), self.bands[i], self.bands[i + 1])[0]
-                Q = quad(lambda x: self.Spectrum(x) / x, self.bands[i], self.bands[i + 1])[0]
-                                
-                self.E[i] = L / Q
-                self.Qdot[i] = Qnorm * self.Lbol * Q
+        #Qnorm = self.SpectrumPars['qdot'] / self.Lbol / \
+        #    quad(lambda x: self.Spectrum(x) / x, self.EminNorm, self.EmaxNorm)[0]
+        #if self.pf['FrequencyAveragedCrossSections']:
+        #    self.E = np.zeros(self.pf['FrequencyGroups'])
+        #    self.LE = np.ones_like(self.E)
+        #    self.Qdot = np.zeros_like(self.E)
+        #    self.bands = self.pf['FrequencyBands']
+        #    
+        #    if len(self.bands) == (len(self.E) - 1):
+        #        self.bands.append(self.Emax)
+        #    
+        #    for i in xrange(int(self.pf['FrequencyGroups'])):
+        #        L = quad(lambda x: self.Spectrum(x), self.bands[i], self.bands[i + 1])[0]
+        #        Q = quad(lambda x: self.Spectrum(x) / x, self.bands[i], self.bands[i + 1])[0]
+        #                        
+        #        self.E[i] = L / Q
+        #        self.Qdot[i] = Qnorm * self.Lbol * Q
                 
         # Time evolution
         if self.SourcePars['evolving']:
-            self.Age = np.linspace(0, self.pf['StopTime'] * self.pf['TimeUnits'], self.pf['AgeBins'])
+            self.Age = np.linspace(0, self.pf['stop_time'] * self.pf['time_units'], self.pf['AgeBins'])
                                               
     def GravitationalRadius(self, M):
         """

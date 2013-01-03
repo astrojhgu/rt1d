@@ -12,7 +12,10 @@ Description: Functions to calculate various quantities from our rt1d datasets.
 import os
 import numpy as np
 import pylab as pl
-#from .Multiplot import *
+from .Multiplot import *
+from ..physics.Constants import *
+
+
 #from .Dataset import Dataset
 #from .Inspection import Inspect
 #from ..mods.Constants import *
@@ -24,14 +27,20 @@ import pylab as pl
 #from ..mods.ComputeCrossSections import PhotoIonizationCrossSection
 #from ..mods.InitializeIntegralTables import InitializeIntegralTables
 
+linestyles = ['-', '--', ':', '-.']
+
 class Analyze:
     def __init__(self, checkpoints):
-        self.checkpoints
+        self.checkpoints = checkpoints
+        self.pf = checkpoints.pf
+        self.grid = checkpoints.grid
+        self.data = checkpoints.data
         
-    def StromgrenSphere(self, t, sol = 0, T0 = None, helium_correction = 0):
+    def StromgrenSphere(self, t, sol = 0, T0 = None):
         """
-        Classical analytic solution for expansion of an HII region in an isothermal medium.  Given the time
-        in seconds, will return the I-front radius in centimeters.
+        Classical analytic solution for expansion of an HII region in an 
+        isothermal medium.  Given the time in seconds, will return the I-front 
+        radius in centimeters.
         
         Future: sol = 1 will be the better "analytic" solution.
         """
@@ -41,18 +50,16 @@ class Analyze:
             if T0 is not None: 
                 T = T0
             else: 
-                T = self.data[0].T[0]
+                T = self.data[0]['T'][0]
                 
-            AHe = 1
-            if helium_correction:
-                AHe = 1. / (1. - 3. * self.cosm.Y / 4.)
-            nH = AHe * self.pf['DensityUnits'] * (1. - self.cosm.Y) / m_H
-            self.Ndot = self.pf['SpectrumPhotonLuminosity']
+            n_H = self.grid.n_H[0]
+            self.Qdot = self.pf['spectrum_qdot']
             self.alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
-            self.trec = 1. / self.alpha_HII / self.data[0].n_HI[-1]                                         # s
-            self.rs = (3. * self.Ndot / 4. / np.pi / self.alpha_HII / nH**2)**(1. / 3.)  # cm
+            self.trec = 1. / self.alpha_HII / self.data[0]['h_1'][0] / n_H # s
+            self.rs = (3. * self.Qdot \
+                    / 4. / np.pi / self.alpha_HII / n_H**2)**(1. / 3.)  # cm
         
-        return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) + self.pf['StartRadius']
+        return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) + self.pf['start_radius']
         
     def LocateIonizationFront(self, dd, species = 0):
         """
@@ -60,11 +67,11 @@ class Analyze:
         """
         
         if species == 0:
-            return np.interp(0.5, self.data[dd].x_HI, self.data[dd].r)
+            return np.interp(0.5, self.data[dd]['h_1'], self.grid.r_mid)
         else:
-            return np.interp(0.5, self.data[dd].x_HeI, self.data[dd].r)
+            return np.interp(0.5, self.data[dd]['he_1'], self.grid.r_mid)
         
-    def ComputeIonizationFrontEvolution(self, T0 = None, helium_correction = 0):
+    def ComputeIonizationFrontEvolution(self, T0 = None):
         """
         Find the position of the I-front at all times, and compute value of analytic solution.
         """    
@@ -74,18 +81,17 @@ class Analyze:
         self.rIF = np.zeros_like(self.t)
         self.ranl = np.zeros_like(self.t)
         for i, dd in enumerate(self.data.keys()[1:]): 
-            self.t[i] = self.data[dd].t
+            self.t[i] = self.data[dd]['time']
             self.rIF[i] = self.LocateIonizationFront(dd) / cm_per_kpc
-            self.ranl[i] = self.StromgrenSphere(self.data[dd].t, T0 = T0, 
-                helium_correction = helium_correction) / cm_per_kpc
+            self.ranl[i] = self.StromgrenSphere(self.data[dd]['time'], T0 = T0) / cm_per_kpc
                 
-    def PlotIonizationFrontEvolution(self, mp = None, anl = True, T0 = None, helium_correction = 0,
+    def PlotIonizationFrontEvolution(self, mp = None, anl = True, T0 = None, 
         color = 'k', ls = '--'):
         """
         Compute analytic and numerical I-front radii vs. time and plot.
         """    
 
-        self.ComputeIonizationFrontEvolution(T0 = T0, helium_correction = helium_correction)
+        self.ComputeIonizationFrontEvolution(T0 = T0)
 
         if mp is not None: 
             self.mp = mp    
@@ -109,7 +115,96 @@ class Analyze:
         
         if mp is None: 
             self.mp.fix_ticks()      
+        else:
+            pl.draw()
+            
+    def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k', 
+        annotate = False, xscale = 'linear', yscale = 'log'):
+        """
+        Plot radial profiles of species fraction (for H or He) at times t (Myr).
+        """      
         
+        if not hasattr(self, 'ax'):
+            self.ax = pl.subplot(111)
+        
+        self.ax.set_xscale('log')
+        self.ax.set_yscale('log')
+        
+        if species == 'H':
+            fields = ['h_1', 'h_2']
+            labels = [r'$x_{\mathrm{HI}}$', r'$x_{\mathrm{HII}}$']
+        
+        line_num = 0
+        for dd in self.data.keys():
+            if self.data[dd]['time'] / self.pf['time_units'] not in t: 
+                continue
+            
+            if line_num > 0:
+                labels = [None] * len(labels)
+            
+            for i, field in enumerate(fields):
+                self.ax.semilogy(self.grid.r_mid / cm_per_kpc,
+                    self.data[dd][field], ls = linestyles[i], 
+                    color = color, label = labels[i])
+
+            line_num += 1
+                    
+        self.ax.set_xscale(xscale)
+        self.ax.set_yscale(yscale)    
+        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
+        self.ax.set_ylabel(r'Species Fraction')  
+        self.ax.set_ylim(1e-5, 1.5)
+        
+        if annotate:
+            self.ax.legend(loc = 'lower right', ncol = len(fields), 
+                frameon = False)
+
+        pl.draw()        
+            
+    def TemperatureProfile(self, t = [10, 30, 100], color = 'k', ls = None, xscale = 'linear', 
+        legend = True):
+        """
+        Plot radial profiles of temperature at times t (Myr).
+        """  
+        
+        if not hasattr(self, 'ax'):
+            self.ax = pl.subplot(111)
+        else:
+            if legend:
+                legend = False
+                
+        if ls is None:
+            ls = linestyles
+        else:
+            ls = [ls] * len(t)
+        
+        self.ax.set_xscale('log')
+        self.ax.set_yscale('log')
+        
+        line_num = 0
+        for dd in self.data.keys():
+            if self.data[dd]['time'] / self.pf['time_units'] not in t: 
+                continue
+            
+            self.ax.loglog(self.grid.r_mid / cm_per_kpc,
+                self.data[dd]['T'], ls = ls[line_num], color = color, label = r'$T_K$')
+                
+            line_num += 1    
+                
+        #if self.pf['LymanAlphaContinuum'] or self.pf['LymanAlphaInjection']:
+        #    self.ax.loglog(r, self.data[dd].Ts, color = color, ls = '--', label = r'$T_S$') 
+        #    
+        #if self.pf['CosmologicalExpansion']:
+        #    self.ax.loglog([min(r), max(r)], [self.pf['CMBTemperatureNow'] * (1. + self.data[dd].z)] * 2,
+        #        color = 'k', ls = ':', label = r'$T_{\gamma}$')         
+        #    
+        #    if legend:
+        #        self.ax.legend(loc = 'upper right', frameon = False)
+            
+        self.ax.set_xscale(xscale)    
+        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
+        self.ax.set_ylabel(r'Temperature $(K)$')  
+        pl.draw()                
         
 
 class AnalyzeOld:
