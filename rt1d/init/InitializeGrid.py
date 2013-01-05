@@ -17,18 +17,20 @@ import chianti.util as util
 from ..util import parse_kwargs, rebin
 from periodic.table import element as ELEMENT
 from ..physics.Constants import k_B, cm_per_kpc, s_per_myr, m_H
+from ..physics.ComputeCrossSections import PhotoIonizationCrossSection
 
 tiny_number = 1e-8  # A relatively small species fraction
 
 class Grid:
     def __init__(self, dims = 64, time_units = s_per_myr, 
-        length_units = cm_per_kpc, start_radius = 0.01):
+        length_units = cm_per_kpc, start_radius = 0.01, **kwargs):
         """ Initialize grid object. """
         
         self.dims = int(dims)
         self.time_units = time_units
         self.length_units = length_units
         self.start_radius = start_radius
+        self.kwargs = kwargs
         
         self.r_edg = self.r = \
             np.linspace(self.R0, length_units, self.dims + 1)
@@ -139,20 +141,41 @@ class Grid:
     @property # MUST GENERALIZE THIS
     def ioniz_thresholds(self):
         """
-        Return bound-free absorption cross-sections for all absorbers.
+        Return ionization threshold energy in eV for all absorbers.
         """    
         
         if not hasattr(self, 'all_thresholds'):
-            self.all_thresholds = []
+            self.all_thresholds = {}
             for absorber in self.absorbers:
                 if absorber == 'h_1':
-                    self.all_thresholds.append(13.6)
+                    self.all_thresholds[absorber] = 13.6
                 elif absorber == 'he_1':
-                    self.all_thresholds.append(24.4)
+                    self.all_thresholds[absorber] = 24.4
                 elif absorber == 'he_2':
-                    self.all_thresholds.append(54.4)
+                    self.all_thresholds[absorber] = 54.4
                     
         return self.all_thresholds
+        
+    @property # MUST GENERALIZE THIS
+    def bf_cross_sections(self):
+        """
+        Return functions that compute the bound-free absorption 
+        cross-sections for all absorbers.
+        """    
+        
+        if not hasattr(self, 'all_xsections'):
+            self.all_xsections = {}
+            for absorber in self.absorbers:
+                #ion = cc.continuum(absorber)
+                #ion.vernerCross(energy = np.logspace(1, 5, 1000))
+                if absorber == 'h_1':
+                    self.all_xsections[absorber] = lambda E: \
+                        PhotoIonizationCrossSection(E, species = 0)
+                elif absorber == 'he_1':
+                    self.all_xsections[absorber] = lambda E: \
+                        PhotoIonizationCrossSection(E, species = 1)
+                
+        return self.all_xsections
         
     @property
     def x_to_n(self):
@@ -170,11 +193,18 @@ class Grid:
         """    
         
         N = {}
+        Nc = {}
+        logN = {}
         for absorber in self.absorbers:
             N[absorber] = np.cumsum(data[absorber] \
                         * self.x_to_n[absorber] * self.dr)
+            
+            logN[absorber] = np.log10(N[absorber])
+            Nc[absorber] = self.dr * data[absorber] \
+                * self.x_to_n[absorber]            
+                        
                     
-        return N      
+        return N, logN, Nc     
         
     def initialize(self, pf):
         """
@@ -262,7 +292,7 @@ class Grid:
         # Initialize gas energy    
         if not self.isothermal:
             self.data['ge'] = 1.5 * k_B * self.particle_density(self.data) \
-                / self.data['T']                
+                * self.data['T']                
             
     def set_x(self, Z = None, x = None, state = None, perturb = 0):
         """

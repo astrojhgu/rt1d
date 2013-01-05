@@ -10,12 +10,15 @@ Description:
 
 """
 
-import numpy as np
+
 from ..physics.Constants import *
 from scipy.integrate import quad, romberg
 from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
+import numpy as np
 from ..util import parse_kwargs
+from ..init.InitializeIntegralTables import IntegralTable
+
 
 
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB
@@ -33,8 +36,9 @@ big_number = 1e5
 ls = ['-', '--', ':', '-.']
 
 class RadiationSourceIdealized:
-    def __init__(self, **kwargs):
+    def __init__(self, grid = None, **kwargs):
         self.pf = parse_kwargs(**kwargs)
+        self.grid = grid
         
         # Create Source/SpectrumPars attributes    
         self.SourcePars = sort(self.pf, prefix = 'source', make_list = False)
@@ -49,12 +53,83 @@ class RadiationSourceIdealized:
         self._name = 'RadiationSourceIdealized'
         
         self.discrete = self.SourcePars['type'] == 0
+        self.continuous = not self.discrete
         
         # We don't allow multi-component discrete spectra...for now
+        # would we ever want/need this? lines on top of continuous spectrum...
         self.multi_group = self.discrete and self.SpectrumPars['multigroup'][0] 
         self.multi_freq = self.discrete and not self.SpectrumPars['multigroup'][0] 
 
         self.initialize()
+        self.create_integral_table()
+                
+    def create_integral_table(self, Z = None, dims = None, 
+        Nmin = None, Nmax = None):
+        
+        if self.discrete:
+            print 'This source does not have a continuous spectrum...'
+            return
+        
+        self.tab = IntegralTable(self.pf, self, self.grid,
+            Z = Z, dims = dims, Nmin = Nmin, Nmax = Nmax)
+            
+        # Tabulate away!    
+        self.tabs = self.tab.TabulateRateIntegrals()    
+        self.tables = {}
+        
+        # Set up interpolation tables  
+        if self.tab.Nd == 1:
+            from scipy.interpolate import interp1d
+        
+            for tab in self.tabs:
+                self.tables[tab] = \
+                    interp1d(self.tab.N[0], self.tabs[tab], 
+                    kind = 'cubic', bounds_error = False,
+                    fill_value = 0.0)
+        
+        elif self.tab.Nd == 2:
+            from scipy.interpolate import RectBivariteSpline
+        
+            for tab in self.tabs:
+                self.tables[tab] = \
+                    RectBivariteSpline(self.tab.N[0], self.tab.N[1], 
+                    self.tabs[tab], bounds_error = False,
+                    fill_value = 0.0)
+        
+        else:    
+            # Set up interpolation tables
+            from scipy.interpolate import LinearNDInterpolator
+            
+            # or scipy.ndimage.map_coordinates
+        
+            Ngrid = []
+            for element in self.tab.N:
+                Ngrid.append(element * np.ones([len(element)] * self.tab.Nd))
+                        
+            Nrav = []
+            for element in Ngrid:
+                Nrav.append(element.ravel())
+            
+            pts = np.array(Nrav).T
+            
+            
+            
+            #print pts.shape, self.tabs['logPhi_h_1'].ravel().shape
+            
+            self.tables = {}
+            for tab in self.tabs:
+                print tab, pts.shape, self.tabs[tab].ravel().shape
+                self.tables[tab] = LinearNDInterpolator(pts, self.tabs[tab].ravel())
+                    
+    
+    def _init_multi_freq(self):
+        pass
+        
+    def _init_star(self):    
+        pass
+        
+    def _init_bh(self):
+        pass
         
     def initialize(self):    
         """
@@ -83,7 +158,7 @@ class RadiationSourceIdealized:
         self.toff = self.tau * (self.fduty**-1. - 1.)
                         
         # SourceType 0, 1, 2
-        self.Lph = self.SpectrumPars['qdot']
+        self.Lph = self.SourcePars['qdot']
         
         # SourceType = 1, 2
         self.T = self.SourcePars['temperature']
@@ -111,7 +186,7 @@ class RadiationSourceIdealized:
         elif self.SourcePars['type'] in [1, 2]:
             self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * \
                 romberg(lambda x: x**2 / (np.exp(x) - 1.), 
-                13.6 * erg_per_ev / k_B / self.T, big_number, divmax = 100) / h**3 / c**2 
+                13.6 * erg_per_ev / k_B / self.T, big_number, divmax = 100) / h**3 / c**2             
             self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
             self.Qdot = self.Lbol * self.LE / self.E / erg_per_ev
@@ -286,15 +361,15 @@ class RadiationSourceIdealized:
         """        
         
         # Renormalize if t > 0 
-        if t != self.last_renormalized:
-            self.last_renormalized = t
-            self.M = self.BlackHoleMass(t)
-            self.r_in = self.DiskInnermostRadius(self.M)
-            self.r_out = self.SpectrumPars['rmax'] * self.GravitationalRadius(self.M)
-            self.T_in = self.DiskInnermostTemperature(self.M)
-            self.T_out = self.DiskTemperature(self.M, self.r_out)
-            self.Lbol = self.BolometricLuminosity(t)
-            self.LuminosityNormalizations = self.NormalizeSpectrumComponents(t)    
+        #if t != self.last_renormalized:
+        #    self.last_renormalized = t
+        #    self.M = self.BlackHoleMass(t)
+        #    self.r_in = self.DiskInnermostRadius(self.M)
+        #    self.r_out = self.SpectrumPars['rmax'] * self.GravitationalRadius(self.M)
+        #    self.T_in = self.DiskInnermostTemperature(self.M)
+        #    self.T_out = self.DiskTemperature(self.M, self.r_out)
+        #    self.Lbol = self.BolometricLuminosity(t)
+        #    self.LuminosityNormalizations = self.NormalizeSpectrumComponents(t)    
         
         emission = 0
         for i, Type in enumerate(self.SpectrumPars['type']):

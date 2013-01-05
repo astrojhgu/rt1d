@@ -1,7 +1,5 @@
 syntax: glob
 
-rt1d.tmproj
-
 # General things
 *.pyc
 *~

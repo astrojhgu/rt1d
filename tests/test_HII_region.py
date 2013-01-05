@@ -13,15 +13,20 @@ Description:
 import rt1d
 import pylab as pl
 
-sim = rt1d.run.RTsim(pf = {'problem_type': 2})
+sim = rt1d.run.RTsim(pf = {'problem_type': 2, 'source_type': 1})
 anl = rt1d.analysis.Analyze(sim.checkpoints)
-anl.TemperatureProfile(t = [10, 30, 100])
+anl.TemperatureProfile(t = [10, 100, 500])
+anl.ax.set_ylim(1e3, 4e4)
+anl.ax.set_xlim(0, 6.6)
+pl.draw()
 
 raw_input('<enter> for radial profiles of xHI & xHII')
 pl.close()
 del anl.ax
 
-anl.IonizationProfile(t = [10, 30, 100], annotate = True)
+anl.IonizationProfile(t = [10, 100, 500], annotate = True)
+anl.ax.set_xlim(0, 6.6)
+pl.draw()
 
 raw_input('')
 

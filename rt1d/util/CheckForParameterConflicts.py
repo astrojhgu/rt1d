@@ -16,7 +16,10 @@ known_conflicts = [ \
     (['infinite_c', 0], ['parallel', 1]),
     (['isothermal', 1], ['secondary_ionization', 1]),
     (['isothermal', 1], ['secondary_ionization', 2]),
-    (['isothermal', 1], ['secondary_ionization', 3])]
+    (['isothermal', 1], ['secondary_ionization', 3]),
+    (['isothermal', 0], ['restricted_timestep', 'energy', 0])]
+    
+# Treat warnings separately
 
 def CheckForParameterConflicts(pf):
     """

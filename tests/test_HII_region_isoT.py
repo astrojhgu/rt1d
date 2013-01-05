@@ -21,7 +21,7 @@ raw_input('<enter> for radial profiles of xHI & xHII')
 pl.close()
 del anl.mp
 
-anl.IonizationProfile(t = [10, 30, 100], annotate = True)
+anl.IonizationProfile(t = [10, 100, 500], annotate = True)
 
 raw_input('')
 

@@ -53,7 +53,7 @@ def RTsim(pf = None):
     grid.set_T(pf['initial_temperature'])
     
     # Initialize radiation source and radiative transfer solver
-    rs = rt1d.sources.RadiationSourceIdealized(**pf)
+    rs = rt1d.sources.RadiationSourceIdealized(grid, **pf)
     rt = rt1d.Radiation(grid, rs, **pf)
     
     # To compute timestep

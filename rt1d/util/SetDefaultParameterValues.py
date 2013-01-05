@@ -72,6 +72,7 @@ def SourceParameters():
         "source_files": 'None',
         "source_type": 0,  
         "source_temperature": 1e5,  
+        "source_qdot": 5e48,
         "source_mass": 1e3,  
         "source_fduty": 1,
         "source_tbirth": 0,
@@ -96,8 +97,7 @@ def SpectrumParameters():
         "spectrum_Emax": 1e2,  
         "spectrum_EminNorm": 0.01,  
         "spectrum_EmaxNorm": 5e2,  
-        
-        "spectrum_qdot": 5e48,  
+         
         "spectrum_N": 0,
         "spectrum_fcol": 1.7,
         "spectrum_file": 'None',

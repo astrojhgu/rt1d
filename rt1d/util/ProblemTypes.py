@@ -117,7 +117,7 @@ def ProblemType(ptype):
              "stop_time": 500.0, 
              "dtDataDump": 10.0, 
              "isothermal": 0,
-             "restricted_timestep": ['ions'],
+             "restricted_timestep": ['ions', 'energy'],
              "species": [1],
              "secondary_ionization": 0,
              "initial_temperature": 1e2,
