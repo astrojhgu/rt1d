@@ -82,6 +82,9 @@ def SourceParameters():
         "source_rmax": 1e3,
         "source_evolving": 0,
         "source_cX": 1.0,
+        
+        "source_table": None,
+        
         }
         
     return pf
@@ -108,14 +111,16 @@ def SpectrumParameters():
         "spectrum_E": [13.6],  
         "spectrum_LE": [1.],  
                 
-        "spectrum_table": 'None',
+        "spectrum_table": None,
         
-        "spectrum_dlogN": [0.1],
+        "spectrum_dlogN": [0.2],
         "spectrum_logNmin": [16],
         "spectrum_logNmax": [21],
         "spectrum_smallest_x": 1e-5,
         
-        #"IntegralTable": 'None',  
+        "spectrum_dlogx": 0.1,
+        
+        #"IntegralTable": 'None',
         #"RegenerateTable": 0,  
         #"ColumnDensityBinsHI": 200,  
         #"ColumnDensityBinsHeI": 100,  
@@ -171,11 +176,11 @@ def ControlParameters():
         "epsilon_dt": 0.05,
         "dtDataDump": 5,
         "stop_time": 500,
-        "initial_timestep": 1e6,
+        "initial_timestep": 1e-6,
         "max_timestep": 1.,
         "restricted_timestep": ['ions'],
         "tau_ifront": 0.5,
-        "parallel": 0,
+        "parallelization": 0,
         "save_rate_coefficients": 1,
         
         }

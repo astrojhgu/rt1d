@@ -6,7 +6,7 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Mon Dec 31 11:16:59 2012
 
-Description: 
+Description:
 
 """
 
@@ -38,11 +38,13 @@ class RadiationField:
         self.gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers2)
                 
         if not self.src.SourceOn(t):
-            return Gamma, gamma, k_H
+            return self.Gamma, self.gamma, self.k_H
         
         # Column density to cells (N) and of cells (Nc)    
         self.N, self.logN, self.Nc = self.grid.ColumnDensity(data)
          
+        # Column densities (of all absorbers) sorted by cell 
+        # (i.e. an array with shape = grid x # of absorbers)
         self.N_by_cell = np.zeros([self.grid.dims, len(self.grid.absorbers)])
         self.Nc_by_cell = np.zeros([self.grid.dims, len(self.grid.absorbers)])
         for i, absorber in enumerate(self.grid.absorbers):
@@ -52,35 +54,151 @@ class RadiationField:
         self.logN_by_cell = np.log10(self.N_by_cell)
         self.logNc_by_cell = np.log10(self.N_by_cell)
         
+        # Number densities and normalizations
         self.n = {}
+        self.A = {}
         for absorber in self.grid.absorbers:
             self.n[absorber] = data[absorber] * self.grid.x_to_n[absorber]
+            self.A[absorber] = self.src.Lbol / self.n[absorber] / self.grid.Vsh
         
         # Eventually loop over sources here
         
-        # Loop over absorbing species
-        for absorber in self.grid.absorbers:
-                            
-            # Discrete spectrum (multi-freq approach)
-            if self.src.multi_freq:
-                self.MultiFreqCoefficients(data, absorber)   
-            
-            # Discrete spectrum (multi-grp approach)
-            elif self.src.multi_group:
-                pass
-            
-            # Continuous spectrum (uses tabulated integral values)
-            else:
-                self.TabulatedCoefficients(data, absorber)
-                self.tau_tot = 10**self.src.tables["logTau"](self.logN_by_cell)
+        """
+        For sources with discrete SEDs.
+        """
+        if self.src.discrete:
+        
+            # Loop over absorbing species
+            for absorber in self.grid.absorbers:
+                                
+                # Discrete spectrum (multi-freq approach)
+                if self.src.multi_freq:
+                    self.MultiFreqCoefficients(data, absorber)
                 
+                # Discrete spectrum (multi-grp approach)
+                elif self.src.multi_group:
+                    pass
+            
+            return self.Gamma, self.gamma, self.k_H
+
+        """
+        For sources with continuous SEDs.
+        """
+
+        # Initialize some arrays
+        self.PhiN = {}
+        self.PhiNdN = {}
+        if not self.pf['isothermal'] and self.pf['secondary_ionization'] < 2:
+            self.PsiN = {}
+            self.PsiNdN = {}
+            self.fheat = self.esec.DepositionFraction(0.0, data['h_2'], 
+                channel = 'heat') 
+        
+        if self.pf['secondary_ionization'] > 1:
+            self.PhiWiggleN = {}
+            self.PhiWiggleNdN = {}
+            self.PhiHatN = {}
+            self.PhiHatNdN = {}
+            
+            for absorber in self.grid.absorbers:
+                self.PhiWiggleN[absorber] = {}
+                self.PhiWiggleNdN[absorber] = {}
+                self.PhiHatN[absorber] = {}
+                self.PhiHatNdN[absorber] = {}
+            
+        else:
+            self.fion = {}
+            for absorber in self.grid.absorbers:
+                self.fion[absorber] = self.esec.DepositionFraction(E = None, 
+                    xHII = data['h_2'], channel = absorber)
+        
+        # Compute column densities up to and of cells        
+        if self.pf['photon_conserving']:
+            
+            self.NdN = self.grid.N_absorbers \
+                * [np.zeros_like(self.grid.zeros_grid_x_absorbers)]
+            for i, absorber in enumerate(self.grid.absorbers):
+                tmp = self.N_by_cell.copy()
+                tmp[..., i] += self.Nc_by_cell[..., i]
+                self.NdN[i] = tmp
+                del tmp
+            
+            self.logNdN = np.log10(self.NdN)
+        
+        # Loop over absorbing species, compute tabulated quantities
+        for i, absorber in enumerate(self.grid.absorbers):
+               
+            self.PhiN[absorber] = \
+                10**self.src.tables["logPhi_%s" % absorber](self.logN_by_cell).squeeze()
+            
+            if (not self.pf['isothermal']) and (self.pf['secondary_ionization'] < 2):
+                self.PsiN[absorber] = \
+                    10**self.src.tables["logPsi_%s" % absorber](self.logN_by_cell).squeeze()
+                
+            if self.pf['photon_conserving']:
+                self.PhiNdN[absorber] = \
+                    10**self.src.tables["logPhi_%s" % absorber](self.logNdN[i]).squeeze()
+                
+                if (not self.pf['isothermal']) and (self.pf['secondary_ionization'] < 2):
+                    self.PsiNdN[absorber] = \
+                        10**self.src.tables["logPsi_%s" % absorber](self.logNdN[i]).squeeze()
+        
+            if self.pf['secondary_ionization'] > 1:
+                
+                if absorber in self.grid.metals:
+                    continue
+                
+                for donor in self.grid.absorbers:
+                    
+                    suffix = '%s_%s' % (absorber, donor)
+                         
+                    self.PhiWiggleN[absorber][donor] = \
+                        10**self.src.tables["logPhiWiggle_%s" % suffix](self.logN_by_cell).squeeze()    
+                    self.PsiWiggleN[absorber][donor] = \
+                        10**self.src.tables["logPsiWiggle_%s" % suffix](self.logN_by_cell).squeeze()
+                    
+                    if not self.pf['isothermal']:
+                        self.PhiHatN[absorber] = \
+                            10**self.src.tables["logPhiHat_%s" % suffix](self.logN_by_cell).squeeze()
+                        self.PsiHatN[absorber] = \
+                            10**self.src.tables["logPsiHat_%s" % suffix](self.logN_by_cell).squeeze()
+                        
+                    if not self.pf['photon_conserving']:
+                        continue
+                    
+                    self.PhiWiggleNdN[absorber] = \
+                        10**self.src.tables["logPhiWiggle_%s" % suffix](self.logNdN[j]).squeeze()    
+                    self.PsiWiggleNdN[absorber] = \
+                        10**self.src.tables["logPsiWiggle_%s" % suffix](self.logNdN[j]).squeeze()
+                    
+                    if not self.pf['isothermal']:
+                        self.PhiHatNdN[absorber] = \
+                            10**self.src.tables["logPhiHat_%s" % suffix](self.logNdN[i]).squeeze()
+                        self.PsiHatNdN[absorber] = \
+                            10**self.src.tables["logPsiHat_%s" % suffix](self.logNdN[i]).squeeze()
+        
+        # Now, go ahead and calculate the rate coefficients
+        for i, absorber in enumerate(self.grid.absorbers):
+            self.Gamma[..., i] = self.PhotoIonizationRate(absorber)
+            self.k_H[..., i] = self.PhotoHeatingRate(absorber)
+            
+            if absorber in self.grid.metals:
+                continue
+            
+            for j, donor in enumerate(self.grid.absorbers):
+                self.gamma[..., i, j] = \
+                    self.SecondaryIonizationRate(absorber, donor)
+                   
+        # Compute total optical depth too
+        self.tau_tot = 10**self.src.tables["logTau"](self.logN_by_cell)            
+        
         return self.Gamma, self.gamma, self.k_H
         
     def MultiFreqCoefficients(self, data, absorber):
         """
         Compute all source-dependent rates for given absorber assuming a
         multi-frequency SED.
-        """   
+        """
         
         i = self.grid.absorbers.index(absorber)
         n = self.n[absorber]
@@ -144,20 +262,6 @@ class RadiationField:
         # Total photo-ionization tally
         self.Gamma[...,i] = np.sum(self.Gamma_E, axis = 1)
     
-    def TabulatedCoefficients(self, data, absorber):
-        """
-        Compute all source-dependent rates for given absorber assuming a
-        continuous SED.  Also compute optical depth.
-        """
-        
-        i = self.grid.absorbers.index(absorber)
-        self.Gamma[..., i], self.Phi_N, self.Phi_N_dN = \
-            self.PhotoIonizationRate(absorber)
-            
-        if not self.grid.isothermal:
-            self.k_H[..., i], Psi_N, Psi_N_dN = \
-                self.PhotoElectricHeatingRate(data, absorber)
-                
     def PhotoIonizationRateMultiFreq(self, qdot, n, tau_r_E, tau_c):
         """
         Returns photo-ionization rate coefficient for single frequency over
@@ -176,78 +280,77 @@ class RadiationField:
     def PhotoIonizationRate(self, absorber):
         """
         Returns photo-ionization rate coefficient for continuous source.
-        """     
+        """                                     
+            
+        IonizationRate = self.PhiN[absorber].copy()
         
-        self.NdN = self.N_by_cell.copy()        
-        i = self.grid.absorbers.index(absorber)
-        self.NdN[..., i] += self.Nc_by_cell[..., i]
-                                
-        Phi_N = None
-        Phi_N_dN = None
-                                        
         if self.pf['photon_conserving']:
-            Phi_N = 10**self.src.tables["logPhi_%s" % absorber](self.logN_by_cell).squeeze()
-            Phi_N_dN = 10**self.src.tables["logPhi_%s" % absorber](np.log10(self.NdN)).squeeze()
-            IonizationRate = Phi_N - Phi_N_dN
-        #else:                
-        #    Phi_N = rs.Interpolate.interp(indices_in, "logPhi_%i" % species, 
-        #        [ncol[0], ncol[1], ncol[2], x_HII, t])       
-        #    IonizationRate = Phi_N
+            IonizationRate -= self.PhiNdN[absorber]
         
-        # Phi_N and Phi_N_dN are grid x absorbers
-        # A is grid
+        return self.A[absorber] * IonizationRate
         
-        self.A = self.src.Lbol / self.n[absorber] / self.grid.Vsh
-                
-        #print Phi_N[0], Phi_N_dN[0], self.A * IonizationRate
-        return self.A * IonizationRate, Phi_N, Phi_N_dN
-        
-    def PhotoElectricHeatingRate(self, data, absorber):
+    def PhotoHeatingRate(self, absorber):
         """
         Photo-electric heating rate coefficient due to photo-electrons previously 
         bound to `species.'  If this method is called, it means TabulateIntegrals = 1.
         """
 
-        Psi_N = None
-        Psi_N_dN = None
+        if self.esec.Method < 2:
+            HeatingRate = self.PsiN[absorber].copy()
+            HeatingRate -= self.grid.ioniz_thresholds[absorber] * erg_per_ev  \
+                * self.PhiN[absorber]
+            if self.pf['photon_conserving']:
+                HeatingRate -= self.PsiNdN[absorber]
+                HeatingRate += erg_per_ev \
+                    * self.grid.ioniz_thresholds[absorber] \
+                    * self.PhiNdN[absorber]
+                    
+        else:
+            HeatingRate = self.PsiHatN[absorber].copy()
+            HeatingRate -= self.grid.ioniz_thresholds[absorber] * erg_per_ev  \
+                * self.PhiHatN[absorber]
+            if self.pf['photon_conserving']:
+                HeatingRate -= self.PsiHatNdN[absorber]
+                HeatingRate += erg_per_ev \
+                    * self.grid.ioniz_thresholds[absorber] \
+                    * self.PhiHatNdN[absorber]            
+                
+        return self.A[absorber] * self.fheat * HeatingRate
+            
+    def SecondaryIonizationRate(self, absorber, donor):
+        """
+        Secondary ionization rate which we denote elsewhere as gamma (note little g).
+        
+            species = species being ionized by photo-electron
+            donor_species = species the photo-electron came from
+            
+        If this routine is called, it means TabulateIntegrals = 1.    
+        """    
         
         if self.esec.Method < 2:
+            IonizationRate = self.PsiN[donor].copy()
+            IonizationRate -= self.grid.ioniz_thresholds[donor] \
+                * erg_per_ev * self.PhiN[donor]
             if self.pf['photon_conserving']:
-                Psi_N = 10**self.src.tables["logPsi_%s" % absorber](self.logN_by_cell).squeeze()
-                Psi_N_dN = 10**self.src.tables["logPsi_%s" % absorber](np.log10(self.NdN)).squeeze()
-                
-                heat = Psi_N - Psi_N_dN \
-                     - self.grid.ioniz_thresholds[absorber] \
-                     * erg_per_ev * (self.Phi_N - self.Phi_N_dN)
-            #else:
-            #    Psi_N = rs.Interpolate.interp(indices_in, "logPsi%i" % species, 
-            #        [ncol[0], ncol[1], ncol[2], x_HII, t])
-            #    heat = Psi_N
-                
-            fheat = self.esec.DepositionFraction(0.0, data['h_2'], 
-                channel = 'heat')    
-                                
-            return self.A * fheat * heat, Psi_N, Psi_N_dN    
-                
+                IonizationRate -= self.PsiNdN[donor]
+                IonizationRate += self.grid.ioniz_thresholds[donor] \
+                    * erg_per_ev * self.PhiNdN[donor]
+                            
         else:
-            if rs.pf['PhotonConserving']:
-                x_HII = np.log10(x_HII)
-                Psi_N = rs.Interpolate.interp(indices_in, "logPsiHat%i" % species, 
-                    [ncol[0], ncol[1], ncol[2], x_HII, t])
-                Psi_N_dN = rs.Interpolate.interp(indices_out, "logPsiHat%i" % species, 
-                    [nout[0], nout[1], nout[2], x_HII, t])
-                Phi_N = rs.Interpolate.interp(indices_in, "logPhiHat%i" % species, 
-                    [ncol[0], ncol[1], ncol[2], x_HII, t])
-                Phi_N_dN = rs.Interpolate.interp(indices_out, "logPhiHat%i" % species, 
-                    [nout[0], nout[1], nout[2], x_HII, t])
-                                
-                heat = (Psi_N - Psi_N_dN - E_th[species] * erg_per_ev * (Phi_N - Phi_N_dN))                   
-            else:
-                Psi_N = rs.Interpolate.interp(indices_in, "logPsiHat%i" % species,
-                    [ncol[0], ncol[1], ncol[2], x_HII, t])
-                heat = Psi_N                    
-                                    
-            return A * heat, None, None                
+            
+            IonizationRate = self.PsiWiggleN[absorber][donor] \
+                - self.grid.ioniz_thresholds[donor] \
+                * erg_per_ev * self.PhiWiggleN[absorber][donor]
+            if self.pf['photon_conserving']:
+                IonizationRate -= self.PsiWiggleNdN[absorber][donor]
+                IonizationRate += self.grid.ioniz_thresholds[donor] \
+                    * erg_per_ev * self.PhiWiggleNdN[absorber][donor]
+                        
+        # Normalization (by number densities) will be applied in 
+        # chemistry solver    
+            
+        return self.A[donor] * self.fion[absorber] * IonizationRate \
+                / self.grid.ioniz_thresholds[absorber] / erg_per_ev    
         
         
         

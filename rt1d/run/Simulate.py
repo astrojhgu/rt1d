@@ -64,9 +64,11 @@ def RTsim(pf = None):
     
     # Evolve chemistry + RT
     data = grid.data
-    dt = rt1d.Constants.s_per_myr / pf['initial_timestep']
+    dt = rt1d.Constants.s_per_myr * pf['initial_timestep']
     t = 0.0
     tf = pf['stop_time'] * rt1d.Constants.s_per_myr
+    
+    print '\nSolving radiative transfer...'
     
     dt_history = []
     pb = rt1d.run.ProgressBar(tf)

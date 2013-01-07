@@ -66,7 +66,6 @@ class RadiationSourceIdealized:
     def create_integral_table(self, dlogN = None, logNmin = None, logNmax = None):
         
         if self.discrete:
-            print 'This source does not have a continuous spectrum...'
             return
         
         # Overide defaults if supplied
@@ -79,8 +78,12 @@ class RadiationSourceIdealized:
         
         self.tab = IntegralTable(self.pf, self, self.grid)
             
-        # Tabulate away!    
-        self.tabs = self.tab.TabulateRateIntegrals()    
+        # Tabulate away!
+        if self.SourcePars['table'] is None:    
+            self.tabs = self.tab.TabulateRateIntegrals()  
+        else:
+            self.tabs = self.SourcePars['table']
+                
         self.tables = {}
         
         # Set up interpolation tables

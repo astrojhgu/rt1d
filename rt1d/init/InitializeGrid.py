@@ -99,6 +99,38 @@ class Grid:
         return self.absorbing_species
         
     @property
+    def N_absorbers(self):
+        if not hasattr(self, 'self.num_of_absorbers'):
+            absorbers = self.absorbers
+            self.num_of_absorbers = int(len(absorbers))
+            
+        return self.num_of_absorbers
+        
+    @property
+    def metals(self):
+        """ Return list of anything that is not hydrogen or helium. """
+        if not hasattr(self, 'all_metals'):
+            self.all_metals = []
+            self.all_metal_ions = []
+            for element in self.ions_by_ion:
+                if element in ['h', 'he']:
+                    continue
+                     
+                self.all_metals.append(element)
+                for ion in self.ions_by_ion[element]:
+                    self.all_metal_ions.append(ion)
+            
+        return self.all_metals  
+        
+    @property
+    def metal_ions(self):
+        """ Return list of all metal ions."""      
+        if not hasattr(self, 'all_metal_ions'):
+            all_metals = self.metals
+            
+        return self.all_metal_ions
+        
+    @property
     def species_abundances(self):
         """
         Return dictionary containing abundances of all ions' parent

@@ -119,16 +119,16 @@ class Analyze:
             pl.draw()
             
     def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k', 
-        annotate = False, xscale = 'linear', yscale = 'log'):
+        annotate = False, xscale = 'linear', yscale = 'log', ax = None):
         """
         Plot radial profiles of species fraction (for H or He) at times t (Myr).
         """      
         
-        if not hasattr(self, 'ax'):
-            self.ax = pl.subplot(111)
-        
-        self.ax.set_xscale('log')
-        self.ax.set_yscale('log')
+        if ax is None:
+            ax = pl.subplot(111)
+
+        ax.set_xscale('log')
+        ax.set_yscale('log')
         
         if species == 'H':
             fields = ['h_1', 'h_2']
@@ -143,50 +143,51 @@ class Analyze:
                 labels = [None] * len(labels)
             
             for i, field in enumerate(fields):
-                self.ax.semilogy(self.grid.r_mid / cm_per_kpc,
+                ax.semilogy(self.grid.r_mid / cm_per_kpc,
                     self.data[dd][field], ls = linestyles[i], 
                     color = color, label = labels[i])
 
             line_num += 1
                     
-        self.ax.set_xscale(xscale)
-        self.ax.set_yscale(yscale)    
-        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
-        self.ax.set_ylabel(r'Species Fraction')  
-        self.ax.set_ylim(1e-5, 1.5)
+        ax.set_xscale(xscale)
+        ax.set_yscale(yscale)    
+        ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
+        ax.set_ylabel(r'Species Fraction')  
+        ax.set_ylim(1e-5, 1.5)
         
         if annotate:
-            self.ax.legend(loc = 'lower right', ncol = len(fields), 
+            ax.legend(loc = 'lower right', ncol = len(fields), 
                 frameon = False)
 
-        pl.draw()        
+        pl.draw()   
+        
+        return ax     
             
     def TemperatureProfile(self, t = [10, 30, 100], color = 'k', ls = None, xscale = 'linear', 
-        legend = True):
+        legend = True, ax = None):
         """
         Plot radial profiles of temperature at times t (Myr).
         """  
         
-        if not hasattr(self, 'ax'):
-            self.ax = pl.subplot(111)
+        if ax is None:
+            ax = pl.subplot(111)
         else:
-            if legend:
-                legend = False
+            legend = False
                 
         if ls is None:
             ls = linestyles
         else:
             ls = [ls] * len(t)
         
-        self.ax.set_xscale('log')
-        self.ax.set_yscale('log')
+        ax.set_xscale('log')
+        ax.set_yscale('log')
         
         line_num = 0
         for dd in self.data.keys():
             if self.data[dd]['time'] / self.pf['time_units'] not in t: 
                 continue
             
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc,
+            ax.loglog(self.grid.r_mid / cm_per_kpc,
                 self.data[dd]['T'], ls = ls[line_num], color = color, label = r'$T_K$')
                 
             line_num += 1    
@@ -201,11 +202,12 @@ class Analyze:
         #    if legend:
         #        self.ax.legend(loc = 'upper right', frameon = False)
             
-        self.ax.set_xscale(xscale)    
-        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
-        self.ax.set_ylabel(r'Temperature $(K)$')  
-        pl.draw()                
+        ax.set_xscale(xscale)
+        ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
+        ax.set_ylabel(r'Temperature $(K)$')
+        pl.draw()
         
+        return ax                
 
 class AnalyzeOld:
     def __init__(self, pf, retabulate = False):

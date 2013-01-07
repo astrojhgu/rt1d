@@ -13,7 +13,7 @@ Description: Check to make sure there are no conflicts between parameters.
 import numpy as np
 
 known_conflicts = [ \
-    (['infinite_c', 0], ['parallel', 1]),
+    (['infinite_c', 0], ['parallelization', 1]),
     (['isothermal', 1], ['secondary_ionization', 1]),
     (['isothermal', 1], ['secondary_ionization', 2]),
     (['isothermal', 1], ['secondary_ionization', 3]),
