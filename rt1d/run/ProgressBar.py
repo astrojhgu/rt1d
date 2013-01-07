@@ -13,21 +13,21 @@ Description:
 try:
     import progressbar
     pb = True
-    widget = ["rt1d: ", progressbar.Percentage(), ' ', \
-              progressbar.Bar(marker = progressbar.RotatingMarker()), ' ', \
-              progressbar.ETA(), ' ']
 except ImportError:
     pb = False
 
 class ProgressBar:
-    def __init__(self, maxval):
+    def __init__(self, maxval, name = 'rt1d'):
         self.maxval = maxval
         
         if pb:
+            self.widget = ["%s: " % name, progressbar.Percentage(), ' ', \
+              progressbar.Bar(marker = progressbar.RotatingMarker()), ' ', \
+              progressbar.ETA(), ' ']
             self._start()
     
     def _start(self):
-        self.pbar = progressbar.ProgressBar(widgets = widget, 
+        self.pbar = progressbar.ProgressBar(widgets = self.widget, 
             maxval = self.maxval).start()
         
     def update(self, value):

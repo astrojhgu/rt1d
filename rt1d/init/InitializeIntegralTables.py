@@ -13,8 +13,8 @@ To do:
 """
 
 import numpy as np
-import os, scipy, itertools
 from ..run import ProgressBar
+import os, scipy, itertools, math
 from scipy.integrate import quad, romberg
 from ..physics.Constants import erg_per_ev
 from scipy.interpolate import LinearNDInterpolator
@@ -36,41 +36,45 @@ negligible_column = 1
 scipy.seterr(all = 'ignore')
 
 class IntegralTable: 
-    def __init__(self, pf, source, grid, Z = None, dims = None, 
-        Nmin = None, Nmax = None):
+    def __init__(self, pf, source, grid):
         self.pf = pf
+        
+        # Make these optional
         self.src = source
-                
-        # If no grid supplied, must have supplied all other keyword args
-        if not grid:
-            pass
+        self.grid = grid
+        
+        # Required bounds of table assuming minimum species fraction
+        self.logNlimits = \
+            self.TableBoundsAuto(self.src.SpectrumPars['smallest_x'])
+        
+        # Only override automatic table properties if the request table size
+        # is *bigger* than the default one.
+        self.N = []
+        self.logN = []
+        for i, absorber in enumerate(self.grid.absorbers):
             
-        else:
-            self.grid = grid
+            if self.src.SpectrumPars['logNmin'] < self.logNlimits[i][0]:
+                self.logNlimits[i][0] = self.src.SpectrumPars['logNmin'][i]
             
-            if dims is not None:
-                if type(dims) is int:
-                    dims = [dims] * len(grid.Z)
+            if self.src.SpectrumPars['logNmax'] < self.logNlimits[i][1]:
+                self.logNlimits[i][1] = self.src.SpectrumPars['logNmax'][i]
             
-            self.N = []         # All column densities
-            self.dims = []      # Length of each array of columns
-            self.Nrange = []    # Min/max for each absorbers N
-            for i, absorber in enumerate(self.grid.absorbers):
-                n = self.grid.species_abundances[absorber] * self.grid.n_H
-                logNmin = np.log10(1e-1 * np.min(n) * np.min(self.grid.dr))
-                logNmax = np.log10(np.sum(n * self.grid.dr))       
-                
-                self.Nrange.append((logNmin, logNmax))
-                
-                if dims is None: # 5 pts per order of magnitude by default
-                    d = int((logNmax - logNmin) / 0.2) + 1
-                else:
-                    d = dims[i]
-                
-                self.dims.append(d)
-                self.N.append(np.linspace(logNmin, logNmax, d))
-                
-        self.Nd = len(self.dims)        
+            logNmin, logNmax = self.logNlimits[i]
+            
+            d = int((logNmax - logNmin) / self.src.SpectrumPars['dlogN'][i]) + 1
+                        
+            self.logN.append(np.linspace(logNmin, logNmax, d))
+            self.N.append(np.logspace(logNmin, logNmax, d))
+                                
+        self.Nd = len(self.grid.Z) 
+        self.dims = [len(element) for element in self.N]       
+        
+        # What quantities are we going to compute?
+        self.IntegralList = self.ToCompute()
+        
+        # Create array of all combinations of column densities and 
+        # corresponding indices
+        self.TableProperties()
                 
         #self.cosm = Cosmology(pf)
         #self.esec = SecondaryElectrons(pf)
@@ -113,10 +117,7 @@ class IntegralTable:
         #    self.HeIColumn = np.ones_like(self.HIColumn) * tiny_number
         #    self.HeIIColumn = np.ones_like(self.HIColumn) * tiny_number
         
-        # What quantities are we going to compute?
-        self.IntegralList = self.ToCompute()
         
-        self.axes, self.indices = self.TableProperties()
         
         # What will our table look like?
         #self.Nd, self.Nt, self.dims, self.values, \
@@ -134,6 +135,21 @@ class IntegralTable:
             
         #self.tname = self.DetermineTableName() 
         
+    def TableBoundsAuto(self, xmin = 1e-5):
+        """
+        Calculate what the bounds of the table must be for a 
+        given grid.
+        """
+        
+        logNlimits = []
+        for i, absorber in enumerate(self.grid.absorbers):
+            n = self.grid.species_abundances[absorber] * self.grid.n_H
+            logNmin = math.floor(np.log10(xmin[i] * np.min(n) * np.min(self.grid.dr)))
+            logNmax = math.ceil(np.log10(np.sum(n * self.grid.dr)))
+            logNlimits.append((logNmin, logNmax))
+            
+        return logNlimits
+        
     def ToCompute(self):
         """
         Return list of quantities to compute.
@@ -143,13 +159,86 @@ class IntegralTable:
         if not self.grid.isothermal:
             integrals.append('Psi')
         
-        if self.grid.secondary_ionization >= 2:
+        if self.pf['secondary_ionization'] >= 2:
             integrals.extend(['PhiWiggle', 'PhiHat'])
             
             if not self.grid.isothermal:
                 integrals.extend(['PsiWiggle', 'PsiHat'])
         
         return integrals
+        
+    def TableProperties(self):
+        """
+        Figure out ND space of all lookup table elements.
+        """  
+        
+        Ns = len(self.grid.absorbers)
+
+        Nt = 1. * Ns            # Number of tables (unique quantities)
+        
+        #dims = [self.dims[0]]   # Number of elements in each dimension of each table        
+        #columns = [self.N[0]]
+        #colnames = ['logN%s' % self.grid.absorbers[0]]                    
+        #locs = [0]
+
+        if not self.grid.isothermal:
+            Nt += 1 * Ns   
+        
+        Nd = len(self.grid.absorbers)
+        
+        #for absorber in self.grid.absorbers:
+        #    Nd += 1
+        #    colnames
+                                    
+        #if self.pf['MultiSpecies'] >= 1:
+        #    Nd += 2
+        #    dims.extend([self.HeINBins, self.HeIINBins]) 
+        #    columns.extend([self.HeIColumn, self.HeIIColumn])
+        #    colnames.extend(['logNHeI', 'logNHeII'])
+        #    locs.extend([1, 2])
+          
+        #if self.pf['SecondaryIonization'] >= 2:
+        #    Nd += 1
+        #    Nt += 2. * (1. + 8 * self.pf['MultiSpecies'])  # Phi/Psi Wiggle
+        #    Nt += 2. * Ns                                  # Phi/Psi Hat
+        #    #dims.append(self.pf['IonizedFractionBins'])
+        #    columns.append(self.esec.log_xHII)
+        #    colnames.append('logx')
+        #    locs.append(3)
+            
+        #if self.pf['SourceTimeEvolution']:
+        #    Nd += 1
+        #    dims.append(self.pf['AgeBins'])
+        #    columns.append(self.src.Age)
+        #    colnames.append('Age')
+        #    locs.append(4)
+            
+        indices = []
+        for dims in self.dims:
+            indices.append(np.arange(dims))
+                
+        tmp1 = itertools.product(*self.logN)
+        tmp2 = itertools.product(*indices)
+        
+        values = []
+        for item in tmp1:
+            values.append(item) 
+        
+        indices = []
+        for item in tmp2:
+            indices.append(item)    
+                              
+        #else:
+        #    values = self.N[0]
+        #    indices = indices[0]     
+        #    dcol = np.diff(values)[0]    
+        
+        self.indices = np.array(indices)
+        self.axes = np.array(values)
+        self.elements_per_table = np.prod(self.indices.shape)
+            
+        #return np.array(values), #Nd, Nt, dims, values, indices, columns, dcol, locs, colnames
+            
                                     
     #def DetermineTableName(self):    
     #    """
@@ -452,8 +541,6 @@ class IntegralTable:
         #    if items_missing > 0:
         #        print ' '
                     
-        #pb = ProgressBar()            
-                    
         # Loop over integrals
         h = 0
         tabs = {}
@@ -464,25 +551,30 @@ class IntegralTable:
             for i, absorber in enumerate(self.grid.absorbers):
                 name = self.DatasetName(integral, species = absorber, 
                     donor_species = donor_species)
-                    
+                                        
                 if integral == 'Tau' and i > 0:
                     continue
+                                        
+                pb = ProgressBar(self.elements_per_table, name)    
                     
                 tab = np.zeros(self.dims)
                 for j, ind in enumerate(self.indices):
-                                                            
-                    k = h * len(self.IntegralList) \
-                      + i * len(self.grid.absorbers) + j + 1
-                    
+
                     if j % size != rank:
                         continue
                                
-                    tab[ind] = np.log10(self.Tabulate(integral, absorber, 10**self.axes[j]))
+                    tab[ind] = \
+                        np.log10(self.Tabulate(integral, absorber, self.axes[j]))
+                    
+                    pb.update(j)
                     
                 tabs[name] = tab.copy()
+            
+            pb.finish()
                     
             h += 1
             
+        print 'Integral tabulation complete.\n'    
             
         #h = 0
         #donor_species = 0
@@ -614,74 +706,6 @@ class IntegralTable:
         else:
             return values
             
-    def TableProperties(self):
-        """
-        Figure out ND space of all lookup table elements.
-        """  
-        
-        Ns = len(self.grid.absorbers)
-
-        Nt = 1. * Ns            # Number of tables (unique quantities)
-        
-        #dims = [self.dims[0]]   # Number of elements in each dimension of each table        
-        #columns = [self.N[0]]
-        #colnames = ['logN%s' % self.grid.absorbers[0]]                    
-        #locs = [0]
-
-        if not self.grid.isothermal:
-            Nt += 1 * Ns   
-        
-        Nd = len(self.grid.absorbers)
-        
-        #for absorber in self.grid.absorbers:
-        #    Nd += 1
-        #    colnames
-                                    
-        #if self.pf['MultiSpecies'] >= 1:
-        #    Nd += 2
-        #    dims.extend([self.HeINBins, self.HeIINBins]) 
-        #    columns.extend([self.HeIColumn, self.HeIIColumn])
-        #    colnames.extend(['logNHeI', 'logNHeII'])
-        #    locs.extend([1, 2])
-          
-        #if self.pf['SecondaryIonization'] >= 2:
-        #    Nd += 1
-        #    Nt += 2. * (1. + 8 * self.pf['MultiSpecies'])  # Phi/Psi Wiggle
-        #    Nt += 2. * Ns                                  # Phi/Psi Hat
-        #    #dims.append(self.pf['IonizedFractionBins'])
-        #    columns.append(self.esec.log_xHII)
-        #    colnames.append('logx')
-        #    locs.append(3)
-            
-        #if self.pf['SourceTimeEvolution']:
-        #    Nd += 1
-        #    dims.append(self.pf['AgeBins'])
-        #    columns.append(self.src.Age)
-        #    colnames.append('Age')
-        #    locs.append(4)
-            
-        indices = []
-        for dims in self.dims:
-            indices.append(np.arange(dims))
-                
-        tmp1 = itertools.product(*self.N)
-        tmp2 = itertools.product(*indices)
-        
-        values = []
-        for item in tmp1:
-            values.append(item) 
-        
-        indices = []
-        for item in tmp2:
-            indices.append(item)    
-                              
-        #else:
-        #    values = self.N[0]
-        #    indices = indices[0]     
-        #    dcol = np.diff(values)[0]    
-            
-        return np.array(values), np.array(indices)#Nd, Nt, dims, values, indices, columns, dcol, locs, colnames
-        
     #def IntegralNames(self):
     #    """
     #    Full names including species indices.
@@ -723,7 +747,7 @@ class IntegralTable:
         
         tau = 0.0
         for absorber in self.grid.absorbers:
-            tau += self.OpticalDepth(N[self.grid.absorbers.index(absorber)], 
+            tau += self.OpticalDepth(10**N[self.grid.absorbers.index(absorber)], 
                 absorber)
     
         return tau
@@ -781,16 +805,12 @@ class IntegralTable:
             return self.Psi(absorber, N)
         if integral == 'Tau':
             return self.TotalOpticalDepth(N)
-        if integral == 'Ptau':
-            return self.OpticalDepth(absorber, N)    
         
-    def Phi(self, absorber, N, donor_species = 0, xHII = 0.0, t = None):
+    def Phi(self, absorber, N):
         """
         Equation 10 in Mirocha et al. 2012.
         """
-                         
-        # Should have a parameter called axes                
-                                
+                                                         
         # Otherwise, continuous spectrum                
         if self.pf['photon_conserving']:
             #if self.pf['SpectrumFile'] is not 'None':
@@ -798,17 +818,19 @@ class IntegralTable:
             #        np.exp(-self.SpecificOpticalDepth(self.src.E[self.src.i_Eth[species]:], ncol)) / \
             #        (self.src.E[self.src.i_Eth[species]:] * erg_per_ev), self.src.E[self.src.i_Eth[species]:])
             #else:
-            integrand = lambda E: 1e-10 * self.src.Spectrum(E, t = t) * \
-                np.exp(-self.SpecificOpticalDepth(E, N)[0]) / \
-                (E * erg_per_ev)
+            t = 0
+            integrand = lambda E: self.src.Spectrum(E, t = t) * \
+                np.exp(-self.SpecificOpticalDepth(E, 10**N)[0]) / E
+                            
         else:
             integrand = lambda E: 1e-10 * PhotoIonizationCrossSection(E, species) * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
                 (E * erg_per_ev)
             
-        return 1e10 * quad(integrand,
-            max(self.grid.ioniz_thresholds[absorber], self.src.Emin), self.src.Emax)[0]
+        return quad(integrand,
+            max(self.grid.ioniz_thresholds[absorber], self.src.Emin), 
+            self.src.Emax)[0] / erg_per_ev
         
     def Psi(self, absorber, N, species = 0, donor_species = 0, xHII = 0.0, t = None):            
         """
@@ -823,7 +845,7 @@ class IntegralTable:
         #            ncol)), self.src.E[self.src.i_Eth[species]:])
             #else:
             integrand = lambda E: self.src.Spectrum(E, t = t) * \
-                np.exp(-self.SpecificOpticalDepth(E, N)[0])
+                np.exp(-self.SpecificOpticalDepth(E, 10**N)[0])
         else:
             integrand = lambda E: PhotoIonizationCrossSection(E, species) * \
                 self.src.Spectrum(E, t = t) * \

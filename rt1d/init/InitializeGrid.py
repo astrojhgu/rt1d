@@ -22,16 +22,13 @@ from ..physics.ComputeCrossSections import PhotoIonizationCrossSection
 tiny_number = 1e-8  # A relatively small species fraction
 
 class Grid:
-    def __init__(self, dims = 64, time_units = s_per_myr, 
-        length_units = cm_per_kpc, start_radius = 0.01, **kwargs):
+    def __init__(self, dims = 64, length_units = cm_per_kpc, start_radius = 0.01):
         """ Initialize grid object. """
         
         self.dims = int(dims)
-        self.time_units = time_units
         self.length_units = length_units
         self.start_radius = start_radius
-        self.kwargs = kwargs
-        
+                
         self.r_edg = self.r = \
             np.linspace(self.R0, length_units, self.dims + 1)
         self.dr = np.diff(self.r_edg)
@@ -202,7 +199,6 @@ class Grid:
             logN[absorber] = np.log10(N[absorber])
             Nc[absorber] = self.dr * data[absorber] \
                 * self.x_to_n[absorber]            
-                        
                     
         return N, logN, Nc     
         
@@ -224,7 +220,6 @@ class Grid:
         
         self.abundance = abundance
         self.isothermal = isothermal
-        self.secondary_ionization = secondary_ionization
         
         self.Z = np.array(Z)
         self.ions_by_ion = {}       # Ions sorted by parent element in dictionary

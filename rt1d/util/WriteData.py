@@ -34,7 +34,8 @@ except ImportError:
 GlobalDir = os.getcwd()
 
 class CheckPoints:
-    def __init__(self, pf = None, grid = None, dtDataDump = 5., time_units = s_per_myr):
+    def __init__(self, pf = None, grid = None, dtDataDump = 5., 
+        time_units = s_per_myr):
         
         self.pf = pf
         self.data = {}
@@ -51,6 +52,14 @@ class CheckPoints:
     def store_ics(self, data):
         nothing = self.update(data, 0., 1)
     
+    def store_kwargs(self, t, kwargs):
+        if not self.write_now(t):    
+            return
+        
+        dd = int(self.dd(t))
+        for kwarg in kwargs:
+            self.data[dd][kwarg] = kwargs[kwarg]
+        
     def update(self, data, t, dt):
         """
         Store data or don't.  If (t + dt) passes our next checkpoint,

@@ -38,13 +38,12 @@ def RTsim(pf = None):
         pf = parse_kwargs()
     
     # Initialize grid object
-    grid = rt1d.Grid(dims = pf['grid_cells'], time_units = pf['time_units'],
-        length_units = pf['length_units'], start_radius = pf['start_radius'])
+    grid = rt1d.Grid(dims = pf['grid_cells'], length_units = pf['length_units'],
+        start_radius = pf['start_radius'])
     
     # Set initial conditions
     grid.set_chem(Z = pf['species'], abundance = pf['abundances'], 
-        isothermal = pf['isothermal'], 
-        secondary_ionization = pf['secondary_ionization'])
+        isothermal = pf['isothermal'])
     grid.set_rho(rho0 = pf['density_units'])
     
     for i in xrange(len(pf['species'])):
@@ -89,6 +88,9 @@ def RTsim(pf = None):
         
         # Save timestep history
         dt_history.append((t, dt))
+        
+        if pf['save_rate_coefficients']:
+            checkpoints.store_kwargs(t, rt.kwargs)
 
     pb.finish()
         

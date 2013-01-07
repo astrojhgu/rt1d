@@ -43,7 +43,7 @@ class ComputeTimestep:
             elif mth == 'electrons':
                 new_dt = min(new_dt, 
                     np.min(dt[..., self.grid.all_species.index('de')]))
-            elif mth == 'energy':
+            elif mth == 'energy' and 'ge' in self.grid.all_species:
                 new_dt = min(new_dt, 
                     np.min(dt[..., self.grid.all_species.index('ge')]))
             else:

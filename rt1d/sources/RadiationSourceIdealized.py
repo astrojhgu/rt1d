@@ -38,7 +38,7 @@ ls = ['-', '--', ':', '-.']
 class RadiationSourceIdealized:
     def __init__(self, grid = None, **kwargs):
         self.pf = parse_kwargs(**kwargs)
-        self.grid = grid
+        self.grid = grid # since we probably need to know what species are being evolved
         
         # Create Source/SpectrumPars attributes    
         self.SourcePars = sort(self.pf, prefix = 'source', make_list = False)
@@ -63,29 +63,35 @@ class RadiationSourceIdealized:
         self.initialize()
         self.create_integral_table()
                 
-    def create_integral_table(self, Z = None, dims = None, 
-        Nmin = None, Nmax = None):
+    def create_integral_table(self, dlogN = None, logNmin = None, logNmax = None):
         
         if self.discrete:
             print 'This source does not have a continuous spectrum...'
             return
         
-        self.tab = IntegralTable(self.pf, self, self.grid,
-            Z = Z, dims = dims, Nmin = Nmin, Nmax = Nmax)
+        # Overide defaults if supplied
+        if dlogN is not None:
+            self.pf.update({'spectrum_dlogN': dlogN})
+        if logNmin is not None:
+            self.pf.update({'spectrum_logNmin': logNmin})
+        if logNmax is not None:
+            self.pf.update({'spectrum_logNmax': logNmax})
+        
+        self.tab = IntegralTable(self.pf, self, self.grid)
             
         # Tabulate away!    
         self.tabs = self.tab.TabulateRateIntegrals()    
         self.tables = {}
         
-        # Set up interpolation tables  
+        # Set up interpolation tables
         if self.tab.Nd == 1:
             from scipy.interpolate import interp1d
         
             for tab in self.tabs:
                 self.tables[tab] = \
-                    interp1d(self.tab.N[0], self.tabs[tab], 
+                    interp1d(self.tab.logN[0], self.tabs[tab], 
                     kind = 'cubic', bounds_error = False,
-                    fill_value = 0.0)
+                    fill_value = self.tabs[tab][0])
         
         elif self.tab.Nd == 2:
             from scipy.interpolate import RectBivariteSpline
@@ -557,8 +563,8 @@ class RadiationSourceIdealized:
         else: 
             Lbol = 1.
         
-        E = np.logspace(np.log10(min(self.SpectrumPars['MinNormEnergy'])), 
-            np.log10(max(self.SpectrumPars['MaxNormEnergy'])), bins)
+        E = np.logspace(np.log10(min(self.SpectrumPars['EminNorm'])), 
+            np.log10(max(self.SpectrumPars['EmaxNorm'])), bins)
         F = []
         
         for energy in E:
@@ -567,9 +573,9 @@ class RadiationSourceIdealized:
         if components and self.N > 1:
             EE = []
             FF = []
-            for i, component in enumerate(self.SpectrumPars['Type']):
-                tmpE = np.logspace(np.log10(self.SpectrumPars['MinEnergy'][i]), 
-                    np.log10(self.SpectrumPars['MaxEnergy'][i]), bins)
+            for i, component in enumerate(self.SpectrumPars['type']):
+                tmpE = np.logspace(np.log10(self.SpectrumPars['Emin'][i]), 
+                    np.log10(self.SpectrumPars['Emax'][i]), bins)
                 tmpF = []
                 for energy in tmpE:
                     tmpF.append(self.Spectrum(energy, t = t, only = component))

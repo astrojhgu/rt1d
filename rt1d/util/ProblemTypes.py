@@ -110,7 +110,7 @@ def ProblemType(ptype):
              }
             
     # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, *continuous spectrum*
-    if ptype in [2, 2.1]:
+    if ptype == 2:
        pf = {"problem_type": 2, 
              "density_units": 1e-3 * m_H,
              "length_units": 6.6 * cm_per_kpc, 
@@ -122,12 +122,31 @@ def ProblemType(ptype):
              "secondary_ionization": 0,
              "initial_temperature": 1e2,
              "initial_ionization": [1.2e-3], 
-             "source_type": 0, 
-             "spectrum_qdot": 5e48, 
-             "spectrum_E": [17.98, 31.15, 49.09, 76.98],
-             "spectrum_LE": [0.23, 0.36, 0.24, 0.06],
+             "source_type": 1, 
+             "source_temperature": 1e5,
+             "spectrum_type": 1,
+             "spectrum_qdot": 5e48,
             }
 
+    # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, *discrete spectrum*
+    if ptype == 2.1:
+      pf = {"problem_type": 2, 
+            "density_units": 1e-3 * m_H,
+            "length_units": 6.6 * cm_per_kpc, 
+            "stop_time": 500.0, 
+            "dtDataDump": 10.0, 
+            "isothermal": 0,
+            "restricted_timestep": ['ions', 'energy'],
+            "species": [1],
+            "secondary_ionization": 0,
+            "initial_temperature": 1e2,
+            "initial_ionization": [1.2e-3], 
+            "source_type": 0, 
+            "spectrum_qdot": 5e48, 
+            "spectrum_E": [17.98, 31.15, 49.09, 76.98],
+            "spectrum_LE": [0.23, 0.36, 0.24, 0.06],
+           }
+    
             
     # RT06-2: Hydrogen + helium, I-front expansion, temperature evolution allowed, *continuous spectrum*
     if ptype == 12:

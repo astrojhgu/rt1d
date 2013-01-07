@@ -73,8 +73,6 @@ class RadiationField:
             else:
                 self.TabulatedCoefficients(data, absorber)
                 self.tau_tot = 10**self.src.tables["logTau"](self.logN_by_cell)
-                print self.Gamma.shape
-                print self.tau_tot.shape
                 
         return self.Gamma, self.gamma, self.k_H
         
@@ -137,7 +135,7 @@ class RadiationField:
                     continue    
                 
                 fion = self.esec.DepositionFraction(E = E, 
-                    xHII = data['h_2'], channel = absorber)
+                    xHII = data['h_2'], channel = absor1ber)
                                                                         
                 # (This k) = i from paper, and (this i) = j from paper
                 self.gamma[...,k,i] += ee * fion \
@@ -152,8 +150,13 @@ class RadiationField:
         continuous SED.  Also compute optical depth.
         """
         
-        self.Gamma, Phi_N, Phi_N_dN = self.PhotoIonizationRate(absorber)
-        self.k_H, Psi_N, Psi_N_dN = self.PhotoElectricHeatingRate(absorber)
+        i = self.grid.absorbers.index(absorber)
+        self.Gamma[..., i], self.Phi_N, self.Phi_N_dN = \
+            self.PhotoIonizationRate(absorber)
+            
+        if not self.grid.isothermal:
+            self.k_H[..., i], Psi_N, Psi_N_dN = \
+                self.PhotoElectricHeatingRate(data, absorber)
                 
     def PhotoIonizationRateMultiFreq(self, qdot, n, tau_r_E, tau_c):
         """
@@ -175,26 +178,29 @@ class RadiationField:
         Returns photo-ionization rate coefficient for continuous source.
         """     
         
-        N = self.N_by_cell
-        NdN = N.copy()        
+        self.NdN = self.N_by_cell.copy()        
         i = self.grid.absorbers.index(absorber)
-        NdN[..., i] += self.Nc_by_cell[..., i]
+        self.NdN[..., i] += self.Nc_by_cell[..., i]
                                 
         Phi_N = None
         Phi_N_dN = None
                                         
         if self.pf['photon_conserving']:
-            Phi_N = self.src.tables["logPhi_%s" % absorber](N)
-            Phi_N_dN = self.src.tables["logPhi_%s" % absorber](NdN)
+            Phi_N = 10**self.src.tables["logPhi_%s" % absorber](self.logN_by_cell).squeeze()
+            Phi_N_dN = 10**self.src.tables["logPhi_%s" % absorber](np.log10(self.NdN)).squeeze()
             IonizationRate = Phi_N - Phi_N_dN
         #else:                
         #    Phi_N = rs.Interpolate.interp(indices_in, "logPhi_%i" % species, 
         #        [ncol[0], ncol[1], ncol[2], x_HII, t])       
         #    IonizationRate = Phi_N
         
-        A = self.src.Lbol / self.n[absorber] / self.grid.Vsh
+        # Phi_N and Phi_N_dN are grid x absorbers
+        # A is grid
         
-        return A * IonizationRate, Phi_N, Phi_N_dN
+        self.A = self.src.Lbol / self.n[absorber] / self.grid.Vsh
+                
+        #print Phi_N[0], Phi_N_dN[0], self.A * IonizationRate
+        return self.A * IonizationRate, Phi_N, Phi_N_dN
         
     def PhotoElectricHeatingRate(self, data, absorber):
         """
@@ -207,18 +213,21 @@ class RadiationField:
         
         if self.esec.Method < 2:
             if self.pf['photon_conserving']:
-                Psi_N = self.src.tables["logPsi_%s" % absorber](N)
-                Psi_N = self.src.tables["logPsi_%s" % absorber](NdN)
+                Psi_N = 10**self.src.tables["logPsi_%s" % absorber](self.logN_by_cell).squeeze()
+                Psi_N_dN = 10**self.src.tables["logPsi_%s" % absorber](np.log10(self.NdN)).squeeze()
                 
                 heat = Psi_N - Psi_N_dN \
                      - self.grid.ioniz_thresholds[absorber] \
-                     * erg_per_ev * (Phi_N - Phi_N_dN)
+                     * erg_per_ev * (self.Phi_N - self.Phi_N_dN)
             #else:
             #    Psi_N = rs.Interpolate.interp(indices_in, "logPsi%i" % species, 
             #        [ncol[0], ncol[1], ncol[2], x_HII, t])
             #    heat = Psi_N
                 
-            return A * self.esec.DepositionFraction(0.0, x_HII, channel = 0) * heat, Psi_N, Psi_N_dN    
+            fheat = self.esec.DepositionFraction(0.0, data['h_2'], 
+                channel = 'heat')    
+                                
+            return self.A * fheat * heat, Psi_N, Psi_N_dN    
                 
         else:
             if rs.pf['PhotonConserving']:

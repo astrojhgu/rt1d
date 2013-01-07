@@ -13,8 +13,10 @@ Description:
 import rt1d
 import pylab as pl
 
-sim = rt1d.run.RTsim(pf = {'problem_type': 2, 'source_type': 1})
+sim = rt1d.run.RTsim(pf = {'problem_type': 2})
+
 anl = rt1d.analysis.Analyze(sim.checkpoints)
+
 anl.TemperatureProfile(t = [10, 100, 500])
 anl.ax.set_ylim(1e3, 4e4)
 anl.ax.set_xlim(0, 6.6)

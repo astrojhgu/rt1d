@@ -79,14 +79,14 @@ class Radiation:
         Gamma, gamma, Heat = self.rfield.SourceDependentCoefficients(data, t)            
 
         # Each is (grid x absorbers)
-        kwargs = {'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma}
+        self.kwargs = {'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma}
                 
         # Compute source independent rate coefficients
         if (not self.grid.isothermal) or (t == 0):
-            kwargs.update(self.chem.chemnet.SourceIndependentCoefficients(data['T']))
+            self.kwargs.update(self.chem.chemnet.SourceIndependentCoefficients(data['T']))
 
         # SOLVE
-        newdata = self.chem.Evolve(data, dt, **kwargs)
+        newdata = self.chem.Evolve(data, dt, **self.kwargs)
                 
         ### 
         ## Tidy up a bit

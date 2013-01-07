@@ -107,18 +107,21 @@ def SpectrumParameters():
           
         "spectrum_E": [13.6],  
         "spectrum_LE": [1.],  
-        
-        "ForceIntegralTabulation": 0,
-        
+                
         "spectrum_table": 'None',
         
-        "IntegralTable": 'None',  
-        "RegenerateTable": 0,  
-        "ColumnDensityBinsHI": 200,  
-        "ColumnDensityBinsHeI": 100,  
-        "ColumnDensityBinsHeII": 100,  
-        "IonizedFractionBins": 20,
-        "AgeBins": 20,
+        "spectrum_dlogN": [0.1],
+        "spectrum_logNmin": [16],
+        "spectrum_logNmax": [21],
+        "spectrum_smallest_x": 1e-5,
+        
+        #"IntegralTable": 'None',  
+        #"RegenerateTable": 0,  
+        #"ColumnDensityBinsHI": 200,  
+        #"ColumnDensityBinsHeI": 100,  
+        #"ColumnDensityBinsHeII": 100,  
+        #"IonizedFractionBins": 20,
+        #"AgeBins": 20,
         }
         
     return pf       
@@ -173,6 +176,7 @@ def ControlParameters():
         "restricted_timestep": ['ions'],
         "tau_ifront": 0.5,
         "parallel": 0,
+        "save_rate_coefficients": 1,
         
         }
         
