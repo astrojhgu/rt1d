@@ -81,7 +81,6 @@ class CheckPoints:
         return False    
         
     def new_dt(self, t, dt):   
-        
         last_dd = int(self.dd(t))
         next_dd = last_dd + 1
          
@@ -97,6 +96,12 @@ class CheckPoints:
     def name(self, t):
         ct = int(self.dd(t))
         return '%s%s' % (self.basename, str(ct).zfill(self.fill))
+        
+    def dump(self, fn):
+        """ Write out data to file. """
+    
+        f = h5py.File(fn, 'w')
+        
             
         
 

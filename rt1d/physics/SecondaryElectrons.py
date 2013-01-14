@@ -31,6 +31,7 @@ class SecondaryElectrons:
             # Read in Furlanetto & Stoever lookup tables
             self.E = f["electron_energy"].value
             self.x = f["ionized_fraction"].value
+            self.logx = np.log10(self.x)
             
             from scipy.interpolate import RectBivariateSpline
             
@@ -41,7 +42,7 @@ class SecondaryElectrons:
             self.fexc = RectBivariateSpline(self.E, self.x, f["fexc"].value)
             self.flya = RectBivariateSpline(self.E, self.x, f['f_Lya'].value)
             
-            f.close()        
+            f.close()
 
     def DepositionFraction(self, E, xHII, channel = 'heat'):
         """

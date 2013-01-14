@@ -13,6 +13,7 @@ Description:
 import rt1d
 import pylab as pl
 
+sim2 = rt1d.run.RTsim(pf = {'problem_type': 2, 'secondary_ionization': 2})
 sim0 = rt1d.run.RTsim(pf = {'problem_type': 2})
 sim1 = rt1d.run.RTsim(pf = {'problem_type': 2, 'secondary_ionization': 1,
     'source_table': sim0.rt.src.tabs})
@@ -30,4 +31,6 @@ ax = anl0.IonizationProfile(t = [10, 100, 500], annotate = True)
 anl1.IonizationProfile(t = [10, 100, 500], color = 'b', ax = ax)
 
 raw_input('')
+
+
 

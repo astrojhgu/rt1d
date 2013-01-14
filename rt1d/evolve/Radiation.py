@@ -24,7 +24,7 @@ class Radiation:
         self.src = source
         
         # Initialize chemistry network / solver
-        self.chem = Chemistry(grid)
+        self.chem = Chemistry(grid, rt = kwargs['radiative_transfer'])
         
         # Initialize RT solver
         self.rfield = RadiationField(grid, source, **kwargs)

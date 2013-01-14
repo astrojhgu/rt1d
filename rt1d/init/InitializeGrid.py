@@ -31,6 +31,7 @@ class Grid:
                 
         self.r_edg = self.r = \
             np.linspace(self.R0, length_units, self.dims + 1)
+        self.r_int = self.r_edg[0:-1]
         self.dr = np.diff(self.r_edg)
         self.r_mid = rebin(self.r_edg)
         

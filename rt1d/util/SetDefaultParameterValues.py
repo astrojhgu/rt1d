@@ -93,6 +93,7 @@ def SpectrumParameters():
     pf = \
         {        
         "spectrum_type": 0,
+        "spectrum_components": 1,
         
         "spectrum_fraction": 1,
         "spectrum_alpha": 1.5,
@@ -101,9 +102,8 @@ def SpectrumParameters():
         "spectrum_EminNorm": 0.01,  
         "spectrum_EmaxNorm": 5e2,  
          
-        "spectrum_N": 0,
         "spectrum_fcol": 1.7,
-        "spectrum_file": 'None',
+        "spectrum_file": None,
         
         "spectrum_multigroup": 0,
         "spectrum_bands": [13.6, 24.6, 54.4],
@@ -113,20 +113,15 @@ def SpectrumParameters():
                 
         "spectrum_table": None,
         
-        "spectrum_dlogN": [0.2],
         "spectrum_logNmin": [16],
         "spectrum_logNmax": [21],
         "spectrum_smallest_x": 1e-5,
         
+        "spectrum_dlogN": [0.2],
         "spectrum_dlogx": 0.1,
+        "spectrum_dE": 5.,
+        "spectrum_dt": s_per_myr,
         
-        #"IntegralTable": 'None',
-        #"RegenerateTable": 0,  
-        #"ColumnDensityBinsHI": 200,  
-        #"ColumnDensityBinsHeI": 100,  
-        #"ColumnDensityBinsHeII": 100,  
-        #"IonizedFractionBins": 20,
-        #"AgeBins": 20,
         }
         
     return pf       
@@ -143,7 +138,7 @@ def ControlParameters():
         "dzDataDump": 0.0,  
         "LogarithmicDataDump": 0,
         "InitialLogDataDump": 1e-6,
-        "NlogDataDumps": 100, 
+        "NlogDataDumps": 100,
         "DataDumpName": 'dd',  
         "OutputDirectory": '.',  
         "OutputFormat": 1,  

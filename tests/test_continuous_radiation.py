@@ -21,7 +21,7 @@ grid.set_chem(Z = [1], abundance = 'cosmic', isothermal = 0)
 grid.set_rho(rho0 = 1e-27)
 
 # Initialize radiation source
-src_pars = {'problem_type': 2}
+src_pars = {'problem_type': 2, 'photon_conserving': 0}
 src = rt1d.sources.RadiationSourceIdealized(grid, **src_pars)
 
 # Plot Phi
@@ -38,8 +38,8 @@ pl.ylabel(r'$\Phi_{\mathrm{HI}}$')
 raw_input('')
 pl.close()
 
-pl.scatter(src.tab.N[0], 10**src.tabs['logPsi_h_1'], 
-    color = 'k', s = 50)
+# Plot Psi
+pl.scatter(src.tab.N[0], 10**src.tabs['logPsi_h_1'], color = 'k', s = 50)
 pl.loglog(10**logN, 10**src.tables['logPsi_h_1'](logN), color = 'k')
 pl.xlabel(r'Column Density $N_{\mathrm{HI}} \ (\mathrm{cm}^{-2})$')
 pl.ylabel(r'$\Psi_{\mathrm{HI}}$')
@@ -47,8 +47,8 @@ pl.ylabel(r'$\Psi_{\mathrm{HI}}$')
 raw_input('')
 pl.close()
 
-pl.scatter(src.tab.N[0], 10**src.tabs['logTau'],
-    color = 'k', s = 50)
+# Plot optical depth
+pl.scatter(src.tab.N[0], 10**src.tabs['logTau'], color = 'k', s = 50)
 pl.loglog(10**logN, 10**src.tables['logTau'](logN), color = 'k')
 pl.xlabel(r'Column Density $N_{\mathrm{HI}} \ (\mathrm{cm}^{-2})$')
 pl.ylabel(r'$\tau$')

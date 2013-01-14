@@ -21,6 +21,9 @@ way:
 More notes:
 10 + ProblemType = same as ProblemType but MultiSpecies = 1    
 
+*use pf.update to accomplish this rather than redundant dicts*
+
+
 """
 
 import numpy as np

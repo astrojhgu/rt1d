@@ -15,11 +15,10 @@ from ..physics.Constants import *
 from scipy.integrate import quad, romberg
 from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
+import re
 import numpy as np
 from ..util import parse_kwargs
 from ..init.InitializeIntegralTables import IntegralTable
-
-
 
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB
                             # will return 0 as it should for x large
@@ -64,6 +63,9 @@ class RadiationSourceIdealized:
         self.create_integral_table()
                 
     def create_integral_table(self, dlogN = None, logNmin = None, logNmax = None):
+        """
+        Take tables and create interpolation functions.
+        """
         
         if self.discrete:
             return
@@ -85,25 +87,44 @@ class RadiationSourceIdealized:
             self.tabs = self.SourcePars['table']
                 
         self.tables = {}
+        self.interp = {}
         
         # Set up interpolation tables
         if self.tab.Nd == 1:
+
             from scipy.interpolate import interp1d
-        
+            
             for tab in self.tabs:
                 self.tables[tab] = \
                     interp1d(self.tab.logN[0], self.tabs[tab], 
                     kind = 'cubic', bounds_error = False,
                     fill_value = self.tabs[tab][0])
+                    
+                self.interp[tab] = lambda logN, logx = None: \
+                    self.tables[tab].__call__(logN[..., 0])    
         
         elif self.tab.Nd == 2:
-            from scipy.interpolate import RectBivariteSpline
+
+            from scipy.interpolate import interp1d, RectBivariateSpline
         
             for tab in self.tabs:
+                if re.search('logPhi', tab) or re.search('logTau', tab):
+                    self.tables[tab] = \
+                        interp1d(self.tab.logN[0], self.tabs[tab], 
+                        kind = 'cubic', bounds_error = False,
+                        fill_value = self.tabs[tab][0])
+                    
+                    self.interp[tab] = lambda logN, logx = None: \
+                        self.tables[tab].__call__(logN[0])
+        
+                    continue
+        
                 self.tables[tab] = \
-                    RectBivariteSpline(self.tab.N[0], self.tab.N[1], 
-                    self.tabs[tab], bounds_error = False,
-                    fill_value = 0.0)
+                    RectBivariateSpline(self.tab.axes[0], self.tab.axes[1], 
+                    self.tabs[tab])
+                
+                self.interp[tab] = lambda logN, logx = None: \
+                    self.tables[tab].__call__(logN[0], logN[1])
         
         else:    
             # Set up interpolation tables
@@ -120,9 +141,7 @@ class RadiationSourceIdealized:
                 Nrav.append(element.ravel())
             
             pts = np.array(Nrav).T
-            
-            
-            
+                        
             #print pts.shape, self.tabs['logPhi_h_1'].ravel().shape
             
             self.tables = {}
@@ -359,8 +378,9 @@ class RadiationSourceIdealized:
         else:
             Lnu = 0.0
             
-        if self.SpectrumPars['N'][i] > 0:
-            return Lnu * np.exp(-self.SpectrumPars['N'][i] * (sigma_E(E, 0) + y * sigma_E(E, 1)))   
+        if self.SpectrumPars['components'][i] > 0:
+            return Lnu * np.exp(-self.SpectrumPars['components'][i] \
+                * (sigma_E(E, 0) + y * sigma_E(E, 1)))   
         else:
             return Lnu     
                 

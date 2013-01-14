@@ -17,12 +17,13 @@ from scipy.integrate import ode
 from ..physics.Constants import k_B
 
 class Chemistry:
-    def __init__(self, grid, dengo = False):
+    def __init__(self, grid, dengo = False, rt = False):
         """
         Initialize chemistry solver with InitializeGrid.Grid class instance.
         """
         self.grid = grid
         self.dengo = dengo
+        self.rtON = rt
         
         if dengo:
             from ..init.InitializeChemicalNetwork import \
@@ -38,7 +39,9 @@ class Chemistry:
             method = 'bdf', nsteps = 1e4, with_jacobian = True,
             atol = 1e-12, rtol = 1e-8)
             
-        self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.all_species)])    
+        self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.all_species)])
+        self.zeros_grid_x_abs = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+        self.zeros_grid_x_abs2 = np.zeros_like(self.grid.zeros_grid_x_absorbers2)
             
     def Evolve(self, data, dt, **kwargs):
         """
@@ -66,8 +69,13 @@ class Chemistry:
                 q[i] = data[species][cell]
                 
             kwargs_cell = kwargs_by_cell[cell]
-            args = (cell, kwargs_cell['Gamma'], kwargs_cell['gamma'], 
+            
+            if self.rtON:
+                args = (cell, kwargs_cell['Gamma'], kwargs_cell['gamma'], 
                     kwargs_cell['Heat'])
+            else:
+                args = (cell, self.zeros_grid_x_abs, self.zeros_grid_x_abs2, 
+                    self.zeros_grid_x_abs)
                             
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)

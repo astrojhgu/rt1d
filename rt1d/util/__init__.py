@@ -9,18 +9,19 @@ from .SetDefaultParameterValues import *
 from .ReadParameterFile import ReadParameterFile, ReadRestartFile
 from .CheckForParameterConflicts import CheckForParameterConflicts
 
+defs = SetAllDefaults()
 def parse_kwargs(**kwargs):
     """
     Parse kwargs dictionary - populate with defaults.
     """    
     
-    pf = SetAllDefaults()
+    pf = defs.copy()
     
     if 'problem_type' in kwargs:
         pf.update(ProblemType(kwargs['problem_type']))
     
     pf.update(kwargs)
-    
+        
     conflicts = CheckForParameterConflicts(pf)
 
     if conflicts:
