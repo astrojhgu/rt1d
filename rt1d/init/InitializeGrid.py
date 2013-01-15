@@ -215,7 +215,7 @@ class Grid:
                 self.x_to_n_converter[ion] = self.n_H \
                     * self.species_abundances[ion]  
         
-        return self.x_to_n_converter    
+        return self.x_to_n_converter
         
     def ColumnDensity(self, data):
         """

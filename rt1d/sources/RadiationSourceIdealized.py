@@ -18,7 +18,9 @@ from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_
 import re
 import numpy as np
 from ..util import parse_kwargs
+from ..init.InitializeInterpolation import LookupTable
 from ..init.InitializeIntegralTables import IntegralTable
+
 
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB
                             # will return 0 as it should for x large
@@ -55,7 +57,7 @@ class RadiationSourceIdealized:
         self.continuous = not self.discrete
         
         # We don't allow multi-component discrete spectra...for now
-        # would we ever want/need this? lines on top of continuous spectrum...
+        # would we ever want/need this? lines on top of continuous spectrum perhaps...
         self.multi_group = self.discrete and self.SpectrumPars['multigroup'][0] 
         self.multi_freq = self.discrete and not self.SpectrumPars['multigroup'][0] 
 
@@ -70,7 +72,7 @@ class RadiationSourceIdealized:
         if self.discrete:
             return
         
-        # Overide defaults if supplied
+        # Overide defaults if supplied - this is dangerous
         if dlogN is not None:
             self.pf.update({'spectrum_dlogN': dlogN})
         if logNmin is not None:
@@ -81,85 +83,35 @@ class RadiationSourceIdealized:
         self.tab = IntegralTable(self.pf, self, self.grid)
             
         # Tabulate away!
-        if self.SourcePars['table'] is None:    
+        if self.SourcePars['table'] is None:
             self.tabs = self.tab.TabulateRateIntegrals()  
         else:
             self.tabs = self.SourcePars['table']
                 
         self.tables = {}
-        self.interp = {}
-        
-        # Set up interpolation tables
-        if self.tab.Nd == 1:
-
-            from scipy.interpolate import interp1d
-            
-            for tab in self.tabs:
-                self.tables[tab] = \
-                    interp1d(self.tab.logN[0], self.tabs[tab], 
-                    kind = 'cubic', bounds_error = False,
-                    fill_value = self.tabs[tab][0])
-                    
-                self.interp[tab] = lambda logN, logx = None: \
-                    self.tables[tab].__call__(logN[..., 0])    
-        
-        elif self.tab.Nd == 2:
-
-            from scipy.interpolate import interp1d, RectBivariateSpline
-        
-            for tab in self.tabs:
-                if re.search('logPhi', tab) or re.search('logTau', tab):
-                    self.tables[tab] = \
-                        interp1d(self.tab.logN[0], self.tabs[tab], 
-                        kind = 'cubic', bounds_error = False,
-                        fill_value = self.tabs[tab][0])
-                    
-                    self.interp[tab] = lambda logN, logx = None: \
-                        self.tables[tab].__call__(logN[0])
-        
-                    continue
-        
-                self.tables[tab] = \
-                    RectBivariateSpline(self.tab.axes[0], self.tab.axes[1], 
-                    self.tabs[tab])
-                
-                self.interp[tab] = lambda logN, logx = None: \
-                    self.tables[tab].__call__(logN[0], logN[1])
-        
-        else:    
-            # Set up interpolation tables
-            from scipy.interpolate import LinearNDInterpolator
-            
-            # or scipy.ndimage.map_coordinates
-        
-            Ngrid = []
-            for element in self.tab.N:
-                Ngrid.append(element * np.ones([len(element)] * self.tab.Nd))
-                        
-            Nrav = []
-            for element in Ngrid:
-                Nrav.append(element.ravel())
-            
-            pts = np.array(Nrav).T
-                        
-            #print pts.shape, self.tabs['logPhi_h_1'].ravel().shape
-            
-            self.tables = {}
-            for tab in self.tabs:
-                print tab, pts.shape, self.tabs[tab].ravel().shape
-                self.tables[tab] = LinearNDInterpolator(pts, self.tabs[tab].ravel())
-                    
+        for tab in self.tabs:
+            self.tables[tab] = \
+                LookupTable(self.pf, tab, self.tab.logN, self.tabs[tab], 
+                    self.tab.logx, self.tab.t)
     
     def _init_multi_freq(self):
         pass
         
-    def _init_star(self):    
+    def _init_star(self):
         pass
         
     def _init_bh(self):
         pass
         
-    def initialize(self):    
+    @property
+    def sigma_bar(self):
+        pass
+    
+    @property
+    def sigma_tilde(self):
+        pass    
+        
+    def initialize(self):
         """
         Create attributes we need, normalize, etc.
         """
@@ -265,7 +217,7 @@ class RadiationSourceIdealized:
         #        self.Qdot[i] = Qnorm * self.Lbol * Q
                 
         # Time evolution
-        if self.SourcePars['evolving']:
+        if np.any(self.SpectrumPars['evolving']):
             self.Age = np.linspace(0, self.pf['stop_time'] * self.pf['time_units'], self.pf['AgeBins'])
                                               
     def GravitationalRadius(self, M):

@@ -19,10 +19,13 @@ way:
     Physics parameters
     
 More notes:
-10 + ProblemType = same as ProblemType but MultiSpecies = 1    
-
-*use pf.update to accomplish this rather than redundant dicts*
-
+-Non-integer problem types are the same as their integer counterparts
+ but with discrete SEDs rather than continuous ones.
+-A problem type > 10 corresponds to the same problem as problem_type % 10, 
+ except helium is included.
+  -To compare apples to apples, remember to modify density_units so that the
+   absolute number density of hydrogen remains unchanged. Or, modify
+   the abundances parameter.
 
 """
 
@@ -34,6 +37,10 @@ def ProblemType(ptype):
     Storage bin for predefined problem types, like those used in the 
     radiative transfer comparison project ('RT06').
     """
+    
+    ptype_int = int(ptype)
+    if ptype_int > 10:
+        ptype_int -= 10
     
     # RT06-0.3, Single zone ionization/heating, then source switches off.
     if ptype == 0:
@@ -53,8 +60,8 @@ def ProblemType(ptype):
               "ColumnDensityBinsHI": 100,
               "DensityUnits": m_H,
               "DensityProfile": 0,
-              "InitialDensity": 1., 
-              "TemperatureProfile": 0, 
+              "InitialDensity": 1.,
+              "TemperatureProfile": 0,
               "InitialTemperature": 1e2,
               "IonizationProfile": 0, 
               "InitialHIIFraction": 1e-6, 
@@ -92,11 +99,11 @@ def ProblemType(ptype):
               "DiscreteSpectrum": 1,
               "Isothermal": 0,
               "OpticalDepthDefiningIFront": [0, 0, 0]
-             }  
-                       
+             }                         
     
-    # RT06-1, RT1: Pure hydrogen, isothermal HII region expansion, monochromatic spectrum at 13.6 eV
-    if ptype in [1, 1.1]:
+    # RT06-1, RT1: Pure hydrogen, isothermal HII region expansion, 
+    # monochromatic spectrum at 13.6 eV
+    if ptype_int == 1:
         pf = {"problem_type": 1, 
               "density_units": 1e-3 * m_H,
               "length_units": 6.6 * cm_per_kpc, 
@@ -112,120 +119,39 @@ def ProblemType(ptype):
               "spectrum_LE": [1.0],
              }
             
-    # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, *continuous spectrum*
-    if ptype == 2:
-       pf = {"problem_type": 2, 
-             "density_units": 1e-3 * m_H,
-             "length_units": 6.6 * cm_per_kpc, 
-             "stop_time": 500.0, 
-             "dtDataDump": 10.0, 
-             "isothermal": 0,
-             "restricted_timestep": ['ions', 'energy'],
-             "species": [1],
-             "secondary_ionization": 0,
-             "initial_temperature": 1e2,
-             "initial_ionization": [1.2e-3], 
-             "source_type": 1, 
-             "source_temperature": 1e5,
-             "spectrum_type": 1,
-             "spectrum_qdot": 5e48,
-            }
-
-    # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, *discrete spectrum*
-    if ptype == 2.1:
-      pf = {"problem_type": 2, 
-            "density_units": 1e-3 * m_H,
-            "length_units": 6.6 * cm_per_kpc, 
-            "stop_time": 500.0, 
-            "dtDataDump": 10.0, 
-            "isothermal": 0,
-            "restricted_timestep": ['ions', 'energy'],
-            "species": [1],
-            "secondary_ionization": 0,
-            "initial_temperature": 1e2,
-            "initial_ionization": [1.2e-3], 
-            "source_type": 0, 
-            "spectrum_qdot": 5e48, 
-            "spectrum_E": [17.98, 31.15, 49.09, 76.98],
-            "spectrum_LE": [0.23, 0.36, 0.24, 0.06],
-           }
-    
-            
-    # RT06-2: Hydrogen + helium, I-front expansion, temperature evolution allowed, *continuous spectrum*
-    if ptype == 12:
-       pf = {"ProblemType": 12, 
-             "DensityUnits": 2.2245547230998267e-27,
-             "LengthUnits": 6.6 * cm_per_kpc,
-             "StopTime": 500.0,
-             "dtDataDump": 10.0, 
-             "OutputRates": 1,
-             "MinimumSpeciesFraction": 1e-6, 
-             "DensityProfile": 0, 
-             "TemperatureProfile": 0, 
-             "InitialTemperature": 1e2,
-             "IonizationProfile": 0, 
-             "InitialHIIFraction": 1.2e-3, 
-             "MultiSpecies": 1,
-             "SourceType": 1, 
-             "SpectrumType": 1,
-             "SpectrumPhotonLuminosity": 5e48, 
-             "SpectrumMinEnergy": 13.6, 
-             "SpectrumMaxEnergy": 100.,
-             "SpectrumMinNormEnergy": 0.1, 
-             "SpectrumMaxNormEnergy": 100., 
-             "DiscreteSpectrum": 0,
-             "Isothermal": 0 
-            }        
-            
-    # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum of Wise & Abel (2011)
-    if ptype == 2.1:
-        pf = {"ProblemType": 2, 
-              "DensityUnits": 1e-3 * m_H,
-              "LengthUnits": 6.6 * cm_per_kpc,
-              "StopTime": 500.0,
+    # RT06-2: Pure hydrogen, HII region expansion, temperature evolution 
+    # allowed, *continuous spectrum*
+    if ptype_int == 2:
+        pf = {"problem_type": 2, 
+              "density_units": 1e-3 * m_H,
+              "length_units": 6.6 * cm_per_kpc, 
+              "stop_time": 500.0, 
               "dtDataDump": 10.0, 
-              "TabulateIntegrals": 0,
-              "MinimumSpeciesFraction": 1e-6, 
-              "DensityProfile": 0, 
-              "TemperatureProfile": 0, 
-              "InitialTemperature": 1e2,
-              "IonizationProfile": 0, 
-              "InitialHIIFraction": 1.2e-3, 
-              "SourceType": 1, 
-              "SpectrumType": 1,
-              "SpectrumPhotonLuminosity": 5e48, 
-              "DiscreteSpectrum": 1,
-              "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06], 
-              "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188],
-              "Isothermal": 0
+              "isothermal": 0,
+              "restricted_timestep": ['ions', 'energy'],
+              "species": [1],
+              "secondary_ionization": 0,
+              "initial_temperature": 1e2,
+              "initial_ionization": [1.2e-3], 
+              "source_type": 1, 
+              "source_temperature": 1e5,
+              "spectrum_type": 1,
+              "spectrum_qdot": 5e48,
              }
-    
-    # RT06-2: Pure hydrogen, HII region expansion, temperature evolution allowed, 4-bin spectrum of Mirocha et al. (2012)        
-    if ptype == 2.2:
-        pf = {"ProblemType": 2, 
-              "DensityUnits": 1e-3 * m_H,
-              "LengthUnits": 6.6 * cm_per_kpc,
-              "StopTime": 500.0,
-              "dtDataDump": 10.0, 
-              "TabulateIntegrals": 0,
-              "MinimumSpeciesFraction": 1e-6, 
-              "DensityProfile": 0, 
-              "TemperatureProfile": 0, 
-              "InitialTemperature": 1e2,
-              "IonizationProfile": 0, 
-              "InitialHIIFraction": 1.2e-3, 
-              "SourceType": 1, 
-              "SpectrumType": 1,
-              "SpectrumPhotonLuminosity": 5e48, 
-              "DiscreteSpectrum": 1,
-              "DiscreteSpectrumSED": [18.29, 31.46, 49.13, 77.23], 
-              "DiscreteSpectrumRelLum": [0.24, 0.35, 0.23, 0.06],
-              "Isothermal": 0
-            }    
+        
+        # Change discrete spectrum: 2.1 = Mirocha et al. 2012, 
+        # 2.2 = Wise & Abel 2011
+        if ptype == 2.1:
+            pf.update({'spectrum_E': [17.98, 31.15, 49.09, 76.98]})
+            pf.update({'spectrum_LE': [0.23, 0.36, 0.24, 0.06]})
+        if ptype == 2.2:
+            pf.update({'spectrum_E': [18.29, 31.46, 49.13, 77.23]})
+            pf.update({'spectrum_LE': [0.24, 0.35, 0.23, 0.06]})
                  
-    # RT06-3: I-front trapping in a dense clump and the formation of a shadow - continuous BB spectrum
+    # RT06-3: I-front trapping in a dense clump and the formation of a shadow,
+    # continuous blackbody spectrum
     if ptype == 3:
-        pf = {"ProblemType": 3,  
+        pf = {"problem_type": 3,  
               "DensityUnits": 2e-4 * m_H,
               "LengthUnits": 6.6 * cm_per_kpc,
               "GridDimensions": 200,
@@ -256,7 +182,7 @@ def ProblemType(ptype):
     
     # RT06-3: I-front trapping in a dense clump and the formation of a shadow
     if ptype == 3.1:
-        pf = {"ProblemType": 3.1,  
+        pf = {"problem_type": 3.1,  
               "DensityUnits": 2e-4 * m_H,
               "LengthUnits": 6.6 * cm_per_kpc,
               "GridDimensions": 200,
@@ -282,69 +208,7 @@ def ProblemType(ptype):
               "PlaneParallelField": 1
              }   
              
-    # X-ray source, helium included, continuous spectrum       
-    if ptype == 5:
-        pf = {"ProblemType": 5, 
-              "LengthUnits": cm_per_mpc,
-              "GridDimensions": 100, 
-              "StopTime": 45.0, 
-              "StartRadius": 0.01, 
-              "dtDataDump": 1, 
-              "Isothermal": 0, 
-              "MultiSpecies": 1, 
-              "SecondaryIonization": 1, 
-              "DensityProfile": 1, 
-              "InitialRedshift": 10, 
-              "TemperatureProfile": 0, 
-              "InitialTemperature": 1e2,
-              "IonizationProfile": 0, 
-              "InitialHIIFraction": 1e-4, 
-              "SourceType": 3,
-              "SourceMass": 1e6, 
-              "SourceRadiativeEfficiency": 0.1, 
-              "SpectrumType": 4,
-              "SpectrumPowerLawIndex": 1.5,
-              "SpectrumMinEnergy": 1e2, 
-              "SpectrumMaxEnergy": 1e4, 
-              "SpectrumMinNormEnergy": 1e2, 
-              "SpectrumMaxNormEnergy": 1e4,
-              "ColumnDensityBinsHI": 200, 
-              "ColumnDensityBinsHeI": 100, 
-              "ColumnDensityBinsHeII": 100
-             }      
-    # X-ray source, helium included, discrete spectrum       
-    if ptype == 5.1:
-        pf = {"ProblemType": 5.1, 
-              "LengthUnits": cm_per_mpc,
-              "GridDimensions": 100, 
-              "StopTime": 45.0, 
-              "StartRadius": 0.01, 
-              "dtDataDump": 1, 
-              "Isothermal": 0, 
-              "MultiSpecies": 1, 
-              "SecondaryIonization": 1, 
-              "DensityProfile": 1, 
-              "InitialRedshift": 10, 
-              "TemperatureProfile": 0, 
-              "InitialTemperature": 1e2,
-              "IonizationProfile": 0, 
-              "InitialHIIFraction": 1e-4, 
-              "SourceType": 3,
-              "SourceMass": 1e6, 
-              "SourceRadiativeEfficiency": 0.1, 
-              "SpectrumType": 4,
-              "SpectrumPowerLawIndex": 1.5, 
-              "SpectrumMinEnergy": 1e2, 
-              "SpectrumMaxEnergy": 1e4, 
-              "SpectrumMinNormEnergy": 1e2, 
-              "SpectrumMaxNormEnergy": 1e4,
-              "ColumnDensityBinsHI": 200, 
-              "ColumnDensityBinsHeI": 100, 
-              "ColumnDensityBinsHeII": 100,
-              "DiscreteSpectrum": 1,
-              "DiscreteSpectrumSED": [500.],
-              "DiscreteSpectrumRelLum": [1.0]
-             }      
-             
-        
+    if ptype >= 10:
+        pf.update({'species': [1, 2]})         
+                     
     return pf    

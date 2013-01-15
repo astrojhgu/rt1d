@@ -29,8 +29,19 @@ from ..physics.Constants import *
 
 linestyles = ['-', '--', ':', '-.']
 
+class DummyCheckpoints:
+    def __init__(self):
+        pass
+
 class Analyze:
     def __init__(self, checkpoints):
+        
+        if type(checkpoints) is str:
+            import h5py
+            f = h5py.File(checkpoints)
+            
+            pass
+        
         self.checkpoints = checkpoints
         self.pf = checkpoints.pf
         self.grid = checkpoints.grid

@@ -31,10 +31,6 @@ class Radiation:
         
     @property
     def finite_c(self):
-        """
-        Speed of light.
-        """
-        
         if self.pf['InfiniteSpeedOfLight']:
             return False
         
@@ -50,33 +46,9 @@ class Radiation:
         
         # Figure out which processors will solve which cells and create newdata dict
         #self.solve_arr, newdata = self.control.DistributeDataAcrossProcessors(data, lb)
-                          
-        # If we're in an expanding universe, prepare to dilute densities by (1 + z)**3
-        #self.z = 0 
-        #self.dz = 0   
-        #if self.pf['CosmologicalExpansion']: 
-        #    self.z = self.cosm.TimeToRedshiftConverter(0., t, self.pf['InitialRedshift'])
-        #    self.dz = dt / self.cosm.dtdz(self.z)
-               
-        
-                                                                                                     
-        # Retrieve indices used for N-D interpolation
-        #self.indices_all = []
-        #for i, col in enumerate(self.ncol_all):
-        #    tmp = []
-        #    for rs in self.rs.all_sources:
-        #        if rs.TableAvailable:
-        #            tmp.append(rs.Interpolate.GetIndices([col[0], col[1], col[2], np.log10(self.x_HII_arr[i]), t]))
-        #        else:
-        #            tmp.append(None)
-        #    self.indices_all.append(tmp)
-        #                                        
-        ## Compute tau *between* source and all cells
-        #tau_all_arr = self.ComputeOpticalDepths([self.ncol_HI, self.ncol_HeI, self.ncol_HeII])
-        #self.tau_all = zip(*tau_all_arr)
         
         # Compute source dependent rate coefficients
-        Gamma, gamma, Heat = self.rfield.SourceDependentCoefficients(data, t)            
+        Gamma, gamma, Heat = self.rfield.SourceDependentCoefficients(data, t)
 
         # Each is (grid x absorbers)
         self.kwargs = {'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma}

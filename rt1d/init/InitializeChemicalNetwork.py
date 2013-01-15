@@ -204,7 +204,7 @@ class SimpleChemicalNetwork:
         if 1 in self.grid.Z:
             self.dqdt[h1] = -(Gamma[0] + self.Beta[cell][0] * n_e) * xHI \
                           +   self.alpha[cell][0] * n_e * xHII \
-                          -   gamma[0][0] * xHI
+                          -   gamma[0][0] * xHI # plus gamma[0][1:]
             self.dqdt[h2] = -self.dqdt[0]   
             self.dqdt[e] = self.dqdt[h2] * n_H             
                                 

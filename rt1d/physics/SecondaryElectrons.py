@@ -15,7 +15,9 @@ Gnedin, & Shull (2002) also available.
 import h5py, os
 import numpy as np
 
-tiny_number = 1e-30
+# If anything is identically zero for methods 2 and 3, 
+# our spline will get screwed up since log(0) = inf
+tiny_number = 1e-20
 
 class SecondaryElectrons:
     def __init__(self, method = 0):
@@ -58,8 +60,13 @@ class SecondaryElectrons:
             Method = 2: Empirical Fits of Ricotti et al. 2002.
             Method = 3: Lookup tables of Furlanetto & Stoever 2010.
             
+        xHII is preferably an array of values (corresponding to grid elements).
+            
         """
         
+        if type(xHII) in [int, float, np.float64]:
+            xHII = np.array([xHII])
+                    
         if E == 0.0: 
             E = tiny_number
         
@@ -71,7 +78,7 @@ class SecondaryElectrons:
             
         if self.Method == 1: 
             if channel == 'heat': 
-                tmp = np.zeros_like(xHII)
+                tmp = tiny_number * np.zeros_like(xHII)
                 tmp[xHII <= 1e-4] = 0.15 * np.ones(len(tmp[xHII <= 1e-4]))
                 tmp[xHII > 1e-4] = 0.9971 * (1. - pow(1 - 
                     pow(xHII[xHII > 1e-4], 0.2663), 1.3163))
@@ -81,61 +88,60 @@ class SecondaryElectrons:
             if channel == 'he_1': 
                 return 0.0554 * pow(1. - pow(xHII, 0.4614), 1.6660) 
             if channel == 'he_2': 
-                return np.zeros_like(xHII)
+                return tiny_number * np.zeros_like(xHII)
             if channel == 'lya': # Assuming that ALL excitations lead to a LyA photon
                 return 0.4766 * pow(1. - pow(xHII, 0.2735), 1.5221)
             
         # Ricotti, Gnedin, & Shull (2002)
         if self.Method == 2:
             if channel == 'heat': 
-                if xHII <= 1e-4: 
-                    # This is what they do in Thomas & Zaroubi (2008).
-                    return 0.15 * np.ones_like(xHII) 
-                else: 
-                    if E >= 11:
-                        return 3.9811 * (11. / E)**0.7 * pow(xHII, 0.4) * \
-                            (1. - pow(xHII, 0.34))**2 + \
-                            (1. - (1. - pow(xHII, 0.2663))**1.3163)
-                    else:
-                        return np.ones_like(xHII)
+                tmp = tiny_number * np.zeros_like(xHII)
+                tmp[xHII <= 1e-4] = 0.15 * np.ones_like(tmp[xHII <= 1e-4]) 
+                if E >= 11:
+                    tmp[xHII > 1e-4] = 3.9811 * (11. / E)**0.7 \
+                        * pow(xHII[xHII > 1e-4], 0.4) * \
+                        (1. - pow(xHII[xHII > 1e-4] , 0.34))**2 + \
+                        (1. - (1. - pow(xHII[xHII > 1e-4] , 0.2663))**1.3163)
+                else:
+                    tmp[xHII > 1e-4] = (1. - tiny_number) \
+                        * np.ones_like(tmp[xHII <= 1e-4]) 
+                    
+                return tmp
                     
             if channel == 'h_1': 
                 if E >= 28:
-                    return -0.6941 * (28. / E)**0.4 * pow(xHII, 0.2) * \
+                    return np.maximum(-0.6941 * (28. / E)**0.4 * pow(xHII, 0.2) * \
                         (1. - pow(xHII, 0.38))**2 + \
-                        0.3908 * (1. - pow(xHII, 0.4092))**1.7592
+                        0.3908 * (1. - pow(xHII, 0.4092))**1.7592, tiny_number)
                 else:
-                    return np.zeros_like(xHII)
+                    return tiny_number * np.zeros_like(xHII)
             if channel == 'he_1': 
                 if E >= 28:
-                    return -0.0984 * (28. / E)**0.4 * pow(xHII, 0.2) * \
+                    return np.maximum(-0.0984 * (28. / E)**0.4 * pow(xHII, 0.2) * \
                         (1. - pow(xHII, 0.38))**2 + \
-                        0.0554 * (1. - pow(xHII, 0.4614))**1.6660
+                        0.0554 * (1. - pow(xHII, 0.4614))**1.6660, tiny_number)
                 else:
-                    return np.zeros_like(xHII)
+                    return tiny_number * np.zeros_like(xHII)
             if channel == 'he_2': 
-                return np.zeros_like(xHII)
+                return tiny_number * np.zeros_like(xHII)
         
-        # Furlanetto & Stoever (2010) - fix to handle array of xHII
-        # Just set up a spline
+        # Furlanetto & Stoever (2010)
         if self.Method == 3:
             
-            f = np.zeros_like(xHII)
+            f = tiny_number * np.zeros_like(xHII)
             
             for i, x in enumerate(xHII):
             
-                if channel == 'heat': 
+                if channel == 'heat':
                     f[i] = self.fh(E, x)
-                    #InterpolationTable = self.fheat
                 if channel == 'h_1': 
                     f[i] = self.fHI(E, x)
-                    #InterpolationTable = self.fion_HI
                 if channel == 'he_1': 
-                    InterpolationTable = self.fion_HeI
+                    f[i] = self.fHeI(E, x)
                 if channel == 'he_2': 
-                    InterpolationTable = self.fion_HeII
+                    f[i] = self.fHeII(E, x)
                 if channel == 'lya':
-                    InterpolationTable = self.f_Lya
+                    f[i] = self.flya(E, x)
             
             return f
             

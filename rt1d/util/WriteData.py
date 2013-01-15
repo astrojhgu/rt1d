@@ -102,8 +102,19 @@ class CheckPoints:
     
         f = h5py.File(fn, 'w')
         
-            
+        pf = f.create_group('parameters')
+        for key in self.pf:
+            pf.create_dataset(key, data = self.pf[key])
         
+        for dd in self.data.keys():
+            grp = f.create_group('dd%s' % str(dd).zfill(4))
+            
+            for key in self.data[dd]:
+                grp.add_dataset(key, data = self.data[dd][key])
+                
+            del grp
+            
+        f.close()        
 
 class WriteData:
     def __init__(self, grid, fn = 'rt1d.sim', **kwargs):

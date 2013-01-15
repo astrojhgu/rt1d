@@ -18,44 +18,43 @@ To clone a copy and install: ::
 or visit the 'Downloads' page for a tarball.
 
 Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis module also relies on matplotlib, 
-though if you'd rather write your own analysis scripts, this dependence is not necessary.
+though if you'd rather make your plots with something else, this dependence is not necessary.
 
 Example
 -------
 
-rt1d can be run from the command line or in batch.  To run a simple test in batch mode, 
-first create a parameter file (let's call it 'pf.dat') containing a single line: ::
+rt1d is meant to be modular, in that you can run various pieces of the code in an
+isolated fashion.  For instance, rather than running a full-blown radiative transfer
+simulation on a grid, you can also run single-zone non-equilibrium chemistry tests without
+any radiation at all.
 
-    ProblemType = 1
+However, there are also modules one can use to avoid writing rt1d scripts. They are located in
+the rt1d/run/Simulate.py module.  In a python terminal (or script), it's as easy as typing:
 
-To run the simulation, copy the rt1d driver script (rt1d/bin/RT1D.py) to your current 
-working directory, and type: ::
+>>>
+>>> import rt1d
+>>> sim = rt1d.run.RTsim()
+>>>
+  
+RTsim returns an instance of the simulation class, which contains the data as well as instances
+of all major classes used in the calculation (e.g. Grid, Radiation, RadiationSources, etc.).
 
-    python RT1D.py pf.dat
-
-This will simulate the expansion of an I-front around a source of monochromatic 13.6 eV 
-photons in an isothermal, hydrogen only medium (test #1 from the Radiative Transfer Comparison
-Project; Iliev et al. 2006).
+This example (all default parameter values) simulates the expansion of an I-front around a 
+monochromatic source of 13.6 eV photons in an isothermal, hydrogen only medium (test #1 from 
+the Radiative Transfer Comparison Project; Iliev et al. 2006).
 
 To do some simple analysis of the output, open up a python (or ipython) session and use 
 built-in analysis routines, or look at the raw data itself:
 
 >>>
->>> import rt1d.analysis as rta
->>> 
->>> # Supply parameter file to initialize dataset ('ds') object
->>> ds = rta.Analyze('./pf.dat') 
+>>> anl = rt1d.analysis.Analyze(sim.checkpoints) 
 >>> 
 >>> # Some built-in analysis routines
->>> ds.PlotIFrontEvolution()               # Plot the I-front radius vs. time
->>> ds.IonizationProfile(t = [1, 10, 100]) # Plot neutral/ionized fractions vs. radius at 1, 10, 100 Myr
->>> 
->>> # Note: since 1D datasets are small, the 'ds' object contains 
->>> # the simulation data for all data dumps.
+>>> anl.PlotIFrontEvolution()               # Plot the I-front radius vs. time
+>>> anl.IonizationProfile(t = [1, 10, 100]) # Plot neutral/ionized fractions vs. radius at 1, 10, 100 Myr
 >>> 
 >>> # Look at min and max values of the neutral fraction in data dump 50
->>> print min(ds.data[50].x_HI), max(ds.data[50].x_HI)
+>>> print min(sim.data[50]['h_1']), max(sim.data[50]['h_1'])
 >>>
 
-For more examples, see the `current documentation <https://bitbucket.org/mirochaj/rt1d/downloads/rt1d_manual.pdf>`_,
-which is very much a work in progress.
+More examples on the way.

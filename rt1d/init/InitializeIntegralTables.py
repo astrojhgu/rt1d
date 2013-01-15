@@ -12,7 +12,7 @@ Description: Tabulate integrals that appear in the rate equations.
 import numpy as np
 from ..run import ProgressBar
 import os, re, scipy, itertools, math, copy
-from scipy.integrate import quad, romberg
+from scipy.integrate import quad, romberg, trapz
 from ..physics.Constants import erg_per_ev
 from ..physics.SecondaryElectrons import *
 from scipy.interpolate import LinearNDInterpolator
@@ -69,6 +69,8 @@ class IntegralTable:
         self.dimsN = np.array([len(element) for element in self.N])
         self.Nd = len(self.dimsN)
         
+        self.logx = None
+        self.t = None
         if self.pf['secondary_ionization'] > 1:
             self.esec = SecondaryElectrons(method = self.pf['secondary_ionization'])
             if self.pf['secondary_ionization'] == 2:
@@ -81,8 +83,8 @@ class IntegralTable:
                 self.logx = self.esec.logx
                 self.E = self.esec.E
                 
-            self.x = 10**self.logx    
-                
+            self.x = 10**self.logx
+                                    
         # What quantities are we going to compute?
         self.IntegralList = self.ToCompute()
         
@@ -161,7 +163,7 @@ class IntegralTable:
         if self.pf['secondary_ionization'] > 1:
             self.Nd += 1
             self.axes.append(self.logx)
-        if self.pf['source_evolving']:
+        if np.any(self.pf['spectrum_evolving']):
             self.Nd += 1
                                 
     def DatasetName(self, integral, absorber, donor):
@@ -190,7 +192,7 @@ class IntegralTable:
         i_donor = 0
         while h < len(self.IntegralList):
             integral = self.IntegralList[h]    
-            
+                        
             donor = self.grid.absorbers[i_donor]
             for i, absorber in enumerate(self.grid.absorbers):
                 
@@ -218,11 +220,11 @@ class IntegralTable:
                         continue
                         
                     if self.pf['secondary_ionization'] > 1 \
-                        and integral not in  ['Tau', 'Phi']:
-                        for k, x in enumerate(self.x):                                 
+                        and integral not in ['Tau', 'Phi']:
+                        for k, x in enumerate(self.x):      
                             tab[ind][k] = self.Tabulate(integral, absorber, 
                                 donor, self.Nall[j], x = x, t = None)
-                    
+                                                    
                     else:
                         tab[ind] = \
                             self.Tabulate(integral, absorber, donor, self.Nall[j])
@@ -350,8 +352,7 @@ class IntegralTable:
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E \
                 / self.sigma_th[absorber]
                 
-        integral = quad(integrand,
-            max(self.grid.ioniz_thresholds[absorber], self.src.Emin), 
+        integral = quad(integrand, max(self.sigma_th[absorber], self.src.Emin), 
             self.src.Emax)[0] / erg_per_ev    
             
         if not self.pf['photon_conserving']:
@@ -379,136 +380,140 @@ class IntegralTable:
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) \
                 / self.sigma_th[absorber]
         
-        integral = quad(integrand, 
-            max(self.grid.ioniz_thresholds[absorber], self.src.Emin), 
+        integral = quad(integrand, max(self.sigma_th[absorber], self.src.Emin), 
             self.src.Emax)[0]
             
         if not self.pf['photon_conserving']:
-            integral *= self.sigma_th[absorber]        
+            integral *= self.sigma_th[absorber]
         
         return integral
+                              
+    def PhiHat(self, N, absorber, donor = None, x = None, t = None):
+        """
+        Equation 2.20 in the manual.
+        """        
         
+        Ei = self.sigma_th[absorber]
+        
+        # Otherwise, continuous spectrum                
+        if self.pf['photon_conserving']:
+            integrand = lambda E: \
+                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
+                self.src.Spectrum(E, t = t) * \
+                np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E
+        else:
+            integrand = lambda E: \
+                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
+                PhotoIonizationCrossSection(E, absorber) * \
+                self.src.Spectrum(E, t = t) * \
+                np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E \
+                / self.sigma_th[absorber]    
+        
+        c = self.E >= max(Ei, self.src.Emin)
+        c &= self.E <= self.src.Emax                       
+        samples = np.array([integrand(E) for E in self.E[c]])[..., 0]
+             
+        integral = trapz(samples, self.E[c]) / erg_per_ev         
+        
+        if not self.pf['photon_conserving']:
+            integral *= self.sigma_th[absorber]
+            
+        return integral
+                
+    def PsiHat(self, N, absorber, donor = None, x = None, t = None):            
+        """
+        Equation 2.21 in the manual.
+        """        
+        
+        Ei = self.sigma_th[absorber]
+        
+        # Otherwise, continuous spectrum    
+        if self.pf['photon_conserving']:
+            integrand = lambda E: \
+                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
+                self.src.Spectrum(E, t = t) * \
+                np.exp(-self.SpecificOpticalDepth(E, N)[0])
+        else:
+            integrand = lambda E: \
+                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
+                PhotoIonizationCrossSection(E, species) * \
+                self.src.Spectrum(E, t = t) * \
+                np.exp(-self.SpecificOpticalDepth(E, N)[0]) \
+                / self.sigma_th[absorber]
+        
+        c = self.E >= max(Ei, self.src.Emin)
+        c &= self.E <= self.src.Emax
+        samples = np.array([integrand(E) for E in self.E[c]])[..., 0]
+        
+        integral = trapz(samples, self.E[c])  
+        
+        if not self.pf['photon_conserving']:
+            integral *= self.sigma_th[absorber]
+        
+        return integral
+            
     def PhiWiggle(self, N, absorber, donor, x = None, t = None):
         """
         Equation 2.18 in the manual.
         """        
         
-        Ej = self.grid.ioniz_thresholds[donor]
+        Ej = self.sigma_th[donor]
         
         # Otherwise, continuous spectrum                
         if self.pf['photon_conserving']:
-            integrand = lambda E: 1e10 * \
+            integrand = lambda E: \
                 self.esec.DepositionFraction(E - Ej, x, channel = absorber) * \
                 self.src.Spectrum(E, t = t) * \
-                np.exp(-self.SpecificOpticalDepth(E, N)[0]) / \
-                (E * erg_per_ev)
+                np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E
+
         #else:
         #    integrand = lambda E: 1e10 * \
         #        self.esec.DepositionFraction(E, xHII, channel = species + 1) * \
         #        PhotoIonizationCrossSection(E, species) * \
         #        self.src.Spectrum(E, t = t) * \
-        #        np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / \
-        #        (E * erg_per_ev)
+        #        np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / E \
+        #        / self.sigma_th[absorber]
             
         c = self.E >= max(Ej, self.src.Emin)
         c &= self.E <= self.src.Emax
-                        
-        y = []
-        for E in self.E[c]:
-            y.append(integrand(E))
-             
-        return 1e-10 * \
-            np.trapz(np.array(y), self.E[c])    
-    
+        samples = np.array([integrand(E) for E in self.E[c]])[..., 0]
+        
+        integral = trapz(samples, self.E[c]) / erg_per_ev
+            
+        if not self.pf['photon_conserving']:
+            integral *= self.sigma_th[absorber]
+                                        
+        return integral
+                              
     def PsiWiggle(self, N, absorber, donor, x = None, t = None):            
         """
         Equation 2.19 in the manual.
         """        
         
-        Ej = self.grid.ioniz_thresholds[donor]
+        Ej = self.sigma_th[donor]
         
         # Otherwise, continuous spectrum    
         if self.pf['photon_conserving']:
-            integrand = lambda E: 1e20 * \
+            integrand = lambda E: \
                 self.esec.DepositionFraction(E - Ej, x, channel = absorber) * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0])
         #else:
-        #    integrand = lambda E: 1e20 * PhotoIonizationCrossSection(E, species) * \
+        #    integrand = lambda E: PhotoIonizationCrossSection(E, species) * \
         #        self.src.Spectrum(E, t = t) * \
         #        np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
+        #        / self.sigma_th[absorber]
                 
         c = self.E >= max(Ej, self.src.Emin)
         c &= self.E <= self.src.Emax
-                        
-        y = []
-        for E in self.E[c]:
-            y.append(integrand(E))
+        samples = np.array([integrand(E) for E in self.E[c]])[..., 0]
              
-        return 1e-20 * \
-            np.trapz(np.array(y), self.E[c])          
-                              
-    def PhiHat(self, N, absorber, donor, x = None, t = None):
-        """
-        Equation 2.20 in the manual.
-        """        
-        
-        Ei = self.grid.ioniz_thresholds[absorber]
-        
-        # Otherwise, continuous spectrum                
-        if self.pf['photon_conserving']:
-            integrand = lambda E: 1e10 * \
-                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
-                self.src.Spectrum(E, t = t) * \
-                np.exp(-self.SpecificOpticalDepth(E, N)[0]) / \
-                (E * erg_per_ev)
-        else:
-            integrand = lambda E: 1e10 * \
-                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
-                PhotoIonizationCrossSection(E, absorber) * \
-                self.src.Spectrum(E, t = t) * \
-                np.exp(-self.SpecificOpticalDepth(E, N)[0]) / \
-                (E * erg_per_ev)
-        
-        c = self.E >= max(Ei, self.src.Emin)
-        c &= self.E <= self.src.Emax       
-                                                
-        y = []
-        for E in self.E[c]:
-            y.append(integrand(E))
-             
-        return 1e-10 * \
-            np.trapz(np.array(y), self.E[c])          
+        integral = trapz(samples, self.E[c])
+            
+        if not self.pf['photon_conserving']:
+            integral *= self.sigma_th[absorber]    
                 
-    def PsiHat(self, N, absorber, donor, x = None, t = None):            
-        """
-        Equation 2.21 in the manual.
-        """        
-        
-        Ei = self.grid.ioniz_thresholds[absorber]
-        
-        # Otherwise, continuous spectrum    
-        if self.pf['photon_conserving']:
-            integrand = lambda E: 1e20 * \
-                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
-                self.src.Spectrum(E, t = t) * \
-                np.exp(-self.SpecificOpticalDepth(E, N)[0])
-        else:
-            integrand = lambda E: 1e20 * \
-                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
-                PhotoIonizationCrossSection(E, species) * \
-                self.src.Spectrum(E, t = t) * \
-                np.exp(-self.SpecificOpticalDepth(E, N)[0])
-        
-        c = self.E >= max(Ei, self.src.Emin)
-        c &= self.E <= self.src.Emax
-                        
-        y = []
-        for E in self.E[c]:
-            y.append(integrand(E))
-             
-        return 1e-20 * \
-            np.trapz(np.array(y), self.E[c])  
+        return integral
             
     def PsiBreve(self, N, absorber, donor, x = None, t = None):
         """

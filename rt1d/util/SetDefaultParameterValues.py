@@ -39,9 +39,7 @@ def GridParameters():
         "species": [1],
         "abundances": [1.],
         "initial_ionization": [1.2e-3],
-            
         "initial_temperature": 1e4,
-        
         }
 
     return pf
@@ -80,7 +78,6 @@ def SourceParameters():
         "source_eta": 0.1,
         "source_isco": 0,  
         "source_rmax": 1e3,
-        "source_evolving": 0,
         "source_cX": 1.0,
         
         "source_table": None,
@@ -89,11 +86,12 @@ def SourceParameters():
         
     return pf
     
-def SpectrumParameters(): 
+def SpectrumParameters():
     pf = \
         {        
         "spectrum_type": 0,
         "spectrum_components": 1,
+        "spectrum_evolving": 0,
         
         "spectrum_fraction": 1,
         "spectrum_alpha": 1.5,
@@ -177,6 +175,7 @@ def ControlParameters():
         "tau_ifront": 0.5,
         "parallelization": 0,
         "save_rate_coefficients": 1,
+        "tabulate_only": 0,
         
         }
         
@@ -185,9 +184,9 @@ def ControlParameters():
 def CosmologyParameters():
     pf = \
         {
-        "OmegaMatterNow": 0.272,  
-        "OmegaBaryonNow": 0.044,  
-        "OmegaLambdaNow": 0.728,  
+        "OmegaMatterNow": 0.272,
+        "OmegaBaryonNow": 0.044,
+        "OmegaLambdaNow": 0.728,
         "HubbleParameterNow": 0.702,
         "PrimordialHeliumByMass": 0.2477,
         "CMBTemperatureNow": 2.725,

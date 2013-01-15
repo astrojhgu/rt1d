@@ -15,19 +15,13 @@ import rt1d
 import pylab as pl
 
 sim = rt1d.run.RTsim(pf = {'problem_type': 2})
-sim2 = rt1d.run.RTsim(pf = {'problem_type': 2, 'photon_conserving': 0})
 
 anl = rt1d.analysis.Analyze(sim.checkpoints)
-anl2 = rt1d.analysis.Analyze(sim2.checkpoints)
 
 ax = anl.TemperatureProfile(t = [10, 100, 500])
-anl2.TemperatureProfile(t = [10, 100, 500], color = 'b'), ax = ax)
-
 raw_input('<enter> for radial profiles of xHI & xHII')
 pl.close()
 
-ax = anl2.IonizationProfile(t = [10, 100, 500], annotate = True)
-anl.IonizationProfile(t = [10, 100, 500], color = 'b', ax = ax)
-
+ax = anl.IonizationProfile(t = [10, 100, 500])
 raw_input('')
 
