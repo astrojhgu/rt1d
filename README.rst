@@ -17,6 +17,9 @@ To clone a copy and install: ::
 
 or visit the 'Downloads' page for a tarball.
 
+Dependencies
+____________
+
 Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis module also relies on matplotlib, 
 though if you'd rather make your plots with something else, this dependence is not necessary.
 
@@ -24,6 +27,21 @@ If you have the Python progressbar module installed somewhere, rt1d will use it.
 be alarmed if the time-to-completion estimate you're given is absurd at first -- the time-step at the beginning
 of radiative transfer simulations is very small (characteristic ionization timescale very
 short).  The example problem given below should run in about a minute on a single CPU.
+
+(Optional (eventually))
+The code is written such that running with an arbitrary chemical composition is 
+possible (in principle).  A few additional dependencies are required to support this.
+First, dengo. Its sub-dependencies can all be installed using pip::
+
+pip install sympy
+pip install ChiantiPy
+pip install periodic
+
+Use of the Chianti atomic database requires one additional environment variable::
+
+export XUVTOP=$WORK/mods/chianti
+
+and of course the database itself, which can be downloaded `here <http://www.chiantidatabase.org/download/CHIANTI_7.1_data.tar.gz>`_.
 
 Example
 -------
