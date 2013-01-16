@@ -17,6 +17,7 @@ To clone a copy and install: ::
 
 or visit the 'Downloads' page for a tarball.
 
+
 Dependencies
 ____________
 
@@ -31,17 +32,18 @@ short).  The example problem given below should run in about a minute on a singl
 (Optional (eventually))
 The code is written such that running with an arbitrary chemical composition is 
 possible (in principle).  A few additional dependencies are required to support this.
-First, dengo. Its sub-dependencies can all be installed using pip::
+First, dengo. Its sub-dependencies can all be installed using pip: ::
 
 pip install sympy
 pip install ChiantiPy
 pip install periodic
 
-Use of the Chianti atomic database requires one additional environment variable::
+Use of the Chianti atomic database requires one additional environment variable: ::
 
 export XUVTOP=$WORK/mods/chianti
 
 and of course the database itself, which can be downloaded `here <http://www.chiantidatabase.org/download/CHIANTI_7.1_data.tar.gz>`_.
+
 
 Example
 -------
