@@ -5,7 +5,7 @@ rt1d
 rt1d is a 1D radiative transfer code developed for the purpose of studying ionization 
 (hydrogen and helium) and temperature evolution of gas in the vicinity of stars, accreting 
 black holes, or really any source of ultraviolet and/or X-ray photons you can think of.
-The methods paper can be found `here <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
+A paper including some discussion of it's inner-workings can be found `here <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
 
 Getting started
 ---------------
@@ -20,6 +20,11 @@ or visit the 'Downloads' page for a tarball.
 Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis module also relies on matplotlib, 
 though if you'd rather make your plots with something else, this dependence is not necessary.
 
+If you have the Python progressbar module installed somewhere, rt1d will use it. Don't 
+be alarmed if the time-to-completion estimate you're given is absurd at first -- the time-step at the beginning
+of radiative transfer simulations is very small (characteristic ionization timescale very
+short).  The example problem given below should run in about a minute on a single CPU.
+
 Example
 -------
 
@@ -29,7 +34,7 @@ simulation on a grid, you can also run single-zone non-equilibrium chemistry tes
 any radiation at all.
 
 However, there are also modules one can use to avoid writing rt1d scripts. They are located in
-the rt1d/run/Simulate.py module.  In a python terminal (or script), it's as easy as typing:
+the rt1d/run/Simulate.py module.  In a Python terminal (or script), it's as easy as typing:
 
 >>>
 >>> import rt1d
@@ -37,7 +42,7 @@ the rt1d/run/Simulate.py module.  In a python terminal (or script), it's as easy
 >>>
   
 RTsim returns an instance of the simulation class, which contains the data as well as instances
-of all major classes used in the calculation (e.g. Grid, Radiation, RadiationSources, etc.).
+of all major classes used in the calculation (e.g. Grid, Radiation, ChemicalNetwork, etc.).
 
 This example (all default parameter values) simulates the expansion of an I-front around a 
 monochromatic source of 13.6 eV photons in an isothermal, hydrogen only medium (test #1 from 
@@ -58,3 +63,4 @@ built-in analysis routines, or look at the raw data itself:
 >>>
 
 More examples on the way.
+

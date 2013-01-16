@@ -48,10 +48,12 @@ class Radiation:
         #self.solve_arr, newdata = self.control.DistributeDataAcrossProcessors(data, lb)
         
         # Compute source dependent rate coefficients
-        Gamma, gamma, Heat = self.rfield.SourceDependentCoefficients(data, t)
-
-        # Each is (grid x absorbers)
-        self.kwargs = {'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma}
+        self.kwargs = {}
+        if self.pf['radiative_transfer']:
+            Gamma, gamma, Heat = self.rfield.SourceDependentCoefficients(data, t)
+            
+            # Each is (grid x absorbers)
+            self.kwargs.update({'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma})
                 
         # Compute source independent rate coefficients
         if (not self.grid.isothermal) or (t == 0):

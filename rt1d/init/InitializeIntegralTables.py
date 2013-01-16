@@ -74,9 +74,10 @@ class IntegralTable:
         if self.pf['secondary_ionization'] > 1:
             self.esec = SecondaryElectrons(method = self.pf['secondary_ionization'])
             if self.pf['secondary_ionization'] == 2:
-                self.logx = np.linspace(-4, 0,
-                    4. / self.src.SpectrumPars['dlogx'][0] + 1)
-                self.E = np.linspace(self.src.Emin, self.src.Emax, 
+                self.logx = np.linspace(self.src.SpectrumPars['logxmin'][0], 0,
+                    abs(self.src.SpectrumPars['logxmin'][0]) \
+                    / self.src.SpectrumPars['dlogx'][0] + 1)
+                self.E = np.linspace(self.src.Emin, self.src.Emax,
                     (self.src.Emax - self.src.Emin) \
                     / self.src.SpectrumPars['dE'][0] + 1)
             elif self.pf['secondary_ionization'] == 3:

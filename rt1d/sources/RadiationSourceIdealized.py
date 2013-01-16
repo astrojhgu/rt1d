@@ -330,8 +330,8 @@ class RadiationSourceIdealized:
         else:
             Lnu = 0.0
             
-        if self.SpectrumPars['components'][i] > 0:
-            return Lnu * np.exp(-self.SpectrumPars['components'][i] \
+        if self.SpectrumPars['N'][i] > 0:
+            return Lnu * np.exp(-self.SpectrumPars['N'][i] \
                 * (sigma_E(E, 0) + y * sigma_E(E, 1)))   
         else:
             return Lnu     

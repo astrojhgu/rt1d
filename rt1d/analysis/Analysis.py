@@ -97,7 +97,7 @@ class Analyze:
             self.ranl[i] = self.StromgrenSphere(self.data[dd]['time'], T0 = T0) / cm_per_kpc
                 
     def PlotIonizationFrontEvolution(self, mp = None, anl = True, T0 = None, 
-        color = 'k', ls = '--'):
+        color = 'k', ls = '--', label = None, plot_error = True, plot_solution = True):
         """
         Compute analytic and numerical I-front radii vs. time and plot.
         """    
@@ -112,17 +112,22 @@ class Analyze:
         if anl: 
             self.mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle = '-', color = 'k')
         
-        self.mp.grid[0].plot(self.t / self.trec, self.rIF, color = color, ls = ls)
-        self.mp.grid[0].set_xlim(0, max(self.t / self.trec))
-        self.mp.grid[0].set_ylim(0, 1.1 * max(max(self.rIF), max(self.ranl)))
-        self.mp.grid[0].set_ylabel(r'$r \ (\mathrm{kpc})$')  
-        self.mp.grid[1].plot(self.t / self.trec, self.rIF / self.ranl, color = color, ls = ls)
-        self.mp.grid[1].set_xlim(0, max(self.t / self.trec))
-        self.mp.grid[1].set_ylim(0.95, 1.05)
-        self.mp.grid[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
-        self.mp.grid[1].set_ylabel(r'$r_{\mathrm{num}} / r_{\mathrm{anl}}$') 
-        self.mp.grid[0].xaxis.set_ticks(np.linspace(0, 4, 5))
-        self.mp.grid[1].xaxis.set_ticks(np.linspace(0, 4, 5))
+        if plot_solution:
+            self.mp.grid[0].plot(self.t / self.trec, self.rIF, 
+                color = color, ls = ls)
+            self.mp.grid[0].set_xlim(0, max(self.t / self.trec))
+            self.mp.grid[0].set_ylim(0, 1.1 * max(max(self.rIF), max(self.ranl)))
+            self.mp.grid[0].set_ylabel(r'$r \ (\mathrm{kpc})$') 
+        
+        if plot_error:     
+            self.mp.grid[1].plot(self.t / self.trec, self.rIF / self.ranl, 
+                color = color, ls = ls, label = label)
+            self.mp.grid[1].set_xlim(0, max(self.t / self.trec))
+            self.mp.grid[1].set_ylim(0.94, 1.05)
+            self.mp.grid[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
+            self.mp.grid[1].set_ylabel(r'$r_{\mathrm{num}} / r_{\mathrm{anl}}$') 
+            self.mp.grid[0].xaxis.set_ticks(np.linspace(0, 4, 5))
+            self.mp.grid[1].xaxis.set_ticks(np.linspace(0, 4, 5))
         
         if mp is None: 
             self.mp.fix_ticks()      

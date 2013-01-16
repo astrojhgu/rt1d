@@ -100,6 +100,7 @@ def SpectrumParameters():
         "spectrum_EminNorm": 0.01,  
         "spectrum_EmaxNorm": 5e2,  
          
+        "spectrum_N": 0,
         "spectrum_fcol": 1.7,
         "spectrum_file": None,
         
@@ -117,6 +118,7 @@ def SpectrumParameters():
         
         "spectrum_dlogN": [0.2],
         "spectrum_dlogx": 0.1,
+        "spectrum_logxmin": [-4],
         "spectrum_dE": 5.,
         "spectrum_dt": s_per_myr,
         
