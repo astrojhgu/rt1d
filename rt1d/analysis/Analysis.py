@@ -104,35 +104,39 @@ class Analyze:
 
         self.ComputeIonizationFrontEvolution(T0 = T0)
 
+        hadmp = False
         if mp is not None: 
-            self.mp = mp    
+            mp = mp    
+            hadmp = True
         else: 
-            self.mp = multiplot(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
+            mp = multiplot(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
 
         if anl: 
-            self.mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle = '-', color = 'k')
+            mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle = '-', color = 'k')
         
         if plot_solution:
-            self.mp.grid[0].plot(self.t / self.trec, self.rIF, 
+            mp.grid[0].plot(self.t / self.trec, self.rIF, 
                 color = color, ls = ls)
-            self.mp.grid[0].set_xlim(0, max(self.t / self.trec))
-            self.mp.grid[0].set_ylim(0, 1.1 * max(max(self.rIF), max(self.ranl)))
-            self.mp.grid[0].set_ylabel(r'$r \ (\mathrm{kpc})$') 
+            mp.grid[0].set_xlim(0, max(self.t / self.trec))
+            mp.grid[0].set_ylim(0, 1.1 * max(max(self.rIF), max(self.ranl)))
+            mp.grid[0].set_ylabel(r'$r \ (\mathrm{kpc})$') 
         
-        if plot_error:     
-            self.mp.grid[1].plot(self.t / self.trec, self.rIF / self.ranl, 
+        if plot_error:
+            mp.grid[1].plot(self.t / self.trec, self.rIF / self.ranl, 
                 color = color, ls = ls, label = label)
-            self.mp.grid[1].set_xlim(0, max(self.t / self.trec))
-            self.mp.grid[1].set_ylim(0.94, 1.05)
-            self.mp.grid[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
-            self.mp.grid[1].set_ylabel(r'$r_{\mathrm{num}} / r_{\mathrm{anl}}$') 
-            self.mp.grid[0].xaxis.set_ticks(np.linspace(0, 4, 5))
-            self.mp.grid[1].xaxis.set_ticks(np.linspace(0, 4, 5))
+            mp.grid[1].set_xlim(0, max(self.t / self.trec))
+            mp.grid[1].set_ylim(0.94, 1.05)
+            mp.grid[1].set_xlabel(r'$t / t_{\mathrm{rec}}$')
+            mp.grid[1].set_ylabel(r'$r_{\mathrm{num}} / r_{\mathrm{anl}}$') 
+            mp.grid[0].xaxis.set_ticks(np.linspace(0, 4, 5))
+            mp.grid[1].xaxis.set_ticks(np.linspace(0, 4, 5))
         
-        if mp is None: 
-            self.mp.fix_ticks()      
+        if not hadmp: 
+            mp.fix_ticks()      
         else:
             pl.draw()
+            
+        return mp
             
     def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k', 
         annotate = False, xscale = 'linear', yscale = 'log', ax = None):

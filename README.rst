@@ -5,7 +5,7 @@ rt1d
 rt1d is a 1D radiative transfer code developed for the purpose of studying ionization 
 (hydrogen and helium) and temperature evolution of gas in the vicinity of stars, accreting 
 black holes, or really any source of ultraviolet and/or X-ray photons you can think of.
-A paper including some discussion of it's inner-workings can be found `here <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
+A paper including some discussion of its inner-workings can be found `here <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
 
 Getting started
 ---------------
@@ -19,7 +19,7 @@ or visit the 'Downloads' page for a tarball.
 
 
 Dependencies
-____________
+------------
 
 Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis module also relies on matplotlib, 
 though if you'd rather make your plots with something else, this dependence is not necessary.
@@ -35,9 +35,9 @@ possible (in principle).  A few additional dependencies are required to support 
 First, dengo. Its sub-dependencies can all be installed using pip: ::
 
     pip install sympy
-    pip install ChiantiPy
     pip install periodic
-
+    pip install ChiantiPy
+    
 Use of the Chianti atomic database requires one additional environment variable: ::
 
     export XUVTOP=$WORK/mods/chianti
