@@ -64,7 +64,7 @@ while t <= tf:
     data = chem.Evolve(data, dt = dt)
     t += dt 
     
-    new_dt = timestep.IonLimited(chem.chemnet.q, chem.chemnet.dqdt)
+    new_dt = timestep.Limit(chem.chemnet.q, chem.chemnet.dqdt)
     dt = min(min(min(new_dt, 2 * dt), dt_max), tf - t)
 
     if dt == 0:

@@ -19,7 +19,7 @@ class ComputeTimestep:
         self.grid = grid
         self.epsilon = epsilon
     
-    def Limit(self, q, dqdt, tau, tau_ifront = 0.5, method = ['ions']):
+    def Limit(self, q, dqdt, tau = None, tau_ifront = 0.5, method = ['ions']):
         """
         Limit timestep based on maximum allowed change in fields.  Which 
         fields determined by method parameter.
@@ -29,7 +29,8 @@ class ComputeTimestep:
         dt = self.epsilon * q / np.abs(dqdt)
         
         # Isolate cells beyond I-front
-        dt[tau <= tau_ifront, ...] = huge_dt
+        if tau is not None:
+            dt[tau <= tau_ifront, ...] = huge_dt
                 
         new_dt = huge_dt
         for mth in method:
@@ -49,8 +50,7 @@ class ComputeTimestep:
             else:
                 new_dt = min(new_dt, np.min(dt))
         
-        return new_dt
-        
+        return new_dt    
             
         
     

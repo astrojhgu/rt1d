@@ -34,8 +34,8 @@ for i, res in enumerate([2**n for n in np.arange(5, 10)]):
     del anl
 
 mp.fix_ticks()    
-mp.grid[1].legend(loc = 'lower right', fontsize = 14, 
-    frameon = False, ncol = 2)    
+pl.rcParams['legend.fontsize'] = 14
+mp.grid[1].legend(loc = 'lower right', frameon = False, ncol = 2)
 pl.savefig('test_convergence.png')
 raw_input('')
     

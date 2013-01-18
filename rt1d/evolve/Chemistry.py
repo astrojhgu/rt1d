@@ -47,16 +47,20 @@ class Chemistry:
         """
         Evolve all cells by dt.
         """
-        
+                
         if self.dengo:
             return self.EvolveDengo(data, dt)
+        else:
+            if 'he_1' in self.grid.absorbers:
+                i = self.grid.absorbers.index('he_1')
+                self.chemnet.psi[...,i] *= data['he_2'] / data['he_1']
         
         newdata = {}
         for species in data:
             newdata[species] = data[species].copy()
                
         kwargs_by_cell = self.sort_kwargs_by_cell(kwargs)
-               
+                               
         self.q_grid = np.zeros_like(self.zeros_gridxq)
         self.dqdt_grid = np.zeros_like(self.zeros_gridxq)
                
@@ -71,11 +75,11 @@ class Chemistry:
             kwargs_cell = kwargs_by_cell[cell]
             
             if self.rtON:
-                args = (cell, kwargs_cell['Gamma'], kwargs_cell['gamma'], 
+                args = (cell, kwargs_cell['Gamma'], kwargs_cell['gamma'],
                     kwargs_cell['Heat'])
             else:
-                args = (cell, self.zeros_grid_x_abs, self.zeros_grid_x_abs2, 
-                    self.zeros_grid_x_abs)
+                args = (cell, self.grid.zeros_absorbers, self.grid.zeros_absorbers2, 
+                    self.grid.zeros_absorbers)
                             
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)
@@ -99,11 +103,11 @@ class Chemistry:
         """    
                 
         newdata = {}
-        for key in data.keys(): 
+        for key in data.keys():
             newdata[key] = copy.deepcopy(data[key])
        
         # Create all kwargs
-        kwargs = {} 
+        kwargs = {}
         for element in self.chemnet.networks:
             network = self.chemnet.networks[element]
             network.init_single_temperature(data['T'])

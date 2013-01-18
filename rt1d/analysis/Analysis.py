@@ -227,7 +227,26 @@ class Analyze:
         ax.set_ylabel(r'Temperature $(K)$')
         pl.draw()
         
-        return ax                
+        return ax             
+        
+    def CellTimeEvolution(self, cell = 0, field = 'x_HI'):
+        """
+        Return time evolution of a given quantity in one cell.
+        """    
+        
+        z = []
+        time = []
+        value = []
+        for dd in self.data.keys():
+            if self.pf['CosmologicalExpansion']:
+                z.append(self.data[dd].z)
+            else:
+                z.append(None)
+
+            time.append(self.data[dd]['time'])
+            value.append(self.data[dd][field][cell])
+        
+        return np.array(time), np.array(z), np.array(value)           
 
 class AnalyzeOld:
     def __init__(self, pf, retabulate = False):

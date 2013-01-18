@@ -89,7 +89,7 @@ class RateCoefficients:
         if species == 2: 
             return 4.95e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-6.31e5 / T)
             
-    def CollisionalExcitationCoolingRate(self, species, T, nabs = None, nion = None):
+    def CollisionalExcitationCoolingRate(self, species, T):
         """
         Returns coefficient for cooling by collisional excitation.  These are equations B4.3a, b, and c respectively
         from FK96.
@@ -100,7 +100,7 @@ class RateCoefficients:
         if species == 0: 
             return 7.5e-19 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.18e5 / T)
         if species == 1: 
-            return 9.1e-27 * T**-0.1687 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.31e4 / T) * nion[1] / nabs[1]   # CONFUSION
+            return 9.1e-27 * T**-0.1687 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.31e4 / T)   # CONFUSION
         if species == 2: 
             return 5.54e-17 * T**-0.397 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-4.73e5 / T)    
         

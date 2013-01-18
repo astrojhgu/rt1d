@@ -1,12 +1,12 @@
 """
 
-test_hydrogen_chemistry.py
+test_helium_chemistry.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Wed Dec 26 18:37:48 2012
 
-Description: 
+Description: Evolve helium species.
 
 """
 
@@ -22,13 +22,13 @@ T = np.logspace(np.log10(3e3), 6, dims)
 grid = rt1d.Grid(dims = dims)
 
 # Set initial conditions
-grid.set_chem(Z = [2], abundance = 'cosmic', isothermal = True)
+grid.set_chem(Z = [2], isothermal = True)
 grid.set_rho(rho0 = 1e-3 * rt1d.Constants.m_H)
 grid.set_T(T)
 grid.set_x(state = 'neutral')
 
 # Initialize chemistry network / solver
-chem = rt1d.Chemistry(grid, rt = False)
+chem = rt1d.Chemistry(grid, rt = False, dengo = False)
 
 # Only need to calculate coefficients once for this test
 chem.chemnet.SourceIndependentCoefficients(chem.grid.data['T'])
@@ -39,11 +39,8 @@ timestep = rt1d.run.ComputeTimestep(grid)
 # Plot Equilibrium solution
 np.seterr(all = 'ignore')
 Teq = np.logspace(np.log10(np.min(T)), np.log10(np.max(T)), 500)
-#eqH = cc.ioneq(1, Teq)
 eqHe = cc.ioneq(2, Teq)
 ax = pl.subplot(111)
-#ax.loglog(Teq, eqH.Ioneq[0], color = 'k', ls = '-')
-#ax.loglog(Teq, eqH.Ioneq[1], color = 'k', ls = '--')
 ax.loglog(Teq, eqHe.Ioneq[0], color = 'k', ls = '-')
 ax.loglog(Teq, eqHe.Ioneq[1], color = 'k', ls = '--')
 ax.loglog(Teq, eqHe.Ioneq[2], color = 'k', ls = ':')
@@ -68,7 +65,7 @@ while t <= tf:
     data = chem.Evolve(data, dt = dt)
     t += dt 
     
-    new_dt = timestep.IonLimited(chem.chemnet.q, chem.chemnet.dqdt)
+    new_dt = timestep.Limit(chem.chemnet.q, chem.chemnet.dqdt)
     dt = min(min(min(new_dt, 2 * dt), dt_max), tf - t)
 
     if dt == 0:
@@ -76,10 +73,6 @@ while t <= tf:
 
 pb.finish()    
 
-#ax.scatter(T, data['h_1'], color = 'b', s = 50, 
-#    marker = 'o')
-#ax.scatter(T, data['h_2'], color = 'b', s = 50, 
-#    alpha = 0.5, marker = 'o')         
 ax.scatter(T, data['he_1'], color = 'b', s = 50, 
     marker = 'o')
 ax.scatter(T, data['he_2'], color = 'b', s = 50, 

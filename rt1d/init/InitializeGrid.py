@@ -40,6 +40,10 @@ class Grid:
         return np.zeros(len(self.absorbers))
     
     @property
+    def zeros_absorbers2(self):
+        return np.zeros([len(self.absorbers)] * 2)    
+    
+    @property
     def zeros_grid_x_absorbers(self):
         return np.zeros([self.dims, len(self.absorbers)])
         
@@ -93,9 +97,9 @@ class Grid:
     def absorbers(self):    
         """ Return list of absorbers (don't include electrons). """
         if not hasattr(self, 'absorbing_species'):
-            self.absorbing_species = self.neutrals
+            self.absorbing_species = copy.copy(self.neutrals)
             for ion in self.ions_by_ion:
-                self.absorbing_species.extend(ion[1:-1])
+                self.absorbing_species.extend(self.ions_by_ion[ion][1:-1])
             
         return self.absorbing_species
         
@@ -241,7 +245,7 @@ class Grid:
         """              
         pass
         
-    def set_chem(self, Z = 1, abundance = None, isothermal = False,
+    def set_chem(self, Z = 1, abundance = 'cosmic', isothermal = False,
         secondary_ionization = False):
         """
         Initialize chemistry - which species we'll be solving for and their 
@@ -280,17 +284,16 @@ class Grid:
             self.data[field] = np.zeros(self.dims)
             
         # Read abundances from chianti
-        if abundance is not None:
-            if type(abundance) is str:
-                self.abundances_by_number = util.abundanceRead(abundance)['abundance']
-                self.element_abundances = []
-                for i, Z in enumerate(self.Z):
-                    self.element_abundances.append(self.abundances_by_number[Z - 1])
-            else:
-                self.abundances_by_number = self.abundance
-                self.element_abundances = []
-                for i, Z in enumerate(self.Z):
-                    self.element_abundances.append(self.abundances_by_number[i])
+        if type(abundance) is str:
+            self.abundances_by_number = util.abundanceRead(abundance)['abundance']
+            self.element_abundances = []
+            for i, Z in enumerate(self.Z):
+                self.element_abundances.append(self.abundances_by_number[Z - 1])
+        else:
+            self.abundances_by_number = self.abundance
+            self.element_abundances = []
+            for i, Z in enumerate(self.Z):
+                self.element_abundances.append(self.abundances_by_number[i])
                                
         # Initialize mapping between q-vector and physical quantities (dengo)                
         self._set_qmap()

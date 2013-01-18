@@ -170,7 +170,9 @@ def ControlParameters():
         
         "epsilon_dt": 0.05,
         "dtDataDump": 5,
+        'logdtDataDump': None,
         "stop_time": 500,
+        "start_time": None,
         "initial_timestep": 1e-6,
         "max_timestep": 1.,
         "restricted_timestep": ['ions'],
