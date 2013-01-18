@@ -156,7 +156,7 @@ class SimpleChemicalNetwork:
         from ..physics.ComputeRateCoefficients import RateCoefficients
         self.coeff = RateCoefficients()
 
-        self.Isothermal = self.grid.isothermal        
+        self.isothermal = self.grid.isothermal        
 
         # For convenience 
         self.zeros_q = np.zeros(len(self.grid.all_species))
@@ -225,7 +225,7 @@ class SimpleChemicalNetwork:
             self.dqdt[e] += (self.dqdt[he2] + self.dqdt[he2 + 1]) * n_He
                             
         # Temperature evolution - looks dumb but using np.sum is slow
-        if not self.Isothermal:
+        if not self.isothermal:
             phoheat = 0.0
             ioncool = 0.0
             reccool = 0.0
@@ -383,7 +383,6 @@ class SimpleChemicalNetwork:
                                 
             # Gas energy
             
-                                                   
         return J
                 
     def SourceIndependentCoefficients(self, T):

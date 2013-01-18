@@ -21,11 +21,11 @@ way:
 More notes:
 -Non-integer problem types are the same as their integer counterparts
  but with discrete SEDs rather than continuous ones.
--A problem type > 10 corresponds to the same problem as problem_type % 10, 
- except helium is included.
-  -To compare apples to apples, remember to modify density_units so that the
-   absolute number density of hydrogen remains unchanged. Or, modify
-   the abundances parameter.
+-A problem type > 10 (or < -10) corresponds to the same problem as 
+ problem_type % 10, except helium is included.
+-To compare apples to apples, remember to modify density_units so that the
+ absolute number density of hydrogen remains unchanged. Or, modify
+ the abundances parameter.
 
 """
 
@@ -39,44 +39,11 @@ def ProblemType(ptype):
     """
     
     ptype_int = int(ptype)
-    if ptype_int > 10:
-        ptype_int -= 10
-    
-    # RT06-0.3, Single zone ionization/heating, then source switches off.
-    if ptype == 0:
-        pf = {
-              "problem_type": 0, 
-              "plane_parallel": 1,
-              "isothermal": 0,
-              "density_units": m_H,
-              "length_units": 1e-4 * cm_per_kpc, # 100 milliparsecs 
-              "start_radius": 0.99,   # cell = 1 milliparsec across
-              "grid_cells": 1, 
-              
-              "start_time": 1e-12,
-              "stop_time": 10, 
-              "logdtDataDump": 0.5,
-              
-              "dtDataDump": 0.1, 
-              "initial_timestep": 1e-15,              
-              "initial_temperature": 1e2,
-              "initial_ionization": [1e-6], 
-              
-              "source_type": 1,
-              "source_qdot": 1e12,
-              "spectrum_type": 1,
-              "source_lifetime": 0.5,
-              "tau_ifront": [0, 0, 0],
-              
-              "spectrum_Emin": 13.6,
-              "spectrum_Emax": 100.,
-              "spectrum_EminNorm": 0.1,
-              "spectrum_EmaxNorm": 100.,
-              
-             }  
-    
+    if abs(ptype_int) > 10:
+        ptype_int -= 10 * np.sign(ptype_int)
+        
     # Single-zone, cosmological expansion test         
-    if ptype == 0.1:
+    if ptype_int == -1:
         pf = {
               "ProblemType": 0.1, 
               "CosmologicalExpansion": 1,
@@ -96,7 +63,41 @@ def ProblemType(ptype):
               "DiscreteSpectrum": 1,
               "Isothermal": 0,
               "OpticalDepthDefiningIFront": [0, 0, 0]
-             }                         
+             }         
+    
+    # RT06-0.3, Single zone ionization/heating, then source switches off.
+    if ptype_int == 0:
+        pf = {
+              "problem_type": 0, 
+              "plane_parallel": 1,
+              "isothermal": 0,
+              "density_units": m_H,
+              "length_units": 1e-4 * cm_per_kpc, # 100 milliparsecs 
+              "time_units": s_per_myr,
+              "start_radius": 0.99,   # cell = 1 milliparsec across
+              "grid_cells": 1, 
+              
+              "stop_time": 10, 
+              "logdtDataDump": 0.1,
+              "dtDataDump": 0.1, 
+              "initial_timestep": 1e-12,
+              "restricted_timestep": ['ions', 'electrons', 'energy'],
+                           
+              "initial_temperature": 1e2,
+              "initial_ionization": [1e-8], 
+              
+              "source_type": 1,
+              "source_qdot": 1e12,
+              "spectrum_type": 1,
+              "source_lifetime": 0.5,
+              "tau_ifront": [0, 0, 0],
+              
+              "spectrum_Emin": 13.6,
+              "spectrum_Emax": 100.,
+              "spectrum_EminNorm": 0.1,
+              "spectrum_EmaxNorm": 100.,
+              
+             }                      
     
     # RT06-1, RT1: Pure hydrogen, isothermal HII region expansion, 
     # monochromatic spectrum at 13.6 eV

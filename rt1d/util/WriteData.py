@@ -34,17 +34,33 @@ except ImportError:
 GlobalDir = os.getcwd()
 
 class CheckPoints:
-    def __init__(self, pf = None, grid = None, dtDataDump = 5., 
-        time_units = s_per_myr):
-        
+    def __init__(self, pf = None, grid = None, time_units = s_per_myr,
+        dtDataDump = 5., logdtDataDump = None, stop_time = 100,
+        initial_timestep = None):
         self.pf = pf
         self.data = {}
         self.grid = grid
         self.dtDD = dtDataDump * time_units
         self.time_units = time_units
+        self.stop_time = stop_time * time_units
         
         self.basename = 'dd'
         self.fill = 4
+            
+        self.DDtimes = np.linspace(0, stop_time * self.time_units, 
+            stop_time / dtDataDump + 1)
+
+        self.logdtDD = logdtDataDump
+        if logdtDataDump is not None:
+            self.logti = np.log10(initial_timestep)
+            self.logtf = np.log10(stop_time)
+            self.logDDt = time_units * np.logspace(self.logti, self.logtf, 
+                (self.logtf - self.logti) / self.logdtDD + 1)[0:-1]
+                
+            self.DDtimes = np.sort(np.concatenate((self.DDtimes, self.logDDt)))
+                                
+        self.allDD = np.linspace(0, len(self.DDtimes) - 1., len(self.DDtimes))
+        self.NDD = len(self.allDD)                            
         
         if self.grid is not None:
             self.store_ics(grid.data)
@@ -75,24 +91,29 @@ class CheckPoints:
         return self.new_dt(t, dt)
         
     def write_now(self, t):
-        if t % self.dtDD == 0:
+        if t in self.DDtimes:
             return True
-        
+            
         return False    
         
-    def new_dt(self, t, dt):   
+    def new_dt(self, t, dt):
         last_dd = int(self.dd(t))
         next_dd = last_dd + 1
-         
+                
         # If dt won't take us all the way to the next DD, don't modify dt
-        if self.dd(t + dt) <= next_dd:
+        if (self.dd(t + dt) <= next_dd):
             return dt
             
-        return next_dd * self.dtDD - t
-        
+        if next_dd <= self.NDD:    
+            return self.DDtimes[next_dd] - t
+        else:
+            return self.stop_time - t
+                 
     def dd(self, t):
-        return t / self.dtDD     
-            
+        """ What data dump are we at currently? Doesn't have to be integer. """
+        return np.interp(t, self.DDtimes, self.allDD, 
+            right = self.NDD)
+
     def name(self, t):
         ct = int(self.dd(t))
         return '%s%s' % (self.basename, str(ct).zfill(self.fill))

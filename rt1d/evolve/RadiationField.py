@@ -30,9 +30,12 @@ class RadiationField:
         if self.src.multi_freq:             
             self.sigma = (np.ones([self.grid.dims, self.src.Nfreq]) \
                        * self.src.sigma).T      
-                       
+        
         if not self.pf['photon_conserving']:
-            self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_int**2                           
+            self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_int**2
+            self.pp_corr = 12. / np.pi / self.grid.r_int**2
+        else:
+            self.pp_corr = self.grid.Vsh / self.grid.dr
                       
     def SourceDependentCoefficients(self, data, t):
         """
@@ -66,13 +69,19 @@ class RadiationField:
         self.A = {}
         for absorber in self.grid.absorbers:
             self.n[absorber] = data[absorber] * self.grid.x_to_n[absorber]
-            
+                    
             if self.pf['photon_conserving']:
                 self.A[absorber] = self.src.Lbol \
                     / self.n[absorber] / self.grid.Vsh
             else:
                 self.A[absorber] = self.A_npc
-                        
+                
+            # Correct normalizations if the radiation field is plane-parallel    
+            if self.pf['plane_parallel']:
+                self.A[absorber] *= self.pp_corr
+                if self.pf['photon_conserving']:
+                    self.A[absorber] /= data[absorber]
+                
         # Eventually loop over sources here
         
         """
@@ -236,9 +245,6 @@ class RadiationField:
         # Compute total optical depth too
         self.tau_tot = 10**self.src.tables["logTau"](self.logN_by_cell)     
                         
-        #print 'gamma', self.gamma
-        #print 'heat', self.k_H        
-                
         return self.Gamma, self.gamma, self.k_H
         
     def OpticallyThinCoefficients(self, data, absorber):

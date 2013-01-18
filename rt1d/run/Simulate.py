@@ -60,25 +60,28 @@ def RTsim(pf = None):
     
     # For storing data
     checkpoints = rt1d.util.CheckPoints(pf = pf, grid = grid,
-        dtDataDump = pf['dtDataDump'], time_units = pf['time_units'])
-    
+        dtDataDump = pf['dtDataDump'], time_units = pf['time_units'],
+        stop_time = pf['stop_time'], initial_timestep = pf['initial_timestep'],
+        logdtDataDump = pf['logdtDataDump'])
+            
     # Evolve chemistry + RT
     data = grid.data
-    dt = rt1d.Constants.s_per_myr * pf['initial_timestep']
+    dt = pf['time_units'] * pf['initial_timestep']
     t = 0.0
-    tf = pf['stop_time'] * rt1d.Constants.s_per_myr
+    tf = pf['stop_time'] * pf['time_units']
     
     print '\nSolving radiative transfer...'
-    
+                
     dt_history = []
     pb = rt1d.run.ProgressBar(tf)
     while t < tf:
-            
+                                        
         # Evolve by dt
         data = rt.Evolve(data, t = t, dt = dt)
         t += dt 
+        
         pb.update(t)
-                
+                        
         # Figure out next dt based on max allowed change in evolving fields
         new_dt = timestep.Limit(rt.chem.q_grid, rt.chem.dqdt_grid, 
             rt.rfield.tau_tot, tau_ifront = pf['tau_ifront'], 
@@ -87,12 +90,14 @@ def RTsim(pf = None):
         # Limit timestep further based on next DD and max allowed increase
         dt = min(new_dt, 2 * dt)
         dt = checkpoints.update(data, t, dt)
-        
+                
         # Save timestep history
         dt_history.append((t, dt))
         
         if pf['save_rate_coefficients']:
             checkpoints.store_kwargs(t, rt.kwargs)
+            
+        print t / pf['time_units'], dt / pf['time_units']    
 
     pb.finish()
         

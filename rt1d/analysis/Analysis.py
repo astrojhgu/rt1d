@@ -238,7 +238,7 @@ class Analyze:
         time = []
         value = []
         for dd in self.data.keys():
-            if self.pf['CosmologicalExpansion']:
+            if self.pf['expansion']:
                 z.append(self.data[dd].z)
             else:
                 z.append(None)

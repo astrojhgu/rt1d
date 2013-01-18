@@ -52,7 +52,7 @@ class Radiation:
         if self.pf['radiative_transfer']:
             Gamma, gamma, Heat = self.rfield.SourceDependentCoefficients(data, t)
             
-            # Each is (grid x absorbers)
+            # Each is grid x absorbers, or grid x [absorbers, absorbers] for gamma
             self.kwargs.update({'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma})
                 
         # Compute source independent rate coefficients
