@@ -80,7 +80,7 @@ class RateCoefficients:
         
         # Derived quantities we'll need
         Vsh = self.Vsh[cell]        
-        Ncell = dr * nabs          
+        Ncell = dr * nabs
         logNcell = np.log10(Ncell)
         
         # Loop over radiation sources                            
@@ -107,7 +107,7 @@ class RateCoefficients:
             small_tau = [False, False, False]      
             if self.pf['AllowSmallTauApprox']:      
                 tau_small = (ncol[0] <= self.smallcol[0]) & (ncol[1] <= self.smallcol[1]) \
-                    & (ncol[2] <= self.smallcol[2])  
+                    & (ncol[2] <= self.smallcol[2])
                     
                 small_tau = [tau_small, tau_small, tau_small]
                 for i in xrange(3): 

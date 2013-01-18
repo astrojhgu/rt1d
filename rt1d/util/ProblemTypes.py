@@ -96,8 +96,17 @@ def ProblemType(ptype):
               "spectrum_Emax": 100.,
               "spectrum_EminNorm": 0.1,
               "spectrum_EmaxNorm": 100.,
-              
-             }                      
+                           
+             }
+             
+        # Change discrete spectrum: 0.1 = Mirocha et al. 2012, 
+        #                           0.2 = Wise & Abel 2011
+        if ptype == 0.1:
+            pf.update({'spectrum_E': [17.98, 31.15, 49.09, 76.98]})
+            pf.update({'spectrum_LE': [0.23, 0.36, 0.24, 0.06]})
+        if ptype == 0.2:
+            pf.update({'spectrum_E': [18.29, 31.46, 49.13, 77.23]})
+            pf.update({'spectrum_LE': [0.24, 0.35, 0.23, 0.06]})                           
     
     # RT06-1, RT1: Pure hydrogen, isothermal HII region expansion, 
     # monochromatic spectrum at 13.6 eV
@@ -140,7 +149,7 @@ def ProblemType(ptype):
              }
         
         # Change discrete spectrum: 2.1 = Mirocha et al. 2012, 
-        # 2.2 = Wise & Abel 2011
+        #                           2.2 = Wise & Abel 2011
         if ptype == 2.1:
             pf.update({'spectrum_E': [17.98, 31.15, 49.09, 76.98]})
             pf.update({'spectrum_LE': [0.23, 0.36, 0.24, 0.06]})

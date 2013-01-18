@@ -12,7 +12,7 @@ Description:
 
 import rt1d
 
-sim = rt1d.run.RTsim(pf = {'problem_type': 0})
+sim = rt1d.run.RTsim(pf = {'problem_type': 0, 'photon_conserving': 0})
 
 anl = rt1d.analysis.Analyze(sim.checkpoints)
 
@@ -28,7 +28,7 @@ mp.grid[1].loglog(t / s_per_yr, T, color = 'k')
 
 mp.grid[0].set_xlim(1e-6, 1e7)
 mp.grid[1].set_xlim(1e-6, 1e7)
-mp.grid[0].set_ylim(1e-7, 1.5)
+mp.grid[0].set_ylim(1e-8, 1.5)
 mp.grid[1].set_ylim(1e2, 1e5)
     
 mp.grid[0].set_ylabel(r'$x_{\mathrm{HI}}$')

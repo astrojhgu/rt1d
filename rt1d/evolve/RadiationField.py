@@ -31,11 +31,11 @@ class RadiationField:
             self.sigma = (np.ones([self.grid.dims, self.src.Nfreq]) \
                        * self.src.sigma).T      
         
-        if not self.pf['photon_conserving']:
-            self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_int**2
-            self.pp_corr = 12. / np.pi / self.grid.r_int**2
-        else:
+        if self.pf['photon_conserving']:
             self.pp_corr = self.grid.Vsh / self.grid.dr
+        else:
+            self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_int**2
+            self.pp_corr = 4. * np.pi * self.grid.r_int**2
                       
     def SourceDependentCoefficients(self, data, t):
         """
@@ -54,7 +54,7 @@ class RadiationField:
         self.N, self.logN, self.Nc = self.grid.ColumnDensity(data)
          
         # Column densities (of all absorbers) sorted by cell 
-        # (i.e. an array with shape = grid x # of absorbers)
+        # (i.e. an array with shape = grid cells x # of absorbers)
         self.N_by_cell = np.zeros([self.grid.dims, len(self.grid.absorbers)])
         self.Nc_by_cell = np.zeros([self.grid.dims, len(self.grid.absorbers)])
         for i, absorber in enumerate(self.grid.absorbers):
@@ -78,9 +78,7 @@ class RadiationField:
                 
             # Correct normalizations if the radiation field is plane-parallel    
             if self.pf['plane_parallel']:
-                self.A[absorber] *= self.pp_corr
-                if self.pf['photon_conserving']:
-                    self.A[absorber] /= data[absorber]
+                self.A[absorber] = self.A[absorber] * self.pp_corr
                 
         # Eventually loop over sources here
         

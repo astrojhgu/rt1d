@@ -97,8 +97,14 @@ def RTsim(pf = None):
         if pf['save_rate_coefficients']:
             checkpoints.store_kwargs(t, rt.kwargs)
             
-        print t / pf['time_units'], dt / pf['time_units']    
-
+        # Raise error if any funny stuff happens    
+        if dt < 0: 
+            raise ValueError('ERROR: dt < 0.  Exiting.') 
+        elif dt == 0:
+            raise ValueError('ERROR: dt = 0.  Exiting.')  
+        elif np.isnan(dt):  
+            raise ValueError('ERROR: dt -> inf.  Exiting.')        
+            
     pb.finish()
         
     sim = simulation(pf, checkpoints, rt)
