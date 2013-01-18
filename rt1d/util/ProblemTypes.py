@@ -96,6 +96,7 @@ def ProblemType(ptype):
               "spectrum_Emax": 100.,
               "spectrum_EminNorm": 0.1,
               "spectrum_EmaxNorm": 100.,
+              "spectrum_smallest_x": [1e-8],
                            
              }
              

@@ -76,7 +76,7 @@ class RadiationField:
             else:
                 self.A[absorber] = self.A_npc
                 
-            # Correct normalizations if the radiation field is plane-parallel    
+            # Correct normalizations if the radiation field is plane-parallel
             if self.pf['plane_parallel']:
                 self.A[absorber] = self.A[absorber] * self.pp_corr
                 
