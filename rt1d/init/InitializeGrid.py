@@ -306,13 +306,13 @@ class Grid:
         dictionary.
         """
         
-        for key in data.keys():
-            self.data[key] = data[key]
+        self.data[key] = data.copy()
 
     def set_T(self, T0):
         """
         Set initial temperature in grid.  If type(T0) is float, assume uniform
         temperature everywhere.  Otherwise, pass T0 as an array of values.
+        Must initialize ionization before this!
         """
         
         if hasattr(T0, 'size'):
@@ -320,10 +320,7 @@ class Grid:
         else:
             self.data['T'] = T0 * np.ones(self.dims)
                         
-        # Initialize gas energy    
-        if not self.isothermal:
-            self.data['ge'] = 1.5 * k_B * self.particle_density(self.data) \
-                * self.data['T']                
+        self._set_ge()       
             
     def set_x(self, Z = None, x = None, state = None, perturb = 0):
         """
@@ -415,7 +412,40 @@ class Grid:
             X += self.abundances_by_number[i] * ele.mass
                                                           
         self.n_H = self.data['rho'] / m_H / X
+    
+    def make_clump(self, position = None, radius = None, overdensity = None,
+        temperature = None, ionization = None, profile = None):
+        """ Create a clump! """
+                
+        # Figure out where the clump is
+        gridarr = np.linspace(0, 1, self.dims)
+        isclump = (gridarr >= (position - radius)) \
+                & (gridarr <= (position + radius))
         
+        # First, modify density
+        if profile == 0:
+            self.data['rho'][isclump] *= overdensity
+            self.n_H *= overdensity
+        if profile == 1:
+            self.data['rho'][isclump] += self.data['rho'][isclump] * overdensity \
+                * np.exp(-(gridarr[isclump] - position)**2 / 2. / radius**2)
+            self.n_H += self.n_H[isclump] * overdensity \
+                * np.exp(-(gridarr[isclump] - position)**2 / 2. / radius**2)
+                      
+        # Now, temperature   
+        self.data['T'][isclump] = temperature
+        
+        # Ionization state - could generalize this more
+        for neutral in self.neutrals:
+            self.data[neutral][isclump] = 1. - ionization
+        for ion in self.ions:
+            self.data[ion][isclump] = ionization    
+        
+        # Reset electron density and gas energy
+        self._set_de()
+        self._set_ge()
+        del self.x_to_n_converter
+                
     def particle_density(self, data):
         """
         Compute total particle number density.
@@ -426,6 +456,12 @@ class Grid:
              n += data[ion] * self.x_to_n[ion]
              
         return n 
+        
+    def _set_ge(self):
+        # Initialize gas energy    
+        if not self.isothermal:
+            self.data['ge'] = 1.5 * k_B * self.particle_density(self.data) \
+                * self.data['T']             
 
     def _set_de(self):
         """

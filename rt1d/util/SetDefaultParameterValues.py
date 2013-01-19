@@ -40,6 +40,15 @@ def GridParameters():
         "abundances": [1.],
         "initial_ionization": [1.2e-3],
         "initial_temperature": 1e4,
+        
+        "clump": 0,  
+        "clump_position": 0.1,  
+        "clump_radius": 0.05,  
+        "clump_overdensity": 100,  
+        "clump_temperature": 100,    
+        "clump_ionization": 1e-6,
+        "clump_profile": 0,
+                
         }
 
     return pf
@@ -114,7 +123,7 @@ def SpectrumParameters():
         
         "spectrum_logNmin": [16],
         "spectrum_logNmax": [21],
-        "spectrum_smallest_x": 1e-5,
+        "spectrum_smallest_x": 1e-8,
         
         "spectrum_dlogN": [0.2],
         "spectrum_dlogx": 0.1,

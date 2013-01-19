@@ -139,7 +139,8 @@ class Analyze:
         return mp
             
     def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k', 
-        annotate = False, xscale = 'linear', yscale = 'log', ax = None):
+        annotate = False, xscale = 'linear', yscale = 'log', ax = None,
+        normx = False):
         """
         Plot radial profiles of species fraction (for H or He) at times t (Myr).
         """      
@@ -184,7 +185,7 @@ class Analyze:
         return ax     
             
     def TemperatureProfile(self, t = [10, 30, 100], color = 'k', ls = None, xscale = 'linear', 
-        legend = True, ax = None):
+        legend = True, ax = None, normx = False):
         """
         Plot radial profiles of temperature at times t (Myr).
         """  

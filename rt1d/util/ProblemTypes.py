@@ -96,19 +96,10 @@ def ProblemType(ptype):
               "spectrum_Emax": 100.,
               "spectrum_EminNorm": 0.1,
               "spectrum_EmaxNorm": 100.,
-              "spectrum_smallest_x": [1e-8],
+              "spectrum_smallest_x": 1e-10,
                            
              }
              
-        # Change discrete spectrum: 0.1 = Mirocha et al. 2012, 
-        #                           0.2 = Wise & Abel 2011
-        if ptype == 0.1:
-            pf.update({'spectrum_E': [17.98, 31.15, 49.09, 76.98]})
-            pf.update({'spectrum_LE': [0.23, 0.36, 0.24, 0.06]})
-        if ptype == 0.2:
-            pf.update({'spectrum_E': [18.29, 31.46, 49.13, 77.23]})
-            pf.update({'spectrum_LE': [0.24, 0.35, 0.23, 0.06]})                           
-    
     # RT06-1, RT1: Pure hydrogen, isothermal HII region expansion, 
     # monochromatic spectrum at 13.6 eV
     if ptype_int == 1:
@@ -149,15 +140,6 @@ def ProblemType(ptype):
               "spectrum_qdot": 5e48,
              }
         
-        # Change discrete spectrum: 2.1 = Mirocha et al. 2012, 
-        #                           2.2 = Wise & Abel 2011
-        if ptype == 2.1:
-            pf.update({'spectrum_E': [17.98, 31.15, 49.09, 76.98]})
-            pf.update({'spectrum_LE': [0.23, 0.36, 0.24, 0.06]})
-        if ptype == 2.2:
-            pf.update({'spectrum_E': [18.29, 31.46, 49.13, 77.23]})
-            pf.update({'spectrum_LE': [0.24, 0.35, 0.23, 0.06]})
-                 
     # RT06-3: I-front trapping in a dense clump and the formation of a shadow,
     # continuous blackbody spectrum
     if ptype == 3:
@@ -166,56 +148,42 @@ def ProblemType(ptype):
               "plane_parallel": 1,
               "density_units": 2e-4 * m_H,
               "length_units": 6.6 * cm_per_kpc,
-              "grid_cells": 200,
+
               "stop_time": 15.0, 
               "dtDataDump": 1.0,
               "isothermal": 0,  
               "initial_temperature": 8e3, 
-              "initial_ionization": [1e-5], 
+              "initial_ionization": [0.999999], 
               "source_type": 1, 
               "source_qdot": 1e6, 
               "spectrum_type": 1,
+              
+              "restricted_timestep": ['ions', 'energy', 'electrons'],
               
               "spectrum_Emin": 13.6, 
               "spectrum_Emax": 100., 
               "spectrum_EminNorm": 0.1, 
               "spectrum_EmaxNorm": 100., 
-              "DiscreteSpectrum": 0,
-              "Clump": 1, 
-              "ClumpPosition": 5.0 / 6.6, 
-              "ClumpOverdensity": 200., 
-              "ClumpRadius": 0.8 / 6.6,
-              "ClumpTemperature": 40., 
+              
+              "clump": 1, 
+              "clump_position": 5.0 / 6.6, 
+              "clump_overdensity": 200., 
+              "clump_radius": 0.8 / 6.6,
+              "clump_temperature": 40., 
+              "clump_profile": 0,
+              "clump_ionization": 1e-6,
+                
              }
-    
-    # RT06-3: I-front trapping in a dense clump and the formation of a shadow
-    if ptype == 3.1:
-        pf = {
-              "problem_type": 3.1,  
-              "DensityUnits": 2e-4 * m_H,
-              "LengthUnits": 6.6 * cm_per_kpc,
-              "GridDimensions": 200,
-              "StopTime": 15.0, 
-              "dtDataDump": 1.0, 
-              "Isothermal": 0, 
-              "DensityProfile": 0, 
-              "TemperatureProfile": 0, 
-              "InitialTemperature": 8e3, 
-              "IonizationProfile": 0, 
-              "InitialHIIFraction": 1e-5, 
-              "SourceType": 0, 
-              "SpectrumType": 1,
-              "SpectrumPhotonLuminosity": 1e6, 
-              "DiscreteSpectrum": 1, 
-              "DiscreteSpectrumSED": [16.74, 24.65, 34.49, 52.06],
-              "DiscreteSpectrumRelLum": [0.277, 0.335, 0.2, 0.188], 
-              "Clump": 1, 
-              "ClumpPosition": 5.0 / 6.6, 
-              "ClumpOverdensity": 200., 
-              "ClumpRadius": 0.8 / 6.6,
-              "ClumpTemperature": 40.,
-              "PlaneParallelField": 1
-             }   
+             
+    if (ptype - ptype_int) != 0:
+        # Change discrete spectrum: 0.1 = Mirocha et al. 2012
+        #                           0.2 = Wise & Abel 2011
+        if (ptype - ptype_int) == 0.1:
+            pf.update({'spectrum_E': [17.98, 31.15, 49.09, 76.98]})
+            pf.update({'spectrum_LE': [0.23, 0.36, 0.24, 0.06]})
+        if (ptype - ptype_int) == 0.2:
+            pf.update({'spectrum_E': [18.29, 31.46, 49.13, 77.23]})
+            pf.update({'spectrum_LE': [0.24, 0.35, 0.23, 0.06]})
              
     if ptype >= 10:
         pf.update({'species': [1, 2]})         

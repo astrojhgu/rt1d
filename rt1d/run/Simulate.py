@@ -47,10 +47,15 @@ def RTsim(pf = None):
     grid.set_rho(rho0 = pf['density_units'])
     
     for i in xrange(len(pf['species'])):
-        grid.set_x(Z = pf['species'][i], x = pf['initial_ionization'][i])
+        grid.set_x(Z = pf['species'][i], x = pf['initial_ionization'][i])       
     
     grid.set_T(pf['initial_temperature'])
     
+    if pf['clump']:
+        grid.make_clump(position = pf['clump_position'], radius = pf['clump_radius'], 
+            temperature = pf['clump_temperature'], overdensity = pf['clump_overdensity'],
+            ionization = pf['clump_ionization'], profile = pf['clump_profile'])
+            
     # Initialize radiation source and radiative transfer solver
     rs = rt1d.sources.RadiationSourceIdealized(grid, **pf)
     rt = rt1d.Radiation(grid, rs, **pf)
@@ -97,13 +102,13 @@ def RTsim(pf = None):
         if pf['save_rate_coefficients']:
             checkpoints.store_kwargs(t, rt.kwargs)
             
-        # Raise error if any funny stuff happens    
+        # Raise error if any funny stuff happens
         if dt < 0: 
-            raise ValueError('ERROR: dt < 0.  Exiting.') 
+            raise ValueError('ERROR: dt < 0.') 
         elif dt == 0:
-            raise ValueError('ERROR: dt = 0.  Exiting.')  
+            raise ValueError('ERROR: dt = 0.')  
         elif np.isnan(dt):  
-            raise ValueError('ERROR: dt -> inf.  Exiting.')        
+            raise ValueError('ERROR: dt -> inf.')        
             
     pb.finish()
         
