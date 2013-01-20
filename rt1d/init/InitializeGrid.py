@@ -327,7 +327,7 @@ class Grid:
         Set initial ionization state.  If Z is None, assume constant ion fraction 
         of 1 / (1 + Z) for all elements.  Can be overrideen by 'state', which can be
         'equilibrium', and maybe eventually other options (e.g. perturbed out of
-        equilibrium slightly perhaps).
+        equilibrium slightly, perhaps).
         """       
         
         if x is not None:
@@ -412,6 +412,7 @@ class Grid:
             X += self.abundances_by_number[i] * ele.mass
                                                           
         self.n_H = self.data['rho'] / m_H / X
+        self.data['n'] = self.particle_density(self.data)
     
     def make_clump(self, position = None, radius = None, overdensity = None,
         temperature = None, ionization = None, profile = None):
@@ -421,15 +422,15 @@ class Grid:
         gridarr = np.linspace(0, 1, self.dims)
         isclump = (gridarr >= (position - radius)) \
                 & (gridarr <= (position + radius))
-        
+                
         # First, modify density
         if profile == 0:
             self.data['rho'][isclump] *= overdensity
-            self.n_H *= overdensity
+            self.n_H[isclump] *= overdensity
         if profile == 1:
             self.data['rho'][isclump] += self.data['rho'][isclump] * overdensity \
                 * np.exp(-(gridarr[isclump] - position)**2 / 2. / radius**2)
-            self.n_H += self.n_H[isclump] * overdensity \
+            self.n_H[isclump] += self.n_H[isclump] * overdensity \
                 * np.exp(-(gridarr[isclump] - position)**2 / 2. / radius**2)
                       
         # Now, temperature   
@@ -444,7 +445,9 @@ class Grid:
         # Reset electron density and gas energy
         self._set_de()
         self._set_ge()
+        
         del self.x_to_n_converter
+        self.data['n'] = self.particle_density(self.data)        
                 
     def particle_density(self, data):
         """

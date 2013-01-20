@@ -141,8 +141,6 @@ class RadiationField:
             for absorber in self.grid.absorbers:
                 self.fion[absorber] = self.esec.DepositionFraction(E = None, 
                     xHII = data['h_2'], channel = absorber)
-
-        #print self.logx
         
         # Compute column densities up to and of cells        
         if self.pf['photon_conserving']:
@@ -330,6 +328,9 @@ class RadiationField:
         q0 = qdot * np.exp(-tau_r_E)             # number of photons entering cell per sec
         dq = q0 * (1. - np.exp(-tau_c))          # number of photons absorbed in cell per sec
         IonizationRate = dq / n / self.grid.Vsh  # ionizations / sec / atom        
+                          
+        if self.pf['plane_parallel']:
+            IonizationRate *= self.pp_corr
                           
         return IonizationRate
         

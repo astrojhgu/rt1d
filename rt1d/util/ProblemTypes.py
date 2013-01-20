@@ -90,7 +90,7 @@ def ProblemType(ptype):
               "source_qdot": 1e12,
               "spectrum_type": 1,
               "source_lifetime": 0.5,
-              "tau_ifront": [0, 0, 0],
+              "tau_ifront": [0],
               
               "spectrum_Emin": 13.6,
               "spectrum_Emax": 100.,
@@ -142,7 +142,7 @@ def ProblemType(ptype):
         
     # RT06-3: I-front trapping in a dense clump and the formation of a shadow,
     # continuous blackbody spectrum
-    if ptype == 3:
+    if ptype_int == 3:
         pf = {
               "problem_type": 3,  
               "plane_parallel": 1,
@@ -153,9 +153,9 @@ def ProblemType(ptype):
               "dtDataDump": 1.0,
               "isothermal": 0,  
               "initial_temperature": 8e3, 
-              "initial_ionization": [0.999999], 
+              "initial_ionization": [1e-6], 
               "source_type": 1, 
-              "source_qdot": 1e6, 
+              "source_qdot": 1e12, 
               "spectrum_type": 1,
               
               "restricted_timestep": ['ions', 'energy', 'electrons'],
@@ -176,6 +176,9 @@ def ProblemType(ptype):
              }
              
     if (ptype - ptype_int) != 0:
+        pf.update({'source_type': 0}) # discrete!
+        pf.update({'photon_conserving': 1})
+        
         # Change discrete spectrum: 0.1 = Mirocha et al. 2012
         #                           0.2 = Wise & Abel 2011
         if (ptype - ptype_int) == 0.1:
