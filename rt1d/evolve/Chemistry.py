@@ -88,15 +88,12 @@ class Chemistry:
             self.dqdt_grid[cell] = self.chemnet.dqdt.copy()
 
             for i, value in enumerate(self.solver.y):
-                newdata[self.grid.all_species[i]][cell] = value
+                newdata[self.grid.all_species[i]][cell] = self.solver.y[i]
                 
         # Convert ge to T
         if not self.grid.isothermal:
             newdata['n'] = self.grid.particle_density(newdata)
             newdata['T'] = newdata['ge'] * 2. / 3. / k_B / newdata['n']
-            
-        if not np.any(np.isfinite(newdata['T'])):
-            print self.q_grid, self.dqdt_grid#kwargs_by_cell
         
         return newdata
 
