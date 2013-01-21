@@ -68,7 +68,7 @@ def ProblemType(ptype):
     # RT06-0.3, Single zone ionization/heating, then source switches off.
     if ptype_int == 0:
         pf = {
-              "problem_type": 0, 
+              "problem_type": 0,
               "plane_parallel": 1,
               "isothermal": 0,
               "density_units": m_H,
@@ -79,17 +79,19 @@ def ProblemType(ptype):
               
               "stop_time": 10, 
               "logdtDataDump": 0.1,
-              "dtDataDump": 0.1, 
+              "dtDataDump": 1.0, 
               "initial_timestep": 1e-12,
+              "max_timestep": 0.01,
               "restricted_timestep": ['ions', 'electrons', 'energy'],
                            
               "initial_temperature": 1e2,
-              "initial_ionization": [1e-8], 
+              "initial_ionization": [1e-8],
               
               "source_type": 1,
               "source_qdot": 1e12,
-              "spectrum_type": 1,
               "source_lifetime": 0.5,
+              
+              "spectrum_type": 1,
               "tau_ifront": [0],
               
               "spectrum_Emin": 13.6,
@@ -150,7 +152,7 @@ def ProblemType(ptype):
               "length_units": 6.6 * cm_per_kpc,
 
               "stop_time": 15.0, 
-              "dtDataDump": 1.0,
+              "dtDataDump": 100.0,
               "isothermal": 0,  
               "initial_temperature": 8e3, 
               "initial_ionization": [1e-6], 

@@ -17,6 +17,8 @@ import dengo.oxygen_rates, dengo.oxygen_cooling
 from dengo.chemistry_constants import tiny, kboltz, mh
 from dengo.chemical_network import ChemicalNetwork, \
     reaction_registry, cooling_registry
+    
+from ..physics.Constants import k_B    
 
 class DengoChemicalNetwork:
     def __init__(self, grid):
@@ -173,7 +175,7 @@ class SimpleChemicalNetwork:
         self.q = q
         self.dqdt = np.zeros_like(self.zeros_q)
         
-        cell, Gamma, gamma, k_H = args
+        cell, Gamma, gamma, k_H, n = args
                                     
         n_H = self.grid.n_H[cell]
         
@@ -257,9 +259,11 @@ class SimpleChemicalNetwork:
         Jacobian of the rate equations.
         """    
                     
-        cell, Gamma, gamma, k_H = args
+        cell, Gamma, gamma, k_H, n = args
                 
         n_H = self.grid.n_H[cell]
+        
+        dTde = 2. / 3. / k_B / n
             
         if 1 in self.grid.Z:
             h1, e = (0, 2)
@@ -315,11 +319,15 @@ class SimpleChemicalNetwork:
                     - self.alpha[cell][h1] * n_H * xHII
                     
             # Gas energy
-            J[-1][h1] = n_H * (k_H[h1] \
-                      - n_e * (self.zeta[cell][h1] + self.psi[cell][h1]
-                      - self.eta[cell][h1]))
-            J[-1][h1 + 1] = -J[-1][h1]
-            J[-1][-1] = 0
+            if not self.isothermal:
+                #J[h1][-1] = 
+                
+                
+                J[-1][h1] = n_H * (k_H[h1] \
+                          - n_e * n_H * (self.zeta[cell][h1] 
+                          + self.psi[cell][h1] - self.eta[cell][h1]))
+                J[-1][h1 + 1] = -J[-1][h1]
+                J[-1][-1] = 0
 
         if 2 in self.grid.Z:
             
@@ -379,9 +387,7 @@ class SimpleChemicalNetwork:
             #          + self.xi[cell] * n_e \
             #          + self.alpha[1][cell] * n_e - self.alpha[2][cell] * n_e
             
-            J[e][e] *= n_He
-                                
-            # Gas energy
+            J[e][e] *= n_He    
             
         return J
                 
@@ -398,13 +404,10 @@ class SimpleChemicalNetwork:
         self.eta = np.zeros_like(self.grid.zeros_grid_x_absorbers)
         self.psi = np.zeros_like(self.grid.zeros_grid_x_absorbers)
         
+        self.xi = np.zeros(self.grid.dims)
+        self.omega = np.zeros(self.grid.dims)
+        
         for i, absorber in enumerate(self.grid.absorbers):
-            #if (i == 0) and (1 not in self.grid.Z):
-            #    continue
-            #
-            #if i > 0 and (2 not in self.grid.Z):
-            #    continue
-                
             self.Beta[...,i] = self.coeff.CollisionalIonizationRate(i, T)
             self.alpha[...,i] = self.coeff.RadiativeRecombinationRate(i, T)
             self.zeta[...,i] = self.coeff.CollisionalIonizationCoolingRate(i, T)
@@ -412,8 +415,9 @@ class SimpleChemicalNetwork:
             self.psi[...,i] = self.coeff.CollisionalExcitationCoolingRate(i, T)            
                         
         # Di-electric recombination
-        self.xi = self.coeff.DielectricRecombinationRate(T)
-        self.omega = self.coeff.DielectricRecombinationCoolingRate(T)
+        if 2 in self.grid.Z:
+            self.xi = self.coeff.DielectricRecombinationRate(T)
+            self.omega = self.coeff.DielectricRecombinationCoolingRate(T)
         
         return {'Beta': self.Beta, 'alpha': self.alpha,  
                 'zeta': self.zeta, 'eta': self.eta, 'psi': self.psi, 

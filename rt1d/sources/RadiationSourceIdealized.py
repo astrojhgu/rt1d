@@ -197,10 +197,17 @@ class RadiationSourceIdealized:
             self._gamma_bar_all = \
                 np.zeros([self.grid.dims, self.grid.N_absorbers, 
                     self.grid.N_absorbers])
-            #for i, absorber in enumerate(self.grid.absorbers):
-            #    self._gamma_bar_all[i] = self.Lbol * self.sigma_bar[i] \
-            #        * self.fLbol_ionizing[i] / 4. / np.pi / self.grid.r_mid**2 \
-            #        / self.hnu_bar[i] / erg_per_ev
+                    
+            if not self.pf['secondary_ionization']:
+                return self._gamma_bar_all
+                    
+            for i, absorber in enumerate(self.grid.absorbers):
+                for j, otherabsorber in enumerate(self.grid.absorbers):
+                    self._gamma_bar_all[..., i, j] = self.Gamma_bar[j] \
+                        * (self.hnu_bar[j] * self.sigma_tilde[j] \
+                        /  self.hnu_bar[i] / self.sigma_bar[j] \
+                        - self.grid.ioniz_thresholds[otherabsorber] \
+                        / self.grid.ioniz_thresholds[absorber])
                     
         return self._gamma_bar_all
     
@@ -371,7 +378,7 @@ class RadiationSourceIdealized:
         if not self.variable:
             return True
             
-        if t <= self.tau:
+        if t < self.tau:
             return True
             
         if self.fduty == 1:

@@ -31,18 +31,19 @@ class RadiationField:
             self.sigma = (np.ones([self.grid.dims, self.src.Nfreq]) \
                        * self.src.sigma).T      
         
-        if not self.pf['optically_thin']:
-            if self.pf['photon_conserving']:
-                self.pp_corr = self.grid.Vsh / self.grid.dr
-            else:
-                self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_int**2
-                self.pp_corr = 4. * np.pi * self.grid.r_int**2
-        else:
+        # Calculate correction to normalization factor if plane_parallel
+        if self.pf['optically_thin']:
             if self.pf['plane_parallel']:
                 self.pp_corr = 4. * np.pi * self.grid.r_mid**2
             else:
                 self.pp_corr = 1.0
-                      
+        else:
+            if self.pf['photon_conserving']:
+                self.pp_corr = self.grid.Vsh / self.grid.dr
+            else:
+                self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_mid**2
+                self.pp_corr = 4. * np.pi * self.grid.r_mid**2
+            
     def SourceDependentCoefficients(self, data, t):
         """
         Compute rate coefficients for photo-ionization, secondary ionization, 
@@ -55,8 +56,16 @@ class RadiationField:
                 
         if not self.src.SourceOn(t):
             return self.Gamma, self.gamma, self.k_H
+            
+        # If we're operating under the optically thin assumption, 
+        # return pre-computed source-dependent values.    
+        if self.pf['optically_thin']:
+            self.tau_tot = np.zeros(self.grid.dims) # by definition
+            return self.src.Gamma_bar * self.pp_corr, \
+                self.src.gamma_bar * self.pp_corr, \
+                self.src.Heat_bar * self.pp_corr    
         
-        # Column density to cells (N) and of cells (Nc)    
+        # Column density to cells (N) and of cells (Nc)
         self.N, self.logN, self.Nc = self.grid.ColumnDensity(data)
          
         # Column densities (of all absorbers) sorted by cell 
@@ -87,12 +96,6 @@ class RadiationField:
                 self.A[absorber] = self.A[absorber] * self.pp_corr
                 
         # Eventually loop over sources here
-        
-        if self.pf['optically_thin']:
-            self.tau_tot = np.zeros(self.grid.dims) # by definition
-            return self.src.Gamma_bar * self.pp_corr, \
-                self.src.gamma_bar * self.pp_corr, \
-                self.src.Heat_bar * self.pp_corr
         
         """
         For sources with discrete SEDs.
@@ -249,14 +252,6 @@ class RadiationField:
         self.tau_tot = 10**self.src.tables["logTau"](self.logN_by_cell)     
                                         
         return self.Gamma, self.gamma, self.k_H
-        
-    def OpticallyThinCoefficients(self, data, absorber):
-        """
-        Compute rate coefficients in the limit of optically thin medium
-        (both between sources and cells and cells themselves).
-        """    
-        
-        pass # we need to compute frequency averaged stuff first
         
     def MultiFreqCoefficients(self, data, absorber):
         """

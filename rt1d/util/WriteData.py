@@ -40,15 +40,17 @@ class CheckPoints:
         self.pf = pf
         self.data = {}
         self.grid = grid
-        self.dtDD = dtDataDump * time_units
         self.time_units = time_units
         self.stop_time = stop_time * time_units
         
         self.basename = 'dd'
         self.fill = 4
             
-        self.DDtimes = np.linspace(0, stop_time * self.time_units, 
-            stop_time / dtDataDump + 1)
+        if dtDataDump is not None:   
+            self.DDtimes = np.linspace(0, self.stop_time, 
+                stop_time / dtDataDump + 1)
+        else:
+            self.DDtimes = np.array([0, self.stop_time])
 
         self.logdtDD = logdtDataDump
         if logdtDataDump is not None:

@@ -77,6 +77,7 @@ def RTsim(pf = None):
     dt = pf['time_units'] * pf['initial_timestep']
     t = 0.0
     tf = pf['stop_time'] * pf['time_units']
+    max_timestep = pf['time_units'] * pf['max_timestep']
     
     print '\nSolving radiative transfer...'
                 
@@ -97,7 +98,7 @@ def RTsim(pf = None):
         
         # Limit timestep further based on next DD and max allowed increase
         dt = min(new_dt, 2 * dt)
-        dt = checkpoints.update(data, t, dt)
+        dt = min(checkpoints.update(data, t, dt), max_timestep)
                 
         # Save timestep history
         dt_history.append((t, dt))

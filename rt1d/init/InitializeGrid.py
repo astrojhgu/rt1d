@@ -399,6 +399,7 @@ class Grid:
             if self.Z == np.ones(1):
                 self.abundances_by_number = self.element_abundances = np.ones(1)
                 self.n_H = self.data['rho'] / m_H
+                self.data['n'] = self.particle_density(self.data)
                 return
                             
         # Set hydrogen number density (which normalizes all other species)
@@ -447,7 +448,7 @@ class Grid:
         self._set_ge()
         
         del self.x_to_n_converter
-        self.data['n'] = self.particle_density(self.data)        
+        self.data['n'] = self.particle_density(self.data)
                 
     def particle_density(self, data):
         """

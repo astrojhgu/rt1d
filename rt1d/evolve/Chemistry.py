@@ -36,7 +36,7 @@ class Chemistry:
         
         self.solver = ode(self.chemnet.RateEquations, 
             jac = self.chemnet.Jacobian).set_integrator('vode', 
-            method = 'bdf', nsteps = 1e4, with_jacobian = True,
+            method = 'bdf', nsteps = 1e4, with_jacobian = False,
             atol = 1e-12, rtol = 1e-8)
             
         self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.all_species)])
@@ -54,7 +54,7 @@ class Chemistry:
             if 'he_1' in self.grid.absorbers:
                 i = self.grid.absorbers.index('he_1')
                 self.chemnet.psi[...,i] *= data['he_2'] / data['he_1']
-        
+                
         newdata = {}
         for species in data:
             newdata[species] = data[species].copy()
@@ -76,7 +76,7 @@ class Chemistry:
             
             if self.rtON:
                 args = (cell, kwargs_cell['Gamma'], kwargs_cell['gamma'],
-                    kwargs_cell['Heat'])
+                    kwargs_cell['Heat'], data['n'][cell])
             else:
                 args = (cell, self.grid.zeros_absorbers, self.grid.zeros_absorbers2, 
                     self.grid.zeros_absorbers)
@@ -94,6 +94,9 @@ class Chemistry:
         if not self.grid.isothermal:
             newdata['n'] = self.grid.particle_density(newdata)
             newdata['T'] = newdata['ge'] * 2. / 3. / k_B / newdata['n']
+            
+        if not np.any(np.isfinite(newdata['T'])):
+            print self.q_grid, self.dqdt_grid#kwargs_by_cell
         
         return newdata
 
