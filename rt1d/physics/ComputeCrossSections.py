@@ -43,46 +43,5 @@ def PhotoIonizationCrossSection(E, species = 0):
         (1.0 + np.sqrt(y / params[species][2]))**-params[species][3]
                                 
     return params[species][1] * F_y * 1e-18
-                                               
-# MOVE TO RS classes                                                                                                               
-def EffectiveCrossSection(rs, E1, E2, species = 0):
-    """
-    Compute frequency averaged cross-section, as in Aubert & Teyssier 2008.
-    
-        rs: Instance of RadiationSource class.
-    """
-        
-    if rs._name == 'RadiationSourceIdealized':
-        Q12 = quad(lambda x: rs.Spectrum(x) / x, E1, E2)[0]
-        return quad(lambda x: rs.Spectrum(x) * PhotoIonizationCrossSection(x, species = species) / \
-            x, E1, E2)[0] / Q12
-    else:
-        i1 = np.argmin(np.abs(E1 - rs.E))
-        i2 = np.argmin(np.abs(E2 - rs.E))
-        
-        Q12 = np.trapz(rs.L_E[i1:i2] / rs.E[i1:i2], rs.E[i1:i2]) / erg_per_ev          
-        return np.trapz(rs.L_E[i1:i2] * PhotoIonizationCrossSection(rs.E[i1:i2], species = species) / \
-            rs.E[i1:i2]) / Q12
-        
-def EnergyWeightedCrossSection(rs, E1, E2, species = 0):
-    """
-    Compute frequency averaged cross-section, as in Aubert & Teyssier 2008.
-    
-        rs: Instance of RadiationSource class.
-    """
-    
-    if rs._name == 'RadiationSourceIdealized':
-        L12 = quad(lambda x: rs.Spectrum(x), E1, E2)[0]
-        return quad(lambda x: rs.Spectrum(x) * PhotoIonizationCrossSection(x, species = species), E1, E2)[0] / L12
-    else:
-        i1 = np.argmin(np.abs(E1 - rs.E))
-        i2 = np.argmin(np.abs(E2 - rs.E))
-        
-        L12 = np.trapz(rs.L_E[i1:i2], rs.E[i1:i2])
-        return np.trapz(rs.L_E[i1:i2] * PhotoIonizationCrossSection(rs.E[i1:i2], species = species), rs.E[i1:i2]) / L12
-    
-    
-    
-    
     
     

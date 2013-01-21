@@ -81,7 +81,7 @@ def ProblemType(ptype):
               "logdtDataDump": 0.1,
               "dtDataDump": 1.0, 
               "initial_timestep": 1e-12,
-              "max_timestep": 0.01,
+              "max_timestep": 0.1,
               "restricted_timestep": ['ions', 'electrons', 'energy'],
                            
               "initial_temperature": 1e2,

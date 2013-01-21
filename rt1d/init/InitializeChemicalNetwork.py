@@ -19,6 +19,7 @@ from dengo.chemical_network import ChemicalNetwork, \
     reaction_registry, cooling_registry
     
 from ..physics.Constants import k_B    
+#from scipy.misc import derivative
 
 class DengoChemicalNetwork:
     def __init__(self, grid):
@@ -324,7 +325,7 @@ class SimpleChemicalNetwork:
                 
                 
                 J[-1][h1] = n_H * (k_H[h1] \
-                          - n_e * n_H * (self.zeta[cell][h1] 
+                          - n_e * (self.zeta[cell][h1] 
                           + self.psi[cell][h1] - self.eta[cell][h1]))
                 J[-1][h1 + 1] = -J[-1][h1]
                 J[-1][-1] = 0
