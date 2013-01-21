@@ -158,7 +158,7 @@ def ProblemType(ptype):
               "source_qdot": 1e12, 
               "spectrum_type": 1,
               
-              "restricted_timestep": ['ions', 'energy', 'electrons'],
+              "restricted_timestep": ['ions', 'electrons', 'energy'],
               
               "spectrum_Emin": 13.6, 
               "spectrum_Emax": 100., 

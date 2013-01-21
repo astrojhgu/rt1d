@@ -68,6 +68,9 @@ def RTsim(pf = None):
         dtDataDump = pf['dtDataDump'], time_units = pf['time_units'],
         stop_time = pf['stop_time'], initial_timestep = pf['initial_timestep'],
         logdtDataDump = pf['logdtDataDump'])
+        
+    if pf['initialize_only']:
+        return simulation(pf, checkpoints, rt)   
             
     # Evolve chemistry + RT
     data = grid.data

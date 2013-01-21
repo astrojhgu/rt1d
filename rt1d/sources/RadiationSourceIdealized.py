@@ -104,13 +104,122 @@ class RadiationSourceIdealized:
         pass
         
     @property
+    def hnu_bar(self):
+        """
+        Average ionizing (per absorber) photon energy in eV.
+        """
+        if not hasattr(self, '_hnu_bar_all'):
+            self._hnu_bar_all = np.zeros_like(self.grid.zeros_absorbers)
+            self._qdot_bar_all = np.zeros_like(self.grid.zeros_absorbers)
+            for i, absorber in enumerate(self.grid.absorbers):
+                self._hnu_bar_all[i], self._qdot_bar_all[i] = \
+                    self.FrequencyAveragedBin(absorber = absorber)
+            
+        return self._hnu_bar_all
+    
+    @property
+    def qdot_bar(self):
+        """
+        Average ionizing photon luminosity (per absorber) in s^-1.
+        """
+        if not hasattr(self, '_qdot_bar_all'):
+            hnu_bar = self.hnu_bar
+            
+        return self._qdot_bar_all   
+    
+    @property
     def sigma_bar(self):
-        pass
+        """
+        Frequency averaged cross section (single bandpass).
+        """
+        if not hasattr(self, '_sigma_bar_all'):
+            self._sigma_bar_all = np.zeros_like(self.grid.zeros_absorbers)
+            for i, absorber in enumerate(self.grid.absorbers):
+                integrand = lambda x: self.Spectrum(x) \
+                    * self.grid.bf_cross_sections[absorber](x) / x
+                    
+                self._sigma_bar_all[i] = self.Lbol \
+                    * quad(integrand, self.grid.ioniz_thresholds[absorber], 
+                      self.Emax)[0] / self.qdot_bar[i] / erg_per_ev
+            
+        return self._sigma_bar_all
     
     @property
     def sigma_tilde(self):
-        pass    
+        if not hasattr(self, '_sigma_tilde_all'):
+            self._sigma_tilde_all = np.zeros_like(self.grid.zeros_absorbers)
+            for i, absorber in enumerate(self.grid.absorbers):
+                integrand = lambda x: self.Spectrum(x) \
+                    * self.grid.bf_cross_sections[absorber](x)
+                self._sigma_tilde_all[i] = quad(integrand, 
+                    self.grid.ioniz_thresholds[absorber], self.Emax)[0] \
+                    / self.fLbol_ionizing[i]
         
+        return self._sigma_tilde_all
+        
+    @property
+    def fLbol_ionizing(self):
+        """
+        Fraction of bolometric luminosity emitted above all ionization
+        thresholds.
+        """
+        if not hasattr(self, '_fLbol_ioniz_all'):
+            self._fLbol_ioniz_all = np.zeros_like(self.grid.zeros_absorbers)
+            for i, absorber in enumerate(self.grid.absorbers):
+                self._fLbol_ioniz_all[i] = quad(self.Spectrum, 
+                    self.grid.ioniz_thresholds[absorber], self.Emax)[0]
+                    
+        return self._fLbol_ioniz_all
+        
+    @property
+    def Gamma_bar(self):
+        """
+        Return ionization rate (as a function of radius) assuming optical 
+        depth to cells and of cells is small.
+        """
+        if not hasattr(self, '_Gamma_bar_all'):
+            self._Gamma_bar_all = \
+                np.zeros([self.grid.dims, self.grid.N_absorbers])
+            for i, absorber in enumerate(self.grid.absorbers):
+                self._Gamma_bar_all[..., i] = self.Lbol * self.sigma_bar[i] \
+                    * self.fLbol_ionizing[i] / 4. / np.pi / self.grid.r_mid**2 \
+                    / self.hnu_bar[i] / erg_per_ev
+                    
+        return self._Gamma_bar_all
+    
+    @property
+    def gamma_bar(self):
+        """
+        Return ionization rate (as a function of radius) assuming optical 
+        depth to cells and of cells is small.
+        """
+        if not hasattr(self, '_gamma_bar_all'):
+            self._gamma_bar_all = \
+                np.zeros([self.grid.dims, self.grid.N_absorbers, 
+                    self.grid.N_absorbers])
+            #for i, absorber in enumerate(self.grid.absorbers):
+            #    self._gamma_bar_all[i] = self.Lbol * self.sigma_bar[i] \
+            #        * self.fLbol_ionizing[i] / 4. / np.pi / self.grid.r_mid**2 \
+            #        / self.hnu_bar[i] / erg_per_ev
+                    
+        return self._gamma_bar_all
+    
+    @property
+    def Heat_bar(self):
+        """
+        Return ionization rate (as a function of radius) assuming optical 
+        depth to cells and of cells is small.
+        """
+        if not hasattr(self, '_Heat_bar_all'):
+            self._Heat_bar_all = \
+                np.zeros([self.grid.dims, self.grid.N_absorbers])
+            for i, absorber in enumerate(self.grid.absorbers):
+                self._Heat_bar_all[..., i] = self.Gamma_bar[..., i] \
+                    * erg_per_ev * (self.hnu_bar[i] * self.sigma_tilde[i] \
+                    / self.sigma_bar[i] - self.grid.ioniz_thresholds[absorber])
+                    
+        return self._Heat_bar_all              
+                    
     def initialize(self):
         """
         Create attributes we need, normalize, etc.
@@ -512,7 +621,8 @@ class RadiationSourceIdealized:
         
         return integrate(integrand, self.EminNorm, self.EmaxNorm)[0]
         
-    def FrequencyAveragedBin(self, species = 0, Emin = None, Emax = None):
+    def FrequencyAveragedBin(self, absorber = 'h_1', Emin = None, Emax = None,
+        energy_weighted = False):
         """
         Bolometric luminosity / number of ionizing photons in spectrum in bandpass
         spanning interval (Emin, Emax). Returns mean photon energy and number of 
@@ -520,12 +630,17 @@ class RadiationSourceIdealized:
         """     
         
         if Emin is None:
-            Emin = max(E_th[species], self.Emin)
+            Emin = max(self.grid.ioniz_thresholds[absorber], self.Emin)
         if Emax is None:
             Emax = self.Emax
             
-        L = self.Lbol * quad(lambda x: self.Spectrum(x), Emin, Emax)[0] 
-        Q = self.Lbol * quad(lambda x: self.Spectrum(x) / x, Emin, Emax)[0] / erg_per_ev
+        if energy_weighted:
+            f = lambda x: x
+        else:
+            f = lambda x: 1.0    
+            
+        L = self.Lbol * quad(lambda x: self.Spectrum(x) * f(x), Emin, Emax)[0] 
+        Q = self.Lbol * quad(lambda x: self.Spectrum(x) * f(x) / x, Emin, Emax)[0] / erg_per_ev
                         
         return L / Q / erg_per_ev, Q
         

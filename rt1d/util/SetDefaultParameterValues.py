@@ -131,14 +131,14 @@ def SpectrumParameters():
         "spectrum_dE": 5.,
         "spectrum_dt": s_per_myr,
         
+        
         }
         
-    return pf       
+    return pf
     
 def ControlParameters():
     pf = \
         {
-        
         "epsilon_dt": 0.05,
         "dtDataDump": 5,
         'logdtDataDump': None,
@@ -146,11 +146,14 @@ def ControlParameters():
         "initial_timestep": 1e-6,
         "max_timestep": 1.,
         "restricted_timestep": ['ions'],
+        
         "tau_ifront": 0.5,
+        "optically_thin": 0,
+        
         "parallelization": 0,
         "save_rate_coefficients": 1,
-        "tabulate_only": 0,
-        
+        "initialize_only": 0,
+        "interp_method": 'cubic',
         }
         
     return pf

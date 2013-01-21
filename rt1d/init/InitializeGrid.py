@@ -236,7 +236,7 @@ class Grid:
             logN[absorber] = np.log10(N[absorber])
             Nc[absorber] = self.dr * data[absorber] \
                 * self.x_to_n[absorber]            
-                    
+
         return N, logN, Nc     
         
     def initialize(self, pf):

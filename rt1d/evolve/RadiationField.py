@@ -31,11 +31,17 @@ class RadiationField:
             self.sigma = (np.ones([self.grid.dims, self.src.Nfreq]) \
                        * self.src.sigma).T      
         
-        if self.pf['photon_conserving']:
-            self.pp_corr = self.grid.Vsh / self.grid.dr
+        if not self.pf['optically_thin']:
+            if self.pf['photon_conserving']:
+                self.pp_corr = self.grid.Vsh / self.grid.dr
+            else:
+                self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_int**2
+                self.pp_corr = 4. * np.pi * self.grid.r_int**2
         else:
-            self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_int**2
-            self.pp_corr = 4. * np.pi * self.grid.r_int**2
+            if self.pf['plane_parallel']:
+                self.pp_corr = 4. * np.pi * self.grid.r_mid**2
+            else:
+                self.pp_corr = 1.0
                       
     def SourceDependentCoefficients(self, data, t):
         """
@@ -81,6 +87,12 @@ class RadiationField:
                 self.A[absorber] = self.A[absorber] * self.pp_corr
                 
         # Eventually loop over sources here
+        
+        if self.pf['optically_thin']:
+            self.tau_tot = np.zeros(self.grid.dims) # by definition
+            return self.src.Gamma_bar * self.pp_corr, \
+                self.src.gamma_bar * self.pp_corr, \
+                self.src.Heat_bar * self.pp_corr
         
         """
         For sources with discrete SEDs.
@@ -221,11 +233,6 @@ class RadiationField:
                         10**self.src.tables["logPsiWiggle_%s" % suffix](self.logNdN[j],
                         self.logx, t)
                         
-                    #print 'PhiWiggleN', self.PhiWiggleN[absorber][donor]
-                    #print 'PhiWiggleNdN', self.PhiWiggleNdN[absorber][donor]
-                    #print 'PsiWiggleN', self.PsiWiggleN[absorber][donor]
-                    #print 'PsiWiggleNdN', self.PsiWiggleNdN[absorber][donor]
-                                                
         # Now, go ahead and calculate the rate coefficients
         for i, absorber in enumerate(self.grid.absorbers):
             self.Gamma[..., i] = self.PhotoIonizationRate(absorber)
@@ -240,7 +247,7 @@ class RadiationField:
                    
         # Compute total optical depth too
         self.tau_tot = 10**self.src.tables["logTau"](self.logN_by_cell)     
-                        
+                                        
         return self.Gamma, self.gamma, self.k_H
         
     def OpticallyThinCoefficients(self, data, absorber):

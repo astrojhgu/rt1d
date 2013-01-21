@@ -16,6 +16,7 @@ from scipy.interpolate import interp1d, interp2d, RectBivariateSpline, \
 
 class LookupTable:
     def __init__(self, pf, name, logN, table, logx = None, t = None):
+        self.pf = pf
         self.name = name
         self.logN = np.array(logN)
         self.table = table
@@ -86,7 +87,7 @@ class LookupTable:
         # Set up interpolation tables
         if self.D == 1:
             self.interp = \
-                interp1d(self.logN[0], self.table, kind = 'cubic')        
+                interp1d(self.logN[0], self.table, kind = self.pf['interp_method'])        
         elif self.D == 2:
             
             if self.adv_secondary_ionization:

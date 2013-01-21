@@ -34,7 +34,7 @@ def PhotoIonizationCrossSection(E, species = 0):
         
         Note: The units are cm^2.
     
-    """                            
+    """
     
     x = (E / params[species][0]) - params[species][5]
     y = np.sqrt(x**2 + params[species][6]**2)
@@ -58,7 +58,7 @@ def EffectiveCrossSection(rs, E1, E2, species = 0):
             x, E1, E2)[0] / Q12
     else:
         i1 = np.argmin(np.abs(E1 - rs.E))
-        i2 = np.argmin(np.abs(E2 - rs.E))            
+        i2 = np.argmin(np.abs(E2 - rs.E))
         
         Q12 = np.trapz(rs.L_E[i1:i2] / rs.E[i1:i2], rs.E[i1:i2]) / erg_per_ev          
         return np.trapz(rs.L_E[i1:i2] * PhotoIonizationCrossSection(rs.E[i1:i2], species = species) / \
