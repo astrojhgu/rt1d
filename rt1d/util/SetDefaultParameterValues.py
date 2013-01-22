@@ -116,8 +116,8 @@ def SpectrumParameters():
         "spectrum_multigroup": 0,
         "spectrum_bands": [13.6, 24.6, 54.4],
           
-        "spectrum_E": [13.6],  
-        "spectrum_LE": [1.],  
+        "spectrum_E": None,  
+        "spectrum_LE": None,  
                 
         "spectrum_table": None,
         
@@ -130,7 +130,6 @@ def SpectrumParameters():
         "spectrum_logxmin": [-4],
         "spectrum_dE": 5.,
         "spectrum_dt": s_per_myr,
-        
         
         }
         

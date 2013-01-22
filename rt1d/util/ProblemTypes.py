@@ -42,6 +42,8 @@ def ProblemType(ptype):
     if abs(ptype_int) > 10:
         ptype_int -= 10 * np.sign(ptype_int)
         
+    ptype_mod1 = round(ptype - ptype_int, 1)
+        
     # Single-zone, cosmological expansion test         
     if ptype_int == -1:
         pf = {
@@ -177,16 +179,15 @@ def ProblemType(ptype):
                 
              }
              
-    if (ptype - ptype_int) != 0:
-        pf.update({'source_type': 0}) # discrete!
+    if ptype_mod1 != 0:
         pf.update({'photon_conserving': 1})
         
         # Change discrete spectrum: 0.1 = Mirocha et al. 2012
         #                           0.2 = Wise & Abel 2011
-        if (ptype - ptype_int) == 0.1:
+        if ptype_mod1 == 0.1:
             pf.update({'spectrum_E': [17.98, 31.15, 49.09, 76.98]})
             pf.update({'spectrum_LE': [0.23, 0.36, 0.24, 0.06]})
-        if (ptype - ptype_int) == 0.2:
+        if ptype_mod1 == 0.2:
             pf.update({'spectrum_E': [18.29, 31.46, 49.13, 77.23]})
             pf.update({'spectrum_LE': [0.24, 0.35, 0.23, 0.06]})
              

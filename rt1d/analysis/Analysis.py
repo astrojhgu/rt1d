@@ -239,6 +239,9 @@ class Analyze:
         time = []
         value = []
         for dd in self.data.keys():
+            if field not in self.data[dd].keys():
+                continue
+            
             if self.pf['expansion']:
                 z.append(self.data[dd].z)
             else:

@@ -103,14 +103,14 @@ class RateCoefficients:
             if self.pf['LymanAlphaContinuum']:
                 Jc[rs] = ON * Lbol[rs] * source.Spectrum(E_LyA) / (4. * np.pi * r)**2
                                                                                                          
-            # Check to see if we're in the small tau limit      
-            small_tau = [False, False, False]      
+            # Check to see if we're in the small tau limit
+            small_tau = [False, False, False]
             if self.pf['AllowSmallTauApprox']:      
                 tau_small = (ncol[0] <= self.smallcol[0]) & (ncol[1] <= self.smallcol[1]) \
                     & (ncol[2] <= self.smallcol[2])
                     
                 small_tau = [tau_small, tau_small, tau_small]
-                for i in xrange(3): 
+                for i in xrange(3):
                     if i > 0 and not self.pf['MultiSpecies']:
                         continue
                                
@@ -119,7 +119,7 @@ class RateCoefficients:
             # Standard - integral tabulation
             if not self.pf['DiscreteSpectrum'] or self.pf['ForceIntegralTabulation']:
              
-                # Loop over species   
+                # Loop over species
                 for i in xrange(3):
                                     
                     if not self.pf['MultiSpecies'] and i > 0:

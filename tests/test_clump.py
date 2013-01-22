@@ -13,8 +13,7 @@ Description:
 import rt1d
 import pylab as pl
 
-sim = rt1d.run.RTsim(pf = {'problem_type': 3, 
-    'tabulate_only': 0, 'photon_conserving': 1, 'spectrum_dlogN': 0.05})
+sim = rt1d.run.RTsim(pf = {'problem_type': 3.1, 'photon_conserving': 1})
 
 anl = rt1d.analysis.Analyze(sim.checkpoints)
 

@@ -67,7 +67,7 @@ def RTsim(pf = None):
     checkpoints = rt1d.util.CheckPoints(pf = pf, grid = grid,
         dtDataDump = pf['dtDataDump'], time_units = pf['time_units'],
         stop_time = pf['stop_time'], initial_timestep = pf['initial_timestep'],
-        logdtDataDump = pf['logdtDataDump'])
+        logdtDataDump = pf['logdtDataDump'], source_lifetime = pf['source_lifetime'])
         
     if pf['initialize_only']:
         return simulation(pf, checkpoints, rt)   

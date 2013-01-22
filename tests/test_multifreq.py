@@ -6,7 +6,8 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Sun Jan 20 14:58:19 2013
 
-Description: 
+Description: Compare results using continuous and discrete emission on
+RT06 problems 0.3 and 2, for now. 
 
 """
 
@@ -15,9 +16,10 @@ import pylab as pl
 
 # RT06 0.3 - continuous, discrete, and optically_thin = 1
 sim_c = rt1d.run.RTsim(pf = {'problem_type': 0})
-sim_d = rt1d.run.RTsim(pf = {'problem_type': 0.1})
+sim_d = rt1d.run.RTsim(pf = {'problem_type': 0.1, 
+    'dtDataDump': None, 'logdtDataDump': 0.25})
 sim_t = rt1d.run.RTsim(pf = {'problem_type': 0, 'optically_thin': 1,
-    'dtDataDump': None, 'logdtDataDump': 0.1})
+    'dtDataDump': None, 'logdtDataDump': 0.25})
 
 anl_c = rt1d.analysis.Analyze(sim_c.checkpoints)
 anl_d = rt1d.analysis.Analyze(sim_d.checkpoints)
@@ -38,12 +40,13 @@ mp = rt1d.analysis.multiplot(dims = (2, 1), share_all = False,
 s_per_yr = rt1d.physics.Constants.s_per_yr
 mp.grid[0].loglog(t1 / s_per_yr, xHI1, color = 'k')
 mp.grid[1].loglog(t1 / s_per_yr, T1, color = 'k')
-mp.grid[0].loglog(t2 / s_per_yr, xHI2, color = 'b')
-mp.grid[1].loglog(t2 / s_per_yr, T2, color = 'b')
+mp.grid[0].scatter(t2 / s_per_yr, xHI2, color = 'b', marker = '+', s = 40,
+    label = r'$n_{\nu} = 4$')
+mp.grid[1].scatter(t2 / s_per_yr, T2, color = 'b', marker = '+', s = 40)
 mp.grid[0].scatter(t3 / s_per_yr, xHI3, color = 'g', marker = 'o',
-    facecolors = 'none')
+    facecolors = 'none', s = 40, label = r'$\tau << 1$')
 mp.grid[1].scatter(t3 / s_per_yr, T3, color = 'g', marker = 'o',
-    facecolors = 'none')
+    facecolors = 'none', s = 40)
 
 mp.grid[0].set_xlim(1e-6, 1e7)
 mp.grid[1].set_xlim(1e-6, 1e7)
@@ -53,7 +56,9 @@ mp.grid[1].set_ylim(1e2, 1e5)
 mp.grid[0].set_ylabel(r'$x_{\mathrm{HI}}$')
 mp.grid[1].set_ylabel(r'$T \ (\mathrm{K})$')
 mp.grid[1].set_xlabel(r'$t \ (\mathrm{yr})$')
+mp.grid[0].legend(loc = 'lower right', frameon = False)
 mp.fix_ticks()
+pl.savefig('test_multifreq_sz.png')
 raw_input('<enter> for HII region test')
 pl.close()
 
@@ -71,5 +76,5 @@ raw_input('<enter> for radial profiles of xHI & xHII')
 
 ax = anl_c.IonizationProfile()
 anl_d.IonizationProfile(ax = ax, color = 'b')
-
+pl.savefig('test_multifreq_HII.png')
 raw_input('')

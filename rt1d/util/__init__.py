@@ -40,4 +40,44 @@ def rebin(bins):
         result[i] = (bins[i] + bins[i + 1]) / 2.
         
     return result
+
+def sort(pf, prefix = 'spectrum', make_list = True):
+    """
+    Turn any item that starts with prefix_ into a list, if it isn't already.
+    Hack off the prefix when we're done.
+    """            
+    
+    result = {}
+    for par in pf.keys():
+        if par[0:len(prefix)] != prefix:
+            continue
+        
+        new_name = par.partition('_')[-1]
+        if type(pf[par]) is not list and make_list:
+            result[new_name] = [pf[par]]
+        else:
+            result[new_name] = pf[par]
             
+    return result       
+    
+#def uniquify(l):   
+#    """
+#    Return a revised version of 'list' containing only unique elements.  
+#    This routine will preserve the order of the original list.
+#    """
+#    
+#    def ID(x): 
+#        return x 
+#    
+#    seen = {} 
+#    result = [] 
+#    for item in l: 
+#        marker = ID(item) 
+#        if marker in seen: 
+#            continue 
+#        
+#        seen[marker] = 1 
+#        result.append(item) 
+#    
+#    return np.array(result)    
+             

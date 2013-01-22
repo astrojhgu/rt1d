@@ -14,13 +14,6 @@ import h5py, os
 import numpy as np
 from ..physics.Cosmology import Cosmology
 from ..physics.Constants import s_per_myr
-
-try:
-    import h5py
-    h5 = True
-except ImportError:
-    print 'Module h5py not found. Will read/write to ASCII instead of HDF5.'
-    h5 = False
     
 try:
     from mpi4py import MPI
@@ -36,12 +29,14 @@ GlobalDir = os.getcwd()
 class CheckPoints:
     def __init__(self, pf = None, grid = None, time_units = s_per_myr,
         dtDataDump = 5., logdtDataDump = None, stop_time = 100,
-        initial_timestep = None):
+        initial_timestep = None, source_lifetime = None):
         self.pf = pf
         self.data = {}
         self.grid = grid
         self.time_units = time_units
         self.stop_time = stop_time * time_units
+        self.source_lifetime = source_lifetime * time_units
+        self.initial_timestep = initial_timestep * time_units
         
         self.basename = 'dd'
         self.fill = 4
@@ -60,6 +55,8 @@ class CheckPoints:
                 (self.logtf - self.logti) / self.logdtDD + 1)[0:-1]
                 
             self.DDtimes = np.sort(np.concatenate((self.DDtimes, self.logDDt)))
+                                
+        self.DDtimes = uniquify(self.DDtimes)                        
                                 
         self.allDD = np.linspace(0, len(self.DDtimes) - 1., len(self.DDtimes))
         self.NDD = len(self.allDD)                            
@@ -99,18 +96,37 @@ class CheckPoints:
         return False    
         
     def new_dt(self, t, dt):
+        """
+        Compute next timestep based on when our next data dump is, and
+        when the source turns off (if ever).
+        """
+        
         last_dd = int(self.dd(t))
         next_dd = last_dd + 1
-                
+        
+        if t == self.source_lifetime:
+            return self.initial_timestep
+        
+        src_on_now = t < self.source_lifetime
+        src_on_next = (t + dt) < self.source_lifetime
+                        
         # If dt won't take us all the way to the next DD, don't modify dt
-        if (self.dd(t + dt) <= next_dd):
-            return dt
+        if self.dd(t + dt) <= next_dd:
+            if (src_on_now and src_on_next) or (not src_on_now):
+                return dt    
             
         if next_dd <= self.NDD:    
-            return self.DDtimes[next_dd] - t
+            next_dt = self.DDtimes[next_dd] - t
         else:
-            return self.stop_time - t
-                 
+            next_dt = self.stop_time - t
+        
+        src_still_on = (t + next_dt) < self.source_lifetime
+            
+        if src_on_now and src_still_on or (not src_on_now):
+            return next_dt
+        
+        return self.source_lifetime - t 
+                
     def dd(self, t):
         """ What data dump are we at currently? Doesn't have to be integer. """
         return np.interp(t, self.DDtimes, self.allDD, 
@@ -139,113 +155,26 @@ class CheckPoints:
             
         f.close()        
 
-class WriteData:
-    def __init__(self, grid, fn = 'rt1d.sim', **kwargs):
-        self.fn = fn
-        self.pf = parse_kwargs(**kwargs)
-        self.grid = grid
-        self.cosm = Cosmology(pf)
-        self.OutputFormat = pf['OutputFormat'] and h5
+def uniquify(l):   
+    """
+    Return a revised version of 'list' containing only unique elements.  
+    This routine will preserve the order of the original list.
+    """
+    
+    def ID(x): 
+        return x 
+    
+    seen = {} 
+    result = [] 
+    for item in l: 
+        marker = ID(item) 
+        if marker in seen: 
+            continue 
         
-    @property
-    def f(self):
-        """ Open hdf5 file object. """    
-        
-        if not hasattr(self, 'f_hdf5'):
-            if self.OutputFormat == 1:
-                self.f_hdf5 = h5py.File('%s.hdf5' % self.fn, 'a')
-            else:
-                self.f_hdf5 = open('%s.dat' % self.fn, 'a')
-        
-        return self.f_hdf5    
-        
-    def WriteAllData(self, data, wct, t, dt):
-        """
-        Write all data to hdf5 file.
-        """
-        
-        if self.OutputFormat == 0:
-            self.WriteASCII(data, wct, t, dt)
-        else:
-            self.WriteHDF5(data, wct, t, dt)
-            
-        self.WriteParameterFile(wct, t, dt)    
-        
-    def WriteHDF5(self, data, wct, t, dt):
-        """
-        Write all data to hdf5 file.
-        """
-                                        
-        f = h5py.File("{0}/{1}/{2}.h5".format(GlobalDir, self.pf['OutputDirectory'].rstrip('/'), 
-            self.GetDataDumpName(wct)), 'w') 
-
-        pf_grp = f.create_group("parameters")
-        data_grp = f.create_group("data")
-        
-        for par in self.pf.keys(): 
-            if par == "CurrentTime": 
-                pf_grp.create_dataset(par, data = t / self.pf['TimeUnits'])
-            elif par == "CurrentRedshift":
-                pf_grp.create_dataset(par, data = self.cosm.TimeToRedshiftConverter(0, t, self.pf['InitialRedshift']))
-            elif par == "CurrentTimestep": 
-                pf_grp.create_dataset(par, data = dt / self.pf['TimeUnits'])
-            else: 
-                pf_grp.create_dataset(par, data = self.pf[par])
-        
-        for field in data: 
-            if data[field].shape[0] > 0:
-                data_grp.create_dataset(field, data = data[field])
-        
-        f.close()
-        
-        if rank == 0: 
-            print "\nWrote %s/%s.h5\n" % (self.pf['OutputDirectory'], 
-                    self.GetDataDumpName(wct))
-
-    def WriteASCII(self, data, wc, t, dt):
-        """
-        Write all data to ASCII file.
-        """    
-        
-        raise ValueError('WriteASCII not yet implemented.')
-        
-    def GetDataDumpName(self, wct):
-        """
-        Return name of data dump to be written
-        """
-
-        return "{0}{1:04d}".format(self.pf['DataDumpName'], wct)
-
-    def WriteParameterFile(self, wct, t, dt):
-        """
-        Write out parameter file to ASCII format.
-        """
-                
-        f = open("{0}/{1}/{2}".format(GlobalDir, self.pf['OutputDirectory'], 
-            self.GetDataDumpName(wct)), 'w')
-        
-        names = self.pf.keys()
-        names.sort()
-        
-        print >> f, "{0} = {1}".format('ProblemType'.ljust(35, ' '), self.pf['ProblemType'])
-        
-        for par in names:
-            
-            # ProblemType must be the first parameter
-            if par == 'ProblemType': 
-                continue
-            
-            if par == "CurrentTime": 
-                val = t / self.pf['TimeUnits']
-            elif par == "CurrentRedshift":
-                val = self.cosm.TimeToRedshiftConverter(0, t, self.pf['InitialRedshift'])
-            elif par == "CurrentTimestep": 
-                val = dt / self.pf['TimeUnits']
-            else: 
-                val = self.pf[par]
-            
-            print >> f, "{0} = {1}".format(par.ljust(35, ' '), val)
-            
-        f.close()    
+        seen[marker] = 1 
+        result.append(item) 
+    
+    return np.array(result)
+          
         
         

@@ -27,7 +27,7 @@ class RadiationField:
             self.sigma_th[absorber] = self.grid.ioniz_thresholds[absorber]
         
         # Array of cross-sections to match grid size 
-        if self.src.multi_freq:             
+        if self.src.multi_freq:
             self.sigma = (np.ones([self.grid.dims, self.src.Nfreq]) \
                        * self.src.sigma).T      
         
@@ -268,7 +268,7 @@ class RadiationField:
         
         self.tau_r = N * self.sigma
         self.tau_tot = np.sum(self.tau_r, axis = 1)
-                
+                        
         # Loop over energy groups
         self.Gamma_E = np.zeros([self.grid.dims, self.src.Nfreq])
         for j, E in enumerate(self.src.E):
@@ -281,7 +281,7 @@ class RadiationField:
                                                             
             # Photo-ionization by *this* energy group
             self.Gamma_E[...,j] = \
-                self.PhotoIonizationRateMultiFreq(self.src.Qdot[j], n, 
+                self.PhotoIonizationRateMultiFreq(self.src.Qdot[j], n,
                 self.tau_r[j], tau_c)
                           
             # Heating
@@ -294,7 +294,7 @@ class RadiationField:
             # Total energy deposition rate per atom i via photo-electrons 
             # due to ionizations by *this* energy group. 
             ee = self.Gamma_E[...,j] * (E - self.sigma_th[absorber]) \
-               * erg_per_ev 
+               * erg_per_ev
             
             self.k_H[...,i] += ee * fheat
                 
@@ -313,7 +313,7 @@ class RadiationField:
                 
                 fion = self.esec.DepositionFraction(E = E, 
                     xHII = data['h_2'], channel = absorber)
-                                                                        
+
                 # (This k) = i from paper, and (this i) = j from paper
                 self.gamma[...,k,i] += ee * fion \
                     / (self.sigma_th[otherabsorber] * erg_per_ev)

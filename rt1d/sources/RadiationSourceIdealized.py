@@ -8,19 +8,28 @@ Created on: Sun Jul 22 16:28:08 2012
 
 Description: 
 
+
+source_type:
+0 - multi-freq - Qdot, E, LE set Lbol
+1 - BB (T *and* Qdot set Lbol)
+2 - PopIII from Schaerer tablex 
+>= 3 - BH (mass sets Lbol)
+
+spectrum_type:
+
+
 """
 
 
 from ..physics.Constants import *
 from scipy.integrate import quad, romberg
-from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
 import re
 import numpy as np
-from ..util import parse_kwargs
+from ..util import parse_kwargs, sort
 from ..init.InitializeInterpolation import LookupTable
 from ..init.InitializeIntegralTables import IntegralTable
-
+from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB
                             # will return 0 as it should for x large
@@ -32,7 +41,7 @@ SchaererTable = {
                 }
 
 E_th = [13.6, 24.6, 54.4]
-small_number = 1e-3                
+small_number = 1e-3
 big_number = 1e5
 ls = ['-', '--', ':', '-.']
 
@@ -53,9 +62,10 @@ class RadiationSourceIdealized:
         
         self._name = 'RadiationSourceIdealized'
         
-        self.discrete = self.SourcePars['type'] == 0
+        self.discrete = (self.SpectrumPars['E'][0] != None) \
+                      or self.pf['optically_thin']
         self.continuous = not self.discrete
-        
+                
         # We don't allow multi-component discrete spectra...for now
         # would we ever want/need this? lines on top of continuous spectrum perhaps...
         self.multi_group = self.discrete and self.SpectrumPars['multigroup'][0] 
@@ -102,6 +112,31 @@ class RadiationSourceIdealized:
         
     def _init_bh(self):
         pass
+        
+    @property
+    def sigma(self):
+        """
+        Compute bound-free absorption cross-section for all frequencies.
+        """    
+        
+        if not self.discrete:
+            return None
+        
+        if not hasattr(self, '_sigma_all'):
+            self._sigma_all = sigma_E(self.E)
+        
+        return self._sigma_all
+        
+    @property
+    def Qdot(self):
+        """
+        Returns number of photons emitted (s^-1) at all frequencies.
+        """    
+        
+        if not hasattr(self, '_Qdot_all'):
+            self._Qdot_all = self.Lbol * self.LE / self.E / erg_per_ev
+        
+        return self._Qdot_all
         
     @property
     def hnu_bar(self):
@@ -225,7 +260,7 @@ class RadiationSourceIdealized:
                     * erg_per_ev * (self.hnu_bar[i] * self.sigma_tilde[i] \
                     / self.sigma_bar[i] - self.grid.ioniz_thresholds[absorber])
                     
-        return self._Heat_bar_all              
+        return self._Heat_bar_all
                     
     def initialize(self):
         """
@@ -253,39 +288,30 @@ class RadiationSourceIdealized:
                 
         self.toff = self.tau * (self.fduty**-1. - 1.)
                         
-        # SourceType 0, 1, 2
-        self.Lph = self.SourcePars['qdot']
-        
-        # SourceType = 1, 2
+        # For stars, normalize SED to ionizing photon luminosity
+        self.Q = self.SourcePars['qdot']
         self.T = self.SourcePars['temperature']
         
-        # SourceType >= 3
+        # For BHs, we'll need to know the mass and radiative efficiency
         self.M = self.SourcePars['mass']
         self.M0 = self.SourcePars['mass']
-        self.epsilon = self.SourcePars['eta']
-        
+        self.epsilon = self.SourcePars['eta']        
         if 3 in self.SpectrumPars['type']:
             self.r_in = self.DiskInnermostRadius(self.M0)
             self.r_out = self.SourcePars['rmax'] * self.GravitationalRadius(self.M0)
             self.fcol = self.SpectrumPars['fcol'][self.SpectrumPars['type'].index(3)]
             self.T_in = self.DiskInnermostTemperature(self.M0)
             self.T_out = self.DiskTemperature(self.M0, self.r_out)    
-
-        ### PUT THIS STUFF ELSEWHERE
                                  
-        # Number of ionizing photons per cm^2 of surface area for BB of temperature self.T.  
-        # Use to solve for stellar radius (which we need to get Lbol).  The factor of pi gets rid of the / sr units
-        if self.multi_freq:
-            self.Lbol = np.sum(self.Lph * self.LE * self.E * erg_per_ev)
-            self.Qdot = self.LE * self.Lph
-            self.sigma = sigma_E(self.E)
-        elif self.SourcePars['type'] in [1, 2]:
-            self.LphNorm = np.pi * 2. * (k_B * self.T)**3 * \
+        # Number of ionizing photons per cm^2 of surface area for BB of 
+        # temperature self.T. Use to solve for stellar radius (which we need 
+        # to get Lbol).  The factor of pi gets rid of the / sr units
+        if self.SourcePars['type'] in [1, 2]:
+            self.QNorm = np.pi * 2. * (k_B * self.T)**3 * \
                 romberg(lambda x: x**2 / (np.exp(x) - 1.), 
                 13.6 * erg_per_ev / k_B / self.T, big_number, divmax = 100) / h**3 / c**2             
-            self.R = np.sqrt(self.Lph / 4. / np.pi / self.LphNorm)        
+            self.R = np.sqrt(self.Q / 4. / np.pi / self.QNorm)        
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
-            self.Qdot = self.Lbol * self.LE / self.E / erg_per_ev
         else:
             self.Lbol = self.BolometricLuminosity(0.0)    
                 
@@ -313,25 +339,9 @@ class RadiationSourceIdealized:
         # Normalize spectrum
         self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
         
-        # Multi-group treatment
-        #Qnorm = self.SpectrumPars['qdot'] / self.Lbol / \
-        #    quad(lambda x: self.Spectrum(x) / x, self.EminNorm, self.EmaxNorm)[0]
-        #if self.pf['FrequencyAveragedCrossSections']:
-        #    self.E = np.zeros(self.pf['FrequencyGroups'])
-        #    self.LE = np.ones_like(self.E)
-        #    self.Qdot = np.zeros_like(self.E)
-        #    self.bands = self.pf['FrequencyBands']
-        #    
-        #    if len(self.bands) == (len(self.E) - 1):
-        #        self.bands.append(self.Emax)
-        #    
-        #    for i in xrange(int(self.pf['FrequencyGroups'])):
-        #        L = quad(lambda x: self.Spectrum(x), self.bands[i], self.bands[i + 1])[0]
-        #        Q = quad(lambda x: self.Spectrum(x) / x, self.bands[i], self.bands[i + 1])[0]
-        #                        
-        #        self.E[i] = L / Q
-        #        self.Qdot[i] = Qnorm * self.Lbol * Q
-                
+        if self.pf['optically_thin']:
+            self.E = self.hnu_bar    
+        
         # Time evolution
         if np.any(self.SpectrumPars['evolving']):
             self.Age = np.linspace(0, self.pf['stop_time'] * self.pf['time_units'], self.pf['AgeBins'])
@@ -425,6 +435,7 @@ class RadiationSourceIdealized:
         if self.pf['SourceType'] in [0, 1, 2]:
             return self.Qdot[bin]
         else:
+            # Currently only BHs have a time-varying bolometric luminosity
             return self.BolometricLuminosity(t) * self.LE[bin] / self.E[bin] / erg_per_ev          
               
     def Intensity(self, E, i, Type, t):
@@ -433,9 +444,7 @@ class RadiationSourceIdealized:
         at photon energy E.  Normalization handled separately.
         """
         
-        if Type == 0:
-            Lnu = self.LE[0]
-        elif Type in [1, 2]:
+        if Type in [1, 2]:
             Lnu = self.BlackBody(E)
         elif Type == 3:
             Lnu = self.MultiColorDisk(E, i, Type, t)
@@ -575,7 +584,7 @@ class RadiationSourceIdealized:
                 return 0.0        
             
         if self.SourcePars['type'] == 0:
-            return self.Lph / (np.sum(self.LE / self.E / erg_per_ev))
+            return self.Q / (np.sum(self.LE / self.E / erg_per_ev))
         
         if self.SourcePars['type'] == 1:
             return self.Lbol
@@ -699,22 +708,5 @@ class RadiationSourceIdealized:
             self.ax.set_ylabel(r'$L_{\nu} \ (\mathrm{erg \ s^{-1}})$')
                 
         pl.draw()
-        
-def sort(pf, prefix = 'spectrum', make_list = True):
-    """
-    Turn any Source/Spectrum parameter into a list, if it isn't already.
-    """            
-    
-    result = {}
-    for par in pf.keys():
-        if par[0:len(prefix)] != prefix:
-            continue
-        
-        new_name = par.partition('_')[-1]
-        if type(pf[par]) is not list and make_list:
-            result[new_name] = [pf[par]]
-        else:
-            result[new_name] = pf[par]
-            
-    return result             
+              
         
