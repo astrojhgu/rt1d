@@ -45,7 +45,7 @@ class CheckPoints:
             self.DDtimes = np.linspace(0, self.stop_time, 
                 stop_time / dtDataDump + 1)
         else:
-            self.DDtimes = np.array([0, self.stop_time])
+            self.DDtimes = np.array([self.stop_time])
 
         self.logdtDD = logdtDataDump
         if logdtDataDump is not None:

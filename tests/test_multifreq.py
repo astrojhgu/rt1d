@@ -44,7 +44,7 @@ mp.grid[0].scatter(t2 / s_per_yr, xHI2, color = 'b', marker = '+', s = 40,
     label = r'$n_{\nu} = 4$')
 mp.grid[1].scatter(t2 / s_per_yr, T2, color = 'b', marker = '+', s = 40)
 mp.grid[0].scatter(t3 / s_per_yr, xHI3, color = 'g', marker = 'o',
-    facecolors = 'none', s = 40, label = r'$\tau << 1$')
+    facecolors = 'none', s = 40, label = r'$\tau \ll 1$')
 mp.grid[1].scatter(t3 / s_per_yr, T3, color = 'g', marker = 'o',
     facecolors = 'none', s = 40)
 
@@ -56,7 +56,7 @@ mp.grid[1].set_ylim(1e2, 1e5)
 mp.grid[0].set_ylabel(r'$x_{\mathrm{HI}}$')
 mp.grid[1].set_ylabel(r'$T \ (\mathrm{K})$')
 mp.grid[1].set_xlabel(r'$t \ (\mathrm{yr})$')
-mp.grid[0].legend(loc = 'lower right', frameon = False)
+mp.grid[0].legend(loc = 'lower left', frameon = False)
 mp.fix_ticks()
 pl.savefig('test_multifreq_sz.png')
 raw_input('<enter> for HII region test')
