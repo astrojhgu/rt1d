@@ -13,28 +13,9 @@ Description:
 import rt1d
 import pylab as pl
 
-sim = rt1d.run.RTsim(pf = {'problem_type': 3.1, 'photon_conserving': 1})
+sim = rt1d.run.RTsim(pf = {'problem_type': 3})
 
 anl = rt1d.analysis.Analyze(sim.checkpoints)
-
-pl.semilogy(sim.grid.r_mid, anl.data[0]['rho'])
-pl.ylabel('rho')
-raw_input('')
-pl.close()
-
-pl.semilogy(sim.grid.r_mid, anl.data[0]['n'])
-pl.ylabel('n')
-raw_input('')
-pl.close()
-
-pl.semilogy(sim.grid.r_mid, anl.data[0]['de'])
-pl.ylabel('ne')
-raw_input('')
-pl.close()
-
-pl.semilogy(sim.grid.r_mid, sim.grid.n_H)
-pl.ylabel('nH')
-raw_input('')
 
 t = [1, 3, 5, 15]
 ls = [':', '--', '-.', '-']

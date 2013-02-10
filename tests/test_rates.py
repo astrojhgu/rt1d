@@ -19,7 +19,7 @@ pl.rcParams['legend.fontsize'] = 14
 
 #
 dims = 32
-T = np.logspace(4, 7, dims)
+T = np.logspace(1, 7, dims)
 #
 
 # Chianti rates

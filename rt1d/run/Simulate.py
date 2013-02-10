@@ -88,8 +88,6 @@ def RTsim(pf = None):
         # Evolve by dt
         data = rt.Evolve(data, t = t, dt = dt)
         t += dt 
-        
-        pb.update(t)
                         
         # Figure out next dt based on max allowed change in evolving fields
         new_dt = timestep.Limit(rt.chem.q_grid, rt.chem.dqdt_grid, 
@@ -112,7 +110,9 @@ def RTsim(pf = None):
         elif dt == 0:
             raise ValueError('ERROR: dt = 0.')  
         elif np.isnan(dt):  
-            raise ValueError('ERROR: dt -> inf.')        
+            raise ValueError('ERROR: dt -> inf.')      
+            
+        pb.update(t)      
             
     pb.finish()
         

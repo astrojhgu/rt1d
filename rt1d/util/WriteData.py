@@ -10,8 +10,8 @@ Description:
 
 """
 
-import h5py, os
 import numpy as np
+import h5py, os, types
 from ..physics.Cosmology import Cosmology
 from ..physics.Constants import s_per_myr
     
@@ -20,7 +20,6 @@ try:
     rank = MPI.COMM_WORLD.rank
     size = MPI.COMM_WORLD.size
 except ImportError:
-    print "Module mpi4py not found.  No worries, we'll just run in serial."
     rank = 0
     size = 1
 
@@ -43,7 +42,7 @@ class CheckPoints:
             
         if dtDataDump is not None:   
             self.DDtimes = np.linspace(0, self.stop_time, 
-                stop_time / dtDataDump + 1)
+                max(stop_time / dtDataDump, 1) + 1)
         else:
             self.DDtimes = np.array([self.stop_time])
 
@@ -56,7 +55,7 @@ class CheckPoints:
                 
             self.DDtimes = np.sort(np.concatenate((self.DDtimes, self.logDDt)))
                                 
-        self.DDtimes = uniquify(self.DDtimes)                        
+        self.DDtimes = np.unique(self.DDtimes)
                                 
         self.allDD = np.linspace(0, len(self.DDtimes) - 1., len(self.DDtimes))
         self.NDD = len(self.allDD)                            
@@ -129,8 +128,7 @@ class CheckPoints:
                 
     def dd(self, t):
         """ What data dump are we at currently? Doesn't have to be integer. """
-        return np.interp(t, self.DDtimes, self.allDD, 
-            right = self.NDD)
+        return np.interp(t, self.DDtimes, self.allDD, right = self.NDD)
 
     def name(self, t):
         ct = int(self.dd(t))
@@ -140,41 +138,26 @@ class CheckPoints:
         """ Write out data to file. """
     
         f = h5py.File(fn, 'w')
+        basename = fn[0:fn.rfind('.')]
         
         pf = f.create_group('parameters')
         for key in self.pf:
+            if type(self.pf[key]) is types.NoneType:
+                continue
+                
             pf.create_dataset(key, data = self.pf[key])
         
         for dd in self.data.keys():
             grp = f.create_group('dd%s' % str(dd).zfill(4))
+            grp.attrs.create('is_data', data = True)
             
             for key in self.data[dd]:
-                grp.add_dataset(key, data = self.data[dd][key])
+                grp.create_dataset(key, data = self.data[dd][key])
                 
-            del grp
+            del grp    
             
         f.close()        
 
-def uniquify(l):   
-    """
-    Return a revised version of 'list' containing only unique elements.  
-    This routine will preserve the order of the original list.
-    """
-    
-    def ID(x): 
-        return x 
-    
-    seen = {} 
-    result = [] 
-    for item in l: 
-        marker = ID(item) 
-        if marker in seen: 
-            continue 
-        
-        seen[marker] = 1 
-        result.append(item) 
-    
-    return np.array(result)
-          
+         
         
         

@@ -22,7 +22,8 @@ from ..physics.ComputeCrossSections import PhotoIonizationCrossSection
 tiny_number = 1e-8  # A relatively small species fraction
 
 class Grid:
-    def __init__(self, dims = 64, length_units = cm_per_kpc, start_radius = 0.01):
+    def __init__(self, dims = 64, length_units = cm_per_kpc, 
+        start_radius = 0.01):
         """ Initialize grid object. """
         
         self.dims = int(dims)
@@ -37,61 +38,54 @@ class Grid:
         
     @property
     def zeros_absorbers(self):
-        return np.zeros(len(self.absorbers))
+        return np.zeros(self.N_absorbers)
     
     @property
     def zeros_absorbers2(self):
-        return np.zeros([len(self.absorbers)] * 2)    
+        return np.zeros([self.N_absorbers] * 2)    
     
     @property
     def zeros_grid_x_absorbers(self):
-        return np.zeros([self.dims, len(self.absorbers)])
+        return np.zeros([self.dims, self.N_absorbers])
         
     @property
     def zeros_grid_x_absorbers2(self):
-        return np.zeros([self.dims, len(self.absorbers), len(self.absorbers)])     
+        return np.zeros([self.dims, self.N_absorbers, self.N_absorbers])     
                 
     @property
     def R0(self):
         return self.start_radius * self.length_units
         
     @property
-    def dr(self):
-        """ Return cell widths. """
-        if not hasattr(self, 'dr_all'):
-            self.dr_all = [np.diff(self.x) * self.length_units]
-            self.dr_all.append()
-            
-    @property
     def Vsh(self):
-        if not hasattr(self, 'Vsh_all'):
-            self.Vsh_all = self.ShellVolume(self.r_edg[0:-1], self.dr)
+        if not hasattr(self, '_Vsh_all'):
+            self._Vsh_all = self.ShellVolume(self.r_edg[0:-1], self.dr)
             
-        return self.Vsh_all
+        return self._Vsh_all
                         
     @property            
     def neutrals(self):
         """ Return list of all neutral species. """            
-        if not hasattr(self, 'neutral_species'):
-            self.neutral_species = []
+        if not hasattr(self, '_neutral_species'):
+            self._neutral_species = []
             for element in self.elements:
-                self.neutral_species.append('%s_1' % element)
+                self._neutral_species.append('%s_1' % element)
 
-        return self.neutral_species
+        return self._neutral_species
                     
     @property            
     def ions(self):
         """ Return list of all ionized species. """     
-        if not hasattr(self, 'ionized_species'):
+        if not hasattr(self, '_ionized_species'):
             neutrals = self.neutrals
-            self.ionized_species = []
+            self._ionized_species = []
             for ion in self.all_ions:
                 if ion in neutrals:
                     continue
                 
-                self.ionized_species.append(ion)
+                self._ionized_species.append(ion)
                 
-        return self.ionized_species
+        return self._ionized_species
     
     @property
     def absorbers(self):    
@@ -110,6 +104,9 @@ class Grid:
             self.num_of_absorbers = int(len(absorbers))
             
         return self.num_of_absorbers
+        
+    #@property
+    #def     
         
     @property
     def metals(self):
@@ -213,13 +210,13 @@ class Grid:
         
     @property
     def x_to_n(self):
-        if not hasattr(self, 'x_to_n_converter'):
-            self.x_to_n_converter = {}
+        if not hasattr(self, '_x_to_n_converter'):
+            self._x_to_n_converter = {}
             for ion in self.all_ions:
-                self.x_to_n_converter[ion] = self.n_H \
+                self._x_to_n_converter[ion] = self.n_H \
                     * self.species_abundances[ion]  
         
-        return self.x_to_n_converter
+        return self._x_to_n_converter
         
     def ColumnDensity(self, data):
         """
@@ -243,7 +240,21 @@ class Grid:
         """
         Use parameter file to set all initial conditions and grid properties.
         """              
-        pass
+        
+        # Set initial conditions
+        self.set_chem(Z = pf['species'], abundance = pf['abundances'], 
+            isothermal = pf['isothermal'])
+        self.set_rho(rho0 = pf['density_units'])
+        
+        for i in xrange(len(pf['species'])):
+            self.set_x(Z = pf['species'][i], x = pf['initial_ionization'][i])       
+        
+        self.set_T(pf['initial_temperature'])
+        
+        if pf['clump']:
+            self.make_clump(position = pf['clump_position'], radius = pf['clump_radius'], 
+                temperature = pf['clump_temperature'], overdensity = pf['clump_overdensity'],
+                ionization = pf['clump_ionization'], profile = pf['clump_profile'])
         
     def set_chem(self, Z = 1, abundance = 'cosmic', isothermal = False,
         secondary_ionization = False):
@@ -306,7 +317,13 @@ class Grid:
         dictionary.
         """
         
-        self.data[key] = data.copy()
+        self.data = {}
+        for key in data.keys():
+            if type(data[key]) is float:
+                self.data[key] = data[key]
+                continue
+                
+            self.data[key] = data[key].copy()
 
     def set_T(self, T0):
         """
@@ -424,19 +441,21 @@ class Grid:
         isclump = (gridarr >= (position - radius)) \
                 & (gridarr <= (position + radius))
                 
-        # First, modify density
+        # First, modify density and temperature
         if profile == 0:
             self.data['rho'][isclump] *= overdensity
             self.n_H[isclump] *= overdensity
-        if profile == 1:
-            self.data['rho'][isclump] += self.data['rho'][isclump] * overdensity \
-                * np.exp(-(gridarr[isclump] - position)**2 / 2. / radius**2)
-            self.n_H[isclump] += self.n_H[isclump] * overdensity \
-                * np.exp(-(gridarr[isclump] - position)**2 / 2. / radius**2)
-                      
-        # Now, temperature   
-        self.data['T'][isclump] = temperature
-        
+            self.data['T'][isclump] = temperature
+        #if profile == 1:
+        #    self.data['rho'] += self.data['rho'] * overdensity \
+        #        * np.exp(-(gridarr - position)**2 / 2. / radius**2)
+        #    self.n_H += self.n_H * overdensity \
+        #        * np.exp(-(gridarr - position)**2 / 2. / radius**2)
+        #    self.data['T'] -= self.data['T'] * overdensity \
+        #        * np.exp(-(gridarr - position)**2 / 2. / radius**2)
+           
+        # Need to think more about Gaussian clump T, x.   
+                
         # Ionization state - could generalize this more
         for neutral in self.neutrals:
             self.data[neutral][isclump] = 1. - ionization

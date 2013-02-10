@@ -154,29 +154,29 @@ def ProblemType(ptype):
               "length_units": 6.6 * cm_per_kpc,
 
               "stop_time": 15.0, 
-              "dtDataDump": 100.0,
+              "dtDataDump": 1.0,
               "isothermal": 0,  
-              "initial_temperature": 8e3, 
-              "initial_ionization": [1e-6], 
+              "initial_temperature": 8e3,
+              "initial_ionization": [1e-6],
               "source_type": 1, 
-              "source_qdot": 1e12, 
+              "source_qdot": 1e6,
               "spectrum_type": 1,
               
               "restricted_timestep": ['ions', 'electrons', 'energy'],
               
-              "spectrum_Emin": 13.6, 
-              "spectrum_Emax": 100., 
-              "spectrum_EminNorm": 0.1, 
-              "spectrum_EmaxNorm": 100., 
+              "spectrum_Emin": 13.6,
+              "spectrum_Emax": 100.,
+              "spectrum_EminNorm": 0.1,
+              "spectrum_EmaxNorm": 100.,
               
-              "clump": 1, 
-              "clump_position": 5.0 / 6.6, 
-              "clump_overdensity": 200., 
+              "clump": 1,
+              "clump_position": 5.0 / 6.6,
+              "clump_overdensity": 200.,
               "clump_radius": 0.8 / 6.6,
-              "clump_temperature": 40., 
+              "clump_temperature": 40.,
               "clump_profile": 0,
               "clump_ionization": 1e-6,
-                
+
              }
              
     if ptype_mod1 != 0:
@@ -192,6 +192,6 @@ def ProblemType(ptype):
             pf.update({'spectrum_LE': [0.24, 0.35, 0.23, 0.06]})
              
     if ptype >= 10:
-        pf.update({'species': [1, 2]})         
+        pf.update({'species': [1, 2]})
                      
     return pf    
