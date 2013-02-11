@@ -164,7 +164,6 @@ class SimpleChemicalNetwork:
         # For convenience 
         self.zeros_q = np.zeros(len(self.grid.all_species))
         self.zeros_jac = np.zeros([len(self.grid.all_species)] * 2)
-        self.zeros_3xgrid = np.zeros([3, self.grid.dims])
         
     def RateEquations(self, t, q, args):
         """
@@ -227,12 +226,9 @@ class SimpleChemicalNetwork:
                            - self.alpha[cell][he2] * n_e * xHeIII
             self.dqdt[e] += (self.dqdt[he2] + self.dqdt[he2 + 1]) * n_He
                             
-        # Temperature evolution - looks dumb but using np.sum is slow
+        # Temperature evolution
         if not self.isothermal:
-            phoheat = 0.0
-            ioncool = 0.0
-            reccool = 0.0
-            exccool = 0.0
+            phoheat, ioncool, reccool, exccool = np.zeros(4)
             
             if 1 in self.grid.Z:
                 phoheat += k_H[h1] * xHI * n_H

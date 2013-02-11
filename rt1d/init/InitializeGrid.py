@@ -462,12 +462,13 @@ class Grid:
         for ion in self.ions:
             self.data[ion][isclump] = ionization    
         
-        # Reset electron density and gas energy
+        # Reset electron density, particle density, and gas energy
         self._set_de()
-        self._set_ge()
-        
+                
         del self._x_to_n_converter
         self.data['n'] = self.particle_density(self.data)
+        
+        self._set_ge()
                 
     def particle_density(self, data):
         """
@@ -483,14 +484,14 @@ class Grid:
     def _set_ge(self):
         # Initialize gas energy    
         if not self.isothermal:
-            self.data['ge'] = 1.5 * k_B * self.particle_density(self.data) \
-                * self.data['T']             
+            self.data['ge'] = 1.5 * k_B * self.data['n'] * self.data['T']             
 
     def _set_de(self):
         """
         Set electron density - must have run set_rho beforehand.
         """
         
+        self.data['de'] = np.zeros(self.dims)
         for i, Z in enumerate(self.Z):
             for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
                 x_i_jp1 = self.data[util.zion2name(Z, j + 1)]

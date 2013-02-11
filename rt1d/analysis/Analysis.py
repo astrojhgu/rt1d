@@ -366,15 +366,13 @@ class Analyze:
                 continue
             
             ne = self.data[dd]['de']   
-            heat, zeta, eta, psi, omega, cool = [np.zeros(self.grid.dims)] * 6
+            heat, zeta, eta, psi, omega, cool = np.zeros([6, self.grid.dims])
             for absorber in self.grid.absorbers:                
                 i = self.grid.absorbers.index(absorber)            
                             
                 nabs = self.data[dd][absorber] * self.grid.x_to_n[absorber]
                 nion = self.data[dd]['h_2'] * self.grid.x_to_n[absorber]
-              
-                print 'hey'
-              
+                            
                 # Photo-heating
                 heat = heat + self.data[dd]['Heat'][...,i] * nabs
                 
@@ -426,7 +424,7 @@ class Analyze:
             10**np.ceil(np.log10(ma)))
         
         if legend:
-            self.ax.legend(frameon = False, ncol = 2, loc = 'best')
+            self.ax.legend(frameon = False, ncol = 3, loc = 'best')
         
         pl.draw()    
         

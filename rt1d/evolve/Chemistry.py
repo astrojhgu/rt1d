@@ -93,7 +93,7 @@ class Chemistry:
         # Convert ge to T
         if not self.grid.isothermal:
             newdata['n'] = self.grid.particle_density(newdata)
-            newdata['T'] = newdata['ge'] * 2. / 3. / k_B / newdata['n']
+            newdata['T'] = newdata['ge'] / 1.5 / k_B / newdata['n']
         
         return newdata
 
