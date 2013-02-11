@@ -15,6 +15,7 @@ import pylab as pl
 from .Multiplot import *
 from ..physics.Constants import *
 from ..init.InitializeGrid import Grid
+from ..physics.SecondaryElectrons import SecondaryElectrons
 
 #from .Dataset import Dataset
 #from .Inspection import Inspect
@@ -68,7 +69,7 @@ class Analyze:
             self.grid = checkpoints.grid
             self.pf = checkpoints.pf
             self.data = checkpoints.data
-        
+            
     def StromgrenSphere(self, t, sol = 0, T0 = None):
         """
         Classical analytic solution for expansion of an HII region in an 
@@ -281,15 +282,18 @@ class Analyze:
         collisional. Needs to be generalized under new framework.
         """ 
         
+        if type(t) is not list:
+            t = [t]
+        
         if legend and hasattr(self, 'ax'):
             legend = False
         
+        self.ax = pl.subplot(111)
+        i = self.grid.absorbers.index(absorber)
         for dd in self.data.keys():
             if self.data[dd]['time'] / self.pf['time_units'] not in t: 
                 continue
             
-            i = self.grid.absorbers.index(absorber)
-              
             ne = self.data[dd]['de']
             nabs = self.data[dd][absorber] * self.grid.x_to_n[absorber]
             nion = self.data[dd]['h_2'] * self.grid.x_to_n[absorber]
@@ -309,26 +313,25 @@ class Analyze:
             xi = self.data[dd]['xi'][...,i] * nion * ne
             recomb = alpha + xi    
                 
-        self.ax = pl.subplot(111)
-        self.ax.loglog(self.grid.r_mid / cm_per_kpc, ion, 
-            color = color, ls = ls, label = 'Total')  
-            
-        if not total_only:      
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, Gamma, 
-                color = color, ls = '--', label = r'$\Gamma$')
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, gamma, 
-                color = color, ls = ':', label = r'$\gamma$')
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, Beta, 
-                color = color, ls = '-.', label = r'$\beta$')
+            self.ax.loglog(self.grid.r_mid / cm_per_kpc, ion, 
+                color = color, ls = ls, label = 'Total')
                 
-        if plot_recomb:
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, recomb, 
-                color = 'b', ls = '-', label = 'Recomb.')
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, alpha, 
-                color = 'b', ls = '--', label = r'$\alpha$')
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, xi, 
-                color = 'b', ls = ':', label = r'$\xi$')
-        
+            if not total_only:      
+                self.ax.loglog(self.grid.r_mid / cm_per_kpc, Gamma, 
+                    color = color, ls = '--', label = r'$\Gamma$')
+                self.ax.loglog(self.grid.r_mid / cm_per_kpc, gamma, 
+                    color = color, ls = ':', label = r'$\gamma$')
+                self.ax.loglog(self.grid.r_mid / cm_per_kpc, Beta, 
+                    color = color, ls = '-.', label = r'$\beta$')
+                    
+            if plot_recomb:
+                self.ax.loglog(self.grid.r_mid / cm_per_kpc, recomb, 
+                    color = 'b', ls = '-', label = 'Recomb.')
+                self.ax.loglog(self.grid.r_mid / cm_per_kpc, alpha, 
+                    color = 'b', ls = '--', label = r'$\alpha$')
+                self.ax.loglog(self.grid.r_mid / cm_per_kpc, xi, 
+                    color = 'b', ls = ':', label = r'$\xi$')
+            
         self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
         self.ax.set_ylabel(r'Ionization Rate $(\mathrm{s}^{-1})$')
         self.ax.set_ylim(0.01 * 10**np.floor(np.log10(np.min(ion))), 
@@ -346,89 +349,87 @@ class Analyze:
         collisional.
         """ 
         
+        if type(t) is not list:
+            t = [t]
+        
         if legend and hasattr(self, 'ax'):
             legend = False
-        
-        for dd in self.data.keys():
-            if self.data[dd]['time'] / self.pf['time_units'] not in t: 
-                continue
-            
-            x_HII = self.data[dd]['h_2']
-            fheat = np.ones(self.grid.dims)
-            #for i in xrange(self.grid.dims):
-            #    fheat[i] = self.esec.DepositionFraction(None, x_HII[i], 0)   
-                            
-            heat, zeta, eta, psi, cool = [np.zeros(self.grid.dims)] * 5
-            for absorber in self.grid.absorbers:                
-                i = self.grid.absorbers.index(absorber)            
-                            
-                ne = self.data[dd]['de']
-                nabs = self.data[dd][absorber] * self.grid.x_to_n[absorber]
-                nion = self.data[dd]['h_2'] * self.grid.x_to_n[absorber]
-              
-                # Photo-heating
-                heat += fheat * self.data[dd]['Heat'][...,i] * nabs
-                
-                # Cooling
-                zeta += self.data[dd].zeta * nabs * ne # collisional ionization
-                eta += self.data[dd].eta * nion * ne  # recombination
-                psi += self.data[dd].psi * nabs * ne  # collisional excitation
-            
-                if absorber == 'he_2':
-                    omega = self.data[dd]['omega'] * nion * ne # dielectric
-            
-            cool = (zeta + eta + psi + omega)    
-            if self.pf['CosmologicalExpansion']:
-                cool += self.data[dd].hubble * 3. * self.data[dd].T * k_B * self.data[dd].n_B
-
-        mi = min(np.min(heat), np.min(cool))    
-        ma = max(np.max(heat), np.max(cool))    
             
         if label is None:
             heat_label = r'$\mathcal{H}_{\mathrm{tot}}$'    
         else:
             heat_label = label    
-            
+        
         self.ax = pl.subplot(111)
-        self.ax.loglog(self.grid.r_mid / cm_per_kpc, heat, 
-            color = color, ls = ls, label = heat_label)
-        
-        if plot_cooling:
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, cool, 
-                color = 'b', ls = '-', label = r'$\mathcal{C}_{\mathrm{tot}}$')
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, zeta, 
-                color = 'g', ls = '--', label = r'$\zeta$')
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, psi, 
-                color = 'g', ls = ':', label = r'$\psi$')
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, eta, 
-                color = 'c', ls = '--', label = r'$\eta$')
-        
-            if self.pf['MultiSpecies']:
-                self.ax.loglog(self.data[dd].r / cm_per_kpc, omega, 
-                    color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
-                    
+        for dd in self.data.keys():
+            if self.data[dd]['time'] / self.pf['time_units'] not in t: 
+                continue
+            
+            ne = self.data[dd]['de']   
+            heat, zeta, eta, psi, omega, cool = [np.zeros(self.grid.dims)] * 6
+            for absorber in self.grid.absorbers:                
+                i = self.grid.absorbers.index(absorber)            
+                            
+                nabs = self.data[dd][absorber] * self.grid.x_to_n[absorber]
+                nion = self.data[dd]['h_2'] * self.grid.x_to_n[absorber]
+              
+                print 'hey'
+              
+                # Photo-heating
+                heat = heat + self.data[dd]['Heat'][...,i] * nabs
+                
+                # Cooling
+                zeta = zeta + self.data[dd]['zeta'][...,i] * nabs * ne # collisional ionization                
+                eta = eta + self.data[dd]['eta'][...,i] * nion * ne   # recombination
+                psi = psi + self.data[dd]['psi'][...,i] * nabs * ne   # collisional excitation
+            
+                if absorber == 'he_2':
+                    omega = self.data[dd]['omega'] * nion * ne # dielectric
+            
+            cool = (zeta + eta + psi + omega)    
             #if self.pf['CosmologicalExpansion']:
-            #    self.ax.loglog(self.data[dd].r / cm_per_kpc, 
-            #        self.data[dd]['hubble'] * 3. * self.data[dd].T * k_B * self.data[dd].n_B, 
-            #        color = 'm', ls = '--', label = r'$H(z)$')
+            #    cool += self.data[dd].hubble * 3. * self.data[dd].T * k_B * self.data[dd].n_B
+
+            mi = min(np.min(heat), np.min(cool))    
+            ma = max(np.max(heat), np.max(cool))    
                 
-        if plot_cooling:
-            ax_label = r'Heating & Cooling Rate $(\mathrm{erg/s/cm^3})$'        
-        else:    
-            ax_label = r'Heating Rate $(\mathrm{erg/s/cm^3})$'        
-                
-        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
+            self.ax.loglog(self.grid.r_mid / cm_per_kpc, heat, 
+                color = color, ls = ls, label = heat_label)
+            
+            if plot_cooling:
+                self.ax.loglog(self.grid.r_mid / cm_per_kpc, cool, 
+                    color = 'b', ls = '-', label = r'$\mathcal{C}_{\mathrm{tot}}$')
+                self.ax.loglog(self.grid.r_mid / cm_per_kpc, zeta, 
+                    color = 'g', ls = '--', label = r'$\zeta$')
+                self.ax.loglog(self.grid.r_mid / cm_per_kpc, psi, 
+                    color = 'g', ls = ':', label = r'$\psi$')
+                self.ax.loglog(self.grid.r_mid / cm_per_kpc, eta, 
+                    color = 'c', ls = '--', label = r'$\eta$')
+            
+                if 'he_2' in self.grid.absorbers:
+                    self.ax.loglog(self.grid.r_mid / cm_per_kpc, omega, 
+                        color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
+                        
+                #if self.pf['CosmologicalExpansion']:
+                #    self.ax.loglog(self.data[dd].r / cm_per_kpc, 
+                #        self.data[dd]['hubble'] * 3. * self.data[dd].T * k_B * self.data[dd].n_B, 
+                #        color = 'm', ls = '--', label = r'$H(z)$')
+                    
+            if plot_cooling:
+                ax_label = r'Heating & Cooling Rate $(\mathrm{erg/s/cm^3})$'        
+            else:    
+                ax_label = r'Heating Rate $(\mathrm{erg/s/cm^3})$'        
+                            
+        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
         self.ax.set_ylabel(ax_label)
         self.ax.set_ylim(0.001 * 10**np.floor(np.log10(mi)), 
             10**np.ceil(np.log10(ma)))
         
         if legend:
-            self.ax.legend(frameon = False, ncol = 3, loc = 'lower right')
+            self.ax.legend(frameon = False, ncol = 2, loc = 'best')
         
         pl.draw()    
         
-        # Save heating and cooling rates
         self.heat = heat
-        self.cool = cool           
-
-      
+        self.cool, self.zeta, self.eta, self.psi = (cool, zeta, eta, psi)
+        

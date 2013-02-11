@@ -466,7 +466,7 @@ class Grid:
         self._set_de()
         self._set_ge()
         
-        del self.x_to_n_converter
+        del self._x_to_n_converter
         self.data['n'] = self.particle_density(self.data)
                 
     def particle_density(self, data):
