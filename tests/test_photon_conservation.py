@@ -25,8 +25,8 @@ pcpf = {'problem_type': 2, 'grid_cells': 128}
 npcpf = {'problem_type': 2, 'grid_cells': 128, 'photon_conserving': 0}
 
 for i, x in enumerate([1, 2, 4, 8, 16]):
-    sim1 = rt1d.run.RTsim(pf = pcpf.update({'density_units': density_units * x}))
-    sim2 = rt1d.run.RTsim(pf = npcpf.update({'density_units': density_units * x})
+    sim1 = rt1d.run.RT(pf = pcpf.update({'density_units': density_units * x}))
+    sim2 = rt1d.run.RT(pf = npcpf.update({'density_units': density_units * x})
     
     pc.append(rt1d.analysis.Analyze(sim1))
     pc2.append(rt1d.analysis.Analyze(sim12))

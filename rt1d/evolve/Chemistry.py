@@ -16,6 +16,14 @@ import numpy as np
 from scipy.integrate import ode
 from ..physics.Constants import k_B
 
+try:
+    from mpi4py import MPI
+    rank = MPI.COMM_WORLD.rank
+    size = MPI.COMM_WORLD.size
+except ImportError:
+    rank = 0
+    size = 1
+
 class Chemistry:
     def __init__(self, grid, dengo = False, rt = False):
         """
@@ -42,7 +50,27 @@ class Chemistry:
         self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.all_species)])
         self.zeros_grid_x_abs = np.zeros_like(self.grid.zeros_grid_x_absorbers)
         self.zeros_grid_x_abs2 = np.zeros_like(self.grid.zeros_grid_x_absorbers2)
+    
+    @property        
+    def load_balance(self):
+        """
+        Return array the same size as the grid, each element noting
+        the processor that solves that cell. 
+        """        
+        
+        if not hasattr(self, '_proc_dist'):
+            ascending = np.arange(size)
+            descending = list(ascending.copy())
+            descending.reverse()
+            single_permutation = np.concatenate((ascending, descending))
             
+            D = size * 2
+            self._proc_dist = np.zeros(self.grid.dims)
+            for i in xrange(self.grid.dims):
+                self._proc_dist[i] = single_permutation[i % D]
+            
+        return self._proc_dist
+        
     def Evolve(self, data, dt, **kwargs):
         """
         Evolve all cells by dt.
@@ -56,16 +84,19 @@ class Chemistry:
                 self.chemnet.psi[...,i] *= data['he_2'] / data['he_1']
                 
         newdata = {}
-        for species in data:
-            newdata[species] = data[species].copy()
+        for field in data:
+            newdata[field] = data[field].copy()
                
         kwargs_by_cell = self.sort_kwargs_by_cell(kwargs)
                                
         self.q_grid = np.zeros_like(self.zeros_gridxq)
         self.dqdt_grid = np.zeros_like(self.zeros_gridxq)
-               
+                              
         # Loop over grid and solve chemistry
         for cell in xrange(self.grid.dims):
+
+            if rank != self.load_balance[cell]:
+                continue
 
             # Construct q vector
             q = np.zeros(len(self.grid.all_species))
@@ -89,6 +120,24 @@ class Chemistry:
 
             for i, value in enumerate(self.solver.y):
                 newdata[self.grid.all_species[i]][cell] = self.solver.y[i]
+                
+        # Collect results        
+        if size > 1:
+            collected_data = {}
+            for key in newdata:
+                tmp = np.zeros_like(newdata[key])
+                nothing = MPI.COMM_WORLD.Allreduce(newdata[key], tmp)
+                collected_data[key] = tmp
+                del tmp    
+                
+            newdata = collected_data
+            tmp_q = np.zeros_like(self.q_grid)
+            tmp_qdot = np.zeros_like(self.q_grid)    
+            nothing = MPI.COMM_WORLD.Allreduce(self.q_grid, tmp_q)
+            nothing = MPI.COMM_WORLD.Allreduce(self.dqdt_grid, tmp_qdot)
+                
+            self.q_grid = tmp_q
+            self.dqdt_grid = tmp_qdot    
                 
         # Convert ge to T
         if not self.grid.isothermal:

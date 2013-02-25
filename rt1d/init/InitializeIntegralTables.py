@@ -22,50 +22,49 @@ try:
     rank = MPI.COMM_WORLD.rank
     size = MPI.COMM_WORLD.size
 except ImportError:
-    print "Module mpi4py not found.  No worries, we'll just run in serial."
+    print "mpi4py not found."
     rank = 0
     size = 1
 
 E_th = [13.6, 24.6, 54.4]
 
-tiny_number = 1e-30
-negligible_column = 1
-
 scipy.seterr(all = 'ignore')
 
 class IntegralTable: 
-    def __init__(self, pf, source, grid):
+    def __init__(self, pf, source, grid, logN=None):
         self.pf = pf
-        
-        # Make these optional
         self.src = source
         self.grid = grid
         
         # Move this stuff to TableProperties
-        
-        # Required bounds of table assuming minimum species fraction
-        self.logNlimits = \
-            self.TableBoundsAuto(self.src.SpectrumPars['smallest_x'])
-        
-        # Only override automatic table properties if the request table size
-        # is *bigger* than the default one.
-        self.N = []
-        self.logN = []
-        for i, absorber in enumerate(self.grid.absorbers):
+        if logN is None:
+            # Required bounds of table assuming minimum species fraction
+            self.logNlimits = \
+                self.TableBoundsAuto(self.src.SpectrumPars['smallest_x'])
             
-            if self.src.SpectrumPars['logNmin'] < self.logNlimits[i][0]:
-                self.logNlimits[i][0] = self.src.SpectrumPars['logNmin'][i]
+            # Only override automatic table properties if the request table size
+            # is *bigger* than the default one.
+            self.N = []
+            self.logN = []
+            for i, absorber in enumerate(self.grid.absorbers):
+                
+                if self.src.SpectrumPars['logNmin'] < self.logNlimits[i][0]:
+                    self.logNlimits[i][0] = self.src.SpectrumPars['logNmin'][i]
+                
+                if self.src.SpectrumPars['logNmax'] < self.logNlimits[i][1]:
+                    self.logNlimits[i][1] = self.src.SpectrumPars['logNmax'][i]
+                
+                logNmin, logNmax = self.logNlimits[i]
+                
+                d = int((logNmax - logNmin) / self.src.SpectrumPars['dlogN'][i]) + 1
             
-            if self.src.SpectrumPars['logNmax'] < self.logNlimits[i][1]:
-                self.logNlimits[i][1] = self.src.SpectrumPars['logNmax'][i]
+                self.logN.append(np.linspace(logNmin, logNmax, d))
+                self.N.append(np.logspace(logNmin, logNmax, d))
+        else:    
+            self.logN = logN
+            self.N = [10**tmp for tmp in self.logN]
             
-            logNmin, logNmax = self.logNlimits[i]
-            
-            d = int((logNmax - logNmin) / self.src.SpectrumPars['dlogN'][i]) + 1
-
-            self.logN.append(np.linspace(logNmin, logNmax, d))
-            self.N.append(np.logspace(logNmin, logNmax, d))
-                                
+        # Retrieve dimensions, add some for secondary electrons if necessary                        
         self.dimsN = np.array([len(element) for element in self.N])
         self.Nd = len(self.dimsN)
         

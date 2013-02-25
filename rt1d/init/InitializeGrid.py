@@ -105,9 +105,6 @@ class Grid:
             
         return self.num_of_absorbers
         
-    #@property
-    #def     
-        
     @property
     def metals(self):
         """ Return list of anything that is not hydrogen or helium. """
@@ -227,13 +224,10 @@ class Grid:
         Nc = {}
         logN = {}
         for absorber in self.absorbers:
-            N[absorber] = np.cumsum(data[absorber] \
-                        * self.x_to_n[absorber] * self.dr)
-            
+            Nc[absorber] = self.dr * data[absorber] * self.x_to_n[absorber]            
+            N[absorber] = np.cumsum(Nc[absorber])
             logN[absorber] = np.log10(N[absorber])
-            Nc[absorber] = self.dr * data[absorber] \
-                * self.x_to_n[absorber]            
-
+            
         return N, logN, Nc     
         
     def initialize(self, pf):
@@ -430,7 +424,6 @@ class Grid:
             X += self.abundances_by_number[i] * ele.mass
                                                           
         self.n_H = self.data['rho'] / m_H / X
-        self.data['n'] = self.particle_density(self.data)
     
     def make_clump(self, position = None, radius = None, overdensity = None,
         temperature = None, ionization = None, profile = None):
@@ -484,6 +477,7 @@ class Grid:
     def _set_ge(self):
         # Initialize gas energy    
         if not self.isothermal:
+            self.data['n'] = self.particle_density(self.data)
             self.data['ge'] = 1.5 * k_B * self.data['n'] * self.data['T']             
 
     def _set_de(self):

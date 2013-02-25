@@ -46,7 +46,7 @@ big_number = 1e5
 ls = ['-', '--', ':', '-.']
 
 class RadiationSourceIdealized:
-    def __init__(self, grid = None, **kwargs):
+    def __init__(self, grid=None, logN=None, **kwargs):
         self.pf = parse_kwargs(**kwargs)
         self.grid = grid # since we probably need to know what species are being evolved
         
@@ -72,9 +72,9 @@ class RadiationSourceIdealized:
         self.multi_freq = self.discrete and not self.SpectrumPars['multigroup'][0] 
 
         self.initialize()
-        self.create_integral_table()
+        self.create_integral_table(logN=logN)
                 
-    def create_integral_table(self, dlogN = None, logNmin = None, logNmax = None):
+    def create_integral_table(self, logN=None):
         """
         Take tables and create interpolation functions.
         """
@@ -83,14 +83,12 @@ class RadiationSourceIdealized:
             return
         
         # Overide defaults if supplied - this is dangerous
-        if dlogN is not None:
-            self.pf.update({'spectrum_dlogN': dlogN})
-        if logNmin is not None:
-            self.pf.update({'spectrum_logNmin': logNmin})
-        if logNmax is not None:
-            self.pf.update({'spectrum_logNmax': logNmax})
+        if logN is not None:
+            self.pf.update({'spectrum_dlogN': [np.diff(tmp) for tmp in logN]})
+            self.pf.update({'spectrum_logNmin': [np.min(tmp) for tmp in logN]})
+            self.pf.update({'spectrum_logNmax': [np.max(tmp) for tmp in logN]})
         
-        self.tab = IntegralTable(self.pf, self, self.grid)
+        self.tab = IntegralTable(self.pf, self, self.grid, logN)
             
         # Tabulate away!
         if self.SourcePars['table'] is None:

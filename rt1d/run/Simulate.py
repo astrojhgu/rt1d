@@ -24,7 +24,7 @@ class simulation:
         self.rs = rt.src
         self.rf = rt.rfield
 
-def RTsim(pf = None):
+def RT(pf = None):
     """
     Run a radiative transfer simulation from input parameter file, which
     can be a dictionary or a path to a text file.
@@ -50,7 +50,7 @@ def RTsim(pf = None):
         grid.set_x(Z = pf['species'][i], x = pf['initial_ionization'][i])       
     
     grid.set_T(pf['initial_temperature'])
-    
+        
     if pf['clump']:
         grid.make_clump(position = pf['clump_position'], radius = pf['clump_radius'], 
             temperature = pf['clump_temperature'], overdensity = pf['clump_overdensity'],

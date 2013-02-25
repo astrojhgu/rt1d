@@ -14,7 +14,7 @@ Comparison Project (Iliev et al. 2006; RT06).
 import rt1d
 import pylab as pl
 
-sim = rt1d.run.RTsim(pf = {'problem_type': 2.1})
+sim = rt1d.run.RT(pf = {'problem_type': 2, 'initialize_only': 0})
 
 anl = rt1d.analysis.Analyze(sim.checkpoints)
 

@@ -13,7 +13,7 @@ Description:
 import rt1d
 import pylab as pl
 
-sim = rt1d.run.RTsim(pf = {'problem_type': 3})
+sim = rt1d.run.RT(pf = {'problem_type': 3, 'grid_cells': 256})
 
 anl = rt1d.analysis.Analyze(sim.checkpoints)
 

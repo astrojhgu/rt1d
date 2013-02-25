@@ -15,10 +15,10 @@ import rt1d
 import pylab as pl
 
 # RT06 0.3 - continuous, discrete, and optically_thin = 1
-sim_c = rt1d.run.RTsim(pf = {'problem_type': 0})
-sim_d = rt1d.run.RTsim(pf = {'problem_type': 0.1, 
+sim_c = rt1d.run.RT(pf = {'problem_type': 0})
+sim_d = rt1d.run.RT(pf = {'problem_type': 0.1, 
     'dtDataDump': None, 'logdtDataDump': 0.25})
-sim_t = rt1d.run.RTsim(pf = {'problem_type': 0, 'optically_thin': 1,
+sim_t = rt1d.run.RT(pf = {'problem_type': 0, 'optically_thin': 1,
     'dtDataDump': None, 'logdtDataDump': 0.25})
 
 anl_c = rt1d.analysis.Analyze(sim_c.checkpoints)
@@ -63,8 +63,8 @@ raw_input('<enter> for HII region test')
 pl.close()
 
 # RT06 2 - continuous, discrete
-sim_c = rt1d.run.RTsim(pf = {'problem_type': 2})
-sim_d = rt1d.run.RTsim(pf = {'problem_type': 2.1})
+sim_c = rt1d.run.RT(pf = {'problem_type': 2})
+sim_d = rt1d.run.RT(pf = {'problem_type': 2.1})
 
 anl_c = rt1d.analysis.Analyze(sim_c.checkpoints)
 anl_d = rt1d.analysis.Analyze(sim_d.checkpoints)

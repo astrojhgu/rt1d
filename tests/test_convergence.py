@@ -18,7 +18,7 @@ colors = ['c', 'm', 'r', 'g', 'b', 'k']
 
 mp = None
 for i, res in enumerate([2**n for n in np.arange(5, 10)]):
-    sim = rt1d.run.RTsim(pf = {'problem_type': 1, 'grid_cells': res})
+    sim = rt1d.run.RT(pf = {'problem_type': 1, 'grid_cells': res})
     anl = rt1d.analysis.Analyze(sim.checkpoints)
 
     plot_anl = plot_sol = True

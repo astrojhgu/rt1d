@@ -58,10 +58,10 @@ the rt1d/run/Simulate.py module.  In a Python terminal (or script), it's as easy
 
 >>>
 >>> import rt1d
->>> sim = rt1d.run.RTsim()
+>>> sim = rt1d.run.RT()
 >>>
   
-RTsim returns an instance of the simulation class, which contains the data as well as instances
+RT returns an instance of the simulation class, which contains the data as well as instances
 of all major classes used in the calculation (e.g. Grid, Radiation, ChemicalNetwork, etc.).
 
 This example (all default parameter values) simulates the expansion of an I-front around a 

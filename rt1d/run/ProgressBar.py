@@ -15,20 +15,29 @@ try:
     pb = True
 except ImportError:
     pb = False
+    
+try:
+    from mpi4py import MPI
+    rank = MPI.COMM_WORLD.rank
+    size = MPI.COMM_WORLD.size
+except ImportError:
+    rank = 0
+    size = 1    
 
 class ProgressBar:
     def __init__(self, maxval, name = 'rt1d'):
         self.maxval = maxval
         
-        if pb:
+        if pb and rank == 0:
             self.widget = ["%s: " % name, progressbar.Percentage(), ' ', \
               progressbar.Bar(marker = progressbar.RotatingMarker()), ' ', \
               progressbar.ETA(), ' ']
             self._start()
     
     def _start(self):
-        self.pbar = progressbar.ProgressBar(widgets = self.widget, 
-            maxval = self.maxval).start()
+        if rank == 0:
+            self.pbar = progressbar.ProgressBar(widgets = self.widget, 
+                maxval = self.maxval).start()
         
     def update(self, value):
         if hasattr(self, 'pbar'):

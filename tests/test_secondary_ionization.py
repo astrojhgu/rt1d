@@ -14,11 +14,11 @@ secondary ionization/heating.
 import rt1d
 import pylab as pl
 
-sim0 = rt1d.run.RTsim(pf = {'problem_type': 2})
-sim1 = rt1d.run.RTsim(pf = {'problem_type': 2, 'secondary_ionization': 1,
+sim0 = rt1d.run.RT(pf = {'problem_type': 2})
+sim1 = rt1d.run.RT(pf = {'problem_type': 2, 'secondary_ionization': 1,
     'source_table': sim0.rt.src.tabs})
-sim2 = rt1d.run.RTsim(pf = {'problem_type': 2, 'secondary_ionization': 2})
-sim3 = rt1d.run.RTsim(pf = {'problem_type': 2, 'secondary_ionization': 3})
+sim2 = rt1d.run.RT(pf = {'problem_type': 2, 'secondary_ionization': 2})
+sim3 = rt1d.run.RT(pf = {'problem_type': 2, 'secondary_ionization': 3})
 
 anl0 = rt1d.analysis.Analyze(sim0.checkpoints)
 anl1 = rt1d.analysis.Analyze(sim1.checkpoints)

@@ -12,7 +12,7 @@ Description:
 
 import rt1d
 
-sim = rt1d.run.RTsim(pf = {'problem_type': 0, 'optically_thin': 1})
+sim = rt1d.run.RT(pf = {'problem_type': 0, 'optically_thin': 1})
 
 anl = rt1d.analysis.Analyze(sim.checkpoints)
 
