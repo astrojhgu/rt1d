@@ -12,14 +12,15 @@ Description: ChemicalNetwork object just needs to have methods called
 """
 
 import numpy as np
-import dengo.primordial_rates, dengo.primordial_cooling
-import dengo.oxygen_rates, dengo.oxygen_cooling
-from dengo.chemistry_constants import tiny, kboltz, mh
-from dengo.chemical_network import ChemicalNetwork, \
-    reaction_registry, cooling_registry
-    
-from ..physics.Constants import k_B    
-#from scipy.misc import derivative
+from ..physics.Constants import k_B
+
+try:
+    import dengo.primordial_rates, dengo.primordial_cooling
+    import dengo.oxygen_rates, dengo.oxygen_cooling
+    from dengo.chemical_network import ChemicalNetwork, \
+        reaction_registry, cooling_registry
+except ImportError:
+    pass   
 
 class DengoChemicalNetwork:
     def __init__(self, grid):

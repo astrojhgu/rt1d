@@ -17,17 +17,6 @@ from ..physics.Constants import *
 from ..init.InitializeGrid import Grid
 from ..physics.SecondaryElectrons import SecondaryElectrons
 
-#from .Dataset import Dataset
-#from .Inspection import Inspect
-#from ..mods.Constants import *
-#from ..mods.Cosmology import *
-#from ..mods.Interpolate import Interpolate
-#from ..mods.InitializeGrid import InitializeGrid
-#from ..mods.RadiationSources import RadiationSources
-#from ..mods.SecondaryElectrons import SecondaryElectrons
-#from ..mods.ComputeCrossSections import PhotoIonizationCrossSection
-#from ..mods.InitializeIntegralTables import InitializeIntegralTables
-
 linestyles = ['-', '--', ':', '-.']
 
 class Analyze:

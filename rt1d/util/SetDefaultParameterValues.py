@@ -77,7 +77,13 @@ def SourceParameters():
         "source_N": 1,
         
         "source_files": 'None',
+        
+        # dictates what sets Lbol 
+        # (qdot for type = 0, T for type = (1,2) M for type > 2)
+        # Just use spectrum type? This only matters for PopIII?
+        # Type 1 normalized by qdot *and* T, type 2 just T
         "source_type": 0,  
+        
         "source_temperature": 1e5,  
         "source_qdot": 5e48,
         "source_mass": 1e3,  

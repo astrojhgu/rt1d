@@ -12,6 +12,7 @@ Description:
 
 import rt1d, copy
 import numpy as np
+from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
 try:
     import ndmin
@@ -22,13 +23,14 @@ erg_per_ev = rt1d.physics.Constants.erg_per_ev
 
 class Optimization:
     def __init__(self, logN=None, Z=[1], nfreq=1, rs=None, fn=None, 
-        thin=False, isothermal=False, secondary_ionization=0, mcmc=False):
+        thinlimit=False, isothermal=False, secondary_ionization=0, mcmc=False,
+        loglikelihood=None):
         self.logN = logN
         self.Z = Z
         self.nfreq = nfreq
         self.rs = rs
         self.fn = fn
-        self.thin = thin
+        self.thinlimit = thinlimit
         self.isothermal = isothermal
         self.secondary_ionization = secondary_ionization
         self.mcmc = mcmc
@@ -59,10 +61,12 @@ class Optimization:
         #self.tab_dims.insert(0, len(self.Z))
         #self.tab_dims.insert(0, len(self.integrals))
     
-    def run_(self, steps, limits=None, step=None):
-        self.__call__(steps, limits=limits, step=step)
+    def run(self, steps, limits=None, step=None, burn=None, guess=None, err=0.1):
+        self.__call__(steps, guess=guess, limits=limits, step=step, 
+            burn=burn, err=err)
     
-    def __call__(self, steps, guess=None, limits=None, step=None):
+    def __call__(self, steps, guess=None, limits=None, step=None, burn=None, 
+        err=0.1):
         """
         Construct optimal discrete spectrum for a given radiation source.
         
@@ -70,43 +74,81 @@ class Optimization:
             logN = list of arrays, each element should be logN for corresponding
                 entry in Z.
         """
+        
+        print 'Finding optimal %i-bin discrete SED...' % self.nfreq
 
-        # Initialize annealer - generous control parameters
+        # Initialize sampler - generous control parameters
         if limits is None:
             limits = [(13.6, 1e2)] * self.nfreq
             limits.extend([(0.0, 1.0)] * self.nfreq)
         if step is None:    
-            step = [5.0] * self.nfreq
-            step.extend([0.1] * self.nfreq)
+            step = [(lim[1] - lim[0]) for lim in limits]
+        if guess is None:
+            guess = []
+            for i in xrange(self.nfreq * 2):
+                guess.append(np.random.rand() * \
+                    (limits[i][1] - limits[i][0]) + limits[i][0])
             
-        self.sampler = ndmin.Annealer(self.cost, limits = limits, step = step, 
-            afreq = 1000)
+        if self.mcmc:
+            self.sampler = ndmin.MarkovChain(lambda p: self.cost(p, err), 
+                dx = step, limits = limits)
+            self.sampler.burn_in(burn, xarr=guess, dx=step, pca=burn)
+            self.sampler.run(steps, xarr = self.sampler.xarr_ML_b, 
+                dx = self.sampler.stepsize, evec = self.sampler.eigenvectors)    
+        else:    
+            self.sampler = ndmin.Annealer(self.cost, limits = limits, 
+                step = step, afreq = 1000)
             
-        # Minimize 'func' and save results
-        self.sampler.run(steps)
+            self.sampler.run(steps)
+            
+        print 'Optimization complete.'    
         
-    def cost(self, pars):
-        E, LE = ndmin.util.split_list(pars)
+    def cost(self, pars, err=0.1):
+        E, LE = ndmin.util.halve_list(pars)
+        #bfx = sigma_E(E)        
                 
         # Compute optical depth for all combinations of column densities
-        tau = self.tau(E)            
-        
+        if self.thinlimit:
+            tau = np.zeros(self.tau_dims)
+        else:
+            tau = self.tau(E)
+            
         # Compute discrete versions of phi & psi
         # NOTE: if ionization thresholds all below smallest emission energy,
         # integrals for all species are identical.
-        
         discrete_tables = self.discrete_tabs(E, LE, tau)
         
+        # Keep only one element if we're doing optically thin optimization
+        if self.thinlimit:
+            mask = 0
+        else:
+            mask = Ellipsis
+            
         # Compute cost
         cost = 0.0
         for i, integral in enumerate(self.integrals):
             for j, absorber in enumerate(self.grid.absorbers):
                 name = self.tab_name(integral, absorber)
-                ref = np.log10(10**self.rs.tabs[name] * erg_per_ev)
-                tmp = discrete_tables[name]
-                
-                cost += np.max(np.abs(tmp - ref)) + np.mean(np.abs(tmp - ref))
-                
+
+                cont = self.rs.tabs[name]
+                disc = discrete_tables[name]
+
+                if self.mcmc: # really lnL in this case
+                                                            
+                    #if integral == 'Phi':
+                    #    var = (10**self.logN[j])**2 * \
+                    #        np.sum(LE**2 * np.exp(-2. * tau[...,j,:]) \
+                    #        * (0.01 * bfx)**2 / E**2, axis = -1) / erg_per_ev**2
+                    #else:
+                    #    var = (10**self.logN[j])**2 * \
+                    #        np.sum(LE**2 * np.exp(-2. * tau[...,j,:]) \
+                    #        * (0.01 * bfx)**2, axis = -1)
+
+                    cost -= np.sum((disc - cont)[mask]**2 / err**2)
+                else:
+                    cost += np.max(np.abs(disc - cont)[mask])
+                    cost += np.mean(np.abs(disc - cont)[mask])
+        
         return cost
     
     def tab_name(self, integral, absorber):
@@ -139,22 +181,25 @@ class Optimization:
         to_sum = LE * np.exp(-tau_E) / E
         to_sum[E < Eth] = 0.0
         summed = np.sum(to_sum, axis = -1)
-        return np.log10(summed)
+        return np.log10(summed / erg_per_ev)
 
     def DiscretePsi(self, E, LE, tau_E, Eth):
         to_sum = LE * np.exp(-tau_E)
         to_sum[E < Eth] = 0.0
         summed = np.sum(to_sum, axis = -1)
-        return np.log10(summed)                     
+        return np.log10(summed)
     
     def tau(self, E):
         """
         Compute total optical depth (over all species) as a function of 
         discrete emission energy E (eV).
         """
+        
         tau_E = np.zeros(self.tau_dims)
+        
         for i in xrange(self.rs.tab.elements_per_table):
             for j, absorber in enumerate(self.grid.absorbers):
+                
                 loc = list(self.rs.tab.indices_N[i])
                 loc.append(j)
                                     
