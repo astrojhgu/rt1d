@@ -57,7 +57,7 @@ pl.scatter([Emono] * 2, [Lmono] * 2, color = 'k', marker = '+', s = 100)
 # Nice labels
 pl.xlabel(r'$h\nu \ (\mathrm{eV})$')
 pl.ylabel(r'$L_{\nu}$')
-raw_input('click <enter> for confidence intervals for (E, LE)')
+raw_input('click <enter> for confidence intervals (E, LE)')
 pl.close()
 
 # Histogram MCMC results and plot
