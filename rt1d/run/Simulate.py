@@ -15,14 +15,16 @@ from ..util.ReadParameterFile import *
 from ..util import parse_kwargs, ReadParameterFile
 
 class simulation:
-    def __init__(self, pf, checkpoints, rt):
+    def __init__(self, pf, checkpoints, rt=None):
         self.pf = pf
         self.checkpoints = checkpoints
         self.data = checkpoints.data
         self.grid = checkpoints.grid
-        self.rt = rt
-        self.rs = rt.src
-        self.rf = rt.rfield
+        
+        if rt:
+            self.rt = rt
+            self.rs = rt.src
+            self.rf = rt.rfield
 
 def RT(pf = None):
     """
@@ -56,10 +58,6 @@ def RT(pf = None):
             temperature = pf['clump_temperature'], overdensity = pf['clump_overdensity'],
             ionization = pf['clump_ionization'], profile = pf['clump_profile'])
             
-    # Initialize radiation source and radiative transfer solver
-    rs = rt1d.sources.RadiationSourceIdealized(grid, **pf)
-    rt = rt1d.Radiation(grid, rs, **pf)
-    
     # To compute timestep
     timestep = rt1d.run.ComputeTimestep(grid, pf['epsilon_dt'])
     
@@ -69,7 +67,14 @@ def RT(pf = None):
         stop_time = pf['stop_time'], initial_timestep = pf['initial_timestep'],
         logdtDataDump = pf['logdtDataDump'], source_lifetime = pf['source_lifetime'])
         
-    if pf['initialize_only']:
+    if pf['initialize_only'] == 1:
+        return simulation(pf, checkpoints, None)    
+        
+    # Initialize radiation source and radiative transfer solver
+    rs = rt1d.sources.RadiationSourceIdealized(grid, **pf)
+    rt = rt1d.Radiation(grid, rs, **pf)    
+        
+    if pf['initialize_only'] == 2:
         return simulation(pf, checkpoints, rt)   
             
     # Evolve chemistry + RT

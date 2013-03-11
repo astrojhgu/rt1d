@@ -13,18 +13,6 @@ driver of rt1d, calling our solvers which call all the various physics modules.
 import copy, math
 import numpy as np
 
-#from .Constants import *
-#from .Cosmology import Cosmology
-#from .ComputeCrossSections import PhotoIonizationCrossSection
-#from .RadiationSource import RadiationSource
-#from .SecondaryElectrons import SecondaryElectrons
-#from .Interpolate import Interpolate
-#from .ComputeRateCoefficients import RateCoefficients
-#from .SolveRateEquations import SolveRateEquations
-#from .ControlSimulation import ControlSimulation
-#from .SpinTemperature import SpinTemperature
-#from .Hydrogen import Hydrogen
-
 try:
     from mpi4py import MPI
     rank = MPI.COMM_WORLD.rank

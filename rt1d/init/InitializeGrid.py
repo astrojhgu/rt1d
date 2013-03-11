@@ -12,12 +12,23 @@ Description:
 
 import copy
 import numpy as np
-import chianti.core as cc
-import chianti.util as util
 from ..util import parse_kwargs, rebin
-from periodic.table import element as ELEMENT
 from ..physics.Constants import k_B, cm_per_kpc, s_per_myr, m_H
 from ..physics.ComputeCrossSections import PhotoIonizationCrossSection
+
+try:
+    import chianti.core as cc
+    import chianti.util as util
+    have_chianti = True
+except ImportError:
+    from ..util import fake_chianti
+    util = fake_chianti()
+    have_chianti = False
+
+try:
+    from periodic.table import element as ELEMENT
+except ImportError:
+    from ..util import ELEMENT
 
 tiny_number = 1e-8  # A relatively small species fraction
 
@@ -90,44 +101,44 @@ class Grid:
     @property
     def absorbers(self):    
         """ Return list of absorbers (don't include electrons). """
-        if not hasattr(self, 'absorbing_species'):
-            self.absorbing_species = copy.copy(self.neutrals)
+        if not hasattr(self, '_absorbing_species'):
+            self._absorbing_species = copy.copy(self.neutrals)
             for ion in self.ions_by_ion:
-                self.absorbing_species.extend(self.ions_by_ion[ion][1:-1])
+                self._absorbing_species.extend(self.ions_by_ion[ion][1:-1])
             
-        return self.absorbing_species
+        return self._absorbing_species
         
     @property
     def N_absorbers(self):
-        if not hasattr(self, 'self.num_of_absorbers'):
+        if not hasattr(self, 'self._num_of_absorbers'):
             absorbers = self.absorbers
-            self.num_of_absorbers = int(len(absorbers))
+            self._num_of_absorbers = int(len(absorbers))
             
-        return self.num_of_absorbers
+        return self._num_of_absorbers
         
     @property
     def metals(self):
         """ Return list of anything that is not hydrogen or helium. """
-        if not hasattr(self, 'all_metals'):
-            self.all_metals = []
-            self.all_metal_ions = []
+        if not hasattr(self, '_metals'):
+            self._metals = []
+            self._metal_ions = []
             for element in self.ions_by_ion:
                 if element in ['h', 'he']:
                     continue
                      
-                self.all_metals.append(element)
+                self._metals.append(element)
                 for ion in self.ions_by_ion[element]:
-                    self.all_metal_ions.append(ion)
+                    self._metal_ions.append(ion)
             
-        return self.all_metals  
+        return self._metals  
         
     @property
     def metal_ions(self):
         """ Return list of all metal ions."""      
-        if not hasattr(self, 'all_metal_ions'):
+        if not hasattr(self, '_metal_ions'):
             all_metals = self.metals
             
-        return self.all_metal_ions
+        return self._metal_ions
         
     @property
     def species_abundances(self):
@@ -135,14 +146,14 @@ class Grid:
         Return dictionary containing abundances of all ions' parent
         element.
         """
-        if not hasattr(self, 'species_abundances'):
-            self.species_abundances = {}
+        if not hasattr(self, '_species_abundances'):
+            self._species_abundances = {}
             for ion in self.ions_by_ion:
                 for state in self.ions_by_ion[ion]:
-                    self.species_abundances[state] = \
+                    self._species_abundances[state] = \
                         self.element_abundances[self.elements.index(ion)]
     
-        return self.species_abundances
+        return self._species_abundances
     
     @property
     def types(self):
@@ -154,17 +165,17 @@ class Grid:
            -1 = other
         """
         
-        if not hasattr(self, 'species_types'):
-            self.species_types = []
+        if not hasattr(self, '_species_types'):
+            self._species_types = []
             for species in self.all_species:
                 if species in self.neutrals:
-                    self.species_types.append(0)
+                    self._species_types.append(0)
                 elif species in self.ions:
-                    self.species_types.append(1)
+                    self._species_types.append(1)
                 else:
-                    self.species_types.append(-1) 
+                    self._species_types.append(-1) 
         
-        return self.species_types   
+        return self._species_types   
         
     @property # MUST GENERALIZE THIS
     def ioniz_thresholds(self):
@@ -172,17 +183,17 @@ class Grid:
         Return ionization threshold energy in eV for all absorbers.
         """    
         
-        if not hasattr(self, 'all_thresholds'):
-            self.all_thresholds = {}
+        if not hasattr(self, '_ioniz_thresholds'):
+            self._ioniz_thresholds = {}
             for absorber in self.absorbers:
                 if absorber == 'h_1':
-                    self.all_thresholds[absorber] = 13.6
+                    self._ioniz_thresholds[absorber] = 13.6
                 elif absorber == 'he_1':
-                    self.all_thresholds[absorber] = 24.4
+                    self._ioniz_thresholds[absorber] = 24.4
                 elif absorber == 'he_2':
-                    self.all_thresholds[absorber] = 54.4
+                    self._ioniz_thresholds[absorber] = 54.4
                     
-        return self.all_thresholds
+        return self._ioniz_thresholds
         
     @property # MUST GENERALIZE THIS
     def bf_cross_sections(self):
@@ -192,18 +203,18 @@ class Grid:
         """    
         
         if not hasattr(self, 'all_xsections'):
-            self.all_xsections = {}
+            self._bf_xsections = {}
             for absorber in self.absorbers:
                 #ion = cc.continuum(absorber)
                 #ion.vernerCross(energy = np.logspace(1, 5, 1000))
                 if absorber == 'h_1':
-                    self.all_xsections[absorber] = lambda E: \
+                    self._bf_xsections[absorber] = lambda E: \
                         PhotoIonizationCrossSection(E, species = 0)
                 elif absorber == 'he_1':
-                    self.all_xsections[absorber] = lambda E: \
+                    self._bf_xsections[absorber] = lambda E: \
                         PhotoIonizationCrossSection(E, species = 1)
                 
-        return self.all_xsections
+        return self._bf_xsections
         
     @property
     def x_to_n(self):
@@ -250,7 +261,7 @@ class Grid:
                 temperature = pf['clump_temperature'], overdensity = pf['clump_overdensity'],
                 ionization = pf['clump_ionization'], profile = pf['clump_profile'])
         
-    def set_chem(self, Z = 1, abundance = 'cosmic', isothermal = False,
+    def set_chem(self, Z = 1, abundance = [1.0], isothermal = False,
         secondary_ionization = False):
         """
         Initialize chemistry - which species we'll be solving for and their 
@@ -289,11 +300,13 @@ class Grid:
             self.data[field] = np.zeros(self.dims)
             
         # Read abundances from chianti
-        if type(abundance) is str:
+        if type(abundance) is str and have_chianti:
             self.abundances_by_number = util.abundanceRead(abundance)['abundance']
             self.element_abundances = []
             for i, Z in enumerate(self.Z):
                 self.element_abundances.append(self.abundances_by_number[Z - 1])
+        elif type(abundance) is str:
+            raise ValueError('If chianti is not installed, must supply abundances by number.')             
         else:
             self.abundances_by_number = self.abundance
             self.element_abundances = []
@@ -419,10 +432,10 @@ class Grid:
             name = util.z2element(i + 1)
             if not name.strip():
                 continue
-                
+                    
             ele = ELEMENT(name)
             X += self.abundances_by_number[i] * ele.mass
-                                                          
+                                                
         self.n_H = self.data['rho'] / m_H / X
     
     def make_clump(self, position = None, radius = None, overdensity = None,
