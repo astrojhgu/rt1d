@@ -6,7 +6,8 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Wed Jan 16 16:50:57 2013
 
-Description: 
+Description: Run RT06 #2 with photon-conserving and non-photon-conserving
+algorithms.
 
 """
 

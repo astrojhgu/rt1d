@@ -110,7 +110,7 @@ class Chemistry:
                     kwargs_cell['Heat'], data['n'][cell])
             else:
                 args = (cell, self.grid.zeros_absorbers, self.grid.zeros_absorbers2, 
-                    self.grid.zeros_absorbers)
+                    self.grid.zeros_absorbers, data['n'][cell])
                             
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)

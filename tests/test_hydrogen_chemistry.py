@@ -24,11 +24,11 @@ grid = rt1d.Grid(dims = dims)
 # Set initial conditions
 grid.set_chem(isothermal = True)
 grid.set_rho(rho0 = 1e-3 * rt1d.Constants.m_H)
-grid.set_T(T)
 grid.set_x(state = 'neutral')  
+grid.set_T(T)
 
 # Initialize chemistry network / solver
-chem = rt1d.Chemistry(grid, dengo = False)
+chem = rt1d.Chemistry(grid, rt = False, dengo = False)
 
 # Only need to calculate coefficients once for this test
 chem.chemnet.SourceIndependentCoefficients(chem.grid.data['T'])

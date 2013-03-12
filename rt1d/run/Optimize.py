@@ -92,9 +92,9 @@ class Optimization:
         if self.mcmc:
             self.sampler = ndmin.MarkovChain(lambda p: self.cost(p, err), 
                 dx = step, limits = limits)
-            self.sampler.burn_in(burn, xarr=guess, dx=step, pca=burn)
-            self.sampler.run(steps, xarr = self.sampler.xarr_ML_b, 
-                dx = self.sampler.stepsize, evec = self.sampler.eigenvectors)    
+            self.sampler.burn_in(burn, guess=guess, dx=step, pca=burn)
+            self.sampler.run(steps, guess=self.sampler.xarr_ML_b, 
+                dx=self.sampler.stepsize, evec=self.sampler.eigenvectors)    
         else:    
             self.sampler = ndmin.Annealer(self.cost, limits = limits, 
                 step = step, afreq = 1000)

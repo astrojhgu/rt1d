@@ -12,7 +12,7 @@ Description: Tabulate integrals that appear in the rate equations.
 import numpy as np
 from ..run import ProgressBar
 import os, re, scipy, itertools, math, copy
-from scipy.integrate import quad, romberg, trapz
+from scipy.integrate import quad, trapz
 from ..physics.Constants import erg_per_ev
 from ..physics.SecondaryElectrons import *
 from scipy.interpolate import LinearNDInterpolator

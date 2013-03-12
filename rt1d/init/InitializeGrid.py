@@ -316,8 +316,6 @@ class Grid:
         # Initialize mapping between q-vector and physical quantities (dengo)                
         self._set_qmap()
                         
-        # Add RT fields here    
-
     def set_ics(self, data):
         """
         Simple way of setting all initial conditions at once with a data 

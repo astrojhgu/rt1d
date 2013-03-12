@@ -29,20 +29,23 @@ be alarmed if the time-to-completion estimate you're given is absurd at first --
 of radiative transfer simulations is very small (characteristic ionization timescale very
 short).  The example problem given below should run in about a minute on a single CPU.
 
-(Optional (eventually))
+(Optional)
 The code is written such that running with an arbitrary chemical composition is 
-possible (in principle).  A few additional dependencies are required to support this.
-First, dengo. Its sub-dependencies can all be installed using pip: ::
+possible (in principle) using dengo (written by Matthew Turk and Devin Silvia).  
+Its sub-dependencies can all be installed using pip: ::
 
     pip install sympy
     pip install periodic
     pip install ChiantiPy
     
-Use of the Chianti atomic database requires one additional environment variable: ::
+The chianti database itself can be downloaded 
+`here <http://www.chiantidatabase.org/download/CHIANTI_7.1_data.tar.gz>`_. To make
+use of it with ChiantiPy, you must define a new environment variable, which for me
+(in bash) looks like: ::
 
     export XUVTOP=$WORK/mods/chianti
 
-and of course the database itself, which can be downloaded `here <http://www.chiantidatabase.org/download/CHIANTI_7.1_data.tar.gz>`_.
+Once this is all done, you should be off to the races.
 
 
 Example
@@ -79,7 +82,7 @@ built-in analysis routines, or look at the raw data itself:
 >>> anl.IonizationProfile(t = [1, 10, 100]) # Plot neutral/ionized fractions vs. radius at 1, 10, 100 Myr
 >>> 
 >>> # Look at min and max values of the neutral fraction in data dump 50
->>> print min(sim.data[50]['h_1']), max(sim.data[50]['h_1'])
+>>> print sim.data[50]['h_1'].min(), sim.data[50]['h_1'].max()
 >>>
 
 More examples on the way.

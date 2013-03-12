@@ -37,9 +37,12 @@ class DengoChemicalNetwork:
         self.networks = {}
         for element in self.grid.elements:
             
-            # NAMESPACE CONFLICT
             chem_net = ChemicalNetwork()
             
+            # If this is hydrogen or helium, we need to do some extra work
+            if self._is_primordial(element):
+                pass
+                
             # Add cooling actions
             for ca in cooling_registry.values():
                 if ca.name.startswith("%s_" % element):
@@ -53,7 +56,13 @@ class DengoChemicalNetwork:
             self.networks[element] = chem_net
         
         self._set_RHS()
-        self._set_Jac()                 
+        self._set_Jac()       
+    
+    def _is_primordial(self, element):
+        if element in ['h', 'he']:
+            return True
+        else:
+            return False
             
     def _set_RHS(self):
         """
@@ -85,7 +94,7 @@ class DengoChemicalNetwork:
         self.dqdt.append(dedot)
         if not self.grid.isothermal:
             self.dqdt.append(gedot)
-            
+                        
     def _set_Jac(self):
         """
         Create string representations of Jacobian.
