@@ -19,6 +19,14 @@ try:
 except ImportError:
     pass
     
+try:
+    from mpi4py import MPI
+    rank = MPI.COMM_WORLD.rank
+    size = MPI.COMM_WORLD.size
+except ImportError:
+    rank = 0
+    size = 1    
+    
 erg_per_ev = rt1d.physics.Constants.erg_per_ev 
 
 class Optimization:
@@ -75,7 +83,8 @@ class Optimization:
                 entry in Z.
         """
         
-        print 'Finding optimal %i-bin discrete SED...' % self.nfreq
+        if rank == 0:
+            print 'Finding optimal %i-bin discrete SED...' % self.nfreq
 
         # Initialize sampler - generous control parameters
         if limits is None:
@@ -100,8 +109,9 @@ class Optimization:
                 step = step, afreq = 1000)
             
             self.sampler.run(steps)
-            
-        print 'Optimization complete.'    
+         
+        if rank == 0:
+            print 'Optimization complete.'    
         
     def cost(self, pars, err=0.1):
         E, LE = ndmin.util.halve_list(pars)

@@ -22,7 +22,6 @@ try:
     rank = MPI.COMM_WORLD.rank
     size = MPI.COMM_WORLD.size
 except ImportError:
-    print "mpi4py not found."
     rank = 0
     size = 1
 
@@ -184,7 +183,8 @@ class IntegralTable:
         Return a dictionary of lookup tables, and also store a copy as self.itabs.
         """
         
-        print '\nTabulating integral quantities...'
+        if rank == 0:
+            print '\nTabulating integral quantities...'
                 
         # Loop over integrals
         h = 0
@@ -215,9 +215,9 @@ class IntegralTable:
                                                               
                 tab = np.zeros(dims)
                 for j, ind in enumerate(self.indices_N):
-
+                        
                     if j % size != rank:
-                        continue
+                        continue    
                         
                     if self.pf['secondary_ionization'] > 1 \
                         and integral not in ['Tau', 'Phi']:
@@ -249,8 +249,20 @@ class IntegralTable:
                 i_donor = 0
 
             pb.finish()
-                                
-        print 'Integral tabulation complete.'
+                       
+        if rank == 0:                        
+            print 'Integral tabulation complete.'
+            
+        # Collect results from all processors    
+        if size > 1:        
+            collected_tabs = {}
+            for tab in tabs:
+                tmp = np.zeros_like(tabs[tab])
+                nothing = MPI.COMM_WORLD.Allreduce(tabs[tab], tmp)
+                collected_tabs[tab] = tmp.copy()
+                del tmp
+                
+            tabs = collected_tabs.copy()
         
         return tabs         
             
