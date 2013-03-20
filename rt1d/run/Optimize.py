@@ -74,7 +74,7 @@ class Optimization:
             burn=burn, err=err)
     
     def __call__(self, steps, guess=None, limits=None, step=None, burn=None, 
-        err=0.1):
+        err=0.1, gamma=0.99, afreq=50):
         """
         Construct optimal discrete spectrum for a given radiation source.
         
@@ -102,11 +102,13 @@ class Optimization:
             self.sampler = ndmin.MarkovChain(lambda p: self.cost(p, err), 
                 dx = step, limits = limits)
             self.sampler.burn_in(burn, guess=guess, dx=step, pca=burn)
-            self.sampler.run(steps, guess=self.sampler.xarr_ML_b, 
-                dx=self.sampler.stepsize, evec=self.sampler.eigenvectors)    
+            
+            if steps > 0:
+                self.sampler.run(steps, guess=self.sampler.xarr_ML_b, 
+                    dx=self.sampler.stepsize, evec=self.sampler.eigenvectors)    
         else:    
-            self.sampler = ndmin.Annealer(self.cost, limits = limits, 
-                step = step, afreq = 1000)
+            self.sampler = ndmin.Annealer(self.cost, limits=limits, 
+                step=step, afreq=afreq, gamma=gamma)
             
             self.sampler.run(steps)
          

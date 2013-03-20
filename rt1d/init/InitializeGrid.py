@@ -239,7 +239,7 @@ class Grid:
             N[absorber] = np.cumsum(Nc[absorber])
             logN[absorber] = np.log10(N[absorber])
             
-        return N, logN, Nc     
+        return N, logN, Nc
         
     def initialize(self, pf):
         """

@@ -318,8 +318,12 @@ class IntegralTable:
             tmp = 0
             for i, absorber in enumerate(self.grid.absorbers):
                 if energy >= self.grid.ioniz_thresholds[absorber]:
-                    tmp += self.PartialOpticalDepth(energy, N[i], absorber)
-            
+                    if type(N) is dict:
+                        tmp += self.PartialOpticalDepth(energy, N[absorber], 
+                            absorber)
+                    else:
+                        tmp += self.PartialOpticalDepth(energy, N[i], 
+                            absorber)
             tau[j] = tmp
             del tmp
         

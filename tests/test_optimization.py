@@ -28,10 +28,10 @@ src = {'problem_type': 2}
 
 # Initialize optimization object - use MCMC rather than simulated annealing
 sedop = rt1d.run.Optimization(logN=logN, Z=Z, nfreq=1, 
-    rs=src, mcmc=True, isothermal=False, thinlimit=True)
+    rs=src, mcmc=False, isothermal=False, thinlimit=True)
 
 # Run MCMC
-sedop(1e5, burn=1e4, err=0.01)
+sedop(1e5, burn=1e3, err=0.01, step = [5, 0.05], afreq=10, gamma=0.99)
 
 # Compute likelihood by brute force
 E = np.linspace(15, 50, 100)
@@ -43,8 +43,8 @@ for i in xrange(len(E)):
 
 # Plot contours of likelihood, analytic solution, and last 1000 steps of chain
 pl.contour(E, LE, lnL.T, 3, colors = 'k', linestyles = [':', '--', '-'])
-pl.plot(sedop.sampler.chain[-1e3:,0], sedop.sampler.chain[-1e3:,1], 
-    color = 'b')
+#pl.plot(sedop.sampler.chain[-1e3:,0], sedop.sampler.chain[-1e3:,1], 
+#    color = 'b')
     
 # We should recover the mean ionizing photon energy and the 
 # fraction of the bolometric luminosity emitted above 13.6 eV

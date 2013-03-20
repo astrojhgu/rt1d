@@ -15,12 +15,11 @@ import pylab as pl
 from .Multiplot import *
 from ..physics.Constants import *
 from ..init.InitializeGrid import Grid
-from ..physics.SecondaryElectrons import SecondaryElectrons
 
 linestyles = ['-', '--', ':', '-.']
 
 class Analyze:
-    def __init__(self, checkpoints):
+    def __init__(self, checkpoints, rs=None):
         
         # Load contents of hdf5 file
         if type(checkpoints) is str:
@@ -58,6 +57,40 @@ class Analyze:
             self.grid = checkpoints.grid
             self.pf = checkpoints.pf
             self.data = checkpoints.data
+            
+        self.rs = rs
+        
+    def EmergentSpectrum(self, t, cell=-1, norm=False):
+        """
+        Compute emergent spectrum at time t (Myr) and given cell in grid. By
+        default, cell=-1, i.e., compute the spectrum that emerges from the grid.
+        If norm=True, do not apply geometrical dilution.
+        """        
+        
+        if not hasattr(self, 'rs'):
+            raise ValueError('RadiationSource class instance required.')
+            
+        E = np.linspace(self.rs.Emin, self.rs.Emax)
+        F = np.array(map(self.rs.Spectrum, E))
+        
+        for dd in self.data: 
+            if self.data[dd]['time'] / s_per_myr != t:
+                continue
+                
+            N, logN, Nc = self.grid.ColumnDensity(self.data[dd])
+            
+            Ntot = {}
+            for absorber in self.grid.absorbers:
+                Ntot[absorber] = N[absorber][cell]
+            
+            tau = self.rs.tab.SpecificOpticalDepth(E, Ntot)
+        
+        out = F * np.exp(-tau)
+        if not norm:
+            out *= self.rs.BolometricLuminosity(t * s_per_myr) \
+                / (4. * np.pi * self.grid.r[cell]**2)
+        
+        return E, F, out
             
     def StromgrenSphere(self, t, sol = 0, T0 = None):
         """
