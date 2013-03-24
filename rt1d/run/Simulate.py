@@ -25,8 +25,9 @@ class simulation:
             self.rt = rt
             self.rs = rt.src
             self.rf = rt.rfield
-
-def RT(pf = None):
+    
+# Make this a class    
+def RT(pf = None, grid=None, rs=None):
     """
     Run a radiative transfer simulation from input parameter file, which
     can be a dictionary or a path to a text file.
@@ -71,7 +72,7 @@ def RT(pf = None):
         return simulation(pf, checkpoints, None)    
         
     # Initialize radiation source and radiative transfer solver
-    rs = rt1d.sources.RadiationSourceIdealized(grid, **pf)
+    rs = rt1d.sources.RadiationSource(grid, **pf)
     rt = rt1d.Radiation(grid, rs, **pf)    
         
     if pf['initialize_only'] == 2:

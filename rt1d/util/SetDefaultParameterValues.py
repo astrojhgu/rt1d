@@ -10,6 +10,7 @@ into groups.
      
 """
 
+from numpy import inf
 from ..physics.Constants import m_H, cm_per_kpc, s_per_myr
 
 defaults = []
@@ -29,7 +30,7 @@ def SetAllDefaults():
 def GridParameters():
     pf = \
         {
-        "grid_cells": 64,
+        "grid_cells": 32,
         "start_radius": 0.01,
         
         "density_units": 1e-3 * m_H,
@@ -76,7 +77,7 @@ def SourceParameters():
         {
         "source_N": 1,
         
-        "source_files": 'None',
+        #"source_files": 'None',
         
         # dictates what sets Lbol 
         # (qdot for type = 0, T for type = (1,2) M for type > 2)
@@ -91,7 +92,7 @@ def SourceParameters():
         "source_tbirth": 0,
         "source_lifetime": 1e10,  
         "source_eta": 0.1,
-        "source_isco": 0,  
+        "source_isco": 6,  
         "source_rmax": 1e3,
         "source_cX": 1.0,
         
@@ -105,24 +106,24 @@ def SpectrumParameters():
     pf = \
         {        
         "spectrum_type": 0,
-        "spectrum_components": 1,
-        "spectrum_evolving": 0,
+        "spectrum_evolving": False,
         
         "spectrum_fraction": 1,
         "spectrum_alpha": 1.5,
         "spectrum_Emin": 13.6,  
         "spectrum_Emax": 1e2,  
-        "spectrum_EminNorm": 0.01,  
-        "spectrum_EmaxNorm": 5e2,  
+        "spectrum_EminNorm": None,
+        "spectrum_EmaxNorm": None, 
          
-        "spectrum_N": 0,
+        "spectrum_logN": 0,
         "spectrum_fcol": 1.7,
         "spectrum_file": None,
         
         "spectrum_multigroup": 0,
-        "spectrum_bands": [13.6, 24.6, 54.4],
+        "spectrum_bands": None,
           
-        "spectrum_E": None,  
+        "spectrum_t": None,  
+        "spectrum_E": None,
         "spectrum_LE": None,  
                 
         "spectrum_table": None,
@@ -145,7 +146,7 @@ def ControlParameters():
     pf = \
         {
         "epsilon_dt": 0.05,
-        "dtDataDump": 5,
+        "dtDataDump": 1,
         'logdtDataDump': None,
         "stop_time": 500,
         "initial_timestep": 1e-6,

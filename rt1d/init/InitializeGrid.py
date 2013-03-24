@@ -155,7 +155,7 @@ class Grid:
     
         return self._species_abundances
     
-    @property
+    @property#may not need this anymore
     def types(self):
         """
         Return list (matching all_species) with integers describing
@@ -435,6 +435,7 @@ class Grid:
             X += self.abundances_by_number[i] * ele.mass
                                                 
         self.n_H = self.data['rho'] / m_H / X
+        self.data['n'] = self.particle_density(self.data)
     
     def make_clump(self, position = None, radius = None, overdensity = None,
         temperature = None, ionization = None, profile = None):

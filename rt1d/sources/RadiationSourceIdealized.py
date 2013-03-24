@@ -24,7 +24,7 @@ spectrum_type:
 from ..physics.Constants import *
 from scipy.integrate import quad, romberg
 
-import re
+import h5py, re
 import numpy as np
 from ..util import parse_kwargs, sort
 from ..init.InitializeInterpolation import LookupTable
@@ -45,23 +45,35 @@ small_number = 1e-3
 big_number = 1e5
 ls = ['-', '--', ':', '-.']
 
-class RadiationSourceIdealized:
+sptypes = {'poly': 0, 'bb': 1, 'popIII':2, 'mcd': 3, 'pl': 4, 'qso': 5, 'user': 6}
+srctypes = {'test': 0, 'star': 1, 'popIII': 2, 'bh': 3}
+
+class RadiationSource:
     def __init__(self, grid=None, logN=None, **kwargs):
         self.pf = parse_kwargs(**kwargs)
         self.grid = grid # since we probably need to know what species are being evolved
-        
+                
+        # Modify parameter file if spectrum_file provided
+        self.load_spectrum()        
+                
         # Create Source/SpectrumPars attributes    
         self.SourcePars = sort(self.pf, prefix = 'source', make_list = False)
         self.SpectrumPars = sort(self.pf, prefix = 'spectrum')
-        
+                
         # Number of spectral components
         self.N = len(self.SpectrumPars['type'])
         
         # Cast types to int to avoid indexing complaints
+        for i, comp in enumerate(self.SpectrumPars['type']):
+            if type(comp) is str:
+                self.SpectrumPars['type'][i] = sptypes[comp]
+                
         self.SpectrumPars['type'] = map(int, self.SpectrumPars['type'])
         
-        self._name = 'RadiationSourceIdealized'
-        
+        # Convert source types to int
+        if type(self.SourcePars['type']) is str:
+            self.SourcePars['type'] = srctypes[self.SourcePars['type']]
+                
         self.discrete = (self.SpectrumPars['E'][0] != None) \
                       or self.pf['optically_thin']
         self.continuous = not self.discrete
@@ -72,8 +84,33 @@ class RadiationSourceIdealized:
         self.multi_freq = self.discrete and not self.SpectrumPars['multigroup'][0] 
 
         self.initialize()
-        self.create_integral_table(logN=logN)
+        if not self.pf['initialize_only']:
+            self.create_integral_table(logN=logN)
+        
+    def load_spectrum(self):
+        """ Modify a few parameters if spectrum_file provided. """
+        
+        fn = self.pf['spectrum_file']
+        
+        if fn is None:
+            return
+            
+        # Read spectrum - expect hdf5 with (at least) E, L_E, and time_yr datasets.
+        f = h5py.File(fn)
+        try:
+            self.pf['spectrum_t'] = f['t'].value
+        except:
+            self.pf['spectrum_t'] = None
+            self.pf['spectrum_evolving'] = False
                 
+        self.pf['spectrum_E'] = f['E'].value
+        self.pf['spectrum_LE'] = f['LE'].value
+        f.close()
+        
+        if len(self.pf['spectrum_LE'].shape) > 1 \
+            and not self.pf['spectrum_evolving']:
+            self.pf['spectrum_LE'] = self.pf['spectrum_LE'][0]
+                                
     def create_integral_table(self, logN=None):
         """
         Take tables and create interpolation functions.
@@ -111,15 +148,34 @@ class RadiationSourceIdealized:
     def _init_bh(self):
         pass
         
+    def _init_agn_template(self):
+        self.Alpha = 0.24
+        self.Beta = 1.60
+        self.Gamma = 1.06
+        self.E_1 = 83.
+        self.K = 0.0041
+        self.E_0 = (self.Beta - self.Alpha) * self.E_1
+        self.A = np.exp(2.0 / self.E_1) * 2.0**self.Alpha
+        self.B = ((self.E_0**(self.Beta - self.Alpha)) * np.exp(-(self.Beta - self.Alpha))) / \
+            (1.0 + (self.K * self.E_0**(self.Beta - self.Gamma)))
+            
+        # Normalization constants to make the SOS04 spectrum continuous.
+        self.SX_Normalization = 1.0
+        self.UV_Normalization = self.SX_Normalization * ((self.A * 2000.0**-self.Alpha) * \
+            np.exp(-2000.0 / self.E_1)) / ((1.2 * 2000**-1.7) * np.exp(2000.0 / 2000.0))
+        self.IR_Normalization = self.UV_Normalization * ((1.2 * 10**-1.7) * np.exp(10.0 / 2000.0)) / \
+            (1.2 * 159 * 10**-0.6)
+        self.HX_Normalization = self.SX_Normalization * (self.A * self.E_0**-self.Alpha * \
+            np.exp(-self.E_0 / self.E_1)) / (self.A * self.B * (1.0 + self.K * self.E_0**(self.Beta - self.Gamma)) * \
+            self.E_0**-self.Beta)                   
+    
     @property
     def sigma(self):
         """
         Compute bound-free absorption cross-section for all frequencies.
         """    
-        
         if not self.discrete:
             return None
-        
         if not hasattr(self, '_sigma_all'):
             self._sigma_all = sigma_E(self.E)
         
@@ -130,7 +186,6 @@ class RadiationSourceIdealized:
         """
         Returns number of photons emitted (s^-1) at all frequencies.
         """    
-        
         if not hasattr(self, '_Qdot_all'):
             self._Qdot_all = self.Lbol * self.LE / self.E / erg_per_ev
         
@@ -266,15 +321,22 @@ class RadiationSourceIdealized:
         """
         
         self.Emin = min(self.SpectrumPars['Emin'])
-        self.Emax = min(self.SpectrumPars['Emax'])
+        self.Emax = max(self.SpectrumPars['Emax'])
+        
+        for i, comp in enumerate(self.SpectrumPars['type']):
+            if self.SpectrumPars['EminNorm'][i] == None:
+                self.SpectrumPars['EminNorm'][i] = self.SpectrumPars['Emin'][i]
+            if self.SpectrumPars['EmaxNorm'][i] == None:
+                self.SpectrumPars['EmaxNorm'][i] = self.SpectrumPars['Emax'][i]    
+        
         self.EminNorm = min(self.SpectrumPars['EminNorm'])
-        self.EmaxNorm = min(self.SpectrumPars['EmaxNorm'])
-                    
+        self.EmaxNorm = max(self.SpectrumPars['EmaxNorm'])
+                         
         # Correct later if using multi-group approach
         self.E = np.array(self.SpectrumPars['E'])
         self.LE = np.array(self.SpectrumPars['LE'])
         self.Nfreq = len(self.E)
-        
+                
         self.last_renormalized = 0
         self.tau = self.SourcePars['lifetime'] * self.pf['time_units']
         self.birth = self.SourcePars['tbirth'] * self.pf['time_units']
@@ -312,38 +374,13 @@ class RadiationSourceIdealized:
             self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
         else:
             self.Lbol = self.BolometricLuminosity(0.0)    
-                
-        # Parameters for average AGN spectrum of SOS04.
-        self.Alpha = 0.24
-        self.Beta = 1.60
-        self.Gamma = 1.06
-        self.E_1 = 83.
-        self.K = 0.0041
-        self.E_0 = (self.Beta - self.Alpha) * self.E_1
-        self.A = np.exp(2.0 / self.E_1) * 2.0**self.Alpha
-        self.B = ((self.E_0**(self.Beta - self.Alpha)) * np.exp(-(self.Beta - self.Alpha))) / \
-            (1.0 + (self.K * self.E_0**(self.Beta - self.Gamma)))
-            
-        # Normalization constants to make the SOS04 spectrum continuous.
-        self.SX_Normalization = 1.0
-        self.UV_Normalization = self.SX_Normalization * ((self.A * 2000.0**-self.Alpha) * \
-            np.exp(-2000.0 / self.E_1)) / ((1.2 * 2000**-1.7) * np.exp(2000.0 / 2000.0))
-        self.IR_Normalization = self.UV_Normalization * ((1.2 * 10**-1.7) * np.exp(10.0 / 2000.0)) / \
-            (1.2 * 159 * 10**-0.6)
-        self.HX_Normalization = self.SX_Normalization * (self.A * self.E_0**-self.Alpha * \
-            np.exp(-self.E_0 / self.E_1)) / (self.A * self.B * (1.0 + self.K * self.E_0**(self.Beta - self.Gamma)) * \
-            self.E_0**-self.Beta)               
              
         # Normalize spectrum
         self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
         
         if self.pf['optically_thin']:
             self.E = self.hnu_bar    
-        
-        # Time evolution
-        if np.any(self.SpectrumPars['evolving']):
-            self.Age = np.linspace(0, self.pf['stop_time'] * self.pf['time_units'], self.pf['AgeBins'])
-                                              
+                                                  
     def GravitationalRadius(self, M):
         """
         Half the Schwartzchild radius.
@@ -353,7 +390,7 @@ class RadiationSourceIdealized:
     def SchwartzchildRadius(self, M):
         return 2. * self.GravitationalRadius(M)    
         
-    def MassAccretionRate(self, M = None):        
+    def MassAccretionRate(self, M = None): 
         return self.BolometricLuminosity(0, M = M) / self.epsilon / c**2    
         
     def DiskInnermostRadius(self, M):      
@@ -361,10 +398,7 @@ class RadiationSourceIdealized:
         Inner radius of disk.  Unless SourceISCO > 0, will be set to the 
         inner-most stable circular orbit for a BH of mass M.
         """
-        if not self.pf['SourceISCO']:
-            return 6. * self.GravitationalRadius(M)
-        else:
-            return self.pf['SourceISCO']     
+        return self.pf['source_isco'] * self.GravitationalRadius(M)
             
     def DiskInnermostTemperature(self, M):
         """
@@ -419,24 +453,21 @@ class RadiationSourceIdealized:
         """
         Compute age of black hole based on current time, current mass, and initial mass.
         """            
-        
-        #if self.variable:
-            
-            
-        return np.log(M / self.pf['SourceMass']) * (self.epsilon / (1. - self.epsilon)) * t_edd
+                    
+        return np.log(M / self.pf['source_mass']) * (self.epsilon / (1. - self.epsilon)) * t_edd
                 
     def IonizingPhotonLuminosity(self, t = 0, bin = None):
         """
         Return Qdot (photons / s) for this source at energy E.
         """
         
-        if self.pf['SourceType'] in [0, 1, 2]:
+        if self.pf['source_type'] in [0, 1, 2]:
             return self.Qdot[bin]
         else:
             # Currently only BHs have a time-varying bolometric luminosity
             return self.BolometricLuminosity(t) * self.LE[bin] / self.E[bin] / erg_per_ev          
               
-    def Intensity(self, E, i, Type, t):
+    def Intensity(self, E, i, Type, t=0):
         """
         Return quantity *proportional* to fraction of bolometric luminosity emitted
         at photon energy E.  Normalization handled separately.
@@ -453,8 +484,8 @@ class RadiationSourceIdealized:
         else:
             Lnu = 0.0
             
-        if self.SpectrumPars['N'][i] > 0:
-            return Lnu * np.exp(-self.SpectrumPars['N'][i] \
+        if self.SpectrumPars['logN'][i] > 0:
+            return Lnu * np.exp(-10**self.SpectrumPars['logN'][i] \
                 * (sigma_E(E, 0) + y * sigma_E(E, 1)))   
         else:
             return Lnu     
@@ -462,14 +493,14 @@ class RadiationSourceIdealized:
     def Spectrum(self, E, t = 0.0, only = None):
         """
         Return fraction of bolometric luminosity emitted at energy E.
-        """        
+        """
         
         # Renormalize if t > 0 
-        #if t != self.last_renormalized:
+        #if t != self.last_renormalized and self.SourcePars['evolving']:
         #    self.last_renormalized = t
         #    self.M = self.BlackHoleMass(t)
         #    self.r_in = self.DiskInnermostRadius(self.M)
-        #    self.r_out = self.SpectrumPars['rmax'] * self.GravitationalRadius(self.M)
+        #    self.r_out = self.SourcePars['rmax'] * self.GravitationalRadius(self.M)
         #    self.T_in = self.DiskInnermostTemperature(self.M)
         #    self.T_out = self.DiskTemperature(self.M, self.r_out)
         #    self.Lbol = self.BolometricLuminosity(t)
@@ -505,7 +536,7 @@ class RadiationSourceIdealized:
         at E, not the number of photons.  
         """
 
-        return E**-self.SpectrumPars['PowerLawIndex'][i]
+        return E**-self.SpectrumPars['alpha'][i]
     
     def MultiColorDisk(self, E, i, Type, t = 0.0):
         """
@@ -513,10 +544,10 @@ class RadiationSourceIdealized:
         """         
         
         # If t > 0, re-compute mass, inner radius, and inner temperature
-        if t > 0 and self.pf['SourceTimeEvolution'] and t != self.last_renormalized:
+        if t > 0 and self.SourcePars['evolving'] and t != self.last_renormalized:
             self.M = self.BlackHoleMass(t)
             self.r_in = self.DiskInnermostRadius(self.M)
-            self.r_out = self.pf['SourceDiskMaxRadius'] * self.GravitationalRadius(self.M)
+            self.r_out = self.pf['source_rmax'] * self.GravitationalRadius(self.M)
             self.T_in = self.DiskInnermostTemperature(self.M)
             self.T_out = self.DiskTemperature(self.M, self.r_out)
                     
@@ -564,7 +595,7 @@ class RadiationSourceIdealized:
         Lbol = self.BolometricLuminosity(t)
         
         normalizations = np.zeros(self.N)
-        for i, component in enumerate(self.SpectrumPars['type']):            
+        for i, component in enumerate(self.SpectrumPars['type']):                        
             integral, err = quad(self.Intensity, self.SpectrumPars['EminNorm'][i], 
                 self.SpectrumPars['EmaxNorm'][i], args = (i, component, t,))
             normalizations[i] = self.SpectrumPars['fraction'][i] * Lbol / integral
@@ -602,6 +633,7 @@ class RadiationSourceIdealized:
         if self.SourcePars['type'] == 4:
             return self.pf['cX'] * 3.4e40
     
+    # Put all this stuff in analysis 
     def SpectrumCDF(self, E):
         """
         Returns cumulative energy output contributed by photons at or less than energy E.
@@ -635,6 +667,7 @@ class RadiationSourceIdealized:
         
         return integrate(integrand, self.EminNorm, self.EmaxNorm)[0]
         
+    # Obsolete?    
     def FrequencyAveragedBin(self, absorber = 'h_1', Emin = None, Emax = None,
         energy_weighted = False):
         """
@@ -660,6 +693,7 @@ class RadiationSourceIdealized:
         
     def PlotSpectrum(self, color = 'k', components = True, t = 0, normalized = True,
         bins = 100, mp = None, label = None):
+        """ Put this with analysis routines. """
         import pylab as pl
         
         if not normalized:
@@ -667,8 +701,7 @@ class RadiationSourceIdealized:
         else: 
             Lbol = 1.
         
-        E = np.logspace(np.log10(min(self.SpectrumPars['EminNorm'])), 
-            np.log10(max(self.SpectrumPars['EmaxNorm'])), bins)
+        E = np.logspace(np.log10(self.Emin), np.log10(self.Emax), bins)
         F = []
         
         for energy in E:

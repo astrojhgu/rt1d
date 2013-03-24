@@ -18,7 +18,7 @@ from ..init.InitializeGrid import Grid
 
 linestyles = ['-', '--', ':', '-.']
 
-class Analyze:
+class Simulation:
     def __init__(self, checkpoints, rs=None):
         
         # Load contents of hdf5 file
@@ -185,7 +185,7 @@ class Analyze:
             
     def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k', 
         annotate = False, xscale = 'linear', yscale = 'log', ax = None,
-        normx = False):
+        normx = False, marker=None, s=50, facecolors=None):
         """
         Plot radial profiles of species fraction (for H or He) at times t (Myr).
         """      
@@ -209,9 +209,15 @@ class Analyze:
                 labels = [None] * len(labels)
             
             for i, field in enumerate(fields):
-                ax.semilogy(self.grid.r_mid / cm_per_kpc,
-                    self.data[dd][field], ls = linestyles[i], 
-                    color = color, label = labels[i])
+                if marker is None:
+                    ax.plot(self.grid.r_mid / cm_per_kpc,
+                        self.data[dd][field], ls = linestyles[i], 
+                        color = color, label = labels[i])
+                else:
+                    ax.scatter(self.grid.r_mid / cm_per_kpc,
+                        self.data[dd][field], marker=marker, s=s, 
+                        color = color, label = labels[i],
+                        facecolors=facecolors)
 
             line_num += 1
                     
@@ -230,7 +236,8 @@ class Analyze:
         return ax     
             
     def TemperatureProfile(self, t = [10, 30, 100], color = 'k', ls = None, xscale = 'linear', 
-        legend = True, ax = None, normx = False):
+        yscale = 'log',legend = True, ax = None, normx = False, marker=None, s=50,
+        facecolors=None):
         """
         Plot radial profiles of temperature at times t (Myr).
         """  
@@ -253,8 +260,16 @@ class Analyze:
             if self.data[dd]['time'] / self.pf['time_units'] not in t: 
                 continue
             
-            ax.loglog(self.grid.r_mid / cm_per_kpc,
-                self.data[dd]['T'], ls = ls[line_num], color = color, label = r'$T_K$')
+            if marker is None:
+                ax.plot(self.grid.r_mid / cm_per_kpc,
+                    self.data[dd]['T'], ls = ls[line_num], color = color, 
+                    label = r'$T_K$')
+            else:
+                ax.scatter(self.grid.r_mid / cm_per_kpc,
+                    self.data[dd]['T'], color = color, 
+                    label = r'$T_K$', marker=marker, s=s,
+                    facecolors=facecolors)
+                        
                 
             line_num += 1    
                 
@@ -269,6 +284,7 @@ class Analyze:
         #        self.ax.legend(loc = 'upper right', frameon = False)
             
         ax.set_xscale(xscale)
+        ax.set_yscale(yscale)
         ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
         ax.set_ylabel(r'Temperature $(K)$')
         pl.draw()

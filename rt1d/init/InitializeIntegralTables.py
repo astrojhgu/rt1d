@@ -162,7 +162,7 @@ class IntegralTable:
         if self.pf['secondary_ionization'] > 1:
             self.Nd += 1
             self.axes.append(self.logx)
-        if np.any(self.pf['spectrum_evolving']):
+        if self.pf['source_evolving']:
             self.Nd += 1
                                 
     def DatasetName(self, integral, absorber, donor):
@@ -329,7 +329,7 @@ class IntegralTable:
         
         return tau
         
-    def Tabulate(self, integral, absorber, donor, N, x = None, t = None):
+    def Tabulate(self, integral, absorber, donor, N, x = None, t = 0):
         if integral == 'Phi':
             table = self.Phi(N, absorber, t = t)
         if integral == 'Psi':
@@ -347,7 +347,7 @@ class IntegralTable:
             
         return np.log10(table)
         
-    def Phi(self, N, absorber, t = None):
+    def Phi(self, N, absorber, t = 0):
         """
         Equation 10 in Mirocha et al. 2012.
         """
@@ -359,7 +359,7 @@ class IntegralTable:
             #        np.exp(-self.SpecificOpticalDepth(self.src.E[self.src.i_Eth[species]:], ncol)) / \
             #        (self.src.E[self.src.i_Eth[species]:] * erg_per_ev), self.src.E[self.src.i_Eth[species]:])
             #else:
-            integrand = lambda E: self.src.Spectrum(E, t = t) * \
+            integrand = lambda E: self.src.Spectrum(E, t=t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E
                             
         else:

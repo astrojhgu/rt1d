@@ -2,7 +2,9 @@
 Conversions between different naming conventions and other random stuff.
 """
 
+
 import numpy as np
+from collections import Iterable
 from .WriteData import CheckPoints
 from .ProblemTypes import ProblemType
 from .SetDefaultParameterValues import *
@@ -53,10 +55,22 @@ def sort(pf, prefix = 'spectrum', make_list = True):
             continue
         
         new_name = par.partition('_')[-1]
-        if type(pf[par]) is not list and make_list:
-            result[new_name] = [pf[par]]
-        else:
+        if isinstance(pf[par], Iterable) or (not make_list):
             result[new_name] = pf[par]
+        elif make_list:
+            result[new_name] = [pf[par]]
+            
+    # Make sure all elements are the same length?      
+    if make_list:  
+        lmax = 1
+        for par in result:
+            lmax = max(lmax, len(result[par]))
+        
+        for par in result:
+            if len(result[par]) == lmax:
+                continue
+            
+            result[par] = lmax * [result[par][0]]      
             
     return result
     

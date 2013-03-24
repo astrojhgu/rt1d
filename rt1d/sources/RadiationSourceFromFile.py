@@ -11,31 +11,53 @@ via ASCII or HDF5 file.
 
 """
 
+# Make this a sub-class of RadiationSourceIdealized? Re-name just RadiationSource?
+
 import h5py
 import numpy as np
 
-from .InitializeIntegralTables import *
+from ..util import sort, parse_kwargs
+from ..physics.Constants import s_per_yr
+from ..init.InitializeInterpolation import LookupTable
+from ..init.InitializeIntegralTables import IntegralTable
+from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
 class RadiationSourceFromFile:
-    def __init__(self, pf):
-        self.pf = pf
+    def __init__(self, grid=None, logN=None, **kwargs):
+        self.pf = parse_kwargs(**kwargs)
+        self.grid = grid # since we probably need to know what species are being evolved
         
-        # Create SpectrumPars attribute    
-        self.SpectrumPars = listify(pf)
-        self.N = len(self.SpectrumPars['Type'])
+        # Create Source/SpectrumPars attributes    
+        self.SourcePars = sort(self.pf, prefix = 'source', make_list = False)
+        self.SpectrumPars = sort(self.pf, prefix = 'spectrum')
+        
+        # Number of spectral components
+        self.N = len(self.SpectrumPars['type'])
         
         # Cast types to int to avoid indexing complaints
-        self.SpectrumPars['Type'] = map(int, self.SpectrumPars['Type'])   
-        
+        self.SpectrumPars['type'] = map(int, self.SpectrumPars['type'])
+                        
         self._name = 'RadiationSourceFromFile'
+        
+        self.discrete = True#(self.SpectrumPars['E'][0] != None) \
+                      #or self.pf['optically_thin']
+        self.continuous = False #not self.discrete
+                
+        # We don't allow multi-component discrete spectra...for now
+        # would we ever want/need this? lines on top of continuous spectrum perhaps...
+        self.multi_group = False#self.discrete and self.SpectrumPars['multigroup'][0] 
+        self.multi_freq = True#self.discrete and not self.SpectrumPars['multigroup'][0] 
+
+        self.initialize()
+        #self.create_integral_table(logN=logN)
         
     def initialize(self):
         """
         Create attributes we need, normalize, etc.
         """
             
-        self.fn = self.pf['SpectrumFile']    
-        self.tau = self.pf['SourceLifetime'] * self.pf['TimeUnits']
+        self.fn = self.pf['spectrum_file']    
+        self.tau = self.SourcePars['lifetime'] * self.pf['time_units']
                 
         # Read spectrum - expect hdf5 with (at least) E, L_E, and time_yr datasets.
         f = h5py.File(self.fn)
@@ -47,10 +69,12 @@ class RadiationSourceFromFile:
         
         self.Emin = np.min(self.E)
         self.Emax = np.max(self.E)
+        self.Nfreq = len(self.E)
         
         # Threshold indices
         self.i_Eth = np.zeros(3)
-        for i, energy in enumerate(E_th):
+        for i, absorber in enumerate(self.grid.absorbers):
+            energy = self.grid.ioniz_thresholds[absorber]
             loc = np.argmin(np.abs(energy - self.E))
             
             if self.E[loc] < energy:
@@ -71,8 +95,7 @@ class RadiationSourceFromFile:
         """
         Return specific luminosity.
         """
-        
-        i = self.get_time_index(t)        
+        i = self.get_time_index(t)
         return self.L_E[i] / self.BolometricLuminosity(t = t)
         
     def Intensity(self, E = None):
@@ -84,7 +107,7 @@ class RadiationSourceFromFile:
         return np.trapz(self.L_E[i], self.E)
         
     def get_time_index(self, t):
-        if self.pf['SourceTimeEvolution']:
+        if self.SpectrumPars['evolving']:
             i = np.argmin(np.abs(t - self.t))
             return max(min(i, self.Nt - 2), 0)
         else:
