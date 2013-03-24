@@ -10,119 +10,117 @@ Description: Run a simulation.
 
 """
 
-import rt1d
+import rt1d # need this?
 from ..util.ReadParameterFile import *
 from ..util import parse_kwargs, ReadParameterFile
-
-class simulation:
-    def __init__(self, pf, checkpoints, rt=None):
-        self.pf = pf
-        self.checkpoints = checkpoints
-        self.data = checkpoints.data
-        self.grid = checkpoints.grid
-        
-        if rt:
-            self.rt = rt
-            self.rs = rt.src
-            self.rf = rt.rfield
     
-# Make this a class    
-def RT(pf = None, grid=None, rs=None):
+class Simulation:
     """
     Run a radiative transfer simulation from input parameter file, which
     can be a dictionary or a path to a text file.
     """
-    
-    if type(pf) is str:
-        pf = ReadParameterFile(pf)
-    elif type(pf) is dict:
-        pf = parse_kwargs(**pf)
-    else:
-        pf = parse_kwargs()
-    
-    # Initialize grid object
-    grid = rt1d.Grid(dims = pf['grid_cells'], length_units = pf['length_units'],
-        start_radius = pf['start_radius'])
-    
-    # Set initial conditions
-    grid.set_chem(Z = pf['species'], abundance = pf['abundances'], 
-        isothermal = pf['isothermal'])
-    grid.set_rho(rho0 = pf['density_units'])
-    
-    for i in xrange(len(pf['species'])):
-        grid.set_x(Z = pf['species'][i], x = pf['initial_ionization'][i])       
-    
-    grid.set_T(pf['initial_temperature'])
-        
-    if pf['clump']:
-        grid.make_clump(position = pf['clump_position'], radius = pf['clump_radius'], 
-            temperature = pf['clump_temperature'], overdensity = pf['clump_overdensity'],
-            ionization = pf['clump_ionization'], profile = pf['clump_profile'])
+    def __init__(self, pf=None, init_grid=True, init_rs=True, init_tabs=True):
+        if type(pf) is str:
+            pf = ReadParameterFile(pf)
+        elif type(pf) is dict:
+            pf = parse_kwargs(**pf)
+        else:
+            pf = parse_kwargs()
             
-    # To compute timestep
-    timestep = rt1d.run.ComputeTimestep(grid, pf['epsilon_dt'])
-    
-    # For storing data
-    checkpoints = rt1d.util.CheckPoints(pf = pf, grid = grid,
-        dtDataDump = pf['dtDataDump'], time_units = pf['time_units'],
-        stop_time = pf['stop_time'], initial_timestep = pf['initial_timestep'],
-        logdtDataDump = pf['logdtDataDump'], source_lifetime = pf['source_lifetime'])
+        self.pf = pf    
         
-    if pf['initialize_only'] == 1:
-        return simulation(pf, checkpoints, None)    
-        
-    # Initialize radiation source and radiative transfer solver
-    rs = rt1d.sources.RadiationSource(grid, **pf)
-    rt = rt1d.Radiation(grid, rs, **pf)    
-        
-    if pf['initialize_only'] == 2:
-        return simulation(pf, checkpoints, rt)   
+        # Initialize grid object
+        if init_grid:
+            grid = rt1d.Grid(dims = pf['grid_cells'], 
+                length_units = pf['length_units'], 
+                start_radius = pf['start_radius'])
             
-    # Evolve chemistry + RT
-    data = grid.data
-    dt = pf['time_units'] * pf['initial_timestep']
-    t = 0.0
-    tf = pf['stop_time'] * pf['time_units']
-    max_timestep = pf['time_units'] * pf['max_timestep']
-    
-    print '\nSolving radiative transfer...'
+            # Set initial conditions
+            grid.set_chem(Z = pf['species'], abundance = pf['abundances'], 
+                isothermal = pf['isothermal'])
+            grid.set_rho(rho0 = pf['density_units'])
+            
+            for i in xrange(len(pf['species'])):
+                grid.set_x(Z = pf['species'][i], 
+                    x = pf['initial_ionization'][i])       
+            
+            grid.set_T(pf['initial_temperature'])
                 
-    dt_history = []
-    pb = rt1d.run.ProgressBar(tf)
-    while t < tf:
-                                        
-        # Evolve by dt
-        data = rt.Evolve(data, t = t, dt = dt)
-        t += dt 
-                        
-        # Figure out next dt based on max allowed change in evolving fields
-        new_dt = timestep.Limit(rt.chem.q_grid, rt.chem.dqdt_grid, 
-            rt.rfield.tau_tot, tau_ifront = pf['tau_ifront'], 
-            method = pf['restricted_timestep'])
+            if pf['clump']:
+                grid.make_clump(position=pf['clump_position'], 
+                    radius=pf['clump_radius'], 
+                    temperature=pf['clump_temperature'], 
+                    overdensity=pf['clump_overdensity'],
+                    ionization=pf['clump_ionization'], 
+                    profile=pf['clump_profile'])
+                    
+            # To compute timestep
+            self.timestep = rt1d.run.ComputeTimestep(grid, pf['epsilon_dt'])
+            
+            # For storing data
+            self.checkpoints = rt1d.util.CheckPoints(pf=pf, grid=grid,
+                dtDataDump=pf['dtDataDump'], time_units=pf['time_units'],
+                stop_time=pf['stop_time'], 
+                initial_timestep=pf['initial_timestep'],
+                logdtDataDump=pf['logdtDataDump'], 
+                source_lifetime=pf['source_lifetime'])
+            
+            self.grid = grid
+            
+        # Initialize radiation source and radiative transfer solver    
+        if init_rs:     
+            self.rs = rt1d.sources.RadiationSources(grid, init_tabs=init_tabs,
+                **pf)
+            self.rt = rt1d.Radiation(self.grid, self.rs.all_sources[0], **self.pf)
+
+    def run(self):
+        self.__call__() 
+     
+    def __call__(self):
+        """ Evolve chemistry and radiative transfer. """
         
-        # Limit timestep further based on next DD and max allowed increase
-        dt = min(new_dt, 2 * dt)
-        dt = min(checkpoints.update(data, t, dt), max_timestep)
+        self.data = self.grid.data
+        dt = self.pf['time_units'] * self.pf['initial_timestep']
+        t = 0.0
+        tf = self.pf['stop_time'] * self.pf['time_units']
+        max_timestep = self.pf['time_units'] * self.pf['max_timestep']
+        
+        print '\nSolving radiative transfer...'
+                    
+        dt_history = []
+        pb = rt1d.run.ProgressBar(tf)
+        while t < tf:
+                                            
+            # Evolve by dt
+            self.data = self.rt.Evolve(self.data, t = t, dt = dt)
+            t += dt 
+                            
+            # Figure out next dt based on max allowed change in evolving fields
+            new_dt = self.timestep.Limit(self.rt.chem.q_grid, 
+                self.rt.chem.dqdt_grid, 
+                self.rt.rfield.tau_tot, tau_ifront = self.pf['tau_ifront'], 
+                method = self.pf['restricted_timestep'])
+            
+            # Limit timestep further based on next DD and max allowed increase
+            dt = min(new_dt, 2 * dt)
+            dt = min(self.checkpoints.update(self.data, t, dt), max_timestep)
+                    
+            # Save timestep history
+            dt_history.append((t, dt))
+            
+            if self.pf['save_rate_coefficients']:
+                self.checkpoints.store_kwargs(t, self.rt.kwargs)
                 
-        # Save timestep history
-        dt_history.append((t, dt))
-        
-        if pf['save_rate_coefficients']:
-            checkpoints.store_kwargs(t, rt.kwargs)
+            # Raise error if any funny stuff happens
+            if dt < 0: 
+                raise ValueError('ERROR: dt < 0.') 
+            elif dt == 0:
+                raise ValueError('ERROR: dt = 0.')  
+            elif np.isnan(dt):  
+                raise ValueError('ERROR: dt -> inf.')      
+                
+            pb.update(t)      
+                
+        pb.finish()
             
-        # Raise error if any funny stuff happens
-        if dt < 0: 
-            raise ValueError('ERROR: dt < 0.') 
-        elif dt == 0:
-            raise ValueError('ERROR: dt = 0.')  
-        elif np.isnan(dt):  
-            raise ValueError('ERROR: dt -> inf.')      
             
-        pb.update(t)      
-            
-    pb.finish()
-        
-    sim = simulation(pf, checkpoints, rt)
-    sim.dt_history = dt_history    
-        
-    return sim

@@ -1,22 +1,12 @@
 """
 
-RadiationSourceIdealized.py
+RadiationSource.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Sun Jul 22 16:28:08 2012
 
-Description: 
-
-
-source_type:
-0 - multi-freq - Qdot, E, LE set Lbol
-1 - BB (T *and* Qdot set Lbol)
-2 - PopIII from Schaerer tablex 
->= 3 - BH (mass sets Lbol)
-
-spectrum_type:
-
+Description: Initialize a radiation source.
 
 """
 
@@ -34,22 +24,16 @@ from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB
                             # will return 0 as it should for x large
 
-SchaererTable = {
-                "Mass": [5, 9, 15, 25, 40, 60, 80, 120, 200, 300, 400, 500, 1000], 
-                "Temperature": [4.44, 4.622, 4.759, 4.85, 4.9, 4.943, 4.97, 4.981, 4.999, 5.007, 5.028, 5.029, 5.026],
-                "Luminosity": [2.87, 3.709, 4.324, 4.89, 5.42, 5.715, 5.947, 6.243, 6.574, 6.819, 6.984, 7.106, 7.444]
-                }
-
 E_th = [13.6, 24.6, 54.4]
 small_number = 1e-3
 big_number = 1e5
-ls = ['-', '--', ':', '-.']
 
-sptypes = {'poly': 0, 'bb': 1, 'popIII':2, 'mcd': 3, 'pl': 4, 'qso': 5, 'user': 6}
-srctypes = {'test': 0, 'star': 1, 'popIII': 2, 'bh': 3}
+sptypes = {'poly': 0, 'bb': 1, 'mcd': 2, 'pl': 3, 'qso': 4, 
+    'user': 5, 'background': 6}
+srctypes = {'poly': 0, 'bb': 1, 'bh': 2}
 
 class RadiationSource:
-    def __init__(self, grid=None, logN=None, **kwargs):
+    def __init__(self, grid=None, logN=None, init_tabs=True, **kwargs):
         self.pf = parse_kwargs(**kwargs)
         self.grid = grid # since we probably need to know what species are being evolved
                 
@@ -59,7 +43,7 @@ class RadiationSource:
         # Create Source/SpectrumPars attributes    
         self.SourcePars = sort(self.pf, prefix = 'source', make_list = False)
         self.SpectrumPars = sort(self.pf, prefix = 'spectrum')
-                
+                        
         # Number of spectral components
         self.N = len(self.SpectrumPars['type'])
         
@@ -84,7 +68,7 @@ class RadiationSource:
         self.multi_freq = self.discrete and not self.SpectrumPars['multigroup'][0] 
 
         self.initialize()
-        if not self.pf['initialize_only']:
+        if init_tabs:
             self.create_integral_table(logN=logN)
         
     def load_spectrum(self):
@@ -356,7 +340,7 @@ class RadiationSource:
         self.M = self.SourcePars['mass']
         self.M0 = self.SourcePars['mass']
         self.epsilon = self.SourcePars['eta']        
-        if 3 in self.SpectrumPars['type']:
+        if 2 in self.SpectrumPars['type']:
             self.r_in = self.DiskInnermostRadius(self.M0)
             self.r_out = self.SourcePars['rmax'] * self.GravitationalRadius(self.M0)
             self.fcol = self.SpectrumPars['fcol'][self.SpectrumPars['type'].index(3)]
@@ -366,7 +350,7 @@ class RadiationSource:
         # Number of ionizing photons per cm^2 of surface area for BB of 
         # temperature self.T. Use to solve for stellar radius (which we need 
         # to get Lbol).  The factor of pi gets rid of the / sr units
-        if self.SourcePars['type'] in [1, 2]:
+        if self.SourcePars['type'] == 1:
             self.QNorm = np.pi * 2. * (k_B * self.T)**3 * \
                 romberg(lambda x: x**2 / (np.exp(x) - 1.), 
                 13.6 * erg_per_ev / k_B / self.T, big_number, divmax = 100) / h**3 / c**2             
@@ -473,13 +457,13 @@ class RadiationSource:
         at photon energy E.  Normalization handled separately.
         """
         
-        if Type in [1, 2]:
+        if Type == 1:
             Lnu = self.BlackBody(E)
-        elif Type == 3:
+        elif Type == 2:
             Lnu = self.MultiColorDisk(E, i, Type, t)
-        elif Type == 4: 
+        elif Type == 3: 
             Lnu = self.PowerLaw(E, i, Type, t)    
-        elif Type == 5:
+        elif Type == 4:
             Lnu = self.QuasarTemplate(E, i, Type, t)    
         else:
             Lnu = 0.0
@@ -494,18 +478,7 @@ class RadiationSource:
         """
         Return fraction of bolometric luminosity emitted at energy E.
         """
-        
-        # Renormalize if t > 0 
-        #if t != self.last_renormalized and self.SourcePars['evolving']:
-        #    self.last_renormalized = t
-        #    self.M = self.BlackHoleMass(t)
-        #    self.r_in = self.DiskInnermostRadius(self.M)
-        #    self.r_out = self.SourcePars['rmax'] * self.GravitationalRadius(self.M)
-        #    self.T_in = self.DiskInnermostTemperature(self.M)
-        #    self.T_out = self.DiskTemperature(self.M, self.r_out)
-        #    self.Lbol = self.BolometricLuminosity(t)
-        #    self.LuminosityNormalizations = self.NormalizeSpectrumComponents(t)    
-        
+               
         emission = 0
         for i, Type in enumerate(self.SpectrumPars['type']):
             if not (self.SpectrumPars['Emin'][i] <= E <= self.SpectrumPars['Emax'][i]):
@@ -544,14 +517,15 @@ class RadiationSource:
         """         
         
         # If t > 0, re-compute mass, inner radius, and inner temperature
-        if t > 0 and self.SourcePars['evolving'] and t != self.last_renormalized:
+        if t > 0 and self.SpectrumPars['evolving'] and t != self.last_renormalized:
             self.M = self.BlackHoleMass(t)
             self.r_in = self.DiskInnermostRadius(self.M)
             self.r_out = self.pf['source_rmax'] * self.GravitationalRadius(self.M)
             self.T_in = self.DiskInnermostTemperature(self.M)
             self.T_out = self.DiskTemperature(self.M, self.r_out)
                     
-        integrand = lambda T: (T / self.T_in)**(-11. / 3.) * self.BlackBody(E, T) / self.T_in
+        integrand = lambda T: (T / self.T_in)**(-11. / 3.) \
+            * self.BlackBody(E, T) / self.T_in
         return quad(integrand, self.T_out, self.T_in)[0]
         
     def QuasarTemplate(self, E, i, Type, t = 0.0):
@@ -619,9 +593,6 @@ class RadiationSource:
             return self.Lbol
         
         if self.SourcePars['type'] == 2:
-            return 10**SchaererTable["Luminosity"][SchaererTable["Mass"].index(self.M)] * lsun
-            
-        if self.SourcePars['type'] == 3:
             if not self.SourceOn(t):
                 return 0.0
                 
@@ -629,115 +600,4 @@ class RadiationSource:
             if M is not None:
                 Mnow = M
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
-    
-        if self.SourcePars['type'] == 4:
-            return self.pf['cX'] * 3.4e40
-    
-    # Put all this stuff in analysis 
-    def SpectrumCDF(self, E):
-        """
-        Returns cumulative energy output contributed by photons at or less than energy E.
-        """    
-        
-        return integrate(self.Spectrum, small_number, E)[0] 
-    
-    def SpectrumMedian(self, energies = None):
-        """
-        Compute median emission energy from spectrum CDF.
-        """
-        
-        if energies is None:
-            energies = np.linspace(self.EminNorm, self.EmaxNorm, 200)
-        
-        if not hasattr('self', 'cdf'):
-            cdf = []
-            for energy in energies:
-                cdf.append(self.SpectrumCDF(energy))
-                
-            self.cdf = np.array(cdf)
-            
-        return np.interp(0.5, self.cdf, energies)
-    
-    def SpectrumMean(self):
-        """
-        Mean emission energy.
-        """        
-        
-        integrand = lambda E: self.Spectrum(E) * E
-        
-        return integrate(integrand, self.EminNorm, self.EmaxNorm)[0]
-        
-    # Obsolete?    
-    def FrequencyAveragedBin(self, absorber = 'h_1', Emin = None, Emax = None,
-        energy_weighted = False):
-        """
-        Bolometric luminosity / number of ionizing photons in spectrum in bandpass
-        spanning interval (Emin, Emax). Returns mean photon energy and number of 
-        ionizing photons in band.
-        """     
-        
-        if Emin is None:
-            Emin = max(self.grid.ioniz_thresholds[absorber], self.Emin)
-        if Emax is None:
-            Emax = self.Emax
-            
-        if energy_weighted:
-            f = lambda x: x
-        else:
-            f = lambda x: 1.0    
-            
-        L = self.Lbol * quad(lambda x: self.Spectrum(x) * f(x), Emin, Emax)[0] 
-        Q = self.Lbol * quad(lambda x: self.Spectrum(x) * f(x) / x, Emin, Emax)[0] / erg_per_ev
-                        
-        return L / Q / erg_per_ev, Q
-        
-    def PlotSpectrum(self, color = 'k', components = True, t = 0, normalized = True,
-        bins = 100, mp = None, label = None):
-        """ Put this with analysis routines. """
-        import pylab as pl
-        
-        if not normalized:
-            Lbol = self.BolometricLuminosity(t)
-        else: 
-            Lbol = 1.
-        
-        E = np.logspace(np.log10(self.Emin), np.log10(self.Emax), bins)
-        F = []
-        
-        for energy in E:
-            F.append(self.Spectrum(energy, t = t))
-        
-        if components and self.N > 1:
-            EE = []
-            FF = []
-            for i, component in enumerate(self.SpectrumPars['type']):
-                tmpE = np.logspace(np.log10(self.SpectrumPars['Emin'][i]), 
-                    np.log10(self.SpectrumPars['Emax'][i]), bins)
-                tmpF = []
-                for energy in tmpE:
-                    tmpF.append(self.Spectrum(energy, t = t, only = component))
-                
-                EE.append(tmpE)
-                FF.append(tmpF)
-        
-        if mp is None:
-            self.ax = pl.subplot(111)
-        else:
-            self.ax = mp
-                    
-        self.ax.loglog(E, np.array(F) * Lbol, color = color, ls = ls[0], label = label)
-        
-        if components and self.N > 1:
-            for i in xrange(self.N):
-                self.ax.loglog(EE[i], np.array(FF[i]) * Lbol, color = color, ls = ls[i + 1])
-        
-        self.ax.set_xlabel(r'$h\nu \ (\mathrm{eV})$')
-        
-        if normalized:
-            self.ax.set_ylabel(r'$L_{\nu} / L_{\mathrm{bol}}$')
-        else:
-            self.ax.set_ylabel(r'$L_{\nu} \ (\mathrm{erg \ s^{-1}})$')
-                
-        pl.draw()
-              
-        
+

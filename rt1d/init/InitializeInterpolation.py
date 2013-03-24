@@ -38,7 +38,7 @@ class LookupTable:
         self.size = np.prod(self.shape)
         
         self.Nd = len(logN)
-        self.evolving = int(np.any(pf['spectrum_evolving']))
+        self.evolving = int(np.any(pf['source_evolving']))
         self.adv_secondary_ionization = int(pf['secondary_ionization'] > 1)
         self.Ed = self.adv_secondary_ionization + self.evolving
                 
@@ -56,7 +56,6 @@ class LookupTable:
         for i in xrange(self.Nd):
             logN[..., i][logN[..., i] < self.logNmin[i]] = self.logNmin[i]
             logN[..., i][logN[..., i] > self.logNmax[i]] = self.logNmax[i]
-            
             
         if self.adv_secondary_ionization and logx is not None:
             logx[logx < self.logxmin] = self.logxmin
@@ -87,7 +86,8 @@ class LookupTable:
         # Set up interpolation tables
         if self.D == 1:
             self.interp = \
-                interp1d(self.logN[0], self.table, kind = self.pf['interp_method'])        
+                interp1d(self.logN[0], self.table, 
+                    kind=self.pf['interp_method'])        
         elif self.D == 2:
             
             if self.adv_secondary_ionization:
@@ -97,7 +97,8 @@ class LookupTable:
             elif self.evolving:
                 ax2 = self.t
                                             
-            if self.basename in ['logPhi', 'logTau'] and self.adv_secondary_ionization:
+            if self.basename in ['logPhi', 'logTau'] \
+                and self.adv_secondary_ionization:
                 self.interp = interp1d(self.logN[0], self.table)
             else:    
                 self.interp = \

@@ -55,7 +55,8 @@ def sort(pf, prefix = 'spectrum', make_list = True):
             continue
         
         new_name = par.partition('_')[-1]
-        if isinstance(pf[par], Iterable) or (not make_list):
+        if (isinstance(pf[par], Iterable) and type(pf[par]) is not str) \
+            or (not make_list):
             result[new_name] = pf[par]
         elif make_list:
             result[new_name] = [pf[par]]

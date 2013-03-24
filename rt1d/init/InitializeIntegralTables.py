@@ -15,7 +15,6 @@ import os, re, scipy, itertools, math, copy
 from scipy.integrate import quad, trapz
 from ..physics.Constants import erg_per_ev
 from ..physics.SecondaryElectrons import *
-from scipy.interpolate import LinearNDInterpolator
 
 try:
     from mpi4py import MPI
@@ -67,8 +66,7 @@ class IntegralTable:
         self.dimsN = np.array([len(element) for element in self.N])
         self.Nd = len(self.dimsN)
         
-        self.logx = None
-        self.t = None
+        self.logx = np.array([-np.inf])
         if self.pf['secondary_ionization'] > 1:
             self.esec = SecondaryElectrons(method = self.pf['secondary_ionization'])
             if self.pf['secondary_ionization'] == 2:
@@ -82,7 +80,17 @@ class IntegralTable:
                 self.logx = self.esec.logx
                 self.E = self.esec.E
                 
-            self.x = 10**self.logx
+        self.x = 10**self.logx
+            
+        # Times
+        if self.pf['spectrum_evolving']:
+            if self.pf['spectrum_t'] is None:
+                stop = self.pf['stop_time'] * self.pf['time_units']
+                self.t = np.linspace(0, stop, 1 + stop / self.pf['spectrum_dt'])
+            else:
+                self.t = self.pf['spectrum_t']  
+        else:
+            self.t = np.array([0])
                                     
         # What quantities are we going to compute?
         self.IntegralList = self.ToCompute()
@@ -154,7 +162,6 @@ class IntegralTable:
         self.indices_N = iN
         self.logNall = np.array(logNarr)
         self.Nall = 10**self.logNall
-        self.elements_per_table = np.prod(self.dimsN)
         
         self.axes = copy.copy(self.logN)
         
@@ -162,8 +169,9 @@ class IntegralTable:
         if self.pf['secondary_ionization'] > 1:
             self.Nd += 1
             self.axes.append(self.logx)
-        if self.pf['source_evolving']:
+        if self.pf['spectrum_evolving']:
             self.Nd += 1
+            self.axes.append(self.t)
                                 
     def DatasetName(self, integral, absorber, donor):
         """
@@ -178,7 +186,7 @@ class IntegralTable:
         else:
             return "log%s_%s" % (integral, absorber)   
               
-    def TabulateRateIntegrals(self, retabulate = True):
+    def TabulateRateIntegrals(self):
         """
         Return a dictionary of lookup tables, and also store a copy as self.itabs.
         """
@@ -207,31 +215,44 @@ class IntegralTable:
                     
                 dims = list(self.dimsN.copy())
                 
+                if integral == 'Tau':
+                    dims.append(1)
+                else:    
+                    dims.append(len(self.t))
                 if self.pf['secondary_ionization'] > 1 \
                     and integral not in ['Tau', 'Phi']:
                     dims.append(len(self.logx))
+                else:
+                    dims.append(1)
                 
-                pb = ProgressBar(self.elements_per_table, name)   
+                pb = ProgressBar(np.prod(dims), name)
                                                               
                 tab = np.zeros(dims)
                 for j, ind in enumerate(self.indices_N):
                         
                     if j % size != rank:
-                        continue    
+                        continue
                         
-                    if self.pf['secondary_ionization'] > 1 \
-                        and integral not in ['Tau', 'Phi']:
-                        for k, x in enumerate(self.x):      
-                            tab[ind][k] = self.Tabulate(integral, absorber, 
-                                donor, self.Nall[j], x = x, t = None)
-                                                    
-                    else:
-                        tab[ind] = \
-                            self.Tabulate(integral, absorber, donor, self.Nall[j])
+                    tmpt = self.t
+                    tmpx = self.x                                    
+                    if integral == 'Tau':
+                        tmpx = [0]   
+                        tmpt = [0]
+                    if integral == 'Phi':
+                        tmpx = [0]      
+                        
+                    for k, t in enumerate(tmpt):                        
+                        for l, x in enumerate(tmpx):  
+                            tab[ind][k,l] = self.Tabulate(integral, 
+                                absorber, donor, self.Nall[j], x=x, t=t)
+                        else:
+                            tab[ind][k,l] = \
+                                self.Tabulate(integral, absorber, donor, 
+                                    self.Nall[j], t=t)
                     
                     pb.update(j)
                     
-                tabs[name] = tab.copy()
+                tabs[name] = np.squeeze(tab).copy()
                 
             if re.search('Wiggle', name):
                 if self.grid.metals:

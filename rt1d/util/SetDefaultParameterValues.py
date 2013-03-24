@@ -96,6 +96,10 @@ def SourceParameters():
         "source_rmax": 1e3,
         "source_cX": 1.0,
         
+        "source_ion": None,
+        "source_heat": None,
+        "source_lya": None,
+        
         "source_table": None,
         
         }
@@ -118,6 +122,7 @@ def SpectrumParameters():
         "spectrum_logN": 0,
         "spectrum_fcol": 1.7,
         "spectrum_file": None,
+        "spectrum_pars": None,
         
         "spectrum_multigroup": 0,
         "spectrum_bands": None,
@@ -130,11 +135,12 @@ def SpectrumParameters():
         
         "spectrum_logNmin": [16],
         "spectrum_logNmax": [21],
+        "spectrum_logxmin": [-4],
+
         "spectrum_smallest_x": 1e-8,
         
         "spectrum_dlogN": [0.2],
         "spectrum_dlogx": 0.1,
-        "spectrum_logxmin": [-4],
         "spectrum_dE": 5.,
         "spectrum_dt": s_per_myr,
         
