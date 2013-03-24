@@ -13,9 +13,10 @@ Description:
 import rt1d
 import pylab as pl
 
-sim = rt1d.run.RT(pf = {'problem_type': 1})
+sim = rt1d.run.Simulation(pf = {'problem_type': 1})
+sim.run()
 
-anl = rt1d.analysis.Analyze(sim.checkpoints)
+anl = rt1d.analyze.Simulation(sim.checkpoints)
 anl.PlotIonizationFrontEvolution()
 
 raw_input('<enter> for radial profiles of xHI & xHII')

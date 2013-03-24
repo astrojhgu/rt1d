@@ -38,7 +38,7 @@ class LookupTable:
         self.size = np.prod(self.shape)
         
         self.Nd = len(logN)
-        self.evolving = int(np.any(pf['source_evolving']))
+        self.evolving = int(np.any(pf['spectrum_evolving']))
         self.adv_secondary_ionization = int(pf['secondary_ionization'] > 1)
         self.Ed = self.adv_secondary_ionization + self.evolving
                 

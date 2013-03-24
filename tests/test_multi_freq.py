@@ -15,15 +15,19 @@ import rt1d
 import pylab as pl
 
 # RT06 0.3 - continuous, discrete, and optically_thin = 1
-sim_c = rt1d.run.RT(pf = {'problem_type': 0})
-sim_d = rt1d.run.RT(pf = {'problem_type': 0.1, 
+sim_c = rt1d.run.Simulation(pf = {'problem_type': 0})
+sim_d = rt1d.run.Simulation(pf = {'problem_type': 0.1, 
     'dtDataDump': None, 'logdtDataDump': 0.25})
-sim_t = rt1d.run.RT(pf = {'problem_type': 0, 'optically_thin': 1,
+sim_t = rt1d.run.Simulation(pf = {'problem_type': 0, 'optically_thin': 1,
     'dtDataDump': None, 'logdtDataDump': 0.25})
+    
+sim_c.run()
+sim_d.run()
+sim_t.run()    
 
-anl_c = rt1d.analysis.Analyze(sim_c.checkpoints)
-anl_d = rt1d.analysis.Analyze(sim_d.checkpoints)
-anl_t = rt1d.analysis.Analyze(sim_t.checkpoints)
+anl_c = rt1d.analyze.Simulation(sim_c.checkpoints)
+anl_d = rt1d.analyze.Simulation(sim_d.checkpoints)
+anl_t = rt1d.analyze.Simulation(sim_t.checkpoints)
 
 t1, z1, xHI1 = anl_c.CellTimeEvolution(field = 'h_1')
 t1, z1, T1 = anl_c.CellTimeEvolution(field = 'T')
@@ -34,7 +38,7 @@ t2, z2, T2 = anl_d.CellTimeEvolution(field = 'T')
 t3, z3, xHI3 = anl_t.CellTimeEvolution(field = 'h_1')
 t3, z3, T3 = anl_t.CellTimeEvolution(field = 'T')
 
-mp = rt1d.analysis.multiplot(dims = (2, 1), share_all = False, 
+mp = rt1d.analyze.multiplot(dims = (2, 1), share_all = False, 
     useAxesGrid = False, panel_size = (0.5, 1))
     
 s_per_yr = rt1d.physics.Constants.s_per_yr
@@ -63,11 +67,14 @@ raw_input('<enter> for HII region test')
 pl.close()
 
 # RT06 2 - continuous, discrete
-sim_c = rt1d.run.RT(pf = {'problem_type': 2})
-sim_d = rt1d.run.RT(pf = {'problem_type': 2.1})
+sim_c = rt1d.run.Simulation(pf = {'problem_type': 2})
+sim_d = rt1d.run.Simulation(pf = {'problem_type': 2.1})
 
-anl_c = rt1d.analysis.Analyze(sim_c.checkpoints)
-anl_d = rt1d.analysis.Analyze(sim_d.checkpoints)
+sim_c.run()
+sim_d.run()
+
+anl_c = rt1d.analyze.Simulation(sim_c.checkpoints)
+anl_d = rt1d.analyze.Simulation(sim_d.checkpoints)
 
 ax = anl_c.TemperatureProfile()
 anl_d.TemperatureProfile(ax = ax, color = 'b')

@@ -164,14 +164,17 @@ class IntegralTable:
         self.Nall = 10**self.logNall
         
         self.axes = copy.copy(self.logN)
+        self.axes_names = self.grid.absorbers
         
         # Determine indices for ionized fraction and time.
         if self.pf['secondary_ionization'] > 1:
             self.Nd += 1
             self.axes.append(self.logx)
+            self.axes_names.append('x')
         if self.pf['spectrum_evolving']:
             self.Nd += 1
             self.axes.append(self.t)
+            self.axes_names.append('t')
                                 
     def DatasetName(self, integral, absorber, donor):
         """
@@ -285,6 +288,7 @@ class IntegralTable:
                 
             tabs = collected_tabs.copy()
         
+        self.tabs = tabs
         return tabs         
             
     def TotalOpticalDepth(self, N):
@@ -559,5 +563,21 @@ class IntegralTable:
         
         pass
                                   
+    def dump(self, fn=None):
+        """ Write table to hdf5. """
+        import h5py
+        
+        if fn is None:
+            fn = 'rt1d_integral_table.hdf5'
+        
+        f = h5py.File(fn)
+        for i, axis in enumerate(self.axes):
+            ds = f.create_dataset(self.axes_names[i], data=axis)
+            ds.attrs.create('axis', data=True)
+        
+        for tab in self.tabs:
+            f.create_dataset(tab, data=self.tabs[tab])    
+        
+        f.close()    
                     
             

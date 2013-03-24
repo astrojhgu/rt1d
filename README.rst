@@ -3,7 +3,7 @@ rt1d
 ====
 
 rt1d is a 1D radiative transfer code developed for the purpose of studying ionization 
-(hydrogen and helium) and temperature evolution of gas in the vicinity of stars, accreting 
+(hydrogen and helium) and thermal evolution of gas in the vicinity of stars, accreting 
 black holes, or really any source of ultraviolet and/or X-ray photons you can think of.
 A paper including some discussion of its inner-workings can be found `here <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
 
@@ -21,13 +21,16 @@ or visit the 'Downloads' page for a tarball.
 Dependencies
 ------------
 
-Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis module also relies on matplotlib, 
+Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis modules also rely on matplotlib, 
 though if you'd rather make your plots with something else, this dependence is not necessary.
 
-If you have the Python progressbar module installed somewhere, rt1d will use it. Don't 
+If you have the Python `progressbar https://code.google.com/p/python-progressbar/`_  installed, rt1d will use it. Don't 
 be alarmed if the time-to-completion estimate you're given is absurd at first -- the time-step at the beginning
 of radiative transfer simulations is very small (characteristic ionization timescale very
 short).  The example problem given below should run in about a minute on a single CPU.
+
+
+
 
 (Optional)
 The code is written such that running with an arbitrary chemical composition is 
@@ -61,7 +64,7 @@ the rt1d/run/Simulate.py module.  In a Python terminal (or script), it's as easy
 
 >>>
 >>> import rt1d
->>> sim = rt1d.run.RT()
+>>> sim = rt1d.run.Simulation()
 >>>
   
 RT returns an instance of the simulation class, which contains the data as well as instances
@@ -75,7 +78,7 @@ To do some simple analysis of the output, open up a python (or ipython) session 
 built-in analysis routines, or look at the raw data itself:
 
 >>>
->>> anl = rt1d.analysis.Analyze(sim.checkpoints) 
+>>> anl = rt1d.analyze.Simulation(sim.checkpoints) 
 >>> 
 >>> # Some built-in analysis routines
 >>> anl.PlotIFrontEvolution()               # Plot the I-front radius vs. time

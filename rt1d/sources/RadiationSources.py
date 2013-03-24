@@ -15,26 +15,21 @@ import re
 from ..util import parse_kwargs
 from collections import Iterable
 from .RadiationSource import RadiationSource
-#from scipy.integrate import quad
-#from .Interpolate import Interpolate
-#from .ComputeCrossSections import *
-#from .RadiationSourceFromFile import *
-#from .RadiationSourceIdealized import *
-#from .InitializeIntegralTables import *
-#from .ReadParameterFile import ReadParameterFile
-#from .SetDefaultParameterValues import SetDefaultSourceParameters 
 
 class RadiationSources:
     def __init__(self, grid=None, logN=None, init_tabs=True, **kwargs):
         self.pf = kwargs.copy()
         self.grid = grid
         
-        self.Ns = len(self.pf['source_type'])
+        try:
+            self.Ns = len(self.pf['source_type'])
+        except TypeError:
+            self.Ns = 1
         
         if type(init_tabs) is bool:
             init_tabs = [init_tabs] * self.Ns
         
-        self.all_sources = self.initialize_sources(init_tabs)
+        self.all_sources = self.src = self.initialize_sources(init_tabs)
         
     def initialize_sources(self, init_tabs=True):
         """
@@ -45,10 +40,16 @@ class RadiationSources:
         for i in xrange(self.Ns):
                         
             sf = self.pf.copy()
-            spars = self.pf['spectrum_pars'][i]
-            for par in spars:
-                sf.update({'spectrum_%s' % par: spars[par]})            
-            del sf['spectrum_pars']
+            
+            if self.pf['spectrum_pars'] is not None:
+                try:
+                    spars = self.pf['spectrum_pars'][i]
+                except IndexError:
+                    spars = self.pf['spectrum_pars']
+                
+                for par in spars:
+                    sf.update({'spectrum_%s' % par: spars[par]})            
+                del sf['spectrum_pars']
                         
             for key in sf:
                 if not re.search('source', key):
@@ -61,7 +62,7 @@ class RadiationSources:
             # Create RadiationSource class instance
             rs = RadiationSource(grid=self.grid, init_tabs=init_tabs[i], **sf)
             
-            sources.append(rs)    
+            sources.append(rs)
                 
         return sources
 

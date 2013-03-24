@@ -67,7 +67,7 @@ histE, binsE = np.histogram(sedop.sampler.chain[...,0], bins = Ebins)
 histLE, binsLE = np.histogram(sedop.sampler.chain[...,1], bins = Lbins)
 
 # Grab multiplot class from rt1d for multipanel hists
-mp = rt1d.analysis.multiplot(dims = (1, 2), useAxesGrid = False)
+mp = rt1d.analyze.multiplot(dims = (1, 2), useAxesGrid = False)
 
 mp.grid[0].plot(ndmin.util.rebin(Ebins), histE, color = 'k', 
     drawstyle = 'steps-mid')
@@ -93,7 +93,7 @@ Eopt, LEopt = np.array(pars[:len(pars) / 2]), np.array(pars[len(pars) / 2:])
 best_phi = sedop.discrete_tabs(Eopt, LEopt)['logPhi_h_1']
 best_psi = sedop.discrete_tabs(Eopt, LEopt)['logPsi_h_1']
 
-mp = rt1d.analysis.multiplot(dims = (2, 1), useAxesGrid = False)
+mp = rt1d.analyze.multiplot(dims = (2, 1), useAxesGrid = False)
 
 mp.grid[0].loglog(10**sedop.logN[0], 10**sedop.rs.tabs['logPhi_h_1'], color = 'k')
 mp.grid[0].loglog(10**sedop.logN[0], 10**best_phi, color = 'b')
@@ -117,12 +117,12 @@ print 'Verifying optimal discrete SED with rt1d...\n'
 Run rt1d to see how this solution works.
 """
 
-continuous = rt1d.run.RT(pf = {'problem_type': 2, 'grid_cells': 32})
-discrete = rt1d.run.RT(pf = {'problem_type': 2.1, 'grid_cells': 32, 
+continuous = rt1d.run.Simulation(pf = {'problem_type': 2, 'grid_cells': 32})
+discrete = rt1d.run.Simulation(pf = {'problem_type': 2.1, 'grid_cells': 32, 
     'spectrum_E': Eopt, 'spectrum_LE': LEopt})
 
-c = rt1d.analysis.Analyze(continuous.checkpoints)    
-d = rt1d.analysis.Analyze(discrete.checkpoints)
+c = rt1d.analyze.Simulation(continuous.checkpoints)    
+d = rt1d.analyze.Simulation(discrete.checkpoints)
 
 ax = c.IonizationProfile(t = [10, 30, 100])
 d.IonizationProfile(t = [10, 30, 100], color = 'b', ax = ax)

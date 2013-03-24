@@ -18,16 +18,16 @@ from ..physics.Constants import *
 from .RadiationField import RadiationField
 
 class Radiation:
-    def __init__(self, grid, source, **kwargs):
+    def __init__(self, grid, sources, **kwargs):
         self.pf = parse_kwargs(**kwargs)
         self.grid = grid
-        self.src = source
+        self.srcs = sources
         
         # Initialize chemistry network / solver
         self.chem = Chemistry(grid, rt = kwargs['radiative_transfer'])
         
         # Initialize RT solver
-        self.rfield = RadiationField(grid, source, **kwargs)
+        self.rfield = RadiationField(grid, sources, **kwargs)
         
     @property
     def finite_c(self):
@@ -50,8 +50,19 @@ class Radiation:
         # Compute source dependent rate coefficients
         self.kwargs = {}
         if self.pf['radiative_transfer']:
-            Gamma, gamma, Heat = self.rfield.SourceDependentCoefficients(data, t)
+            Gamma_src, gamma_src, Heat_src = \
+                self.rfield.SourceDependentCoefficients(data, t)
+
+            if len(self.srcs) > 1:
+                for i, src in enumerate(self.srcs):
+                    self.kwargs.update({'Gamma_%i' % i: Gamma_src[i], 
+                        'gamma_%i' % i: gamma_src[i],
+                        'Heat_%i' % i: Heat_src[i]})
             
+            Gamma = np.sum(Gamma_src, axis=0)
+            gamma = np.sum(gamma_src, axis=0)
+            Heat = np.sum(Heat_src, axis=0)
+                        
             # Each is grid x absorbers, or grid x [absorbers, absorbers] for gamma
             self.kwargs.update({'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma})
                 

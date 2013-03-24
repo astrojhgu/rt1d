@@ -13,7 +13,7 @@ algorithms.
 
 import rt1d
 
-m_H = rt1d.physics.constants.m_H
+m_H = rt1d.physics.Constants.m_H
 density_units = 1e-3 * m_H
 
 # Control sims
@@ -26,11 +26,15 @@ pcpf = {'problem_type': 2, 'grid_cells': 128}
 npcpf = {'problem_type': 2, 'grid_cells': 128, 'photon_conserving': 0}
 
 for i, x in enumerate([1, 2, 4, 8, 16]):
-    sim1 = rt1d.run.RT(pf = pcpf.update({'density_units': density_units * x}))
-    sim2 = rt1d.run.RT(pf = npcpf.update({'density_units': density_units * x})
+    units = density_units * x
+    sim1 = rt1d.run.Simulation(pf = pcpf.update({'density_units': units}))
+    sim2 = rt1d.run.Simulation(pf = npcpf.update({'density_units': units}))
     
-    pc.append(rt1d.analysis.Analyze(sim1))
-    pc2.append(rt1d.analysis.Analyze(sim12))
+    sim1.run()
+    sim2.run()
+    
+    pc.append(rt1d.analyze.Simulation(sim1))
+    pc2.append(rt1d.analyze.Simulation(sim12))
     
     del sim1, sim2
     

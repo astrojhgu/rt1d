@@ -62,7 +62,7 @@ print Eopt, LEopt, np.sum(LEopt)
 best_phi = sedop.discrete_tabs(Eopt, LEopt)['logPhi_h_1']
 best_psi = sedop.discrete_tabs(Eopt, LEopt)['logPsi_h_1']
 
-mp = rt1d.analysis.multiplot(dims = (2, 1), useAxesGrid = False)
+mp = rt1d.analyze.multiplot(dims = (2, 1), useAxesGrid = False)
 
 mp.grid[0].loglog(10**sedop.logN[0], 10**sedop.rs.tabs['logPhi_h_1'], color = 'k')
 mp.grid[0].loglog(10**sedop.logN[0], 10**best_phi, color = 'b')
@@ -81,7 +81,7 @@ pl.savefig('phi_psi.png')
 raw_input('')
 pl.close()
 
-mp = rt1d.analysis.multiplot(dims = (2, 2), useAxesGrid = False)
+mp = rt1d.analyze.multiplot(dims = (2, 2), useAxesGrid = False)
 
 for i in xrange(4):
     bins = np.linspace(Eopt[i] - 10, Eopt[i] + 10, 41)

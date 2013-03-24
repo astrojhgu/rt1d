@@ -30,7 +30,7 @@ big_number = 1e5
 
 sptypes = {'poly': 0, 'bb': 1, 'mcd': 2, 'pl': 3, 'qso': 4, 
     'user': 5, 'background': 6}
-srctypes = {'poly': 0, 'bb': 1, 'bh': 2}
+srctypes = {'test': 0, 'star': 1, 'bh': 2}
 
 class RadiationSource:
     def __init__(self, grid=None, logN=None, init_tabs=True, **kwargs):
@@ -122,6 +122,9 @@ class RadiationSource:
             self.tables[tab] = \
                 LookupTable(self.pf, tab, self.tab.logN, self.tabs[tab], 
                     self.tab.logx, self.tab.t)
+    
+    def dump(self, fn=None):
+        self.tab.dump(fn)                
     
     def _init_multi_freq(self):
         pass
@@ -469,7 +472,7 @@ class RadiationSource:
             Lnu = 0.0
             
         if self.SpectrumPars['logN'][i] > 0:
-            return Lnu * np.exp(-10**self.SpectrumPars['logN'][i] \
+            return Lnu * np.exp(-10.**self.SpectrumPars['logN'][i] \
                 * (sigma_E(E, 0) + y * sigma_E(E, 1)))   
         else:
             return Lnu     
@@ -599,5 +602,6 @@ class RadiationSource:
             Mnow = self.BlackHoleMass(t)
             if M is not None:
                 Mnow = M
-            return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p * c / sigma_T
+            return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p \
+                * c / sigma_T
 

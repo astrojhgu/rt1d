@@ -71,7 +71,7 @@ class Simulation:
         if init_rs:     
             self.rs = rt1d.sources.RadiationSources(grid, init_tabs=init_tabs,
                 **pf)
-            self.rt = rt1d.Radiation(self.grid, self.rs.all_sources[0], **self.pf)
+            self.rt = rt1d.Radiation(self.grid, self.rs.all_sources, **self.pf)
 
     def run(self):
         self.__call__() 

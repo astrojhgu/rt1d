@@ -14,9 +14,10 @@ Comparison Project (Iliev et al. 2006; RT06).
 import rt1d
 import pylab as pl
 
-sim = rt1d.run.RT(pf = {'problem_type': 2, 'initialize_only': 0})
+sim = rt1d.run.Simulation(pf = {'problem_type': 2})
+sim.run()
 
-anl = rt1d.analysis.Analyze(sim.checkpoints)
+anl = rt1d.analyze.Simulation(sim.checkpoints)
 
 ax = anl.TemperatureProfile(t = [10, 100, 500])
 raw_input('<enter> for radial profiles of xHI & xHII')
