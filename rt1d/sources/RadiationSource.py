@@ -30,12 +30,12 @@ big_number = 1e5
 
 sptypes = {'poly': 0, 'bb': 1, 'mcd': 2, 'pl': 3, 'qso': 4, 
     'user': 5, 'background': 6}
-srctypes = {'test': 0, 'star': 1, 'bh': 2}
+srctypes = {'test': 0, 'star': 1, 'bh': 2, 'diffuse': 3}
 
 class RadiationSource:
     def __init__(self, grid=None, logN=None, init_tabs=True, **kwargs):
         self.pf = parse_kwargs(**kwargs)
-        self.grid = grid # since we probably need to know what species are being evolved
+        self.grid = grid
                 
         # Modify parameter file if spectrum_file provided
         self.load_spectrum()        

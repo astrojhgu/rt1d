@@ -64,6 +64,7 @@ class IntegralTable:
             
         # Retrieve dimensions, add some for secondary electrons if necessary                        
         self.dimsN = np.array([len(element) for element in self.N])
+        self.elements_per_table = np.prod(self.dimsN)
         self.Nd = len(self.dimsN)
         
         self.logx = np.array([-np.inf])
@@ -164,7 +165,7 @@ class IntegralTable:
         self.Nall = 10**self.logNall
         
         self.axes = copy.copy(self.logN)
-        self.axes_names = self.grid.absorbers
+        self.axes_names = copy.copy(self.grid.absorbers)
         
         # Determine indices for ionized fraction and time.
         if self.pf['secondary_ionization'] > 1:
@@ -228,7 +229,7 @@ class IntegralTable:
                 else:
                     dims.append(1)
                 
-                pb = ProgressBar(np.prod(dims), name)
+                pb = ProgressBar(self.elements_per_table, name)
                                                               
                 tab = np.zeros(dims)
                 for j, ind in enumerate(self.indices_N):
@@ -248,11 +249,7 @@ class IntegralTable:
                         for l, x in enumerate(tmpx):  
                             tab[ind][k,l] = self.Tabulate(integral, 
                                 absorber, donor, self.Nall[j], x=x, t=t)
-                        #else:
-                        #    tab[ind][k,l] = \
-                        #        self.Tabulate(integral, absorber, donor, 
-                        #            self.Nall[j], t=t)
-                    
+
                     pb.update(j)
                     
                 tabs[name] = np.squeeze(tab).copy()

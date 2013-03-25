@@ -261,8 +261,7 @@ class Grid:
                 temperature = pf['clump_temperature'], overdensity = pf['clump_overdensity'],
                 ionization = pf['clump_ionization'], profile = pf['clump_profile'])
         
-    def set_chem(self, Z = 1, abundance = [1.0], isothermal = False,
-        secondary_ionization = False):
+    def set_chem(self, Z = 1, abundance = [1.0], isothermal = False):
         """
         Initialize chemistry - which species we'll be solving for and their 
         abundances ('cosmic', 'sun_photospheric', 'sun_coronal', etc.).

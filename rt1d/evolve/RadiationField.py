@@ -22,7 +22,7 @@ class RadiationField:
         self.grid = grid
         self.srcs = sources
         self.esec = SecondaryElectrons(method = self.pf['secondary_ionization'])
-        
+                
         self.Ns = len(self.srcs)
         
         self.sigma_th = {}
@@ -98,6 +98,11 @@ class RadiationField:
         for h, src in enumerate(self.srcs):        
             if not src.SourceOn(t):
                 continue
+                
+            if src.SourcePars['type'] == 3:
+                self.Gamma[h] = src.ionization_rate(t)
+                self.k_H[h] = src.heating_rate(t)
+                continue    
                 
             self.h = h
             self.src = copy.deepcopy(src)

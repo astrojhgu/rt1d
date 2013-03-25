@@ -22,7 +22,7 @@ class Radiation:
         self.pf = parse_kwargs(**kwargs)
         self.grid = grid
         self.srcs = sources
-        
+                
         # Initialize chemistry network / solver
         self.chem = Chemistry(grid, rt = kwargs['radiative_transfer'])
         
