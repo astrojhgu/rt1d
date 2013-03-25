@@ -79,21 +79,26 @@ class RadiationSource:
         if fn is None:
             return
             
-        # Read spectrum - expect hdf5 with (at least) E, L_E, and time_yr datasets.
-        f = h5py.File(fn)
-        try:
-            self.pf['spectrum_t'] = f['t'].value
-        except:
-            self.pf['spectrum_t'] = None
-            self.pf['spectrum_evolving'] = False
-                
-        self.pf['spectrum_E'] = f['E'].value
-        self.pf['spectrum_LE'] = f['LE'].value
-        f.close()
-        
-        if len(self.pf['spectrum_LE'].shape) > 1 \
-            and not self.pf['spectrum_evolving']:
-            self.pf['spectrum_LE'] = self.pf['spectrum_LE'][0]
+        # Read spectrum - expect hdf5 with (at least) E, LE, and t datasets.    
+        if re.search('.hdf5', fn):    
+            
+            f = h5py.File(fn)
+            try:
+                self.pf['spectrum_t'] = f['t'].value
+            except:
+                self.pf['spectrum_t'] = None
+                self.pf['spectrum_evolving'] = False
+                    
+            self.pf['spectrum_E'] = f['E'].value
+            self.pf['spectrum_LE'] = f['LE'].value
+            f.close()
+            
+            if len(self.pf['spectrum_LE'].shape) > 1 \
+                and not self.pf['spectrum_evolving']:
+                self.pf['spectrum_LE'] = self.pf['spectrum_LE'][0]
+        else: # Read ASCII
+            pass
+                    
                                 
     def create_integral_table(self, logN=None):
         """

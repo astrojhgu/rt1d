@@ -248,10 +248,10 @@ class IntegralTable:
                         for l, x in enumerate(tmpx):  
                             tab[ind][k,l] = self.Tabulate(integral, 
                                 absorber, donor, self.Nall[j], x=x, t=t)
-                        else:
-                            tab[ind][k,l] = \
-                                self.Tabulate(integral, absorber, donor, 
-                                    self.Nall[j], t=t)
+                        #else:
+                        #    tab[ind][k,l] = \
+                        #        self.Tabulate(integral, absorber, donor, 
+                        #            self.Nall[j], t=t)
                     
                     pb.update(j)
                     

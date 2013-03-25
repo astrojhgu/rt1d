@@ -2,10 +2,12 @@
 rt1d
 ====
 
-rt1d is a 1D radiative transfer code developed for the purpose of studying ionization 
-(hydrogen and helium) and thermal evolution of gas in the vicinity of stars, accreting 
-black holes, or really any source of ultraviolet and/or X-ray photons you can think of.
-A paper including some discussion of its inner-workings can be found `here <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
+rt1d is a 1D radiative transfer code developed for the purpose of studying 
+ionization (hydrogen and helium) and thermal evolution of gas in the vicinity 
+of stars, accreting black holes, or really any source of ultraviolet and/or 
+X-ray photons you can think of. A paper including some discussion of its 
+inner-workings can be found 
+`here <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
 
 Getting started
 ---------------
@@ -21,30 +23,31 @@ or visit the 'Downloads' page for a tarball.
 Dependencies
 ------------
 
-Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis modules also rely on matplotlib, 
-though if you'd rather make your plots with something else, this dependence is not necessary.
+Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis 
+modules also rely on matplotlib, though if you'd rather make your plots with 
+something else, this dependence is not necessary.
 
-If you have the Python `progressbar https://code.google.com/p/python-progressbar/`_  installed, rt1d will use it. Don't 
-be alarmed if the time-to-completion estimate you're given is absurd at first -- the time-step at the beginning
-of radiative transfer simulations is very small (characteristic ionization timescale very
-short).  The example problem given below should run in about a minute on a single CPU.
-
-
-
+If you have the Python 
+`progressbar <https://code.google.com/p/python-progressbar>`_ installed, rt1d 
+will use it. Don't be alarmed if the time-to-completion estimate you're given 
+is absurd at first -- the time-step at the beginning of radiative transfer 
+simulations is very small (characteristic ionization timescale very
+short).  The example problem given below should run in about a minute on a 
+single CPU.
 
 (Optional)
-The code is written such that running with an arbitrary chemical composition is 
-possible (in principle) using dengo (written by Matthew Turk and Devin Silvia).  
-Its sub-dependencies can all be installed using pip: ::
+The code is written such that running with an arbitrary chemical composition 
+is possible (in principle) using dengo (written by Matthew Turk and 
+Devin Silvia). Its sub-dependencies can all be installed using pip: ::
 
     pip install sympy
     pip install periodic
     pip install ChiantiPy
     
 The chianti database itself can be downloaded 
-`here <http://www.chiantidatabase.org/download/CHIANTI_7.1_data.tar.gz>`_. To make
-use of it with ChiantiPy, you must define a new environment variable, which for me
-(in bash) looks like: ::
+`here <http://www.chiantidatabase.org/download/CHIANTI_7.1_data.tar.gz>`_. To 
+make use of it with ChiantiPy, you must define a new environment variable, 
+which for me (in bash) looks like: ::
 
     export XUVTOP=$WORK/mods/chianti
 
@@ -54,28 +57,34 @@ Once this is all done, you should be off to the races.
 Example
 -------
 
-rt1d is meant to be modular, in that you can run various pieces of the code in an
-isolated fashion.  For instance, rather than running a full-blown radiative transfer
-simulation on a grid, you can also run single-zone non-equilibrium chemistry tests without
-any radiation at all.
+rt1d is meant to be modular. For instance, rather than running a full 
+radiative transfer simulation on a grid, you can also run single-zone 
+non-equilibrium chemistry tests without any radiation at all.
 
-However, there are also modules one can use to avoid writing rt1d scripts. They are located in
-the rt1d/run/Simulate.py module.  In a Python terminal (or script), it's as easy as typing:
+However, there are also modules one can use to avoid writing rt1d scripts. 
+They are located in the rt1d/run directory.  In a Python terminal (or script), 
+it's as easy as typing:
 
 >>>
 >>> import rt1d
 >>> sim = rt1d.run.Simulation()
+>>> sim.run()
 >>>
   
-RT returns an instance of the simulation class, which contains the data as well as instances
-of all major classes used in the calculation (e.g. Grid, Radiation, ChemicalNetwork, etc.).
+The 'sim' object is an instance of the simulation class, which contains the 
+data as well as instancesof all major classes used in the calculation (e.g. 
+Grid, Radiation, ChemicalNetwork, etc.). A second command to actually run
+the simulation is implemented so that if you like, you can initialize the 
+grid, solver, and/or radiation sources without starting a calculation. This
+is useful for inspecting the properties of sources, as well as debugging.
 
-This example (all default parameter values) simulates the expansion of an I-front around a 
-monochromatic source of 13.6 eV photons in an isothermal, hydrogen only medium (test #1 from 
-the Radiative Transfer Comparison Project; Iliev et al. 2006).
+This example (all default parameter values) simulates the expansion of an 
+I-front around a monochromatic source of 13.6 eV photons in an isothermal, 
+hydrogen only medium (test #1 from the Radiative Transfer Comparison Project; 
+Iliev et al. 2006).
 
-To do some simple analysis of the output, open up a python (or ipython) session and use 
-built-in analysis routines, or look at the raw data itself:
+To do some simple analysis of the output, open up a python (or ipython) 
+session and use built-in analysis routines, or look at the raw data itself:
 
 >>>
 >>> anl = rt1d.analyze.Simulation(sim.checkpoints) 
