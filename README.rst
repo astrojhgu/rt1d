@@ -71,17 +71,18 @@ it's as easy as typing:
 >>> sim.run()
 >>>
   
-The 'sim' object is an instance of the simulation class, which contains the 
-data as well as instancesof all major classes used in the calculation (e.g. 
+The 'sim' object is an instance of the Simulation class, which contains the 
+data as well as instances of all major classes used in the calculation (e.g. 
 Grid, Radiation, ChemicalNetwork, etc.). A second command to actually run
 the simulation is implemented so that if you like, you can initialize the 
 grid, solver, and/or radiation sources without starting a calculation. This
-is useful for inspecting the properties of sources, as well as debugging.
+is useful for inspecting the properties of sources, chemical reaction
+networks, debugging, etc.
 
 This example (all default parameter values) simulates the expansion of an 
 I-front around a monochromatic source of 13.6 eV photons in an isothermal, 
 hydrogen only medium (test #1 from the Radiative Transfer Comparison Project; 
-Iliev et al. 2006).
+`Iliev et al. 2006 <http://adsabs.harvard.edu/abs/2006MNRAS.371.1057I>`_).
 
 To do some simple analysis of the output, open up a python (or ipython) 
 session and use built-in analysis routines, or look at the raw data itself:
