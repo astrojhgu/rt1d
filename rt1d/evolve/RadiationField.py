@@ -84,17 +84,17 @@ class RadiationField:
             for absorber in self.grid.absorbers:
                 self.n[absorber] = data[absorber] * self.grid.x_to_n[absorber]
                           
-        # Compute column densities up to and of cells        
-        if self.pf['photon_conserving']:
-            self.NdN = self.grid.N_absorbers \
-                * [np.zeros_like(self.grid.zeros_grid_x_absorbers)]
-            for i, absorber in enumerate(self.grid.absorbers):
-                tmp = self.N_by_cell.copy()
-                tmp[..., i] += self.Nc_by_cell[..., i]
-                self.NdN[i] = tmp
-                del tmp
-            
-            self.logNdN = np.log10(self.NdN)                  
+            # Compute column densities up to and of cells        
+            if self.pf['photon_conserving']:
+                self.NdN = self.grid.N_absorbers \
+                    * [np.zeros_like(self.grid.zeros_grid_x_absorbers)]
+                for i, absorber in enumerate(self.grid.absorbers):
+                    tmp = self.N_by_cell.copy()
+                    tmp[..., i] += self.Nc_by_cell[..., i]
+                    self.NdN[i] = tmp
+                    del tmp
+                
+                self.logNdN = np.log10(self.NdN)                  
                           
         # Loop over sources
         for h, src in enumerate(self.srcs):        

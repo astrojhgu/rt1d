@@ -165,7 +165,9 @@ class IntegralTable:
         self.Nall = 10**self.logNall
         
         self.axes = copy.copy(self.logN)
-        self.axes_names = copy.copy(self.grid.absorbers)
+        self.axes_names = []
+        for absorber in self.grid.absorbers:
+            self.axes_names.append('logN_%s' % absorber)
         
         # Determine indices for ionized fraction and time.
         if self.pf['secondary_ionization'] > 1:

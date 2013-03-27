@@ -76,8 +76,8 @@ def ProblemType(ptype):
               
               "stop_time": 10, 
               "logdtDataDump": 0.1,
-              "dtDataDump": 1.0, 
-              "initial_timestep": 1e-12,
+              "dtDataDump": None, 
+              "initial_timestep": 1e-15,
               "max_timestep": 0.1,
               "restricted_timestep": ['ions', 'electrons', 'energy'],
                            

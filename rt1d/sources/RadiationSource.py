@@ -16,7 +16,7 @@ from scipy.integrate import quad, romberg
 
 import h5py, re
 import numpy as np
-from ..util import parse_kwargs, sort, evolve
+from ..util import parse_kwargs, sort, evolve, readtab
 from ..init.InitializeInterpolation import LookupTable
 from ..init.InitializeIntegralTables import IntegralTable
 from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
@@ -81,7 +81,6 @@ class RadiationSource:
             
         # Read spectrum - expect hdf5 with (at least) E, LE, and t datasets.    
         if re.search('.hdf5', fn):    
-            
             f = h5py.File(fn)
             try:
                 self.pf['spectrum_t'] = f['t'].value
@@ -96,8 +95,13 @@ class RadiationSource:
             if len(self.pf['spectrum_LE'].shape) > 1 \
                 and not self.pf['spectrum_evolving']:
                 self.pf['spectrum_LE'] = self.pf['spectrum_LE'][0]
-        else: # Read ASCII
-            pass
+        else: 
+            spec = readtab(fn)
+            if len(spec) == 2:
+                self.pf['spectrum_E'], self.pf['spectrum_LE'] = spec
+            else:
+                self.pf['spectrum_E'], self.pf['spectrum_LE'], \
+                    self.pf['spectrum_t'] = spec
                     
     def create_integral_table(self, logN=None):
         """
@@ -613,4 +617,33 @@ class RadiationSource:
                 Mnow = M
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p \
                 * c / sigma_T
+                
+    def FrequencyAveragedBin(self, absorber = 'h_1', Emin = None, Emax = None,
+        energy_weighted = False):
+        """
+        Bolometric luminosity / number of ionizing photons in spectrum in bandpass
+        spanning interval (Emin, Emax). Returns mean photon energy and number of 
+        ionizing photons in band.
+        """     
+        
+        if Emin is None:
+            Emin = max(self.grid.ioniz_thresholds[absorber], self.Emin)
+        if Emax is None:
+            Emax = self.Emax
+            
+        if energy_weighted:
+            f = lambda x: x
+        else:
+            f = lambda x: 1.0    
+            
+        L = self.Lbol * quad(lambda x: self.Spectrum(x) * f(x), Emin, Emax)[0] 
+        Q = self.Lbol * quad(lambda x: self.Spectrum(x) * f(x) / x, Emin, 
+            Emax)[0] / erg_per_ev
+                        
+        return L / Q / erg_per_ev, Q            
+
+    def dump(self, fn, bins=100, format='hdf5'):
+        """ Dump spectrum to given output format. """
+
+        pass
 

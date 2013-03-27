@@ -141,5 +141,63 @@ class fake_chianti:
         
         return tmp
         
+def readtab(fn, start = 0, stop = None, header = False, output_dict = True):
+    """
+    Returns columns from ASCII file as lists, or if header supplied (and
+    output_dict = True) as a dictionary.
+    """
+    
+    f = open(fn, 'r')
+    
+    data = []
+    for i, line in enumerate(f):
+        
+        # Ignore blank
+        if not line.strip(): 
+            continue
+        
+        # Possibly read in header
+        if line.split()[0][0] == '#': 
+            if not header: 
+                hdr = None            
+            else: 
+                hdr = line.split()[1:]
+            
+            continue
+        
+        # Only read between start and stop
+        if (i + 1) < start: 
+            continue
+        if stop is not None:
+            if (i + 1) > stop: 
+                continue
+                                    
+        data.append(line.split())
+        
+        for j, element in enumerate(data[-1]):
+            try: 
+                data[-1][j] = float(element)
+            except ValueError: 
+                data[-1][j] = str(element)
+    
+    f.close()
+    
+    out = zip(*data)
+    
+    if header: 
+        out.append(hdr)
+        
+        ret = {}
+        for i, item in enumerate(hdr):
+            ret[item] = out[i]
+        
+        if output_dict:    
+            return ret    
+            
+    # Accommodate 1 column files
+    if len(out) == 1 and not header: 
+        return out[0]
+    else: 
+        return out
         
                         
