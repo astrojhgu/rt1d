@@ -31,7 +31,7 @@ class Radiation:
         
     @property
     def finite_c(self):
-        if self.pf['InfiniteSpeedOfLight']:
+        if self.pf['infinite_c']:
             return False
         
         return True

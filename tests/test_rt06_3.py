@@ -1,6 +1,6 @@
 """
 
-test_clumpy.py
+test_rt06_3.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder

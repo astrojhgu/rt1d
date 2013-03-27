@@ -1,6 +1,6 @@
 """
 
-test_single_zone.py
+test_rt06_03.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder

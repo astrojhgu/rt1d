@@ -16,7 +16,7 @@ from scipy.integrate import quad, romberg
 
 import h5py, re
 import numpy as np
-from ..util import parse_kwargs, sort
+from ..util import parse_kwargs, sort, evolve
 from ..init.InitializeInterpolation import LookupTable
 from ..init.InitializeIntegralTables import IntegralTable
 from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
@@ -69,7 +69,7 @@ class RadiationSource:
 
         self.initialize()
         if init_tabs:
-            self.create_integral_table(logN=logN)
+            self.create_integral_table(logN=logN)      
         
     def load_spectrum(self):
         """ Modify a few parameters if spectrum_file provided. """
@@ -99,13 +99,12 @@ class RadiationSource:
         else: # Read ASCII
             pass
                     
-                                
     def create_integral_table(self, logN=None):
         """
         Take tables and create interpolation functions.
         """
         
-        if self.discrete:
+        if self.discrete or self.SourcePars['type'] == 3:
             return
         
         # Overide defaults if supplied - this is dangerous
@@ -312,6 +311,10 @@ class RadiationSource:
         Create attributes we need, normalize, etc.
         """
         
+        if self.SourcePars['type'] == 3:
+            self.ionization_rate = evolve(self.SourcePars['ion'])
+            self.heating_rate = evolve(self.SourcePars['heat'])
+        
         self.Emin = min(self.SpectrumPars['Emin'])
         self.Emax = max(self.SpectrumPars['Emax'])
         
@@ -368,7 +371,8 @@ class RadiationSource:
             self.Lbol = self.BolometricLuminosity(0.0)    
              
         # Normalize spectrum
-        self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
+        if self.SourcePars['type'] < 3:
+            self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
         
         if self.pf['optically_thin']:
             self.E = self.hnu_bar    

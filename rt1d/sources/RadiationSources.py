@@ -47,9 +47,10 @@ class RadiationSources:
                 except IndexError:
                     spars = self.pf['spectrum_pars']
                 
-                for par in spars:
-                    sf.update({'spectrum_%s' % par: spars[par]})            
-                del sf['spectrum_pars']
+                if spars is not None:
+                    for par in spars:
+                        sf.update({'spectrum_%s' % par: spars[par]})            
+                    del sf['spectrum_pars']
                         
             for key in sf:
                 if not re.search('source', key):

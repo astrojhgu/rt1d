@@ -1,12 +1,12 @@
 """
 
-test_rates.py
+test_rt06_00.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Sun Dec 30 22:10:25 2012
 
-Description: 
+Description: Test rate coefficients.
 
 """
 

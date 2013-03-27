@@ -57,6 +57,8 @@ class RadiationField:
         Compute rate coefficients for photo-ionization, secondary ionization, 
         and photo-heating.
         """
+        
+        z = None # One day, compute current redshift ;)
 
         self.k_H = np.array(self.Ns*[np.zeros_like(self.grid.zeros_grid_x_absorbers)])
         self.Gamma = np.array(self.Ns*[np.zeros_like(self.grid.zeros_grid_x_absorbers)])
@@ -100,8 +102,8 @@ class RadiationField:
                 continue
                 
             if src.SourcePars['type'] == 3:
-                self.Gamma[h] = src.ionization_rate(t)
-                self.k_H[h] = src.heating_rate(t)
+                self.Gamma[h] = src.ionization_rate(z)
+                self.k_H[h] = src.heating_rate(z)
                 continue    
                 
             self.h = h

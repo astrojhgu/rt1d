@@ -1,6 +1,6 @@
 """
 
-test_HII_region.py
+test_rt06_2.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder

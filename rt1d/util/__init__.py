@@ -2,7 +2,7 @@
 Conversions between different naming conventions and other random stuff.
 """
 
-
+import types
 import numpy as np
 from collections import Iterable
 from .WriteData import CheckPoints
@@ -75,6 +75,18 @@ def sort(pf, prefix = 'spectrum', make_list = True):
             
     return result
     
+class evolve:
+    """ Make thing the may or may not evolve with time callable. """
+    def __init__(self, val):
+        self.val = val
+        self.callable = val == types.FunctionType
+    def __call__(self, z = None):
+        if self.callable:
+            return self.val(z)
+        else:
+            return self.val
+    
+    
 class ELEMENT:
     def __init__(self, name):
         self.name = name
@@ -128,4 +140,6 @@ class fake_chianti:
         tmp['Z'] = self.element2z(element)
         
         return tmp
+        
+        
                         

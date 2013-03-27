@@ -75,14 +75,6 @@ def PhysicsParameters():
 def SourceParameters():
     pf = \
         {
-        "source_N": 1,
-        
-        #"source_files": 'None',
-        
-        # dictates what sets Lbol 
-        # (qdot for type = 0, T for type = (1,2) M for type > 2)
-        # Just use spectrum type? This only matters for PopIII?
-        # Type 1 normalized by qdot *and* T, type 2 just T
         "source_type": 0,  
         
         "source_temperature": 1e5,  
@@ -96,9 +88,9 @@ def SourceParameters():
         "source_rmax": 1e3,
         "source_cX": 1.0,
         
-        "source_ion": None,
-        "source_heat": None,
-        "source_lya": None,
+        "source_ion": 0,
+        "source_heat": 0,
+        "source_lya": 0,
         
         "source_table": None,
         
@@ -155,6 +147,8 @@ def ControlParameters():
         "dtDataDump": 1,
         'logdtDataDump': None,
         "stop_time": 500,
+        "initial_redshift": 20.,
+        "final_redshift": 6.,
         "initial_timestep": 1e-6,
         "max_timestep": 1.,
         "restricted_timestep": ['ions'],
@@ -164,7 +158,6 @@ def ControlParameters():
         
         "parallelization": 0,
         "save_rate_coefficients": 1,
-        "initialize_only": 0,
         
         "interp_method": 'cubic',
         }

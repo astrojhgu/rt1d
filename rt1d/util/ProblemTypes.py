@@ -47,24 +47,19 @@ def ProblemType(ptype):
     # Single-zone, cosmological expansion test         
     if ptype_int == -1:
         pf = {
-              "ProblemType": 0.1, 
-              "CosmologicalExpansion": 1,
-              "TabulateIntegrals": 0, 
-              "LengthUnits": 1e-4 * cm_per_kpc, # 100 milliparsecs 
-              "GridDimensions": 1, 
-              "StartRadius": 0.99, # cell = 1 milliparsec across
-              "StopTime": 800, 
+              "problem_type": 0.1, 
+              "radiative_transfer": 0,
+              "expansion": 1,
+              "grid_cells": 1,
+              "length_units": 1e-4*cm_per_kpc, # 100 milliparsecs 
+              "start_radius": 0.99, # cell = 1 milliparsec across
+              "stop_time": 800, 
               "dtDataDump": 20, 
-              "ODEMinStep": 1e-15,
-              "InitialRedshift": 400., 
-              "FinalRedshift": 6,
-              "IonizationProfile": 0, 
-              "InitialHIIFraction": 1e-4, 
-              "SourceType": 0, 
-              "SourceLifetime": 0,
-              "DiscreteSpectrum": 1,
-              "Isothermal": 0,
-              "OpticalDepthDefiningIFront": [0, 0, 0]
+              "initial_timestep": 1e-15,
+              "initial_redshift": 400., 
+              "final_redshift": 6,
+              "initial_ionization": 1e-4, 
+              "isothermal": 0,
              }         
     
     # RT06-0.3, Single zone ionization/heating, then source switches off.
