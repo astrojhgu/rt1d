@@ -73,7 +73,7 @@ class Grid:
             self._Vsh_all = self.ShellVolume(self.r_edg[0:-1], self.dr)
             
         return self._Vsh_all
-                        
+                
     @property            
     def neutrals(self):
         """ Return list of all neutral species. """            

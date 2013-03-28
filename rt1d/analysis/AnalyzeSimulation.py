@@ -183,7 +183,7 @@ class Simulation:
             
         return mp
             
-    def IonizationProfile(self, species = 'H', t = [1, 10, 100], color = 'k', 
+    def IonizationProfile(self, species = 'h', t = [1, 10, 100], color = 'k', 
         annotate = False, xscale = 'linear', yscale = 'log', ax = None,
         normx = False, marker=None, s=50, facecolors=None):
         """
@@ -196,8 +196,8 @@ class Simulation:
         ax.set_xscale('log')
         ax.set_yscale('log')
         
-        if species == 'H':
-            fields = ['h_1', 'h_2']
+        if species == 'h':
+            fields = self.grid.ions_by_ion[species]
             labels = [r'$x_{\mathrm{HI}}$', r'$x_{\mathrm{HII}}$']
         
         line_num = 0

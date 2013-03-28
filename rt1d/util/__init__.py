@@ -19,7 +19,9 @@ def parse_kwargs(**kwargs):
     
     pf = defs.copy()
     
-    if 'problem_type' in kwargs:
+    if not kwargs:
+        pf.update(ProblemType(1))
+    elif 'problem_type' in kwargs:
         pf.update(ProblemType(kwargs['problem_type']))
     
     pf.update(kwargs)

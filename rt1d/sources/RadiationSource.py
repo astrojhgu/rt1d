@@ -38,7 +38,7 @@ class RadiationSource:
         self.grid = grid
                 
         # Modify parameter file if spectrum_file provided
-        self.load_spectrum()        
+        self._load_spectrum()        
                 
         # Create Source/SpectrumPars attributes    
         self.SourcePars = sort(self.pf, prefix = 'source', make_list = False)
@@ -67,11 +67,113 @@ class RadiationSource:
         self.multi_group = self.discrete and self.SpectrumPars['multigroup'][0] 
         self.multi_freq = self.discrete and not self.SpectrumPars['multigroup'][0] 
 
-        self.initialize()
+        self._initialize()
         if init_tabs:
-            self.create_integral_table(logN=logN)      
+            self.create_integral_table(logN=logN) 
+            
+    def _initialize(self):
+        """
+        Create attributes we need, normalize, etc.
+        """
         
-    def load_spectrum(self):
+        if self.SourcePars['type'] == 3:
+            self.ionization_rate = evolve(self.SourcePars['ion'])
+            self.heating_rate = evolve(self.SourcePars['heat'])
+        
+        self.Emin = min(self.SpectrumPars['Emin'])
+        self.Emax = max(self.SpectrumPars['Emax'])
+        
+        for i, comp in enumerate(self.SpectrumPars['type']):
+            if self.SpectrumPars['EminNorm'][i] == None:
+                self.SpectrumPars['EminNorm'][i] = self.SpectrumPars['Emin'][i]
+            if self.SpectrumPars['EmaxNorm'][i] == None:
+                self.SpectrumPars['EmaxNorm'][i] = self.SpectrumPars['Emax'][i]    
+        
+        self.EminNorm = min(self.SpectrumPars['EminNorm'])
+        self.EmaxNorm = max(self.SpectrumPars['EmaxNorm'])
+                         
+        # Correct later if using multi-group approach
+        self.E = np.array(self.SpectrumPars['E'])
+        self.LE = np.array(self.SpectrumPars['LE'])
+        self.Nfreq = len(self.E)
+                
+        self.last_renormalized = 0
+        self.tau = self.SourcePars['lifetime'] * self.pf['time_units']
+        self.birth = self.SourcePars['tbirth'] * self.pf['time_units']
+        self.fduty = self.SourcePars['fduty']
+        
+        self.variable = self.fduty < 1
+        if self.fduty == 1:
+            self.variable = self.tau < (self.pf['stop_time'] * self.pf['time_units'])
+                
+        self.toff = self.tau * (self.fduty**-1. - 1.)
+                        
+        # For stars, normalize SED to ionizing photon luminosity
+        self.Q = self.SourcePars['qdot']
+        self.T = self.SourcePars['temperature']
+        
+        # For BHs, we'll need to know the mass and radiative efficiency
+        self.M = self.SourcePars['mass']
+        self.M0 = self.SourcePars['mass']
+        self.epsilon = self.SourcePars['eta']        
+
+        # Source specific initialization
+        if self.SourcePars['type'] == 1:
+            self._init_star()
+        elif self.SourcePars['type'] == 2 and 2 in self.SpectrumPars['type']:
+            self._init_bh()    
+        else:
+            self.Lbol = self.BolometricLuminosity(0.0)    
+             
+        # Normalize spectrum
+        if self.SourcePars['type'] < 3:
+            self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
+        
+        if self.pf['optically_thin']:
+            self.E = self.hnu_bar    
+            
+    def _init_multi_freq(self):
+        pass
+        
+    def _init_star(self):
+        # Number of ionizing photons per cm^2 of surface area for BB of 
+        # temperature self.T. Use to solve for stellar radius (which we need 
+        # to get Lbol).  The factor of pi gets rid of the / sr units
+        self.QNorm = np.pi * 2. * (k_B * self.T)**3 * \
+                romberg(lambda x: x**2 / (np.exp(x) - 1.), 
+                13.6 * erg_per_ev / k_B / self.T, big_number, divmax = 100) / h**3 / c**2             
+        self.R = np.sqrt(self.Q / 4. / np.pi / self.QNorm)        
+        self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
+        
+    def _init_bh(self):
+        self.r_in = self.DiskInnermostRadius(self.M0)
+        self.r_out = self.SourcePars['rmax'] * self.GravitationalRadius(self.M0)
+        self.fcol = self.SpectrumPars['fcol'][self.SpectrumPars['type'].index(3)]
+        self.T_in = self.DiskInnermostTemperature(self.M0)
+        self.T_out = self.DiskTemperature(self.M0, self.r_out)    
+        
+    def _init_agn_template(self):
+        self.Alpha = 0.24
+        self.Beta = 1.60
+        self.Gamma = 1.06
+        self.E_1 = 83.
+        self.K = 0.0041
+        self.E_0 = (self.Beta - self.Alpha) * self.E_1
+        self.A = np.exp(2.0 / self.E_1) * 2.0**self.Alpha
+        self.B = ((self.E_0**(self.Beta - self.Alpha)) * np.exp(-(self.Beta - self.Alpha))) / \
+            (1.0 + (self.K * self.E_0**(self.Beta - self.Gamma)))
+            
+        # Normalization constants to make the SOS04 spectrum continuous.
+        self.SX_Normalization = 1.0
+        self.UV_Normalization = self.SX_Normalization * ((self.A * 2000.0**-self.Alpha) * \
+            np.exp(-2000.0 / self.E_1)) / ((1.2 * 2000**-1.7) * np.exp(2000.0 / 2000.0))
+        self.IR_Normalization = self.UV_Normalization * ((1.2 * 10**-1.7) * np.exp(10.0 / 2000.0)) / \
+            (1.2 * 159 * 10**-0.6)
+        self.HX_Normalization = self.SX_Normalization * (self.A * self.E_0**-self.Alpha * \
+            np.exp(-self.E_0 / self.E_1)) / (self.A * self.B * (1.0 + self.K * self.E_0**(self.Beta - self.Gamma)) * \
+            self.E_0**-self.Beta)         
+                                                               
+    def _load_spectrum(self):
         """ Modify a few parameters if spectrum_file provided. """
         
         fn = self.pf['spectrum_file']
@@ -132,37 +234,8 @@ class RadiationSource:
                     self.tab.logx, self.tab.t)
     
     def dump(self, fn=None):
-        self.tab.dump(fn)                
-    
-    def _init_multi_freq(self):
-        pass
-        
-    def _init_star(self):
-        pass
-        
-    def _init_bh(self):
-        pass
-        
-    def _init_agn_template(self):
-        self.Alpha = 0.24
-        self.Beta = 1.60
-        self.Gamma = 1.06
-        self.E_1 = 83.
-        self.K = 0.0041
-        self.E_0 = (self.Beta - self.Alpha) * self.E_1
-        self.A = np.exp(2.0 / self.E_1) * 2.0**self.Alpha
-        self.B = ((self.E_0**(self.Beta - self.Alpha)) * np.exp(-(self.Beta - self.Alpha))) / \
-            (1.0 + (self.K * self.E_0**(self.Beta - self.Gamma)))
-            
-        # Normalization constants to make the SOS04 spectrum continuous.
-        self.SX_Normalization = 1.0
-        self.UV_Normalization = self.SX_Normalization * ((self.A * 2000.0**-self.Alpha) * \
-            np.exp(-2000.0 / self.E_1)) / ((1.2 * 2000**-1.7) * np.exp(2000.0 / 2000.0))
-        self.IR_Normalization = self.UV_Normalization * ((1.2 * 10**-1.7) * np.exp(10.0 / 2000.0)) / \
-            (1.2 * 159 * 10**-0.6)
-        self.HX_Normalization = self.SX_Normalization * (self.A * self.E_0**-self.Alpha * \
-            np.exp(-self.E_0 / self.E_1)) / (self.A * self.B * (1.0 + self.K * self.E_0**(self.Beta - self.Gamma)) * \
-            self.E_0**-self.Beta)                   
+        """ Dump integral table to file."""
+        self.tab.dump(fn)                  
     
     @property
     def sigma(self):
@@ -310,77 +383,6 @@ class RadiationSource:
                     
         return self._Heat_bar_all
                     
-    def initialize(self):
-        """
-        Create attributes we need, normalize, etc.
-        """
-        
-        if self.SourcePars['type'] == 3:
-            self.ionization_rate = evolve(self.SourcePars['ion'])
-            self.heating_rate = evolve(self.SourcePars['heat'])
-        
-        self.Emin = min(self.SpectrumPars['Emin'])
-        self.Emax = max(self.SpectrumPars['Emax'])
-        
-        for i, comp in enumerate(self.SpectrumPars['type']):
-            if self.SpectrumPars['EminNorm'][i] == None:
-                self.SpectrumPars['EminNorm'][i] = self.SpectrumPars['Emin'][i]
-            if self.SpectrumPars['EmaxNorm'][i] == None:
-                self.SpectrumPars['EmaxNorm'][i] = self.SpectrumPars['Emax'][i]    
-        
-        self.EminNorm = min(self.SpectrumPars['EminNorm'])
-        self.EmaxNorm = max(self.SpectrumPars['EmaxNorm'])
-                         
-        # Correct later if using multi-group approach
-        self.E = np.array(self.SpectrumPars['E'])
-        self.LE = np.array(self.SpectrumPars['LE'])
-        self.Nfreq = len(self.E)
-                
-        self.last_renormalized = 0
-        self.tau = self.SourcePars['lifetime'] * self.pf['time_units']
-        self.birth = self.SourcePars['tbirth'] * self.pf['time_units']
-        self.fduty = self.SourcePars['fduty']
-        
-        self.variable = self.fduty < 1
-        if self.fduty == 1:
-            self.variable = self.tau < (self.pf['stop_time'] * self.pf['time_units'])
-                
-        self.toff = self.tau * (self.fduty**-1. - 1.)
-                        
-        # For stars, normalize SED to ionizing photon luminosity
-        self.Q = self.SourcePars['qdot']
-        self.T = self.SourcePars['temperature']
-        
-        # For BHs, we'll need to know the mass and radiative efficiency
-        self.M = self.SourcePars['mass']
-        self.M0 = self.SourcePars['mass']
-        self.epsilon = self.SourcePars['eta']        
-        if 2 in self.SpectrumPars['type']:
-            self.r_in = self.DiskInnermostRadius(self.M0)
-            self.r_out = self.SourcePars['rmax'] * self.GravitationalRadius(self.M0)
-            self.fcol = self.SpectrumPars['fcol'][self.SpectrumPars['type'].index(3)]
-            self.T_in = self.DiskInnermostTemperature(self.M0)
-            self.T_out = self.DiskTemperature(self.M0, self.r_out)    
-                                 
-        # Number of ionizing photons per cm^2 of surface area for BB of 
-        # temperature self.T. Use to solve for stellar radius (which we need 
-        # to get Lbol).  The factor of pi gets rid of the / sr units
-        if self.SourcePars['type'] == 1:
-            self.QNorm = np.pi * 2. * (k_B * self.T)**3 * \
-                romberg(lambda x: x**2 / (np.exp(x) - 1.), 
-                13.6 * erg_per_ev / k_B / self.T, big_number, divmax = 100) / h**3 / c**2             
-            self.R = np.sqrt(self.Q / 4. / np.pi / self.QNorm)        
-            self.Lbol = 4. * np.pi * self.R**2 * sigma_SB * self.T**4
-        else:
-            self.Lbol = self.BolometricLuminosity(0.0)    
-             
-        # Normalize spectrum
-        if self.SourcePars['type'] < 3:
-            self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
-        
-        if self.pf['optically_thin']:
-            self.E = self.hnu_bar    
-                                                  
     def GravitationalRadius(self, M):
         """
         Half the Schwartzchild radius.

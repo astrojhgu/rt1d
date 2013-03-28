@@ -112,7 +112,7 @@ def ProblemType(ptype):
               "initial_temperature": 1e4,
               "initial_ionization": [1.2e-3], 
               "source_type": 0, 
-              "spectrum_qdot": 5e48, 
+              "source_qdot": 5e48, 
               "spectrum_E": [13.6],
               "spectrum_LE": [1.0],
              }
@@ -134,7 +134,7 @@ def ProblemType(ptype):
               "source_type": 1, 
               "source_temperature": 1e5,
               "spectrum_type": 1,
-              "spectrum_qdot": 5e48,
+              "source_qdot": 5e48,
              }
         
     # RT06-3: I-front trapping in a dense clump and the formation of a shadow,
@@ -185,6 +185,7 @@ def ProblemType(ptype):
             pf.update({'spectrum_LE': [0.24, 0.35, 0.23, 0.06]})
              
     if ptype >= 10:
-        pf.update({'species': [1, 2]})
+        pf.update({'species': [1, 2], 'abundances': [1.0, 0.08],
+            'initial_ionization':[pf['initial_ionization']]*2})
                      
     return pf    

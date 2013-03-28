@@ -10,9 +10,10 @@ Description: Run a simulation.
 
 """
 
-import rt1d # need this?
+import rt1d
 from ..util.ReadParameterFile import *
 from ..util import parse_kwargs, ReadParameterFile
+#from ..util.SetDefaultParameterValues import SetAllDefaults
     
 class Simulation:
     """
@@ -25,9 +26,9 @@ class Simulation:
         elif type(pf) is dict:
             pf = parse_kwargs(**pf)
         else:
-            pf = parse_kwargs()
+            pf = parse_kwargs(**{'problem_type': 1})
             
-        self.pf = pf    
+        self.pf = pf
         
         # Initialize grid object
         if init_grid:
