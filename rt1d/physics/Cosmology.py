@@ -19,7 +19,7 @@ import numpy as np
 from .Constants import c, G, km_per_mpc, m_H, m_He
 
 class Cosmology:
-    def __init__(self, pf):
+    def __init__(self, pf=None):
         if pf is None:
             from ..util.SetDefaultParameterValues import CosmologyParameters
             pf = CosmologyParameters()

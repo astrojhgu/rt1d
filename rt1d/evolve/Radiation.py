@@ -27,7 +27,8 @@ class Radiation:
         self.chem = Chemistry(grid, rt = kwargs['radiative_transfer'])
         
         # Initialize RT solver
-        self.rfield = RadiationField(grid, sources, **kwargs)
+        if self.srcs is not None:
+            self.rfield = RadiationField(grid, sources, **kwargs)
         
     @property
     def finite_c(self):
@@ -71,7 +72,7 @@ class Radiation:
             self.kwargs.update(self.chem.chemnet.SourceIndependentCoefficients(data['T']))
 
         # SOLVE
-        newdata = self.chem.Evolve(data, dt, **self.kwargs)
+        newdata = self.chem.Evolve(data, t, dt, **self.kwargs)
                 
         ### 
         ## Tidy up a bit

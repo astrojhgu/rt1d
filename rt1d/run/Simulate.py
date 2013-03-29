@@ -37,15 +37,18 @@ class Simulation:
                 start_radius = pf['start_radius'])
             
             # Set initial conditions
-            grid.set_chem(Z = pf['species'], abundance = pf['abundances'], 
-                isothermal = pf['isothermal'])
-            grid.set_rho(rho0 = pf['density_units'])
-            
-            for i in xrange(len(pf['species'])):
-                grid.set_x(Z = pf['species'][i], 
-                    x = pf['initial_ionization'][i])       
-            
-            grid.set_T(pf['initial_temperature'])
+            if pf['expansion']:
+                grid.set_cosmology(zi=pf['initial_redshift'])
+            else:
+                grid.set_chem(Z = pf['species'], abundance = pf['abundances'], 
+                    isothermal = pf['isothermal'])
+                grid.set_rho(rho0 = pf['density_units'])
+                
+                for i in xrange(len(pf['species'])):
+                    grid.set_x(Z = pf['species'][i], 
+                        x = pf['initial_ionization'][i])       
+                
+                grid.set_T(pf['initial_temperature'])
                 
             if pf['clump']:
                 grid.make_clump(position=pf['clump_position'], 
@@ -70,9 +73,13 @@ class Simulation:
             
         # Initialize radiation source and radiative transfer solver    
         if init_rs:     
-            self.rs = rt1d.sources.RadiationSources(grid, init_tabs=init_tabs,
-                **pf)
-            self.rt = rt1d.Radiation(self.grid, self.rs.all_sources, **self.pf)
+            if self.pf['radiative_transfer']:
+                self.rs = rs = rt1d.sources.RadiationSources(grid, 
+                    init_tabs=init_tabs, **pf)
+            else:
+                self.rs = rs = None
+                
+            self.rt = rt1d.Radiation(self.grid, rs, **self.pf)
 
     def run(self):
         self.__call__() 
@@ -80,7 +87,7 @@ class Simulation:
     def __call__(self):
         """ Evolve chemistry and radiative transfer. """
         
-        self.data = self.grid.data
+        data = self.grid.data.copy()
         dt = self.pf['time_units'] * self.pf['initial_timestep']
         t = 0.0
         tf = self.pf['stop_time'] * self.pf['time_units']
@@ -93,18 +100,22 @@ class Simulation:
         while t < tf:
                                             
             # Evolve by dt
-            self.data = self.rt.Evolve(self.data, t = t, dt = dt)
+            data = self.rt.Evolve(data, t = t, dt = dt)
             t += dt 
+            
+            tau_tot = None
+            if hasattr(self.rt, 'rfield'):
+                tau_tot = self.rt.rfield.tau_tot
                             
             # Figure out next dt based on max allowed change in evolving fields
             new_dt = self.timestep.Limit(self.rt.chem.q_grid, 
-                self.rt.chem.dqdt_grid, 
-                self.rt.rfield.tau_tot, tau_ifront = self.pf['tau_ifront'], 
+                self.rt.chem.dqdt_grid, tau_tot, 
+                tau_ifront = self.pf['tau_ifront'], 
                 method = self.pf['restricted_timestep'])
             
             # Limit timestep further based on next DD and max allowed increase
             dt = min(new_dt, 2 * dt)
-            dt = min(self.checkpoints.update(self.data, t, dt), max_timestep)
+            dt = min(self.checkpoints.update(data, t, dt), max_timestep)
                     
             # Save timestep history
             dt_history.append((t, dt))

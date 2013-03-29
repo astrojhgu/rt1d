@@ -53,12 +53,11 @@ def ProblemType(ptype):
               "grid_cells": 1,
               "length_units": 1e-4*cm_per_kpc, # 100 milliparsecs 
               "start_radius": 0.99, # cell = 1 milliparsec across
-              "stop_time": 800, 
               "dtDataDump": 20, 
-              "initial_timestep": 1e-15,
-              "initial_redshift": 400., 
+              "dzDataDump": 1,
+              "initial_redshift": 400.,
               "final_redshift": 6,
-              "initial_ionization": 1e-4, 
+              "initial_ionization": [1e-4], 
               "isothermal": 0,
              }         
     

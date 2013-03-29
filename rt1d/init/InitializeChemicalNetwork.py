@@ -169,7 +169,8 @@ class SimpleChemicalNetwork:
         from ..physics.ComputeRateCoefficients import RateCoefficients
         self.coeff = RateCoefficients()
 
-        self.isothermal = self.grid.isothermal        
+        self.isothermal = self.grid.isothermal
+        self.expansion = self.grid.expansion       
 
         # For convenience 
         self.zeros_q = np.zeros(len(self.grid.all_species))
@@ -186,8 +187,12 @@ class SimpleChemicalNetwork:
         self.dqdt = np.zeros_like(self.zeros_q)
         
         cell, Gamma, gamma, k_H, n = args
-                                    
-        n_H = self.grid.n_H[cell]
+        
+        if self.grid.expansion:
+            z = self.grid.cosm.TimeToRedshiftConverter(0, t, self.grid.zi)
+            n_H = self.grid.cosm.nH0 * (1. + z)**3
+        else:
+            n_H = self.grid.n_H[cell]
         
         # h1, he1, etc. correspond to indices in absorbers list.
         
@@ -200,14 +205,14 @@ class SimpleChemicalNetwork:
                 
             if 2 in self.grid.Z:
                 he1, he2, e = (1, 2, 4)
-                n_He = self.grid.element_abundances[1] * self.grid.n_H[cell]
+                n_He = self.grid.element_abundances[1] * n_H
                 xHeI = q[he1]
                 xHeII = q[he2]
                 xHeIII = q[he2 + 1]
                 
         elif 2 in self.grid.Z:    
             he1, he2, e = (0, 1, 3)
-            n_He = self.grid.element_abundances[0] * self.grid.n_H[cell]
+            n_He = self.grid.element_abundances[0] * n_H
             xHeI = q[he1]
             xHeII = q[he2]
             xHeIII = q[he2 + 1]
@@ -257,6 +262,9 @@ class SimpleChemicalNetwork:
             
             self.dqdt[-1] = phoheat - n_e * (ioncool + reccool + exccool)
 
+            if self.grid.expansion:
+                pass
+
             # Multispecies : dqdt[-1] += n_e * xHeIII * n_He * omega
 
         return self.dqdt
@@ -268,8 +276,12 @@ class SimpleChemicalNetwork:
                     
         cell, Gamma, gamma, k_H, n = args
                 
-        n_H = self.grid.n_H[cell]
-        
+        if self.grid.expansion:
+            z = self.grid.cosm.TimeToRedshiftConverter(0, t, self.grid.zi)
+            n_H = self.grid.cosm.nH0 * (1. + z)**3
+        else:    
+            n_H = self.grid.n_H[cell]        
+                        
         dTde = 2. / 3. / k_B / n
             
         if 1 in self.grid.Z:
@@ -281,7 +293,7 @@ class SimpleChemicalNetwork:
                 
             if 2 in self.grid.Z:
                 he1, he2, e = (1, 2, 4)
-                n_He = self.grid.element_abundances[1] * self.grid.n_H[cell]
+                n_He = self.grid.element_abundances[1] * n_H
                 xHeI = q[he1]
                 xHeII = q[he2]
                 xHeIII = q[he2 + 1]
@@ -290,7 +302,7 @@ class SimpleChemicalNetwork:
                 nHeIII = n_He * xHeIII
         elif 2 in self.grid.Z:    
             he1, he2, e = (0, 1, 3)
-            n_He = self.grid.element_abundances[0] * self.grid.n_H[cell]
+            n_He = self.grid.element_abundances[0] * n_H
             xHeI = q[he1]
             xHeII = q[he2]
             xHeIII = q[he2 + 1]

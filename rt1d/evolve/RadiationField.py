@@ -51,6 +51,11 @@ class RadiationField:
             else:
                 self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_mid**2
                 self.pp_corr = 4. * np.pi * self.grid.r_mid**2
+                
+        # See if all sources are diffuse
+        self.all_diffuse = 1
+        for src in self.srcs:
+            self.all_diffuse *= int(src.SourcePars['type'] == 3)        
             
     def SourceDependentCoefficients(self, data, t):
         """
@@ -65,7 +70,7 @@ class RadiationField:
         self.gamma = np.array(self.Ns*[np.zeros_like(self.grid.zeros_grid_x_absorbers2)])
         
         # Column density to cells (N) and of cells (Nc)
-        if not self.pf['optically_thin']:
+        if not self.pf['optically_thin'] or self.all_diffuse:
             self.N, self.logN, self.Nc = self.grid.ColumnDensity(data)
             
             # Column densities (of all absorbers) sorted by cell 

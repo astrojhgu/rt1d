@@ -304,7 +304,7 @@ class Simulation:
                 continue
             
             if self.pf['expansion']:
-                z.append(self.data[dd].z)
+                z.append(self.data[dd]['redshift'])
             else:
                 z.append(None)
 

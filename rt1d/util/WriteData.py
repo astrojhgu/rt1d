@@ -83,6 +83,11 @@ class CheckPoints:
         if self.write_now(t):
             tmp = data.copy()
             tmp.update({'time': t})
+            
+            if self.grid.expansion:
+                z = self.grid.cosm.TimeToRedshiftConverter(0, t, self.grid.zi)
+                tmp.update({'redshift': z})
+            
             self.data[int(self.dd(t))] = tmp
             del tmp
             

@@ -13,6 +13,7 @@ Description:
 import copy
 import numpy as np
 from ..util import parse_kwargs, rebin
+from ..physics.Cosmology import Cosmology
 from ..physics.Constants import k_B, cm_per_kpc, s_per_myr, m_H
 from ..physics.ComputeCrossSections import PhotoIonizationCrossSection
 
@@ -46,6 +47,8 @@ class Grid:
         self.r_int = self.r_edg[0:-1]
         self.dr = np.diff(self.r_edg)
         self.r_mid = rebin(self.r_edg)
+        
+        self.zi = 0
         
     @property
     def zeros_absorbers(self):
@@ -226,6 +229,13 @@ class Grid:
         
         return self._x_to_n_converter
         
+    @property
+    def expansion(self):
+        if not hasattr(self, 'expansion'):
+            self.expansion = 0
+        
+        return self.expansion
+        
     def ColumnDensity(self, data):
         """
         Compute column densities for all absorbing species.
@@ -261,7 +271,7 @@ class Grid:
                 temperature = pf['clump_temperature'], overdensity = pf['clump_overdensity'],
                 ionization = pf['clump_ionization'], profile = pf['clump_profile'])
         
-    def set_chem(self, Z = 1, abundance = [1.0], isothermal = False):
+    def set_chem(self, Z=1, abundance=[1.0], isothermal=False):
         """
         Initialize chemistry - which species we'll be solving for and their 
         abundances ('cosmic', 'sun_photospheric', 'sun_coronal', etc.).
@@ -314,7 +324,17 @@ class Grid:
                                
         # Initialize mapping between q-vector and physical quantities (dengo)                
         self._set_qmap()
-                        
+        
+    def set_cosmology(self, zi=500, pars=None):
+        self.expansion=1
+        self.cosm = Cosmology()
+        
+        self.zi = zi
+        self.set_chem()
+        self.set_rho(self.cosm.rho_b_z0 * (1. + zi)**3 * (1. - self.cosm.Y))
+        self.set_x(Z=1, x=0.)
+        self.set_T(self.cosm.TCMB(zi))
+            
     def set_ics(self, data):
         """
         Simple way of setting all initial conditions at once with a data 
@@ -403,9 +423,9 @@ class Grid:
                 self.data[species].fill(1. / (1. + util.convertName(species)['Z']))
         
         # Set electron density
-        self._set_de()
+        self._set_de(self.zi)
         
-    def set_rho(self, rho0 = None):
+    def set_rho(self, rho0=None):
         """
         Initialize gas density and from that, the hydrogen number density 
         (which normalizes all other number densities).
@@ -420,7 +440,7 @@ class Grid:
             if self.Z == np.ones(1):
                 self.abundances_by_number = self.element_abundances = np.ones(1)
                 self.n_H = self.data['rho'] / m_H
-                self.data['n'] = self.particle_density(self.data)
+                self.data['n'] = self.particle_density(self.data, self.zi)
                 return
                             
         # Set hydrogen number density (which normalizes all other species)
@@ -434,7 +454,7 @@ class Grid:
             X += self.abundances_by_number[i] * ele.mass
                                                 
         self.n_H = self.data['rho'] / m_H / X
-        self.data['n'] = self.particle_density(self.data)
+        self.data['n'] = self.particle_density(self.data, self.zi)
     
     def make_clump(self, position = None, radius = None, overdensity = None,
         temperature = None, ionization = None, profile = None):
@@ -470,28 +490,29 @@ class Grid:
         self._set_de()
                 
         del self._x_to_n_converter
-        self.data['n'] = self.particle_density(self.data)
+        self.data['n'] = self.particle_density(self.data, self.zi)
         
         self._set_ge()
                 
-    def particle_density(self, data):
+    def particle_density(self, data, z=0):
         """
         Compute total particle number density.
         """    
         
         n = data['de'].copy()
         for ion in self.all_ions:
-             n += data[ion] * self.x_to_n[ion]
+            n += data[ion] * self.x_to_n[ion] * (1. + z)**3 \
+                / (1. + self.zi)**3
              
         return n 
         
     def _set_ge(self):
         # Initialize gas energy    
         if not self.isothermal:
-            self.data['n'] = self.particle_density(self.data)
+            self.data['n'] = self.particle_density(self.data, self.zi)
             self.data['ge'] = 1.5 * k_B * self.data['n'] * self.data['T']             
 
-    def _set_de(self):
+    def _set_de(self, z=0):
         """
         Set electron density - must have run set_rho beforehand.
         """
@@ -500,7 +521,9 @@ class Grid:
         for i, Z in enumerate(self.Z):
             for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
                 x_i_jp1 = self.data[util.zion2name(Z, j + 1)]
-                self.data['de'] += j * x_i_jp1 * self.n_H * self.element_abundances[i]
+                self.data['de'] += j * x_i_jp1 * self.n_H \
+                    * self.element_abundances[i] * (1. + z)**3 \
+                    / (1. + self.zi)**3
 
     def _set_qmap(self):
         """

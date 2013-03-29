@@ -71,10 +71,15 @@ class Chemistry:
             
         return self._proc_dist
         
-    def Evolve(self, data, dt, **kwargs):
+    def Evolve(self, data, t, dt, **kwargs):
         """
         Evolve all cells by dt.
         """
+        
+        if self.grid.expansion:
+            z = self.grid.cosm.TimeToRedshiftConverter(0, t, self.grid.zi)
+        else:
+            z = 0    
                 
         if self.dengo:
             return self.EvolveDengo(data, dt)
@@ -141,7 +146,7 @@ class Chemistry:
                 
         # Convert ge to T
         if not self.grid.isothermal:
-            newdata['n'] = self.grid.particle_density(newdata)
+            newdata['n'] = self.grid.particle_density(newdata, z)
             newdata['T'] = newdata['ge'] / 1.5 / k_B / newdata['n']
         
         return newdata
