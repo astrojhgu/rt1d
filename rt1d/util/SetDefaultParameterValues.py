@@ -65,6 +65,7 @@ def PhysicsParameters():
         "secondary_ionization": 0,  
         "isothermal": 1,  
         "expansion": 0,  
+        "compton_scattering": 0,
         
         "clumping_factor": 1,
         "recombination": 'B', 

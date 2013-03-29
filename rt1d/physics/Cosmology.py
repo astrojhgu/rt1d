@@ -16,7 +16,7 @@ Notes:
 """
 
 import numpy as np
-from .Constants import c, G, km_per_mpc, m_H, m_He
+from .Constants import c, G, km_per_mpc, m_H, m_He, sigma_SB
 
 class Cosmology:
     def __init__(self, pf=None):
@@ -64,6 +64,10 @@ class Cosmology:
         
     def TCMB(self, z):
         return self.CMBTemperatureNow * (1. + z)
+        
+    def UCMB(self, z):
+        """ CMB energy density. """    
+        return 4.0 * sigma_SB * self.TCMB(z)**4 / c
     
     def Tgas(self, z):
         """

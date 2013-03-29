@@ -37,7 +37,9 @@ class Simulation:
             
             # Set initial conditions
             if pf['expansion']:
-                grid.set_cosmology(zi=pf['initial_redshift'])
+                grid.set_cosmology(zi=pf['initial_redshift'],
+                    compton_scattering=pf['compton_scattering'],
+                    xi = pf['initial_ionization'][0])
             else:
                 grid.set_chem(Z = pf['species'], abundance = pf['abundances'], 
                     isothermal = pf['isothermal'])
@@ -135,7 +137,7 @@ class Simulation:
             elif np.isnan(dt):  
                 raise ValueError('ERROR: dt -> inf.')      
                 
-            pb.update(t)      
+            pb.update(t)
                 
         pb.finish()
             

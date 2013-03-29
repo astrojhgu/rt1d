@@ -127,6 +127,8 @@ class Chemistry:
             for i, value in enumerate(self.solver.y):
                 newdata[self.grid.all_species[i]][cell] = self.solver.y[i]
                                 
+            newdata['de'][cell] = max(newdata['de'][cell], 0.0)                    
+                                
         # Collect results        
         if size > 1:
             collected_data = {}

@@ -14,33 +14,26 @@ import rt1d
 import pylab as pl
 import numpy as np
 
-sim = rt1d.run.Simulation(pf={'problem_type':-1, 'dtDataDump': 1,
-    'initial_redshift': 145})
+sim = rt1d.run.Simulation(pf={'problem_type':-1,
+    'initial_redshift': 1e3, 'initial_ionization': [0.049]})
 sim.run()
 
 anl = rt1d.analyze.Simulation(sim.checkpoints)
 
-z = np.linspace(10, 145)
-pl.loglog(z, sim.grid.cosm.nH0 * (1. + z)**3, color='k')
-
-t, z, n = anl.CellTimeEvolution(field='n')
-pl.scatter(z, n, color='b', facecolors='none', s=50)
-
-pl.xlabel(r'$z$')
-pl.ylabel(r'$n_{\mathrm{H}} \ \mathrm{cm}^{-3}$')
-
-raw_input('')
-pl.clf()
-
-z = np.linspace(10, 145)
+z = np.linspace(10, 1e3)
 pl.loglog(z, sim.grid.cosm.TCMB(sim.grid.cosm.zdec) * \
     (1. + z)**2 / (1. + sim.grid.cosm.zdec)**2, color = 'k')
+pl.loglog(z, sim.grid.cosm.TCMB(z), color = 'k', ls = ':')
 
 t, z, T = anl.CellTimeEvolution(field='T')
-pl.scatter(z, T, color='b', facecolors='none', s=50)
+pl.loglog(z, T, color='b')
 
 pl.xlabel(r'$z$')
 pl.ylabel(r'$T_K$')
+pl.xlim(10, sim.grid.zi)
+pl.ylim(1, 3e3)
 
 raw_input('')
+
+
 

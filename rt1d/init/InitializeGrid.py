@@ -326,14 +326,16 @@ class Grid:
         # Initialize mapping between q-vector and physical quantities (dengo)                
         self._set_qmap()
         
-    def set_cosmology(self, zi=500):
+    def set_cosmology(self, zi=500, compton_scattering=0, xi=0.99):
         self.expansion=1
+        self.compton_scattering = compton_scattering
+        
         self.cosm = Cosmology()
         
         self.zi = zi
         self.set_chem()
         self.set_rho(self.cosm.rho_b_z0 * (1. + zi)**3 * (1. - self.cosm.Y))
-        self.set_x(Z=1, x=1e-4)
+        self.set_x(Z=1, x=xi)
         self.set_T(self.cosm.TCMB(zi))
             
     def set_ics(self, data):

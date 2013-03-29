@@ -48,7 +48,7 @@ erg_per_ev = e / erg_per_j
 erg_per_kev = 1e3 * erg_per_ev
 
 # Stefan-Boltzmann constant - [sigma_SB] = erg / cm^2 / deg^4 / s
-sigma_SB = 2.0 * pi**5 * k_B**4 / 15.0 / c**2 / h**3     
+sigma_SB = 2.0 * pi**5 * k_B**4 / 15.0 / c**2 / h**3
 
 # Hydrogen 
 A10 = 2.85e-15 				    # HI 21cm spontaneous emission coefficient - [A10] = Hz

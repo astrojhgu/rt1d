@@ -12,7 +12,7 @@ Description: ChemicalNetwork object just needs to have methods called
 """
 
 import numpy as np
-from ..physics.Constants import k_B
+from ..physics.Constants import k_B, sigma_T, m_e, c, s_per_myr
 
 try:
     import dengo.primordial_rates, dengo.primordial_cooling
@@ -266,15 +266,21 @@ class SimpleChemicalNetwork:
             if self.grid.expansion:
                 hubcool = 2. * self.grid.cosm.HubbleParameter(z) * q[-1]
                             
-                # Add Compton heating here
-            
-            self.dqdt[-1] = phoheat * to_temp \
+                compton = 0.0
+                if self.grid.compton_scattering:
+                    Tcmb = self.grid.cosm.TCMB(z)
+                    ucmb = self.grid.cosm.UCMB(z)
+                    tcomp = 3. * m_e * c / (8. * sigma_T * ucmb)
+                    compton = xHII * (Tcmb - q[-1]) / tcomp \
+                        / (1. + self.grid.cosm.y + xHII)
+                                                
+            self.dqdt[-1] = phoheat * to_temp + compton \
                 - n_e * (ioncool + reccool + exccool) * to_temp \
                 - hubcool
                                 
         if self.grid.expansion:
             self.dqdt[e] -= 3 * self.grid.cosm.HubbleParameter(z) * n_H * xHII
-                
+                       
         # Multispecies : dqdt[-1] += n_e * xHeIII * n_He * omega
 
         return self.dqdt
@@ -413,8 +419,15 @@ class SimpleChemicalNetwork:
             J[e][e] *= n_He    
             
         if self.grid.expansion:
-            J[-1][-1] = -2. * self.grid.cosm.HubbleParameter(z)          
+            J[-1][-1] = -2. * self.grid.cosm.HubbleParameter(z)        
             
+            if self.grid.compton_scattering:
+                Tcmb = self.grid.cosm.TCMB(z)
+                ucmb = self.grid.cosm.UCMB(z)
+                tcomp = 3. * m_e * c / (8. * sigma_T * ucmb)
+                J[-1][-1] -= xHII / tcomp \
+                    / (1. + self.grid.cosm.y + xHII)
+
         return J
                 
     def SourceIndependentCoefficients(self, T):
