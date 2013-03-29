@@ -126,9 +126,7 @@ class Chemistry:
 
             for i, value in enumerate(self.solver.y):
                 newdata[self.grid.all_species[i]][cell] = self.solver.y[i]
-                                
-            newdata['de'][cell] = max(newdata['de'][cell], 0.0)                    
-                                
+                                                                
         # Collect results        
         if size > 1:
             collected_data = {}
@@ -148,11 +146,13 @@ class Chemistry:
             self.dqdt_grid = tmp_qdot    
                 
         # Convert T to ge for fun and update particle density
-        if not self.grid.isothermal:
-            newdata['n'] = self.grid.particle_density(newdata, z - dz)
-            newdata['ge'] = 1.5 * newdata['n'] * k_B * newdata['T']
+        #if not self.grid.isothermal:
+        newdata['n'] = self.grid.particle_density(newdata, z - dz)
+        newdata['ge'] = 1.5 * newdata['n'] * k_B * newdata['T']
+        newdata['de'] = self.grid.electron_density(newdata, z - dz)
+        newdata['Ts'] = self.grid.hydr.Ts(newdata, z - dz)
                         
-        return newdata
+        return newdata    
 
     def EvolveDengo(self, data, dt):
         """

@@ -14,6 +14,7 @@ import copy
 import numpy as np
 from collections import Iterable
 from ..util import parse_kwargs, rebin
+from ..physics.Hydrogen import Hydrogen
 from ..physics.Cosmology import Cosmology
 from ..physics.Constants import k_B, cm_per_kpc, s_per_myr, m_H
 from ..physics.ComputeCrossSections import PhotoIonizationCrossSection
@@ -237,6 +238,18 @@ class Grid:
         
         return self.expansion
         
+    @property
+    def hydr(self):
+        if not hasattr(self, '_hydr'):
+            self._hydr = Hydrogen(self.cosm)
+        return self._hydr    
+            
+    @property
+    def cosm(self):
+        if not hasattr(self, '_cosm'):
+            self._cosm = Cosmology()
+        return self._cosm
+        
     def ColumnDensity(self, data):
         """
         Compute column densities for all absorbing species.
@@ -329,8 +342,6 @@ class Grid:
     def set_cosmology(self, zi=500, compton_scattering=0, xi=0.99):
         self.expansion=1
         self.compton_scattering = compton_scattering
-        
-        self.cosm = Cosmology()
         
         self.zi = zi
         self.set_chem()
@@ -526,6 +537,16 @@ class Grid:
                 x_i_jp1 = self.data[util.zion2name(Z, j + 1)]
                 self.data['de'] += j * x_i_jp1 * self.n_H \
                     * self.element_abundances[i]
+    
+    def electron_density(self, data, z):
+        de = np.zeros(self.dims)
+        for i, Z in enumerate(self.Z):
+            for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
+                x_i_jp1 = data[util.zion2name(Z, j + 1)]
+                de += j * x_i_jp1 * self.n_H * (1. + z)**3 / (1. + self.zi)**3 \
+                    * self.element_abundances[i]
+
+        return de
 
     def _set_qmap(self):
         """

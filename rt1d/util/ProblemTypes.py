@@ -61,8 +61,8 @@ def ProblemType(ptype):
               "initial_ionization": [0.049],
               "final_redshift": 10,
               "stop_time": 450.,
-              "restricted_timestep": ['hubble'],
-              "epsilon_dt": 0.01
+              "restricted_timestep": ['electrons', 'ions', 'energy', 'hubble'],
+              "epsilon_dt": 0.05
              }
     
     # RT06-0.3, Single zone ionization/heating, then source switches off.

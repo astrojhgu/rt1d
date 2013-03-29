@@ -109,13 +109,14 @@ class Simulation:
                 T = self.data[0]['T'][0]
                 
             n_H = self.grid.n_H[0]
-            self.Qdot = self.pf['spectrum_qdot']
+            self.Qdot = self.pf['source_qdot']
             self.alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
             self.trec = 1. / self.alpha_HII / self.data[0]['h_1'][0] / n_H # s
             self.rs = (3. * self.Qdot \
                     / 4. / np.pi / self.alpha_HII / n_H**2)**(1. / 3.)  # cm
         
-        return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) + self.pf['start_radius']
+        return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) \
+            + self.pf['start_radius']
         
     def LocateIonizationFront(self, dd, species = 0):
         """
@@ -129,7 +130,8 @@ class Simulation:
         
     def ComputeIonizationFrontEvolution(self, T0 = None):
         """
-        Find the position of the I-front at all times, and compute value of analytic solution.
+        Find the position of the I-front at all times, and compute value of 
+        analytic solution.
         """    
                 
         # First locate I-front for all data dumps and compute analytic solution

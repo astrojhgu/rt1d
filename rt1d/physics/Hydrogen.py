@@ -155,7 +155,7 @@ class Hydrogen:
         
         return 1.81e11 * Sa * Ja / (1. + z)
     
-    def Ts(self, z, Tk, Ja, nH, ne):
+    def SpinTemp(self, z, Tk, Ja, nH, ne):
         """
         Returns spin temperature given:
             z = redshift (sets CMB temperature)
@@ -172,6 +172,14 @@ class Hydrogen:
                 
         return (1.0 + x_c + x_a) / \
             (self.cosm.TCMB(z)**-1. + x_c * Tk**-1. + x_a * Tc**-1.)
+    
+    def Ts(self, data, z):
+        Tk = data['T']
+        Ja = 0.0
+        nH = self.cosm.nH0 * (1. + z)**3
+        ne = data['de']      
+        
+        return self.SpinTemp(z, Tk, Ja, nH, ne)
         
     def DifferentialBrightnessTemperature(self, z, xHII, delta, Ts):
         """

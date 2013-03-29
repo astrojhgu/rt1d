@@ -263,10 +263,10 @@ class SimpleChemicalNetwork:
                          + self.psi[cell][he2] * xHeII * n_He \
             
             hubcool = 0.0
+            compton = 0.0
             if self.grid.expansion:
                 hubcool = 2. * self.grid.cosm.HubbleParameter(z) * q[-1]
                             
-                compton = 0.0
                 if self.grid.compton_scattering:
                     Tcmb = self.grid.cosm.TCMB(z)
                     ucmb = self.grid.cosm.UCMB(z)
@@ -277,10 +277,7 @@ class SimpleChemicalNetwork:
             self.dqdt[-1] = phoheat * to_temp + compton \
                 - n_e * (ioncool + reccool + exccool) * to_temp \
                 - hubcool
-                                
-        if self.grid.expansion:
-            self.dqdt[e] -= 3 * self.grid.cosm.HubbleParameter(z) * n_H * xHII
-                       
+
         # Multispecies : dqdt[-1] += n_e * xHeIII * n_He * omega
 
         return self.dqdt
