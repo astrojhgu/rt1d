@@ -468,4 +468,32 @@ class Simulation:
         
         self.heat = heat
         self.cool, self.zeta, self.eta, self.psi = (cool, zeta, eta, psi)
+    
+    def take_derivative(self, cell=None, t=None, z=None, field='T', wrt='t'):
+        """ Evaluate derivative of `field' with respect to `wrt' at z. """
         
+        if wrt in ['t', 'z', 'logt', 'logz']:
+            t, z, val = self.CellTimeEvolution(cell=cell, field=field)
+        
+        # Take all derivatives wrt z, convert afterwards
+        x = self.data_asc['z']
+        y = self.data_asc[field]
+        xp, fp = central_difference(x, y)
+        
+        if wrt == 'nu':
+            fp *= -1.0 * (1. + xp)**2 / nu_0_mhz  
+        elif wrt == 'logt':            
+            spline = scipy.interpolate.interp1d(x, y)
+            fp *= -2.0 * (1. + xp) / spline(xp) / 3.
+        else:
+            print 'Unrecognized option for wrt.'
+
+        # x-values must be monotonically increasing - fix dep. on 'wrt'
+        if not np.all(np.diff(xp) > 0):
+            xp, fp = list(xp), list(fp)
+            xp.reverse()
+            fp.reverse()
+            xp, fp = np.array(xp), np.array(fp)        
+                                        
+        return np.interp(z, xp, fp)
+         

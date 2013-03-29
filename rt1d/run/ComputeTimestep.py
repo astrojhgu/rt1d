@@ -19,7 +19,8 @@ class ComputeTimestep:
         self.grid = grid
         self.epsilon = epsilon
     
-    def Limit(self, q, dqdt, tau = None, tau_ifront = 0.5, method = ['ions']):
+    def Limit(self, q, dqdt, z=None, tau = None, tau_ifront = 0.5, 
+        method = ['ions']):
         """
         Limit timestep based on maximum allowed change in fields.  Which 
         fields determined by method parameter.
@@ -47,6 +48,9 @@ class ComputeTimestep:
             elif mth == 'energy' and 'ge' in self.grid.all_species:
                 new_dt = min(new_dt, 
                     np.min(dt[..., self.grid.all_species.index('ge')]))
+            elif mth == 'hubble':
+                new_dt = min(new_dt, self.epsilon \
+                    * self.grid.cosm.HubbleTime(z))
             else:
                 new_dt = min(new_dt, np.min(dt))
         

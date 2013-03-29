@@ -49,17 +49,18 @@ def ProblemType(ptype):
         pf = {
               "problem_type": 0.1, 
               "radiative_transfer": 0,
+              "isothermal": 0,
               "expansion": 1,
               "grid_cells": 1,
               "length_units": 1e-4*cm_per_kpc, # 100 milliparsecs 
               "start_radius": 0.99, # cell = 1 milliparsec across
               "dtDataDump": 20, 
               "dzDataDump": 1,
-              "initial_redshift": 400.,
+              "initial_redshift": 500.,
               "final_redshift": 6,
-              "initial_ionization": [1e-4], 
-              "isothermal": 0,
-             }         
+              "restricted_timestep": ['ions', 'hubble'],
+              "epsilon_dt": 0.01
+             }
     
     # RT06-0.3, Single zone ionization/heating, then source switches off.
     if ptype_int == 0:

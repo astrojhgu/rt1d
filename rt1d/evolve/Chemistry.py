@@ -78,8 +78,9 @@ class Chemistry:
         
         if self.grid.expansion:
             z = self.grid.cosm.TimeToRedshiftConverter(0, t, self.grid.zi)
+            dz = dt / self.grid.cosm.dtdz(z)
         else:
-            z = 0    
+            z = dz = 0    
                 
         if self.dengo:
             return self.EvolveDengo(data, dt)
@@ -107,15 +108,15 @@ class Chemistry:
             q = np.zeros(len(self.grid.all_species))
             for i, species in enumerate(self.grid.all_species):
                 q[i] = data[species][cell]
-                
+                                    
             kwargs_cell = kwargs_by_cell[cell]
             
             if self.rtON:
                 args = (cell, kwargs_cell['Gamma'], kwargs_cell['gamma'],
-                    kwargs_cell['Heat'], data['n'][cell])
+                    kwargs_cell['Heat'], data['n'][cell], t, data['T'][cell])
             else:
                 args = (cell, self.grid.zeros_absorbers, self.grid.zeros_absorbers2, 
-                    self.grid.zeros_absorbers, data['n'][cell])
+                    self.grid.zeros_absorbers, data['n'][cell], t, data['T'][cell])
                             
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)
@@ -125,7 +126,7 @@ class Chemistry:
 
             for i, value in enumerate(self.solver.y):
                 newdata[self.grid.all_species[i]][cell] = self.solver.y[i]
-                
+                                
         # Collect results        
         if size > 1:
             collected_data = {}
@@ -144,11 +145,11 @@ class Chemistry:
             self.q_grid = tmp_q
             self.dqdt_grid = tmp_qdot    
                 
-        # Convert ge to T
+        # Convert T to ge for fun and update particle density
         if not self.grid.isothermal:
-            newdata['n'] = self.grid.particle_density(newdata, z)
-            newdata['T'] = newdata['ge'] / 1.5 / k_B / newdata['n']
-        
+            newdata['n'] = self.grid.particle_density(newdata, z - dz)
+            newdata['ge'] = 1.5 * newdata['n'] * k_B * newdata['T']
+                        
         return newdata
 
     def EvolveDengo(self, data, dt):

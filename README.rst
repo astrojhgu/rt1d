@@ -80,7 +80,7 @@ is useful for inspecting the properties of sources, chemical reaction
 networks, debugging, etc.
 
 This example (all default parameter values) simulates the expansion of an 
-I-front around a monochromatic source of 13.6 eV photons in an isothermal, 
+ionization front around a monochromatic source of 13.6 eV photons in an isothermal, 
 hydrogen only medium (test #1 from the Radiative Transfer Comparison Project; 
 `Iliev et al. 2006 <http://adsabs.harvard.edu/abs/2006MNRAS.371.1057I>`_).
 

@@ -12,6 +12,7 @@ Description:
 
 import copy
 import numpy as np
+from collections import Iterable
 from ..util import parse_kwargs, rebin
 from ..physics.Cosmology import Cosmology
 from ..physics.Constants import k_B, cm_per_kpc, s_per_myr, m_H
@@ -301,7 +302,7 @@ class Grid:
       
         self.all_species.append('de')          
         if not isothermal:
-            self.all_species.append('ge')
+            self.all_species.append('T')
             
         # Create blank data fields
         self.data = {}
@@ -325,14 +326,14 @@ class Grid:
         # Initialize mapping between q-vector and physical quantities (dengo)                
         self._set_qmap()
         
-    def set_cosmology(self, zi=500, pars=None):
+    def set_cosmology(self, zi=500):
         self.expansion=1
         self.cosm = Cosmology()
         
         self.zi = zi
         self.set_chem()
         self.set_rho(self.cosm.rho_b_z0 * (1. + zi)**3 * (1. - self.cosm.Y))
-        self.set_x(Z=1, x=0.)
+        self.set_x(Z=1, x=1e-4)
         self.set_T(self.cosm.TCMB(zi))
             
     def set_ics(self, data):
@@ -356,7 +357,7 @@ class Grid:
         Must initialize ionization before this!
         """
         
-        if hasattr(T0, 'size'):
+        if isinstance(T0, Iterable):
             self.data['T'] = T0
         else:
             self.data['T'] = T0 * np.ones(self.dims)
@@ -423,7 +424,7 @@ class Grid:
                 self.data[species].fill(1. / (1. + util.convertName(species)['Z']))
         
         # Set electron density
-        self._set_de(self.zi)
+        self._set_de()
         
     def set_rho(self, rho0=None):
         """
@@ -431,7 +432,7 @@ class Grid:
         (which normalizes all other number densities).
         """                
         
-        if hasattr(rho0, 'size'):
+        if isinstance(rho0, Iterable):
             self.data['rho'] = rho0
         else:
             self.data['rho'] = rho0 * np.ones(self.dims)   
@@ -512,7 +513,7 @@ class Grid:
             self.data['n'] = self.particle_density(self.data, self.zi)
             self.data['ge'] = 1.5 * k_B * self.data['n'] * self.data['T']             
 
-    def _set_de(self, z=0):
+    def _set_de(self):
         """
         Set electron density - must have run set_rho beforehand.
         """
@@ -522,8 +523,7 @@ class Grid:
             for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
                 x_i_jp1 = self.data[util.zion2name(Z, j + 1)]
                 self.data['de'] += j * x_i_jp1 * self.n_H \
-                    * self.element_abundances[i] * (1. + z)**3 \
-                    / (1. + self.zi)**3
+                    * self.element_abundances[i]
 
     def _set_qmap(self):
         """

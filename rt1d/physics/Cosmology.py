@@ -76,15 +76,21 @@ class Cosmology:
             return self.TCMB(self.zdec) * (1. + z)**2 / (1. + self.zdec)**2
         
     def ScaleFactor(self, z):
-        return 1.0 / (1.0 + z)
+        return 1. / (1. + z)
         
     def EvolutionFunction(self, z):
         return np.sqrt(self.OmegaMatterNow * (1.0 + z)**3  + self.OmegaLambdaNow)
         
-    def HubbleParameter(self, z):	
+    def HubbleParameter(self, z):	        
         return self.HubbleParameterNow * np.sqrt(self.OmegaMatterNow * (1.0 + z)**3 + 
             self.OmegaLambdaNow) 
     
+    def HubbleLength(self, z):
+        return c / self.HubbleParameter(z)
+    
+    def HubbleTime(self, z):
+        return 2. / 3. / self.HubbleParameter(z)
+        
     def OmegaMatter(self, z):
         return self.OmegaMatterNow * (1.0 + z)**3 / self.EvolutionFunction(z)**2
     

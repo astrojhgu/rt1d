@@ -186,14 +186,16 @@ class SimpleChemicalNetwork:
         self.q = q
         self.dqdt = np.zeros_like(self.zeros_q)
         
-        cell, Gamma, gamma, k_H, n = args
+        cell, Gamma, gamma, k_H, n, time, T = args
         
+        to_temp = 1. / (1.5 * n * k_B)
+                
         if self.grid.expansion:
-            z = self.grid.cosm.TimeToRedshiftConverter(0, t, self.grid.zi)
+            z = self.grid.cosm.TimeToRedshiftConverter(0., time, self.grid.zi)
             n_H = self.grid.cosm.nH0 * (1. + z)**3
         else:
             n_H = self.grid.n_H[cell]
-        
+                    
         # h1, he1, etc. correspond to indices in absorbers list.
         
         if 1 in self.grid.Z:
@@ -225,7 +227,7 @@ class SimpleChemicalNetwork:
                           +   self.alpha[cell][h1] * n_e * xHII \
                           -   gamma[h1][h1] * xHI # plus gamma[0][1:]
             self.dqdt[h1 + 1] = -self.dqdt[h1]   
-            self.dqdt[e] = self.dqdt[h1 + 1] * n_H             
+            self.dqdt[e] = self.dqdt[h1 + 1] * n_H
                                 
         # Helium rate equations  
         if 2 in self.grid.Z:
@@ -260,12 +262,20 @@ class SimpleChemicalNetwork:
                 exccool += self.psi[cell][he1] * xHeI * n_He \
                          + self.psi[cell][he2] * xHeII * n_He \
             
-            self.dqdt[-1] = phoheat - n_e * (ioncool + reccool + exccool)
-
+            hubcool = 0.0
             if self.grid.expansion:
-                pass
-
-            # Multispecies : dqdt[-1] += n_e * xHeIII * n_He * omega
+                hubcool = 2. * self.grid.cosm.HubbleParameter(z) * q[-1]
+                            
+                # Add Compton heating here
+            
+            self.dqdt[-1] = phoheat * to_temp \
+                - n_e * (ioncool + reccool + exccool) * to_temp \
+                - hubcool
+                                
+        if self.grid.expansion:
+            self.dqdt[e] -= 3 * self.grid.cosm.HubbleParameter(z) * n_H * xHII
+                
+        # Multispecies : dqdt[-1] += n_e * xHeIII * n_He * omega
 
         return self.dqdt
         
@@ -274,16 +284,14 @@ class SimpleChemicalNetwork:
         Jacobian of the rate equations.
         """    
                     
-        cell, Gamma, gamma, k_H, n = args
+        cell, Gamma, gamma, k_H, n, time, T = args        
                 
         if self.grid.expansion:
-            z = self.grid.cosm.TimeToRedshiftConverter(0, t, self.grid.zi)
+            z = self.grid.cosm.TimeToRedshiftConverter(0., time, self.grid.zi)
             n_H = self.grid.cosm.nH0 * (1. + z)**3
         else:    
             n_H = self.grid.n_H[cell]        
-                        
-        dTde = 2. / 3. / k_B / n
-            
+                                    
         if 1 in self.grid.Z:
             h1, e = (0, 2)
             xHI = q[h1]
@@ -338,15 +346,11 @@ class SimpleChemicalNetwork:
                     - self.alpha[cell][h1] * n_H * xHII
                     
             # Gas energy
-            if not self.isothermal:
-                #J[h1][-1] = 
-                
-                
+            if not self.isothermal:                
                 J[-1][h1] = n_H * (k_H[h1] \
                           - n_e * (self.zeta[cell][h1] 
                           + self.psi[cell][h1] - self.eta[cell][h1]))
                 J[-1][h1 + 1] = -J[-1][h1]
-                J[-1][-1] = 0
 
         if 2 in self.grid.Z:
             
@@ -407,6 +411,9 @@ class SimpleChemicalNetwork:
             #          + self.alpha[1][cell] * n_e - self.alpha[2][cell] * n_e
             
             J[e][e] *= n_He    
+            
+        if self.grid.expansion:
+            J[-1][-1] = -2. * self.grid.cosm.HubbleParameter(z)          
             
         return J
                 

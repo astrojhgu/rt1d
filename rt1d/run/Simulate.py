@@ -11,9 +11,8 @@ Description: Run a simulation.
 """
 
 import rt1d
-from ..util.ReadParameterFile import *
+import numpy as np
 from ..util import parse_kwargs, ReadParameterFile
-#from ..util.SetDefaultParameterValues import SetAllDefaults
     
 class Simulation:
     """
@@ -50,13 +49,13 @@ class Simulation:
                 
                 grid.set_T(pf['initial_temperature'])
                 
-            if pf['clump']:
-                grid.make_clump(position=pf['clump_position'], 
-                    radius=pf['clump_radius'], 
-                    temperature=pf['clump_temperature'], 
-                    overdensity=pf['clump_overdensity'],
-                    ionization=pf['clump_ionization'], 
-                    profile=pf['clump_profile'])
+                if pf['clump']:
+                    grid.make_clump(position=pf['clump_position'], 
+                        radius=pf['clump_radius'], 
+                        temperature=pf['clump_temperature'], 
+                        overdensity=pf['clump_overdensity'],
+                        ionization=pf['clump_ionization'], 
+                        profile=pf['clump_profile'])
                     
             # To compute timestep
             self.timestep = rt1d.run.ComputeTimestep(grid, pf['epsilon_dt'])
@@ -74,12 +73,13 @@ class Simulation:
         # Initialize radiation source and radiative transfer solver    
         if init_rs:     
             if self.pf['radiative_transfer']:
-                self.rs = rs = rt1d.sources.RadiationSources(grid, 
+                self.rs = rt1d.sources.RadiationSources(grid, 
                     init_tabs=init_tabs, **pf)
+                allsrcs = self.rs.all_sources    
             else:
-                self.rs = rs = None
+                allsrcs = None
                 
-            self.rt = rt1d.Radiation(self.grid, rs, **self.pf)
+            self.rt = rt1d.Radiation(self.grid, allsrcs, **self.pf)
 
     def run(self):
         self.__call__() 
@@ -98,6 +98,10 @@ class Simulation:
         dt_history = []
         pb = rt1d.run.ProgressBar(tf)
         while t < tf:
+                    
+            z = None                 
+            if self.grid.expansion:
+                z = self.grid.cosm.TimeToRedshiftConverter(0, t, self.grid.zi)                         
                                             
             # Evolve by dt
             data = self.rt.Evolve(data, t = t, dt = dt)
@@ -109,9 +113,9 @@ class Simulation:
                             
             # Figure out next dt based on max allowed change in evolving fields
             new_dt = self.timestep.Limit(self.rt.chem.q_grid, 
-                self.rt.chem.dqdt_grid, tau_tot, 
-                tau_ifront = self.pf['tau_ifront'], 
-                method = self.pf['restricted_timestep'])
+                self.rt.chem.dqdt_grid, z=z, tau=tau_tot, 
+                tau_ifront=self.pf['tau_ifront'], 
+                method=self.pf['restricted_timestep'])
             
             # Limit timestep further based on next DD and max allowed increase
             dt = min(new_dt, 2 * dt)

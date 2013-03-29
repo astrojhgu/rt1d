@@ -23,6 +23,11 @@ class RadiationField:
         self.srcs = sources
         self.esec = SecondaryElectrons(method = self.pf['secondary_ionization'])
                 
+        if self.srcs is not None:
+            self._initialize()
+        
+    def _initialize(self):    
+            
         self.Ns = len(self.srcs)
         
         self.sigma_th = {}
