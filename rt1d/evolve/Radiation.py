@@ -37,7 +37,7 @@ class Radiation:
         
         return True
     
-    def Evolve(self, data, t, dt):
+    def Evolve(self, data, t, dt, *args):
         """
         This routine calls our solvers and updates 'data' -> 'newdata'
         """
@@ -52,7 +52,7 @@ class Radiation:
         self.kwargs = {}
         if self.pf['radiative_transfer']:
             Gamma_src, gamma_src, Heat_src = \
-                self.rfield.SourceDependentCoefficients(data, t)
+                self.rfield.SourceDependentCoefficients(data, t, *args)
 
             if len(self.srcs) > 1:
                 for i, src in enumerate(self.srcs):

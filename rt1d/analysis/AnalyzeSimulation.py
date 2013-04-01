@@ -9,7 +9,7 @@ Description: Functions to calculate various quantities from our rt1d datasets.
      
 """
 
-import os
+import os, re
 import numpy as np
 import pylab as pl
 from .Multiplot import *
@@ -293,27 +293,30 @@ class Simulation:
         
         return ax             
         
-    def CellTimeEvolution(self, cell = 0, field = 'x_HI'):
+    def CellEvolution(self, cell=0, field='x_HI', redshift=False):
         """
-        Return time evolution of a given quantity in one cell.
+        Return time or redshift evolution of a given quantity in given cell.
         """    
         
-        z = []
         time = []
         value = []
         for dd in self.data.keys():
             if field not in self.data[dd].keys():
                 continue
-            
-            if self.pf['expansion']:
-                z.append(self.data[dd]['redshift'])
-            else:
-                z.append(None)
 
-            time.append(self.data[dd]['time'])
+            if redshift and 'redshift' in self.data[dd].keys():
+                time.append(self.data[dd]['redshift'])
+            else:
+                time.append(self.data[dd]['time'])
+            
             value.append(self.data[dd][field][cell])
+            
+        # Sort result    
+        order = np.argsort(time)
+        time = np.array(time)[order]
+        value = np.array(value)[order]
         
-        return np.array(time), np.array(z), np.array(value)    
+        return time, value
     
     def IonizationRate(self, t = 1, absorber = 'h_1', color = 'k', ls = '-', 
         legend = True, plot_recomb = False, total_only = False, src = 0):

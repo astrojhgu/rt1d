@@ -26,9 +26,9 @@ pl.loglog(z, sim.grid.cosm.TCMB(sim.grid.cosm.zdec) * \
     label=r'analytic')
 pl.loglog(z, sim.grid.cosm.TCMB(z), color = 'k', ls = ':')
 
-t, z, T = anl.CellTimeEvolution(field='T')
+z, T = anl.CellEvolution(field='T', redshift=True)
 pl.loglog(z, T, color='b', label='rt1d')
-t, z, Ts = anl.CellTimeEvolution(field='Ts')
+z, Ts = anl.CellEvolution(field='Ts', redshift=True)
 pl.loglog(z, Ts, color='b', ls = '--')
 
 pl.xlabel(r'$z$')
@@ -36,14 +36,14 @@ pl.ylabel(r'$T_K$')
 pl.xlim(10, sim.grid.zi)
 pl.ylim(1, 2e3)
 
-try:
-    import glorb
-    ds = glorb.analysis.Analyze21cm(glorb.run.RadioBackground(**{'zi': 1100, 
-        'zfl': 6, 'dz': 1}))
-    pl.loglog(ds.data['z'], ds.data['Tk'], color='g', label='cosmorec')
-    pl.loglog(ds.data['z'], ds.data['Ts'], color='g', ls='--')    
-except:
-    pass
+#try:
+#    import glorb
+#    ds = glorb.analysis.Analyze21cm(glorb.run.RadioBackground(**{'zi': 1100, 
+#        'zfl': 6, 'dz': 1}))
+#    pl.loglog(ds.data['z'], ds.data['Tk'], color='g', label='cosmorec')
+#    pl.loglog(ds.data['z'], ds.data['Ts'], color='g', ls='--')    
+#except:
+#    pass
     
 pl.legend(frameon=False, loc='lower right')    
 raw_input('')    

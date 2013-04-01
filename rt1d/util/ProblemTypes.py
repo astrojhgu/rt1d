@@ -55,14 +55,13 @@ def ProblemType(ptype):
               "grid_cells": 1,
               "length_units": 1e-4*cm_per_kpc, # 100 milliparsecs 
               "start_radius": 0.99, # cell = 1 milliparsec across
-              "dtDataDump": 1, 
-              "dzDataDump": 1,
+              "dtDataDump": 10., 
+              "dzDataDump": 5.,
               "initial_redshift": 1e3,
               "initial_ionization": [0.049],
               "final_redshift": 10,
               "stop_time": 450.,
               "restricted_timestep": ['electrons', 'ions', 'energy', 'hubble'],
-              "epsilon_dt": 0.05
              }
     
     # RT06-0.3, Single zone ionization/heating, then source switches off.

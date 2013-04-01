@@ -67,6 +67,14 @@ class RadiationSource:
         self.multi_group = self.discrete and self.SpectrumPars['multigroup'][0] 
         self.multi_freq = self.discrete and not self.SpectrumPars['multigroup'][0] 
 
+        # See if source emits ionizing photons (component by component)
+        self.ionizing = self.SpectrumPars['Emax'] > E_LL
+        
+        # Just a set of power-laws? (only for photons below 13.6 eV)
+        self.plseries = np.all(np.array(self.SpectrumPars['type']) == 1) and \
+                        np.all(np.array(self.SpectrumPars['Emax']) < E_th[0])
+
+
         self._initialize()
         if init_tabs:
             self.create_integral_table(logN=logN) 
@@ -584,13 +592,42 @@ class RadiationSource:
         Normalize each component of spectrum to some fraction of the bolometric luminosity.
         """
         
-        Lbol = self.BolometricLuminosity(t)
+        if self.SourcePars['type'] >= 0:
+            Lbol = self.BolometricLuminosity(t)
+        else:
+            Lbol = 1.0
         
         normalizations = np.zeros(self.N)
-        for i, component in enumerate(self.SpectrumPars['type']):                        
-            integral, err = quad(self.Intensity, self.SpectrumPars['EminNorm'][i], 
-                self.SpectrumPars['EmaxNorm'][i], args = (i, component, t,))
-            normalizations[i] = self.SpectrumPars['fraction'][i] * Lbol / integral
+        
+        # Series of power-laws - enforce continuity
+        if self.plseries:
+            
+            # Stitch Lyman-series PLs together
+            for i, component in enumerate(self.SourcePars['type']):
+                if i == 0:
+                    normalizations[i] = 1.0
+                else:
+                    normalizations[i] = self.Intensity(self.SpectrumPars['Emax'][i-1], 
+                    i - 1) / self.Intensity(self.SpectrumPars['Emin'][i], i)
+                
+            # Normalize them    
+            integral = 0
+            for i, component in enumerate(self.SpectrumPars['type']):
+                tmp, err = quad(self._Intensity, self.SpectrumPars['EminNorm'][i], 
+                    self.SpectrumPars['EmaxNorm'][i], args = (i,))    
+                
+                integral += tmp * normalizations[i]
+                
+            normalizations *= (1.0 / integral)    
+                
+        # General spectrum, continuity not requried
+        else:        
+            for i, component in enumerate(self.SpectrumPars['type']):                        
+                integral, err = quad(self.Intensity, 
+                    self.SpectrumPars['EminNorm'][i], 
+                    self.SpectrumPars['EmaxNorm'][i], args = (i, component, t,))
+                normalizations[i] = self.SpectrumPars['fraction'][i] * Lbol \
+                    / integral
             
         return normalizations
         

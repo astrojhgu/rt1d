@@ -42,7 +42,8 @@ m_e = 9.10938188e-28     		# Electron mass - [m_e] = g
 m_p = 1.67262158e-24    		# Proton mass - [m_p] = g
 m_n = 1.67492729e-24            # Neutron mass - [m_n] = g
 sigma_T = 6.65e-25			    # Cross section for Thomson scattering - [sigma_T] = cm^2
-alpha = 1 / 137.035999070 		# Fine structure constant - unitless
+alpha_FS = 1 / 137.035999070    # Fine structure constant - unitless
+Ryd = 2.1798719e-11             # Rydberg in cgs units
 
 erg_per_ev = e / erg_per_j
 erg_per_kev = 1e3 * erg_per_ev
@@ -59,7 +60,13 @@ nu_alpha = 2.47e15              # Rest frequency of Lyman-alpha - [nu_alpha] = H
 T_star = 0.068 				    # Corresponding temperature difference between HI hyperfine states - [T_star] = K
 a_0 = 5.292e-9 				    # Bohr radius - [a_0] = cm
 f12 = 0.4162                    # Lyman-alpha oscillator strength
-E_LyA = h * nu_alpha / erg_per_ev
+E_LyA = h * c / (1216. * 1e2 / 1e10) / erg_per_ev
+E_LyB = h * c / (1026. * 1e2 / 1e10) / erg_per_ev
+E_LL = Ryd / erg_per_ev
+nu_alpha = E_LyA * erg_per_ev / h
+nu_beta = E_LyB * erg_per_ev / h
+nu_LL = E_LL * erg_per_ev / h
+dnu = nu_LL - nu_alpha
 
 # Helium
 m_He = m_HeI = 2.0 * (m_p + m_n + m_e)

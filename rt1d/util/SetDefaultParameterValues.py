@@ -150,7 +150,7 @@ def ControlParameters():
         "stop_time": 500,
         "initial_redshift": 20.,
         "final_redshift": 6.,
-        "initial_timestep": 1e-6,
+        "initial_timestep": 1e-8,
         "max_timestep": 1.,
         "restricted_timestep": ['ions'],
         

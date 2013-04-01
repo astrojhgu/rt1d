@@ -62,14 +62,12 @@ class RadiationField:
         for src in self.srcs:
             self.all_diffuse *= int(src.SourcePars['type'] == 3)        
             
-    def SourceDependentCoefficients(self, data, t):
+    def SourceDependentCoefficients(self, data, t, *args):
         """
         Compute rate coefficients for photo-ionization, secondary ionization, 
         and photo-heating.
         """
         
-        z = None # One day, compute current redshift ;)
-
         self.k_H = np.array(self.Ns*[np.zeros_like(self.grid.zeros_grid_x_absorbers)])
         self.Gamma = np.array(self.Ns*[np.zeros_like(self.grid.zeros_grid_x_absorbers)])
         self.gamma = np.array(self.Ns*[np.zeros_like(self.grid.zeros_grid_x_absorbers2)])

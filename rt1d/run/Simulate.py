@@ -13,6 +13,7 @@ Description: Run a simulation.
 import rt1d
 import numpy as np
 from ..util import parse_kwargs, ReadParameterFile
+from ..physics.Constants import s_per_myr
     
 class Simulation:
     """
@@ -64,8 +65,12 @@ class Simulation:
             
             # For storing data
             self.checkpoints = rt1d.util.CheckPoints(pf=pf, grid=grid,
-                dtDataDump=pf['dtDataDump'], time_units=pf['time_units'],
+                dtDataDump=pf['dtDataDump'], 
+                dzDataDump=pf['dzDataDump'], 
+                time_units=pf['time_units'],
                 stop_time=pf['stop_time'], 
+                final_redshift=pf['final_redshift'],
+                initial_redshift=pf['initial_redshift'],
                 initial_timestep=pf['initial_timestep'],
                 logdtDataDump=pf['logdtDataDump'], 
                 source_lifetime=pf['source_lifetime'])
@@ -90,9 +95,13 @@ class Simulation:
         """ Evolve chemistry and radiative transfer. """
         
         data = self.grid.data.copy()
-        dt = self.pf['time_units'] * self.pf['initial_timestep']
         t = 0.0
+        dt = self.pf['time_units'] * self.pf['initial_timestep']
         tf = self.pf['stop_time'] * self.pf['time_units']
+        z = self.pf['initial_redshift']
+        dz = self.pf['dzDataDump']
+        zf = self.pf['final_redshift']
+                
         max_timestep = self.pf['time_units'] * self.pf['max_timestep']
         
         print '\nSolving radiative transfer...'
@@ -100,14 +109,14 @@ class Simulation:
         dt_history = []
         pb = rt1d.run.ProgressBar(tf)
         while t < tf:
-                    
-            z = None                 
-            if self.grid.expansion:
-                z = self.grid.cosm.TimeToRedshiftConverter(0, t, self.grid.zi)                         
-                                            
+                                         
             # Evolve by dt
-            data = self.rt.Evolve(data, t = t, dt = dt)
+            data = self.rt.Evolve(data, t=t, dt=dt)
             t += dt 
+            
+            if self.grid.expansion:
+                z -= dt / self.grid.cosm.dtdz(z)
+                #print z
             
             tau_tot = None
             if hasattr(self.rt, 'rfield'):
@@ -116,18 +125,25 @@ class Simulation:
             # Figure out next dt based on max allowed change in evolving fields
             new_dt = self.timestep.Limit(self.rt.chem.q_grid, 
                 self.rt.chem.dqdt_grid, z=z, tau=tau_tot, 
-                tau_ifront=self.pf['tau_ifront'], 
+                tau_ifront=self.pf['tau_ifront'],
                 method=self.pf['restricted_timestep'])
             
             # Limit timestep further based on next DD and max allowed increase
             dt = min(new_dt, 2 * dt)
-            dt = min(self.checkpoints.update(data, t, dt), max_timestep)
+            dt = min(self.checkpoints.next_dt(t, dt), max_timestep)
+            
+            # Limit timestep based on next RD
+            if self.checkpoints.redshift_dumps:
+                dz = self.checkpoints.next_dz(z, dz)
+                dt = min(dt, dz*self.grid.cosm.dtdz(z))
+                                
+            self.checkpoints.update(data, t, z)
                     
             # Save timestep history
             dt_history.append((t, dt))
             
             if self.pf['save_rate_coefficients']:
-                self.checkpoints.store_kwargs(t, self.rt.kwargs)
+                self.checkpoints.store_kwargs(t, z, self.rt.kwargs)
                 
             # Raise error if any funny stuff happens
             if dt < 0: 

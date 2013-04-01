@@ -5,8 +5,8 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on 2010-03-01.
 
-Description: Cosmology calculator based on Peebles 1993, with additions from Britton Smith's cosmology 
-calculator in the Enzo analysis toolkit yt.
+Description: Cosmology calculator based on Peebles 1993, with additions from 
+Britton Smith's cosmology calculator in yt.
 
 Notes: 
       -Everything here uses cgs.
