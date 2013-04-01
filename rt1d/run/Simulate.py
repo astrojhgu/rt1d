@@ -116,7 +116,6 @@ class Simulation:
             
             if self.grid.expansion:
                 z -= dt / self.grid.cosm.dtdz(z)
-                #print z
             
             tau_tot = None
             if hasattr(self.rt, 'rfield'):
@@ -154,6 +153,9 @@ class Simulation:
                 raise ValueError('ERROR: dt -> inf.')      
                 
             pb.update(t)
+            
+            if z <= self.pf['final_redshift']:
+                break
                 
         pb.finish()
             

@@ -74,7 +74,6 @@ class RadiationSource:
         self.plseries = np.all(np.array(self.SpectrumPars['type']) == 1) and \
                         np.all(np.array(self.SpectrumPars['Emax']) < E_th[0])
 
-
         self._initialize()
         if init_tabs:
             self.create_integral_table(logN=logN) 

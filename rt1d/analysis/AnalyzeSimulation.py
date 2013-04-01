@@ -48,7 +48,7 @@ class Simulation:
             self.grid = Grid(dims = self.pf['grid_cells'], 
                 length_units = self.pf['length_units'], 
                 start_radius = self.pf['start_radius'])
-            self.grid.set_ics(self.data[0])
+            self.grid.set_ics(self.data['dd0000'])
             self.grid.initialize(self.pf)
         
         # Read contents from CheckPoints class instance            
@@ -106,12 +106,12 @@ class Simulation:
             if T0 is not None: 
                 T = T0
             else: 
-                T = self.data[0]['T'][0]
+                T = self.data['dd0000']['T'][0]
                 
             n_H = self.grid.n_H[0]
             self.Qdot = self.pf['source_qdot']
             self.alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
-            self.trec = 1. / self.alpha_HII / self.data[0]['h_1'][0] / n_H # s
+            self.trec = 1. / self.alpha_HII / self.data['dd0000']['h_1'][0] / n_H # s
             self.rs = (3. * self.Qdot \
                     / 4. / np.pi / self.alpha_HII / n_H**2)**(1. / 3.)  # cm
         
@@ -135,13 +135,22 @@ class Simulation:
         """    
                 
         # First locate I-front for all data dumps and compute analytic solution
-        self.t = np.zeros(len(self.data) - 1) # Exclude dd0000
-        self.rIF = np.zeros_like(self.t)
-        self.ranl = np.zeros_like(self.t)
-        for i, dd in enumerate(self.data.keys()[1:]): 
-            self.t[i] = self.data[dd]['time']
-            self.rIF[i] = self.LocateIonizationFront(dd) / cm_per_kpc
-            self.ranl[i] = self.StromgrenSphere(self.data[dd]['time'], T0 = T0) / cm_per_kpc
+        self.t = []
+        self.rIF = []
+        self.ranl = []
+        for i, dd in enumerate(self.data.keys()):
+            if dd == 'dd0000':
+                continue
+                 
+            self.t.append(self.data[dd]['time'])
+            self.rIF.append(self.LocateIonizationFront(dd) / cm_per_kpc)
+            self.ranl.append(self.StromgrenSphere(self.data[dd]['time'], 
+                T0=T0) / cm_per_kpc)
+                
+        order = np.argsort(self.t)
+        self.t = np.array(self.t)[order]
+        self.rIF = np.array(self.rIF)[order]
+        self.ranl = np.array(self.ranl)[order]
                 
     def PlotIonizationFrontEvolution(self, mp = None, anl = True, T0 = None, 
         color = 'k', ls = '--', label = None, plot_error = True, plot_solution = True):
@@ -478,7 +487,7 @@ class Simulation:
         """ Evaluate derivative of `field' with respect to `wrt' at z. """
         
         if wrt in ['t', 'z', 'logt', 'logz']:
-            t, z, val = self.CellTimeEvolution(cell=cell, field=field)
+            t, z, val = self.CellEvolution(cell=cell, field=field)
         
         # Take all derivatives wrt z, convert afterwards
         x = self.data_asc['z']

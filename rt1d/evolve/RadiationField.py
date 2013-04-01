@@ -27,8 +27,15 @@ class RadiationField:
             self._initialize()
         
     def _initialize(self):    
-            
         self.Ns = len(self.srcs)
+        
+        # See if all sources are diffuse
+        self.all_diffuse = 1
+        for src in self.srcs:
+            self.all_diffuse *= int(src.SourcePars['type'] == 3)
+            
+        if self.all_diffuse:
+            return
         
         self.sigma_th = {}
         for absorber in self.grid.absorbers:
@@ -56,11 +63,6 @@ class RadiationField:
             else:
                 self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_mid**2
                 self.pp_corr = 4. * np.pi * self.grid.r_mid**2
-                
-        # See if all sources are diffuse
-        self.all_diffuse = 1
-        for src in self.srcs:
-            self.all_diffuse *= int(src.SourcePars['type'] == 3)        
             
     def SourceDependentCoefficients(self, data, t, *args):
         """
@@ -110,8 +112,8 @@ class RadiationField:
                 continue
                 
             if src.SourcePars['type'] == 3:
-                self.Gamma[h] = src.ionization_rate(z)
-                self.k_H[h] = src.heating_rate(z)
+                self.Gamma[h] = src.ionization_rate(z, *args)
+                self.k_H[h] = src.heating_rate(z, *args)
                 continue    
                 
             self.h = h

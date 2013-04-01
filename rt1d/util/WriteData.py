@@ -28,8 +28,8 @@ GlobalDir = os.getcwd()
 class CheckPoints:
     def __init__(self, pf=None, grid=None, time_units=s_per_myr,
         dtDataDump=5., dzDataDump=None, logdtDataDump=None, logdzDataDump=None,
-        stop_time=100,
-        initial_timestep=None, source_lifetime=None,
+        stop_time=100.,
+        initial_timestep=1.0, source_lifetime=np.inf,
         final_redshift=None, initial_redshift=None):
         self.pf = pf
         self.data = {}

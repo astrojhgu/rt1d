@@ -146,7 +146,9 @@ def ControlParameters():
         {
         "epsilon_dt": 0.05,
         "dtDataDump": 1,
+        "dzDataDump": None,
         'logdtDataDump': None,
+        'logdzDataDump': None,
         "stop_time": 500,
         "initial_redshift": 20.,
         "final_redshift": 6.,

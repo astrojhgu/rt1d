@@ -249,6 +249,12 @@ class Grid:
         if not hasattr(self, '_cosm'):
             self._cosm = Cosmology()
         return self._cosm
+    
+    @property
+    def recombination_method(self):
+        if not hasattr(self, '_recombination_method'):
+            self._recombination_method = 'B'
+        return self._recombination_method        
         
     def ColumnDensity(self, data):
         """
@@ -284,6 +290,9 @@ class Grid:
             self.make_clump(position = pf['clump_position'], radius = pf['clump_radius'], 
                 temperature = pf['clump_temperature'], overdensity = pf['clump_overdensity'],
                 ionization = pf['clump_ionization'], profile = pf['clump_profile'])
+        
+    def set_recombination(self, case='B'):
+        self._recombination_method = case    
         
     def set_chem(self, Z=1, abundance=[1.0], isothermal=False):
         """

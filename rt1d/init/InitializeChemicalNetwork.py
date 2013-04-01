@@ -167,7 +167,7 @@ class SimpleChemicalNetwork:
         self.grid = grid
         
         from ..physics.ComputeRateCoefficients import RateCoefficients
-        self.coeff = RateCoefficients()
+        self.coeff = RateCoefficients(grid)
 
         self.isothermal = self.grid.isothermal
         self.expansion = self.grid.expansion       
