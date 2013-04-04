@@ -29,7 +29,7 @@ small_number = 1e-3
 big_number = 1e5
 
 sptypes = {'poly': 0, 'bb': 1, 'mcd': 2, 'pl': 3, 'qso': 4, 
-    'user': 5, 'background': 6}
+    'user': 5}
 srctypes = {'test': 0, 'star': 1, 'bh': 2, 'diffuse': 3}
 
 class RadiationSource:
@@ -39,10 +39,10 @@ class RadiationSource:
                 
         # Modify parameter file if spectrum_file provided
         self._load_spectrum()        
-                
-        # Create Source/SpectrumPars attributes    
-        self.SourcePars = sort(self.pf, prefix = 'source', make_list = False)
-        self.SpectrumPars = sort(self.pf, prefix = 'spectrum')
+                                
+        # Create Source/SpectrumPars attributes
+        self.SourcePars = sort(self.pf, prefix='source', make_list=False)
+        self.SpectrumPars = sort(self.pf, prefix='spectrum')
                         
         # Number of spectral components
         self.N = len(self.SpectrumPars['type'])
@@ -68,7 +68,8 @@ class RadiationSource:
         self.multi_freq = self.discrete and not self.SpectrumPars['multigroup'][0] 
 
         # See if source emits ionizing photons (component by component)
-        self.ionizing = self.SpectrumPars['Emax'] > E_LL
+        self.ionizing = np.array(self.SpectrumPars['Emax']) > E_LL
+        # Should also be function of absorbers
         
         # Just a set of power-laws? (only for photons below 13.6 eV)
         self.plseries = np.all(np.array(self.SpectrumPars['type']) == 1) and \
@@ -85,6 +86,7 @@ class RadiationSource:
         
         if self.SourcePars['type'] == 3:
             self.ionization_rate = evolve(self.SourcePars['ion'])
+            self.secondary_ionization_rate = evolve(self.SourcePars['ion2'])
             self.heating_rate = evolve(self.SourcePars['heat'])
         
         self.Emin = min(self.SpectrumPars['Emin'])
@@ -133,8 +135,8 @@ class RadiationSource:
             self.Lbol = self.BolometricLuminosity(0.0)    
              
         # Normalize spectrum
-        if self.SourcePars['type'] < 3:
-            self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
+        #if self.SourcePars['type'] < 3:
+        self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
         
         if self.pf['optically_thin']:
             self.E = self.hnu_bar    
@@ -157,7 +159,8 @@ class RadiationSource:
         self.r_out = self.SourcePars['rmax'] * self.GravitationalRadius(self.M0)
         self.fcol = self.SpectrumPars['fcol'][self.SpectrumPars['type'].index(3)]
         self.T_in = self.DiskInnermostTemperature(self.M0)
-        self.T_out = self.DiskTemperature(self.M0, self.r_out)    
+        self.T_out = self.DiskTemperature(self.M0, self.r_out)
+        self.Lbol = self.BolometricLuminosity(0.0)
         
     def _init_agn_template(self):
         self.Alpha = 0.24
@@ -276,7 +279,7 @@ class RadiationSource:
             self._qdot_bar_all = np.zeros_like(self.grid.zeros_absorbers)
             for i, absorber in enumerate(self.grid.absorbers):
                 self._hnu_bar_all[i], self._qdot_bar_all[i] = \
-                    self.FrequencyAveragedBin(absorber = absorber)
+                    self.FrequencyAveragedBin(absorber=absorber)
             
         return self._hnu_bar_all
     
@@ -517,14 +520,14 @@ class RadiationSource:
             
         return emission
         
-    def BlackBody(self, E, T = None):
+    def BlackBody(self, E, T=None):
         """
         Returns specific intensity of blackbody at self.T.
         """
         
         if T is None:
             T = self.T
-        
+                    
         nu = E * erg_per_ev / h
         return 2.0 * h * nu**3 / c**2 / (np.exp(h * nu / k_B / T) - 1.0)
         
@@ -534,7 +537,7 @@ class RadiationSource:
         at E, not the number of photons.  
         """
 
-        return E**-self.SpectrumPars['alpha'][i]
+        return E**self.SpectrumPars['alpha'][i]
     
     def MultiColorDisk(self, E, i, Type, t = 0.0):
         """
@@ -591,10 +594,10 @@ class RadiationSource:
         Normalize each component of spectrum to some fraction of the bolometric luminosity.
         """
         
-        if self.SourcePars['type'] >= 0:
+        if self.SourcePars['type'] < 3:
             Lbol = self.BolometricLuminosity(t)
         else:
-            Lbol = 1.0
+            return np.ones(self.N)
         
         normalizations = np.zeros(self.N)
         
@@ -619,7 +622,7 @@ class RadiationSource:
                 
             normalizations *= (1.0 / integral)    
                 
-        # General spectrum, continuity not requried
+        # General spectrum, continuity of components not requried
         else:        
             for i, component in enumerate(self.SpectrumPars['type']):                        
                 integral, err = quad(self.Intensity, 
@@ -630,10 +633,11 @@ class RadiationSource:
             
         return normalizations
         
-    def BolometricLuminosity(self, t = 0.0, M = None):
+    def BolometricLuminosity(self, t=0.0, M=None):
         """
-        Returns the bolometric luminosity of a source in units of erg/s.  For accreting black holes, the 
-        bolometric luminosity will increase with time, hence the optional 't' argument.
+        Returns the bolometric luminosity of a source in units of erg/s.  
+        For accreting black holes, the bolometric luminosity will increase 
+        with time, hence the optional 't' and 'M' arguments.
         """        
         
         if not self.variable:
@@ -655,9 +659,12 @@ class RadiationSource:
                 Mnow = M
             return self.epsilon * 4.0 * np.pi * G * Mnow * g_per_msun * m_p \
                 * c / sigma_T
+        
+        if self.SourcePars['type'] == 3:
+            return 1.0        
                 
-    def FrequencyAveragedBin(self, absorber = 'h_1', Emin = None, Emax = None,
-        energy_weighted = False):
+    def FrequencyAveragedBin(self, absorber='h_1', Emin=None, Emax=None,
+        energy_weighted=False):
         """
         Bolometric luminosity / number of ionizing photons in spectrum in bandpass
         spanning interval (Emin, Emax). Returns mean photon energy and number of 
@@ -665,7 +672,8 @@ class RadiationSource:
         """     
         
         if Emin is None:
-            Emin = max(self.grid.ioniz_thresholds[absorber], self.Emin)
+            Emin = max(self.grid.ioniz_thresholds[absorber], 
+                np.array(self.SpectrumPars['Emin'])[self.ionizing])
         if Emax is None:
             Emax = self.Emax
             

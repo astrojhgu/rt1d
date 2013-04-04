@@ -16,14 +16,7 @@ import numpy as np
 class RateCoefficients:
     def __init__(self, grid, source='fk94'):
         self.grid = grid
-        self.cosm = grid.cosm   
-        
-    @property
-    def RecombinationMethod(self):    
-        if self.pf is not None:
-            return self.pf['recombination']
-        else:
-            return 'B'          
+        self.cosm = grid.cosm       
         
     def CollisionalIonizationRate(self, species, T):
         """
@@ -45,14 +38,14 @@ class RateCoefficients:
         refers to HII, HeII, and HeIII.
         """
         
-        if self.grid.recombination_method == 'A':
+        if self.grid.recombination == 'A':
             if species == 0:
                 return 6.28e-11 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 1e6)**0.7)**-1.
             elif species == 1:
                 return 1.5e-10 * T**-0.6353
             elif species == 2:
                 return 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4e6)**0.7)**-1.
-        elif self.grid.recombination_method == 'B':
+        elif self.grid.recombination == 'B':
             if species == 0:
                 return 2.6e-13 * (T / 1.e4)**-0.85 
             elif species == 1:

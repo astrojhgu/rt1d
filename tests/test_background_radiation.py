@@ -6,7 +6,7 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Tue Mar 26 22:10:28 2013
 
-Description: 
+Description: Add constant background ionizing field.
 
 """
 

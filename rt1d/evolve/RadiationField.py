@@ -46,7 +46,7 @@ class RadiationField:
         for src in self.srcs:
             if src.continuous:
                 self.sigma.append(None)
-                continue                
+                continue
 
             self.sigma.append((np.ones([self.grid.dims, src.Nfreq]) \
                    * src.sigma).T)
@@ -64,7 +64,7 @@ class RadiationField:
                 self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_mid**2
                 self.pp_corr = 4. * np.pi * self.grid.r_mid**2
             
-    def SourceDependentCoefficients(self, data, t, *args):
+    def SourceDependentCoefficients(self, data, t, z=None, **kwargs):
         """
         Compute rate coefficients for photo-ionization, secondary ionization, 
         and photo-heating.
@@ -104,7 +104,7 @@ class RadiationField:
                     self.NdN[i] = tmp
                     del tmp
                 
-                self.logNdN = np.log10(self.NdN)                  
+                self.logNdN = np.log10(self.NdN)
                           
         # Loop over sources
         for h, src in enumerate(self.srcs):        
@@ -112,8 +112,9 @@ class RadiationField:
                 continue
                 
             if src.SourcePars['type'] == 3:
-                self.Gamma[h] = src.ionization_rate(z, *args)
-                self.k_H[h] = src.heating_rate(z, *args)
+                self.Gamma[h] = src.ionization_rate(z, **kwargs)
+                self.gamma[h] = src.secondary_ionization_rate(z, **kwargs)
+                self.k_H[h] = src.heating_rate(z, **kwargs)
                 continue    
                 
             self.h = h
@@ -173,8 +174,8 @@ class RadiationField:
             if not self.pf['isothermal'] and self.pf['secondary_ionization'] < 2:
                 self.PsiN = {}
                 self.PsiNdN = {}
-                self.fheat = self.esec.DepositionFraction(0.0, data['h_2'], 
-                    channel = 'heat')
+                self.fheat = self.esec.DepositionFraction(data['h_2'], 
+                    channel='heat')
                 
             self.logx = None            
             if self.pf['secondary_ionization'] > 1:
@@ -199,8 +200,9 @@ class RadiationField:
             else:
                 self.fion = {}
                 for absorber in self.grid.absorbers:
-                    self.fion[absorber] = self.esec.DepositionFraction(E = None, 
-                        xHII = data['h_2'], channel = absorber)
+                    self.fion[absorber] = \
+                        self.esec.DepositionFraction(xHII=data['h_2'], 
+                            channel=absorber)
                             
             # Loop over absorbing species, compute tabulated quantities
             for i, absorber in enumerate(self.grid.absorbers):
@@ -324,8 +326,8 @@ class RadiationField:
             if self.grid.isothermal:
                 continue
                  
-            fheat = self.esec.DepositionFraction(E = E,
-                xHII = data['h_2'], channel = 'heat')
+            fheat = self.esec.DepositionFraction(xHII=data['h_2'], 
+                E=E, channel='heat')
             
             # Total energy deposition rate per atom i via photo-electrons 
             # due to ionizations by *this* energy group. 
@@ -347,8 +349,8 @@ class RadiationField:
                     self.sigma_th[otherabsorber]:
                     continue    
                 
-                fion = self.esec.DepositionFraction(E = E, 
-                    xHII = data['h_2'], channel = absorber)
+                fion = self.esec.DepositionFraction(xHII=data['h_2'], 
+                    E=E, channel=absorber)
 
                 # (This k) = i from paper, and (this i) = j from paper
                 gamma[...,k,i] += ee * fion \

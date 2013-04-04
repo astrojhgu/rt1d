@@ -14,13 +14,14 @@ Gnedin, & Shull (2002) also available.
 
 import h5py, os
 import numpy as np
+from collections import Iterable
 
 # If anything is identically zero for methods 2 and 3, 
 # our spline will get screwed up since log(0) = inf
 tiny_number = 1e-20
 
 class SecondaryElectrons:
-    def __init__(self, method = 0):
+    def __init__(self, method=0):
         self.Method = method
 
         if self.Method == 3:
@@ -46,7 +47,7 @@ class SecondaryElectrons:
             
             f.close()
 
-    def DepositionFraction(self, E, xHII, channel = 'heat'):
+    def DepositionFraction(self, xHII, E=None, channel = 'heat'):
         """
         Return the fraction of secondary electron energy deposited as heat, or further ionizations.
         The parameter 'channel' determines which we want, and could be:
@@ -64,10 +65,10 @@ class SecondaryElectrons:
             
         """
         
-        if type(xHII) in [int, float, np.float64]:
+        if not isinstance(xHII, Iterable):
             xHII = np.array([xHII])
                     
-        if E == 0.0: 
+        if E is None: 
             E = tiny_number
         
         if self.Method == 0:

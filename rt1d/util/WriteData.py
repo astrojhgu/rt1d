@@ -101,7 +101,7 @@ class CheckPoints:
             self.store_ics(grid.data)
         
     def store_ics(self, data):
-        """ 
+        """
         Write initial conditions. If redshift dumps wanted, store
         initial dataset as both dd and rd.
         """

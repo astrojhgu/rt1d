@@ -27,30 +27,50 @@ class Simulation:
             pf = parse_kwargs(**pf)
         else:
             pf = parse_kwargs(**{'problem_type': 1})
-            
+                        
         self.pf = pf
         
         # Initialize grid object
         if init_grid:
-            grid = rt1d.Grid(dims = pf['grid_cells'], 
-                length_units = pf['length_units'], 
-                start_radius = pf['start_radius'])
+            grid = rt1d.Grid(dims=pf['grid_cells'], 
+                length_units=pf['length_units'], 
+                start_radius=pf['start_radius'])
+            
+            grid.set_physics(isothermal=pf['isothermal'], 
+                compton_scattering=pf['compton_scattering'],
+                secondary_ionization=pf['secondary_ionization'], 
+                expansion=pf['expansion'], 
+                recombination=pf['recombination'])
             
             # Set initial conditions
             if pf['expansion']:
-                grid.set_cosmology(zi=pf['initial_redshift'],
-                    compton_scattering=pf['compton_scattering'],
-                    xi = pf['initial_ionization'][0])
+                grid.set_cosmology(initial_redshift=pf['initial_redshift'],
+                    OmegaMatterNow=pf['OmegaMatterNow'], 
+                    OmegaLambdaNow=pf['OmegaLambdaNow'], 
+                    OmegaBaryonNow=pf['OmegaBaryonNow'],
+                    HubbleParameterNow=pf['HubbleParameterNow'],
+                    HeliumFractionByMass=pf['HeliumFractionByMass'], 
+                    CMBTemperatureNow=pf['CMBTemperatureNow'])    
+                grid.set_chemistry(Z=pf['Z'], abundance=pf['abundances'])
+                grid.set_density(grid.cosm.rho_b_z0 \
+                    * (1. + pf['initial_redshift'])**3)
+                grid.set_temperature(grid.cosm.TCMB(pf['initial_redshift']))
+                
+                for i, Z in enumerate(pf['Z']):
+                    grid.set_ionization(Z=Z, x=pf['initial_ionization'][i])
+                
+                grid.data['n'] = grid.particle_density(grid.data, 
+                    z=pf['initial_redshift'])
+                    
             else:
-                grid.set_chem(Z = pf['species'], abundance = pf['abundances'], 
-                    isothermal = pf['isothermal'])
-                grid.set_rho(rho0 = pf['density_units'])
+                grid.set_chemistry(Z=pf['Z'], abundance=pf['abundances'])
+                grid.set_density(pf['density_units'])
                 
-                for i in xrange(len(pf['species'])):
-                    grid.set_x(Z = pf['species'][i], 
-                        x = pf['initial_ionization'][i])       
+                for i, Z in enumerate(pf['Z']):
+                    grid.set_ionization(Z=Z, x=pf['initial_ionization'][i])
                 
-                grid.set_T(pf['initial_temperature'])
+                grid.set_temperature(pf['initial_temperature'])
+                grid.data['n'] = grid.particle_density(grid.data)
                 
                 if pf['clump']:
                     grid.make_clump(position=pf['clump_position'], 
@@ -111,7 +131,7 @@ class Simulation:
         while t < tf:
                                          
             # Evolve by dt
-            data = self.rt.Evolve(data, t=t, dt=dt)
+            data = self.rt.Evolve(data, t=t, dt=dt, z=z)
             t += dt 
             
             if self.grid.expansion:
@@ -143,14 +163,6 @@ class Simulation:
             
             if self.pf['save_rate_coefficients']:
                 self.checkpoints.store_kwargs(t, z, self.rt.kwargs)
-                
-            # Raise error if any funny stuff happens
-            if dt < 0: 
-                raise ValueError('ERROR: dt < 0.') 
-            elif dt == 0:
-                raise ValueError('ERROR: dt = 0.')  
-            elif np.isnan(dt):  
-                raise ValueError('ERROR: dt -> inf.')      
                 
             pb.update(t)
             

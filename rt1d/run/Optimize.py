@@ -45,7 +45,7 @@ class Optimization:
         
         # Use Grid class to carry info about absorbing species
         self.grid = rt1d.Grid()
-        self.grid.set_chem(Z=self.Z, isothermal=self.isothermal, 
+        self.grid.set_chemistry(Z=self.Z, isothermal=self.isothermal, 
             secondary_ionization=self.secondary_ionization)
         
         # Initialize radiation source

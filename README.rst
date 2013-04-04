@@ -9,6 +9,9 @@ X-ray photons you can think of. A paper including some discussion of its
 inner-workings can be found 
 `here <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
 
+Be warned: this code is still under active development -- use at your own risk! 
+Correctness of results is not guaranteed.
+
 Getting started
 ---------------
 To clone a copy and install: ::

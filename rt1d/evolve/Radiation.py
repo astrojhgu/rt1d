@@ -37,14 +37,14 @@ class Radiation:
         
         return True
     
-    def Evolve(self, data, t, dt, *args):
+    def Evolve(self, data, t, dt, z=None, **kwargs):
         """
         This routine calls our solvers and updates 'data' -> 'newdata'
         """
         
         # Make data globally accessible
         self.data = data
-        
+                
         # Figure out which processors will solve which cells and create newdata dict
         #self.solve_arr, newdata = self.control.DistributeDataAcrossProcessors(data, lb)
         
@@ -52,7 +52,7 @@ class Radiation:
         self.kwargs = {}
         if self.pf['radiative_transfer']:
             Gamma_src, gamma_src, Heat_src = \
-                self.rfield.SourceDependentCoefficients(data, t, *args)
+                self.rfield.SourceDependentCoefficients(data, t, z, **kwargs)
 
             if len(self.srcs) > 1:
                 for i, src in enumerate(self.srcs):

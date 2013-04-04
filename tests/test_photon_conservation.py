@@ -12,6 +12,7 @@ algorithms.
 """
 
 import rt1d
+import pylab as pl
 
 m_H = rt1d.physics.Constants.m_H
 density_units = 1e-3 * m_H
@@ -33,8 +34,8 @@ for i, x in enumerate([1, 2, 4, 8, 16]):
     sim1.run()
     sim2.run()
     
-    pc.append(rt1d.analyze.Simulation(sim1))
-    pc2.append(rt1d.analyze.Simulation(sim12))
+    pc.append(rt1d.analyze.Simulation(sim1.checkpoints))
+    npc.append(rt1d.analyze.Simulation(sim2.checkpoints))
     
     del sim1, sim2
     

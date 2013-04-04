@@ -438,12 +438,12 @@ class IntegralTable:
         # Otherwise, continuous spectrum                
         if self.pf['photon_conserving']:
             integrand = lambda E: \
-                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
+                self.esec.DepositionFraction(x,E=E-Ei, channel='heat') * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E
         else:
             integrand = lambda E: \
-                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
+                self.esec.DepositionFraction(x, E=E-Ei, channel='heat') * \
                 PhotoIonizationCrossSection(E, absorber) * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E \
@@ -470,12 +470,12 @@ class IntegralTable:
         # Otherwise, continuous spectrum    
         if self.pf['photon_conserving']:
             integrand = lambda E: \
-                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
+                self.esec.DepositionFraction(x, E=E-Ei, channel='heat') * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0])
         else:
             integrand = lambda E: \
-                self.esec.DepositionFraction(E - Ei, x, channel = 'heat') * \
+                self.esec.DepositionFraction(x, E=E-Ei, channel='heat') * \
                 PhotoIonizationCrossSection(E, species) * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) \
@@ -502,7 +502,7 @@ class IntegralTable:
         # Otherwise, continuous spectrum                
         if self.pf['photon_conserving']:
             integrand = lambda E: \
-                self.esec.DepositionFraction(E - Ej, x, channel = absorber) * \
+                self.esec.DepositionFraction(x, E=E-Ej, channel=absorber) * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E
 
@@ -535,7 +535,7 @@ class IntegralTable:
         # Otherwise, continuous spectrum    
         if self.pf['photon_conserving']:
             integrand = lambda E: \
-                self.esec.DepositionFraction(E - Ej, x, channel = absorber) * \
+                self.esec.DepositionFraction(x, E=E-Ej, channel=absorber) * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0])
         #else:

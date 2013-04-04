@@ -21,7 +21,10 @@ class RadiationSources:
         self.pf = kwargs.copy()
         self.grid = grid
         
-        try:
+        if type(self.pf['source_type']) is not list:
+            self.pf['source_type'] = [self.pf['source_type']]
+            
+        try:    
             self.Ns = len(self.pf['source_type'])
         except TypeError:
             self.Ns = 1
@@ -32,15 +35,14 @@ class RadiationSources:
         self.all_sources = self.src = self.initialize_sources(init_tabs)
         
     def initialize_sources(self, init_tabs=True):
-        """
-        Construct list of RadiationSource____ class instances.
-        """    
+        """ Construct list of RadiationSource class instances. """    
         
         sources = []
         for i in xrange(self.Ns):
                         
             sf = self.pf.copy()
             
+            # Construct spectrum_pars
             if self.pf['spectrum_pars'] is not None:
                 try:
                     spars = self.pf['spectrum_pars'][i]
@@ -52,14 +54,16 @@ class RadiationSources:
                         sf.update({'spectrum_%s' % par: spars[par]})            
                     del sf['spectrum_pars']
                         
+            # Add source pars
             for key in sf:
                 if not re.search('source', key):
                     continue
-                if not isinstance(sf[key], Iterable):
-                    continue    
+                if type(sf[key]) is not list:
+                    sf.update({key:sf[key]})
+                    continue
                 
-                sf.update({key: sf[key][i]})                
-                        
+                sf.update({key:sf[key][i]})                       
+                                    
             # Create RadiationSource class instance
             rs = RadiationSource(grid=self.grid, init_tabs=init_tabs[i], **sf)
             

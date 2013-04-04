@@ -22,10 +22,10 @@ T = np.logspace(3, 8, dims)
 grid = rt1d.Grid(dims = dims)
 
 # Set initial conditions
-grid.set_chem(Z = 8, abundance = 'sun_photospheric', isothermal = True)
-grid.set_rho(rho0 = rt1d.Constants.m_H)
-grid.set_T(T)
-grid.set_x(state = 'neutral')  
+grid.set_chemistry(Z = 8, abundance = 'sun_photospheric', isothermal = True)
+grid.set_density(rho0 = rt1d.Constants.m_H)
+grid.set_temperature(T)
+grid.set_ionization(state = 'neutral')  
 
 # Initialize chemistry network / solver
 chem = rt1d.Chemistry(grid, dengo = True)

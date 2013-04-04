@@ -36,14 +36,14 @@ except ImportError:
 tiny_number = 1e-8  # A relatively small species fraction
 
 class Grid:
-    def __init__(self, dims = 64, length_units = cm_per_kpc, 
-        start_radius = 0.01):
+    def __init__(self, dims=64, length_units=cm_per_kpc, start_radius=0.01):
         """ Initialize grid object. """
         
         self.dims = int(dims)
         self.length_units = length_units
         self.start_radius = start_radius
-                
+        
+        # Compute cell centers and edges        
         self.r_edg = self.r = \
             np.linspace(self.R0, length_units, self.dims + 1)
         self.r_int = self.r_edg[0:-1]
@@ -51,7 +51,7 @@ class Grid:
         self.r_mid = rebin(self.r_edg)
         
         self.zi = 0
-        
+                
     @property
     def zeros_absorbers(self):
         return np.zeros(self.N_absorbers)
@@ -70,10 +70,12 @@ class Grid:
                 
     @property
     def R0(self):
+        """ Start radius in lenght_units. """
         return self.start_radius * self.length_units
         
     @property
     def Vsh(self):
+        """ Shell volume in length_units**3. """
         if not hasattr(self, '_Vsh_all'):
             self._Vsh_all = self.ShellVolume(self.r_edg[0:-1], self.dr)
             
@@ -108,13 +110,14 @@ class Grid:
         """ Return list of absorbers (don't include electrons). """
         if not hasattr(self, '_absorbing_species'):
             self._absorbing_species = copy.copy(self.neutrals)
-            for ion in self.ions_by_ion:
-                self._absorbing_species.extend(self.ions_by_ion[ion][1:-1])
+            for ion in self.ions_by_parent:
+                self._absorbing_species.extend(self.ions_by_parent[ion][1:-1])
             
         return self._absorbing_species
         
     @property
     def N_absorbers(self):
+        """ Return number of absorbing species. """
         if not hasattr(self, 'self._num_of_absorbers'):
             absorbers = self.absorbers
             self._num_of_absorbers = int(len(absorbers))
@@ -127,19 +130,19 @@ class Grid:
         if not hasattr(self, '_metals'):
             self._metals = []
             self._metal_ions = []
-            for element in self.ions_by_ion:
+            for element in self.ions_by_parent:
                 if element in ['h', 'he']:
                     continue
                      
                 self._metals.append(element)
-                for ion in self.ions_by_ion[element]:
+                for ion in self.ions_by_parent[element]:
                     self._metal_ions.append(ion)
             
         return self._metals  
         
     @property
     def metal_ions(self):
-        """ Return list of all metal ions."""      
+        """ Return list of all metal (not H or He) ions."""      
         if not hasattr(self, '_metal_ions'):
             all_metals = self.metals
             
@@ -148,19 +151,19 @@ class Grid:
     @property
     def species_abundances(self):
         """
-        Return dictionary containing abundances of all ions' parent
-        element.
+        Return dictionary containing abundances of parent
+        elements of all ions.
         """
         if not hasattr(self, '_species_abundances'):
             self._species_abundances = {}
-            for ion in self.ions_by_ion:
-                for state in self.ions_by_ion[ion]:
+            for ion in self.ions_by_parent:
+                for state in self.ions_by_parent[ion]:
                     self._species_abundances[state] = \
                         self.element_abundances[self.elements.index(ion)]
     
         return self._species_abundances
-    
-    @property#may not need this anymore
+        
+    @property
     def types(self):
         """
         Return list (matching all_species) with integers describing
@@ -180,12 +183,13 @@ class Grid:
                 else:
                     self._species_types.append(-1) 
         
-        return self._species_types   
+        return self._species_types       
         
     @property # MUST GENERALIZE THIS
     def ioniz_thresholds(self):
         """
-        Return ionization threshold energy in eV for all absorbers.
+        Return dictionary containing ionization threshold energies (in eV)
+        for all absorbers.
         """    
         
         if not hasattr(self, '_ioniz_thresholds'):
@@ -203,8 +207,8 @@ class Grid:
     @property # MUST GENERALIZE THIS
     def bf_cross_sections(self):
         """
-        Return functions that compute the bound-free absorption 
-        cross-sections for all absorbers.
+        Return dictionary containing functions that compute the bound-free 
+        absorption cross-sections for all absorbers.
         """    
         
         if not hasattr(self, 'all_xsections'):
@@ -223,6 +227,10 @@ class Grid:
         
     @property
     def x_to_n(self):
+        """
+        Return dictionary containing conversion factor between species
+        fraction and number density for all species.
+        """
         if not hasattr(self, '_x_to_n_converter'):
             self._x_to_n_converter = {}
             for ion in self.all_ions:
@@ -233,10 +241,33 @@ class Grid:
         
     @property
     def expansion(self):
-        if not hasattr(self, 'expansion'):
-            self.expansion = 0
+        if not hasattr(self, '_expansion'):
+            self.set_physics()
+        return self._expansion
+    
+    @property
+    def isothermal(self):
+        if not hasattr(self, '_isothermal'):
+            self.set_physics()
+        return self._isothermal
+    
+    @property
+    def secondary_ionization(self):
+        if not hasattr(self, '_secondary_ionization'):
+            self.set_physics()
+        return self._secondary_ionization
+    
+    @property
+    def compton_scattering(self):
+        if not hasattr(self, '_compton_scattering'):
+            self.set_physics()
+        return self._compton_scattering
         
-        return self.expansion
+    @property
+    def recombination(self):
+        if not hasattr(self, '_recombination'):
+            self.set_physics()
+        return self._recombination
         
     @property
     def hydr(self):
@@ -249,17 +280,9 @@ class Grid:
         if not hasattr(self, '_cosm'):
             self._cosm = Cosmology()
         return self._cosm
-    
-    @property
-    def recombination_method(self):
-        if not hasattr(self, '_recombination_method'):
-            self._recombination_method = 'B'
-        return self._recombination_method        
-        
+            
     def ColumnDensity(self, data):
-        """
-        Compute column densities for all absorbing species.
-        """    
+        """ Compute column densities for all absorbing species. """    
         
         N = {}
         Nc = {}
@@ -270,60 +293,60 @@ class Grid:
             logN[absorber] = np.log10(N[absorber])
             
         return N, logN, Nc
+                
+    def set_physics(self, isothermal=False, compton_scattering=False,
+        secondary_ionization=0, expansion=False, recombination='B'):
+        self._isothermal = isothermal
+        self._compton_scattering = compton_scattering
+        self._secondary_ionization = secondary_ionization
+        self._expansion = expansion
+        self._recombination = recombination
         
-    def initialize(self, pf):
-        """
-        Use parameter file to set all initial conditions and grid properties.
-        """              
+        if self._expansion:
+            self.set_cosmology()
         
-        # Set initial conditions
-        self.set_chem(Z = pf['species'], abundance = pf['abundances'], 
-            isothermal = pf['isothermal'])
-        self.set_rho(rho0 = pf['density_units'])
+    def set_cosmology(self, initial_redshift=1e3, OmegaMatterNow=0.272, 
+        OmegaLambdaNow=0.728, OmegaBaryonNow=0.044, HubbleParameterNow=0.702, 
+        HeliumFractionByMass=0.2477, CMBTemperatureNow=2.725):
         
-        for i in xrange(len(pf['species'])):
-            self.set_x(Z = pf['species'][i], x = pf['initial_ionization'][i])       
+        self.zi = initial_redshift
+        self._cosm = Cosmology(OmegaMatterNow=OmegaMatterNow, 
+            OmegaLambdaNow=OmegaLambdaNow, OmegaBaryonNow=OmegaBaryonNow,
+            HubbleParameterNow=HubbleParameterNow, 
+            HeliumFractionByMass=HeliumFractionByMass,
+            CMBTemperatureNow=CMBTemperatureNow)        
         
-        self.set_T(pf['initial_temperature'])
-        
-        if pf['clump']:
-            self.make_clump(position = pf['clump_position'], radius = pf['clump_radius'], 
-                temperature = pf['clump_temperature'], overdensity = pf['clump_overdensity'],
-                ionization = pf['clump_ionization'], profile = pf['clump_profile'])
-        
-    def set_recombination(self, case='B'):
-        self._recombination_method = case    
-        
-    def set_chem(self, Z=1, abundance=[1.0], isothermal=False):
+    def set_chemistry(self, Z=1, abundance=[1.0]):
         """
         Initialize chemistry - which species we'll be solving for and their 
-        abundances ('cosmic', 'sun_photospheric', 'sun_coronal', etc.).
+        abundances ('cosmic', 'sun_photospheric', 'sun_coronal', etc. are
+        acceptable arguments if we have chianti). Creates initial (empty)
+        data dictionary to population with other set_* routines.
         """                
         
         if type(Z) is not list:
             Z = [Z]
         
         self.abundance = abundance
-        self.isothermal = isothermal
         
         self.Z = np.array(Z)
-        self.ions_by_ion = {}       # Ions sorted by parent element in dictionary
-        self.elements = []          # Just a list of element names
-        self.all_ions = []          # All ion species
-        self.all_species = []       # Anything with an ODE we'll later solve
+        self.ions_by_parent = {} # Ions sorted by parent element in dictionary
+        self.elements = []       # Just a list of element names
+        self.all_ions = []       # All ion species
+        self.all_species = []    # Anything with an ODE we'll later solve
           
         for element in self.Z:
             element_name = util.z2element(element)
-            self.ions_by_ion[element_name] = []
+            self.ions_by_parent[element_name] = []
             self.elements.append(element_name)
             for ion in xrange(element + 1):
                 name = util.zion2name(element, ion + 1)
                 self.all_ions.append(name)
                 self.all_species.append(name)
-                self.ions_by_ion[element_name].append(name)
+                self.ions_by_parent[element_name].append(name)
       
-        self.all_species.append('de')          
-        if not isothermal:
+        self.all_species.append('de')
+        if not self.isothermal:
             self.all_species.append('T')
             
         # Create blank data fields
@@ -336,7 +359,7 @@ class Grid:
             self.abundances_by_number = util.abundanceRead(abundance)['abundance']
             self.element_abundances = []
             for i, Z in enumerate(self.Z):
-                self.element_abundances.append(self.abundances_by_number[Z - 1])
+                self.element_abundances.append(self.abundances_by_number[Z-1])
         elif type(abundance) is str:
             raise ValueError('If chianti is not installed, must supply abundances by number.')             
         else:
@@ -347,46 +370,51 @@ class Grid:
                                
         # Initialize mapping between q-vector and physical quantities (dengo)                
         self._set_qmap()
-        
-    def set_cosmology(self, zi=500, compton_scattering=0, xi=0.99):
-        self.expansion=1
-        self.compton_scattering = compton_scattering
-        
-        self.zi = zi
-        self.set_chem()
-        self.set_rho(self.cosm.rho_b_z0 * (1. + zi)**3 * (1. - self.cosm.Y))
-        self.set_x(Z=1, x=xi)
-        self.set_T(self.cosm.TCMB(zi))
-            
-    def set_ics(self, data):
-        """
-        Simple way of setting all initial conditions at once with a data 
-        dictionary.
-        """
-        
-        self.data = {}
-        for key in data.keys():
-            if type(data[key]) is float:
-                self.data[key] = data[key]
-                continue
-                
-            self.data[key] = data[key].copy()
 
-    def set_T(self, T0):
+    def set_density(self, rho0=None):
+        """
+        Initialize gas density and from that, the hydrogen number density 
+        (which normalizes all other number densities).
+        """                
+        
+        if isinstance(rho0, Iterable):
+            self.data['rho'] = rho0
+        else:
+            self.data['rho'] = rho0 * np.ones(self.dims)   
+                    
+        if len(self.Z) == 1:
+            if self.Z == np.ones(1):
+                self.abundances_by_number = self.element_abundances = np.ones(1)
+                if self.expansion:
+                    self.n_H = (1. - self.cosm.Y) * self.data['rho'] / m_H
+                else:
+                    self.n_H = self.data['rho'] / m_H    
+                return
+                            
+        # Set hydrogen number density (which normalizes all other species)
+        X = 0
+        for i in xrange(len(self.abundances_by_number) - 1):
+            name = util.z2element(i + 1)
+            if not name.strip():
+                continue
+                    
+            ele = ELEMENT(name)
+            X += self.abundances_by_number[i] * ele.mass
+                                                
+        self.n_H = self.data['rho'] / m_H / X
+        
+    def set_temperature(self, T0):
         """
         Set initial temperature in grid.  If type(T0) is float, assume uniform
         temperature everywhere.  Otherwise, pass T0 as an array of values.
-        Must initialize ionization before this!
         """
         
         if isinstance(T0, Iterable):
             self.data['T'] = T0
         else:
             self.data['T'] = T0 * np.ones(self.dims)
-                        
-        self._set_ge()       
             
-    def set_x(self, Z = None, x = None, state = None, perturb = 0):
+    def set_ionization(self, Z=None, x=None, state=None, perturb=0):
         """
         Set initial ionization state.  If Z is None, assume constant ion fraction 
         of 1 / (1 + Z) for all elements.  Can be overrideen by 'state', which can be
@@ -411,10 +439,11 @@ class Grid:
                     # For some reason chianti sometimes gives nans where
                     # the neutral fraction (in oxygen at least) should be 1.
                     # It only happens when cc.ioneq is given an array of temps,
-                    # i.e. everything is fine if you loop over T but that's way slower.
-                                        
+                    # i.e. everything is fine if you loop over T but that's 
+                    # way slower.
                     if perturb > 0:
-                        tmp = self.data[name] * np.random.normal(loc = 1.0, scale = perturb, size = self.dims)        
+                        tmp = self.data[name] * np.random.normal(loc=1.0, 
+                            scale=perturb, size=self.dims)
                         tmp[tmp < tiny_number] = tiny_number
                         self.data[name] = copy.copy(tmp)
                                    
@@ -443,41 +472,25 @@ class Grid:
         
         else:
             for species in self.all_ions:
-                self.data[species].fill(1. / (1. + util.convertName(species)['Z']))
+                self.data[species].fill(1. \
+                    / (1. + util.convertName(species)['Z']))
         
         # Set electron density
-        self._set_de()
+        self._set_electron_density()
         
-    def set_rho(self, rho0=None):
+    def set_ics(self, data):
         """
-        Initialize gas density and from that, the hydrogen number density 
-        (which normalizes all other number densities).
-        """                
+        Simple way of setting all initial conditions at once with a data 
+        dictionary.
+        """
         
-        if isinstance(rho0, Iterable):
-            self.data['rho'] = rho0
-        else:
-            self.data['rho'] = rho0 * np.ones(self.dims)   
-                    
-        if len(self.Z) == 1:
-            if self.Z == np.ones(1):
-                self.abundances_by_number = self.element_abundances = np.ones(1)
-                self.n_H = self.data['rho'] / m_H
-                self.data['n'] = self.particle_density(self.data, self.zi)
-                return
-                            
-        # Set hydrogen number density (which normalizes all other species)
-        X = 0
-        for i in xrange(len(self.abundances_by_number) - 1):
-            name = util.z2element(i + 1)
-            if not name.strip():
+        self.data = {}
+        for key in data.keys():
+            if type(data[key]) is float:
+                self.data[key] = data[key]
                 continue
-                    
-            ele = ELEMENT(name)
-            X += self.abundances_by_number[i] * ele.mass
-                                                
-        self.n_H = self.data['rho'] / m_H / X
-        self.data['n'] = self.particle_density(self.data, self.zi)
+                
+            self.data[key] = data[key].copy()    
     
     def make_clump(self, position = None, radius = None, overdensity = None,
         temperature = None, ionization = None, profile = None):
@@ -510,12 +523,21 @@ class Grid:
             self.data[ion][isclump] = ionization    
         
         # Reset electron density, particle density, and gas energy
-        self._set_de()
+        self._set_electron_density()
                 
         del self._x_to_n_converter
-        self.data['n'] = self.particle_density(self.data, self.zi)
         
-        self._set_ge()
+    def _set_electron_density(self):
+        """
+        Set electron density - must have run set_density beforehand.
+        """
+        
+        self.data['de'] = np.zeros(self.dims)
+        for i, Z in enumerate(self.Z):
+            for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
+                x_i_jp1 = self.data[util.zion2name(Z, j + 1)]
+                self.data['de'] += j * x_i_jp1 * self.n_H \
+                    * self.element_abundances[i]    
                 
     def particle_density(self, data, z=0):
         """
@@ -528,25 +550,7 @@ class Grid:
                 / (1. + self.zi)**3
              
         return n 
-        
-    def _set_ge(self):
-        # Initialize gas energy    
-        if not self.isothermal:
-            self.data['n'] = self.particle_density(self.data, self.zi)
-            self.data['ge'] = 1.5 * k_B * self.data['n'] * self.data['T']             
-
-    def _set_de(self):
-        """
-        Set electron density - must have run set_rho beforehand.
-        """
-        
-        self.data['de'] = np.zeros(self.dims)
-        for i, Z in enumerate(self.Z):
-            for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
-                x_i_jp1 = self.data[util.zion2name(Z, j + 1)]
-                self.data['de'] += j * x_i_jp1 * self.n_H \
-                    * self.element_abundances[i]
-    
+            
     def electron_density(self, data, z):
         de = np.zeros(self.dims)
         for i, Z in enumerate(self.Z):

@@ -186,7 +186,7 @@ class SimpleChemicalNetwork:
         self.q = q
         self.dqdt = np.zeros_like(self.zeros_q)
         
-        cell, Gamma, gamma, k_H, n, time, T = args
+        cell, Gamma, gamma, k_H, n, time = args
         
         to_temp = 1. / (1.5 * n * k_B)
                 
@@ -287,7 +287,7 @@ class SimpleChemicalNetwork:
         Jacobian of the rate equations.
         """    
                     
-        cell, Gamma, gamma, k_H, n, time, T = args        
+        cell, Gamma, gamma, k_H, n, time = args        
                 
         if self.grid.expansion:
             z = self.grid.cosm.TimeToRedshiftConverter(0., time, self.grid.zi)

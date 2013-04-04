@@ -208,29 +208,30 @@ class Simulation:
         ax.set_yscale('log')
         
         if species == 'h':
-            fields = self.grid.ions_by_ion[species]
+            fields = self.grid.ions_by_parent[species]
             labels = [r'$x_{\mathrm{HI}}$', r'$x_{\mathrm{HII}}$']
         
-        line_num = 0
         for dd in self.data.keys():
-            if self.data[dd]['time'] / self.pf['time_units'] not in t: 
+            t_time_units = self.data[dd]['time'] / self.pf['time_units']
+            if t_time_units not in t: 
                 continue
-            
+                
+            line_num = t.index(t_time_units)
             if line_num > 0:
-                labels = [None] * len(labels)
+                lab = [None] * len(labels)
+            else:
+                lab = labels
             
             for i, field in enumerate(fields):
                 if marker is None:
                     ax.plot(self.grid.r_mid / cm_per_kpc,
                         self.data[dd][field], ls = linestyles[i], 
-                        color = color, label = labels[i])
+                        color=color, label = lab[i])
                 else:
                     ax.scatter(self.grid.r_mid / cm_per_kpc,
                         self.data[dd][field], marker=marker, s=s, 
-                        color = color, label = labels[i],
+                        color = color, label = lab[i],
                         facecolors=facecolors)
-
-            line_num += 1
                     
         ax.set_xscale(xscale)
         ax.set_yscale(yscale)    
@@ -246,18 +247,16 @@ class Simulation:
         
         return ax     
             
-    def TemperatureProfile(self, t = [10, 30, 100], color = 'k', ls = None, xscale = 'linear', 
-        yscale = 'log',legend = True, ax = None, normx = False, marker=None, s=50,
-        facecolors=None):
+    def TemperatureProfile(self, t = [10,30,100], color = 'k', ls=None, 
+        xscale = 'linear', yscale = 'log', ax = None, normx = False, 
+        marker=None, s=50, facecolors=None, label=None):
         """
         Plot radial profiles of temperature at times t (Myr).
         """  
         
         if ax is None:
             ax = pl.subplot(111)
-        else:
-            legend = False
-                
+        
         if ls is None:
             ls = linestyles
         else:
@@ -266,24 +265,27 @@ class Simulation:
         ax.set_xscale('log')
         ax.set_yscale('log')
         
-        line_num = 0
         for dd in self.data.keys():
-            if self.data[dd]['time'] / self.pf['time_units'] not in t: 
+            t_time_units = self.data[dd]['time'] / self.pf['time_units']
+            if t_time_units not in t: 
                 continue
+                
+            line_num = t.index(t_time_units)
+            if line_num > 0:
+                lab = None
+            else:
+                lab = label
             
             if marker is None:
                 ax.plot(self.grid.r_mid / cm_per_kpc,
-                    self.data[dd]['T'], ls = ls[line_num], color = color, 
-                    label = r'$T_K$')
+                    self.data[dd]['T'], ls=ls[line_num], color=color, 
+                    label=lab)
             else:
                 ax.scatter(self.grid.r_mid / cm_per_kpc,
-                    self.data[dd]['T'], color = color, 
-                    label = r'$T_K$', marker=marker, s=s,
+                    self.data[dd]['T'], color=color, 
+                    label=lab, marker=marker, s=s,
                     facecolors=facecolors)
-                        
-                
-            line_num += 1    
-                
+                                        
         #if self.pf['LymanAlphaContinuum'] or self.pf['LymanAlphaInjection']:
         #    self.ax.loglog(r, self.data[dd].Ts, color = color, ls = '--', label = r'$T_S$') 
         #    
@@ -291,8 +293,6 @@ class Simulation:
         #    self.ax.loglog([min(r), max(r)], [self.pf['CMBTemperatureNow'] * (1. + self.data[dd].z)] * 2,
         #        color = 'k', ls = ':', label = r'$T_{\gamma}$')         
         #    
-        #    if legend:
-        #        self.ax.legend(loc = 'upper right', frameon = False)
             
         ax.set_xscale(xscale)
         ax.set_yscale(yscale)

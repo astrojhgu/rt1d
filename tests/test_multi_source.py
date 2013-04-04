@@ -16,25 +16,31 @@ import pylab as pl
 
 src1 = {'type': 'bb', 'Emin': 13.6, 'Emax': 1e2,
     'EminNorm': 0.0, 'EmaxNorm': np.inf}
-src2 = {'type': 'pl', 'Emin': 50, 'Emax': 1e3, 'alpha': 1.5,
-    'logN': 20}
+src2 = {'type': 'pl', 'Emin': 100, 'Emax': 1e3, 'alpha': 1.5,
+    'logN': 20.}
 
 pf = \
 {
  'problem_type': 2,
  'stop_time': 30,
  'source_type': ['star', 'bh'],
- 'source_mass': [None, 1],
- 'source_rmax': [None, 1e4],
+ 'source_mass': [None, 1e2],
+ 'source_rmax': [None, 1e3],
  'source_temperature': [1e5, None],
  'spectrum_pars': [src1, src2],
 }
 
-sim = rt1d.run.Simulation(pf=pf)
+sim = rt1d.run.Simulation(pf={'problem_type': 2})
 sim.run()
 
+sim2 = rt1d.run.Simulation(pf=pf)
+sim2.run()
+
 anl = rt1d.analyze.Simulation(sim.checkpoints)
+anl2 = rt1d.analyze.Simulation(sim2.checkpoints)
 
-anl.TemperatureProfile(t = [10, 30])
-
+ax = anl.TemperatureProfile(t=[10,30], color='k', label='BB')
+anl2.TemperatureProfile(ax=ax, t=[10,30], color='b', label='BB+BH')
+ax.legend(frameon=False)
+pl.draw()
 raw_input('')

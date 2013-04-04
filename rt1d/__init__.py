@@ -1,7 +1,3 @@
-"""
-Import the essentials.
-"""
-
 import run, sources
 import analysis as analyze
 from .physics import Constants

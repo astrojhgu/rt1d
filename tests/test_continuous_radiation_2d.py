@@ -17,8 +17,8 @@ import numpy as np
 grid = rt1d.Grid(length_units = 3e23) # 100 kpc grid
     
 # Set initial conditions
-grid.set_chem(Z = [1], abundance = 'cosmic', isothermal = 0)
-grid.set_rho(rho0 = 1e-27)
+grid.set_chemistry(Z = [1], abundance = 'cosmic', isothermal = 0)
+grid.set_density(rho0 = 1e-27)
 
 # Initialize radiation source
 src_pars = {'problem_type': 2, 'photon_conserving': 1, 

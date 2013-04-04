@@ -19,27 +19,29 @@ import numpy as np
 from .Constants import c, G, km_per_mpc, m_H, m_He, sigma_SB
 
 class Cosmology:
-    def __init__(self, pf=None):
-        if pf is None:
-            from ..util.SetDefaultParameterValues import CosmologyParameters
-            pf = CosmologyParameters()
-            
-        self.pf = pf
-        self.OmegaMatterNow = pf['OmegaMatterNow']
-        self.OmegaBaryonNow = pf['OmegaBaryonNow']
-        self.OmegaLambdaNow = pf['OmegaLambdaNow']
+    def __init__(self, OmegaMatterNow=0.272, OmegaLambdaNow=0.728,
+        OmegaBaryonNow=0.044, HubbleParameterNow=0.702, 
+        HeliumFractionByMass=0.2477, CMBTemperatureNow=2.725):
+                
+        self.OmegaMatterNow = OmegaMatterNow
+        self.OmegaBaryonNow = OmegaBaryonNow
+        self.OmegaLambdaNow = OmegaLambdaNow
         self.OmegaCDMNow = self.OmegaMatterNow - self.OmegaBaryonNow
-        self.HubbleParameterNow = pf['HubbleParameterNow'] * 100 / km_per_mpc
-        self.CriticalDensityNow = (3 * self.HubbleParameterNow**2) / (8 * np.pi * G)
-        self.CMBTemperatureNow = pf['CMBTemperatureNow']
+        self.HubbleParameterNow = HubbleParameterNow * 100 / km_per_mpc
+        self.CMBTemperatureNow = CMBTemperatureNow
         
-        self.h_70 = pf['HubbleParameterNow']
+        self.CriticalDensityNow = (3 * self.HubbleParameterNow**2) \
+            / (8 * np.pi * G)
         
-        self.Y = pf['PrimordialHeliumByMass'] * 1 #1min(1, pf['MultiSpecies'] + pf['CosmologicalExpansion'])
+        self.h70 = HubbleParameterNow
+        
+        self.Y = HeliumFractionByMass
         self.y = self.Y / 4. / (1. - self.Y) 
         self.X = 1. - self.Y
+        
+        self.g_per_baryon = m_H / (1. - self.Y) / (1. + self.y)
                 
-        self.zdec = 150. * (self.OmegaBaryonNow * pf['HubbleParameterNow']**2 / 0.023)**0.4 - 1.
+        self.zdec = 150. * (self.OmegaBaryonNow * self.h70**2 / 0.023)**0.4 - 1.
 
         # Hydrogen, helium, electron, and baryon densities today (z = 0)
         self.rho_b_z0 = self.MeanBaryonDensity(0)
@@ -47,6 +49,9 @@ class Cosmology:
         self.nHe0 = self.y * self.nH0
         self.ne0 = self.nH0 + 2. * self.nHe0
         self.rho_n_z0 = self.nH0 + self.nHe0 + self.ne0
+        
+        self.nH = lambda z: self.nH0 * (1. + z)**3
+        self.nHe = lambda z: self.nHe0 * (1. + z)**3
         
     def TimeToRedshiftConverter(self, t_i, t_f, z_i):
         """
@@ -105,7 +110,8 @@ class Cosmology:
         return self.OmegaMatter(z) * self.CriticalDensity(z)
         
     def MeanBaryonDensity(self, z):
-        return (self.OmegaBaryonNow / self.OmegaMatterNow) * self.MeanMatterDensity(z)
+        return (self.OmegaBaryonNow / self.OmegaMatterNow) \
+            * self.MeanMatterDensity(z)
     
     def MeanHydrogenNumberDensity(self, z):
         return (1. - self.Y) * self.MeanBaryonDensity(z) / m_H
@@ -122,6 +128,55 @@ class Cosmology:
     
     def dtdz(self, z):
         return 1. / self.HubbleParameter(z) / (1. + z) 
+    
+    def LuminosityDistance(self, z):
+        """
+        Returns luminosity distance in Mpc.  Assumes we mean distance from us (z = 0).
+        """
+        
+        return (1. + z) * self.ComovingRadialDistance(0., z)
+        
+    def ComovingRadialDistance(self, z0, z):
+        """
+        Return comoving distance between redshift z0 and z, z0 < z.
+        """
+        
+        if self.highzapprox:
+            return 2. * c * ((1. + z0)**-0.5 - (1. + z)**-0.5) \
+                / self.HubbleParameterNow / self.sqrtOmegaMatterNow
+                
+        # Otherwise, do the integral - normalize to H0 for numerical reasons
+        integrand = lambda z: self.HubbleParameterNow / self.HubbleParameter(z)
+        return c * romberg(integrand, z0, z) / self.HubbleParameterNow        
+            
+    def ProperRadialDistance(self, z0, z):
+        return self.ComovingDistance(z0, z) / (1. + z)    
+        
+    def ComovingLineElement(self, z):
+        """
+        Comoving differential line element at redshift z (i.e. dl/dz).
+        """     
+        
+        return c / self.HubbleParameter(z)
+        
+    def ProperLineElement(self, z):
+        """
+        Proper differential line element at redshift z (i.e. dl/dz).
+        """    
+        
+        return self.ComovingLineElement(z) / (1. + z)
+        
+    def dldz(self, z):
+        """ Proper differential line element. """
+        return self.ProperLineElement(z)        
+    
+    def CriticalDensityForCollapse(self, z):
+        """
+        Generally denoted (in LaTeX format) \Delta_c, fit from 
+        Bryan & Norman (1998).
+        """            
+        d = self.OmegaMatter(z) - 1.
+        return 18. * np.pi**2 + 82. * d - 39. * d**2    
     
             
     

@@ -45,14 +45,22 @@ class ComputeTimestep:
             elif mth == 'electrons':
                 new_dt = min(new_dt, 
                     np.min(dt[..., self.grid.all_species.index('de')]))
-            elif mth == 'energy' and 'ge' in self.grid.all_species:
+            elif mth == 'temperature' and 'T' in self.grid.all_species:
                 new_dt = min(new_dt, 
-                    np.min(dt[..., self.grid.all_species.index('ge')]))
-            elif mth == 'hubble':
+                    np.min(dt[..., self.grid.all_species.index('T')]))
+            elif mth == 'hubble' and self.grid.expansion:
                 new_dt = min(new_dt, self.epsilon \
                     * self.grid.cosm.HubbleTime(z))
             else:
                 new_dt = min(new_dt, np.min(dt))
+                
+        # Raise error if any funny stuff happens
+        if new_dt < 0: 
+            raise ValueError('ERROR: dt < 0.') 
+        elif new_dt == 0:
+            raise ValueError('ERROR: dt = 0.')  
+        elif np.isnan(new_dt):  
+            raise ValueError('ERROR: dt -> inf.')      
         
         return new_dt    
             

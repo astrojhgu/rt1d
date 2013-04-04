@@ -89,6 +89,10 @@ class Chemistry:
                 i = self.grid.absorbers.index('he_1')
                 self.chemnet.psi[...,i] *= data['he_2'] / data['he_1']
                 
+        # Make sure we've got number densities
+        if 'n' not in data.keys():
+            data['n'] = self.grid.particle_density(data, z)        
+                
         newdata = {}
         for field in data:
             newdata[field] = data[field].copy()
@@ -113,10 +117,10 @@ class Chemistry:
             
             if self.rtON:
                 args = (cell, kwargs_cell['Gamma'], kwargs_cell['gamma'],
-                    kwargs_cell['Heat'], data['n'][cell], t, data['T'][cell])
+                    kwargs_cell['Heat'], data['n'][cell], t)
             else:
                 args = (cell, self.grid.zeros_absorbers, self.grid.zeros_absorbers2, 
-                    self.grid.zeros_absorbers, data['n'][cell], t, data['T'][cell])
+                    self.grid.zeros_absorbers, data['n'][cell], t)
                             
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)

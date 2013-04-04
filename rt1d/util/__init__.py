@@ -25,7 +25,7 @@ def parse_kwargs(**kwargs):
         pf.update(ProblemType(kwargs['problem_type']))
     
     pf.update(kwargs)
-        
+                
     conflicts = CheckForParameterConflicts(pf)
 
     if conflicts:
@@ -45,7 +45,7 @@ def rebin(bins):
         
     return result
 
-def sort(pf, prefix = 'spectrum', make_list = True):
+def sort(pf, prefix='spectrum', make_list=True, make_array=False):
     """
     Turn any item that starts with prefix_ into a list, if it isn't already.
     Hack off the prefix when we're done.
@@ -64,7 +64,7 @@ def sort(pf, prefix = 'spectrum', make_list = True):
             result[new_name] = [pf[par]]
             
     # Make sure all elements are the same length?      
-    if make_list:  
+    if make_list or make_array:  
         lmax = 1
         for par in result:
             lmax = max(lmax, len(result[par]))
@@ -73,7 +73,10 @@ def sort(pf, prefix = 'spectrum', make_list = True):
             if len(result[par]) == lmax:
                 continue
             
-            result[par] = lmax * [result[par][0]]      
+            result[par] = lmax * [result[par][0]]
+            
+            if make_array:
+                result[par] = np.array(result[par])
             
     return result
     

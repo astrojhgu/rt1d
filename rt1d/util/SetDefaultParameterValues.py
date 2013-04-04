@@ -37,7 +37,7 @@ def GridParameters():
         "length_units": 6.6 * cm_per_kpc,  
         "time_units": s_per_myr,  
         
-        "species": [1],
+        "Z": [1],
         "abundances": [1.],
         "initial_ionization": [1.2e-3],
         "initial_temperature": 1e4,
@@ -66,9 +66,10 @@ def PhysicsParameters():
         "isothermal": 1,  
         "expansion": 0,  
         "compton_scattering": 0,
+        "recombination": 'B', 
         
         "clumping_factor": 1,
-        "recombination": 'B', 
+        
         }
         
     return pf
@@ -90,6 +91,7 @@ def SourceParameters():
         "source_cX": 1.0,
         
         "source_ion": 0,
+        "source_ion2": 0,
         "source_heat": 0,
         "source_lya": 0,
         
@@ -106,7 +108,7 @@ def SpectrumParameters():
         "spectrum_evolving": False,
         
         "spectrum_fraction": 1,
-        "spectrum_alpha": 1.5,
+        "spectrum_alpha": -1.5,
         "spectrum_Emin": 13.6,  
         "spectrum_Emax": 1e2,  
         "spectrum_EminNorm": None,
@@ -174,7 +176,7 @@ def CosmologyParameters():
         "OmegaBaryonNow": 0.044,
         "OmegaLambdaNow": 0.728,
         "HubbleParameterNow": 0.702,
-        "PrimordialHeliumByMass": 0.2477,
+        "HeliumFractionByMass": 0.2477,
         "CMBTemperatureNow": 2.725,
         }
         

@@ -6,7 +6,7 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Fri Jan 18 09:35:35 2013
 
-Description: 
+Description: Single zone ionization/recombination + heating/cooling test.
 
 """
 

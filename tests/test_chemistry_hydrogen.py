@@ -22,10 +22,10 @@ T = np.logspace(3, 6, dims)
 grid = rt1d.Grid(dims = dims)
 
 # Set initial conditions
-grid.set_chem(isothermal = True)
-grid.set_rho(rho0 = 1e-3 * rt1d.Constants.m_H)
-grid.set_x(state = 'neutral')  
-grid.set_T(T)
+grid.set_chemistry(isothermal = True)
+grid.set_density(rho0 = 1e-3 * rt1d.Constants.m_H)
+grid.set_ionization(state = 'neutral')  
+grid.set_temperature(T)
 
 # Initialize chemistry network / solver
 chem = rt1d.Chemistry(grid, rt = False, dengo = False)
