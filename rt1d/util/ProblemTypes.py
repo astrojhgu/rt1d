@@ -47,7 +47,7 @@ def ProblemType(ptype):
     # Single-zone, cosmological expansion test         
     if ptype_int == -1:
         pf = {
-              "problem_type": 0.1, 
+              "problem_type": -1, 
               "radiative_transfer": 0,
               "isothermal": 0,
               "expansion": 1,

@@ -29,11 +29,10 @@ class Simulation:
                 pf = parse_kwargs(**pf)
         else:
             pf = {}
-            
-        if kwargs:
-            pf.update(parse_kwargs(**kwargs))
-        else:
-            pf.update(parse_kwargs(**{'problem_type': 1}))
+            if kwargs:
+                pf.update(parse_kwargs(**kwargs))
+            else:
+                pf.update(parse_kwargs(**{'problem_type': 1}))
                         
         self.pf = pf
         

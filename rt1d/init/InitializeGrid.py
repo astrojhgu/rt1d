@@ -388,9 +388,10 @@ class Grid:
             if self.Z == np.ones(1):
                 self.abundances_by_number = self.element_abundances = np.ones(1)
                 if self.expansion:
-                    self.n_H = (1. - self.cosm.Y) * self.data['rho'] / m_H
+                    self.n_H = self.n_ref = \
+                        (1. - self.cosm.Y) * self.data['rho'] / m_H
                 else:
-                    self.n_H = self.data['rho'] / m_H    
+                    self.n_H = self.n_ref = self.data['rho'] / m_H    
                 return
                             
         # Set hydrogen number density (which normalizes all other species)
