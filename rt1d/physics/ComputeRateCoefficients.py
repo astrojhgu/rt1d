@@ -16,7 +16,6 @@ import numpy as np
 class RateCoefficients:
     def __init__(self, grid, source='fk94'):
         self.grid = grid
-        self.cosm = grid.cosm       
         
     def CollisionalIonizationRate(self, species, T):
         """
@@ -121,25 +120,3 @@ class RateCoefficients:
         
         return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
         
-    def HubbleCoolingRate(self, z):
-        """
-        Just the Hubble parameter. 
-        """
-        
-        return self.cosm.HubbleParameter(z)
-        
-    def ComptonHeatingRate(self, z, nH, nHe, ne, xHII, Tk):
-        """
-        Compton heating rate due to electron-CMB scattering.
-        """    
-        
-        if z > self.cosm.zdec:
-            Tcmb = self.cosm.TCMB(z)
-            ucmb = sigma_SB * Tcmb**4. / 4. / np.pi / c
-            
-            return 4. * sigma_T * ne * ucmb * k_B * (Tcmb - Tk) / m_e / c
-            #return xHII * k_B * (nH + nHe + ne) * 4. * sigma_T * ucmb * \
-            #    (Tcmb - Tk) / (1. + self.cosm.y + xHII) / m_e / c   
-        else:
-            return 0.0
-            # Implement source-dependent compton heating 

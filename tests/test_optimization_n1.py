@@ -7,7 +7,7 @@ Affiliation: University of Colorado at Boulder
 Created on: Mon Feb 25 09:27:17 2013
 
 Description: Optimize 10^5 BB SED in optically thin limit, in which case
-we have an analytic solution.
+we have an ~analytic solution that we can compare to.
 
 """
 
@@ -26,14 +26,14 @@ logN = [np.linspace(15, 20, 51)]
 # Set source properties - grab 10^5 K blackbody from RT06 #2
 src = {'problem_type': 2}
 
-# Initialize optimization object - use MCMC rather than simulated annealing
+# Initialize optimization object - use simulated annealing rather than MCMC
 sedop = rt1d.run.Optimization(logN=logN, Z=Z, nfreq=1, 
     rs=src, mcmc=False, isothermal=False, thinlimit=True)
 
-# Run MCMC
+# Run optimization
 sedop(1e5, burn=1e3, err=0.01, step = [5, 0.05], afreq=10, gamma=0.99)
 
-# Compute likelihood by brute force
+# Compute likelihood/cost by brute force
 E = np.linspace(15, 50, 100)
 LE = np.linspace(0.6, 1.0, 100)
 lnL = np.zeros([len(E), len(LE)])
@@ -42,9 +42,9 @@ for i in xrange(len(E)):
         lnL[i,j] = sedop.cost([E[i], LE[j]])
 
 # Plot contours of likelihood, analytic solution, and last 1000 steps of chain
-pl.contour(E, LE, lnL.T, 3, colors = 'k', linestyles = [':', '--', '-'])
-#pl.plot(sedop.sampler.chain[-1e3:,0], sedop.sampler.chain[-1e3:,1], 
-#    color = 'b')
+pl.contour(E, LE, lnL.T, 3, colors='k', linestyles=[':', '--', '-'])
+pl.plot(sedop.sampler.chain[-1e3:,0], sedop.sampler.chain[-1e3:,1], 
+    color='b')
     
 # We should recover the mean ionizing photon energy and the 
 # fraction of the bolometric luminosity emitted above 13.6 eV
@@ -52,12 +52,12 @@ Emono = sedop.rs.hnu_bar[0]
 Lmono = sedop.rs.fLbol_ionizing[0]
 
 # Plot what we expect    
-pl.scatter([Emono] * 2, [Lmono] * 2, color = 'k', marker = '+', s = 100)
+pl.scatter([Emono]*2, [Lmono]*2, color = 'k', marker = '+', s = 100)
 
 # Nice labels
 pl.xlabel(r'$h\nu \ (\mathrm{eV})$')
 pl.ylabel(r'$L_{\nu}$')
-raw_input('click <enter> for confidence intervals (E, LE)')
+raw_input('click <enter> for confidence regions (E, LE)')
 pl.close()
 
 # Histogram MCMC results and plot
@@ -118,8 +118,11 @@ Run rt1d to see how this solution works.
 """
 
 continuous = rt1d.run.Simulation(pf = {'problem_type': 2, 'grid_cells': 32})
+continuous.run()
+
 discrete = rt1d.run.Simulation(pf = {'problem_type': 2.1, 'grid_cells': 32, 
     'spectrum_E': Eopt, 'spectrum_LE': LEopt})
+discrete.run()
 
 c = rt1d.analyze.Simulation(continuous.checkpoints)    
 d = rt1d.analyze.Simulation(discrete.checkpoints)

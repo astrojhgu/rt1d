@@ -138,6 +138,8 @@ def ProblemType(ptype):
               "source_temperature": 1e5,
               "spectrum_type": 1,
               "source_qdot": 5e48,
+              "spectrum_EminNorm": 1e-1,
+              "spectrum_EmaxNorm": 5e2
              }
         
     # RT06-3: I-front trapping in a dense clump and the formation of a shadow,

@@ -19,7 +19,7 @@ class ComputeTimestep:
         self.grid = grid
         self.epsilon = epsilon
     
-    def Limit(self, q, dqdt, z=None, tau = None, tau_ifront = 0.5, 
+    def Limit(self, q, dqdt, z=None, tau=None, tau_ifront=0.5, 
         method = ['ions']):
         """
         Limit timestep based on maximum allowed change in fields.  Which 

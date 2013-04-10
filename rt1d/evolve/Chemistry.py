@@ -14,6 +14,7 @@ import copy
 import pylab as pl
 import numpy as np
 from scipy.integrate import ode
+from ..util import convert_ion_name
 from ..physics.Constants import k_B
 
 try:
@@ -25,7 +26,7 @@ except ImportError:
     size = 1
 
 class Chemistry:
-    def __init__(self, grid, dengo = False, rt = False):
+    def __init__(self, grid, dengo=False, rt=False):
         """
         Initialize chemistry solver with InitializeGrid.Grid class instance.
         """
@@ -43,9 +44,9 @@ class Chemistry:
         self.chemnet = ChemicalNetwork(grid)
         
         self.solver = ode(self.chemnet.RateEquations, 
-            jac = self.chemnet.Jacobian).set_integrator('vode', 
-            method = 'bdf', nsteps = 1e4, with_jacobian = False,
-            atol = 1e-12, rtol = 1e-8)
+            jac=self.chemnet.Jacobian).set_integrator('vode', 
+            method='bdf', nsteps=1e4, with_jacobian=True,
+            atol=1e-12, rtol=1e-8)
             
         self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.all_species)])
         self.zeros_grid_x_abs = np.zeros_like(self.grid.zeros_grid_x_absorbers)
@@ -80,7 +81,7 @@ class Chemistry:
             z = self.grid.cosm.TimeToRedshiftConverter(0, t, self.grid.zi)
             dz = dt / self.grid.cosm.dtdz(z)
         else:
-            z = dz = 0    
+            z = dz = 0
                 
         if self.dengo:
             return self.EvolveDengo(data, dt)
@@ -114,13 +115,14 @@ class Chemistry:
                 q[i] = data[species][cell]
                                     
             kwargs_cell = kwargs_by_cell[cell]
-            
+              
             if self.rtON:
                 args = (cell, kwargs_cell['Gamma'], kwargs_cell['gamma'],
                     kwargs_cell['Heat'], data['n'][cell], t)
             else:
-                args = (cell, self.grid.zeros_absorbers, self.grid.zeros_absorbers2, 
-                    self.grid.zeros_absorbers, data['n'][cell], t)
+                args = (cell, self.grid.zeros_absorbers, 
+                    self.grid.zeros_absorbers2, self.grid.zeros_absorbers, 
+                    data['n'][cell], t)
                             
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)
@@ -148,11 +150,11 @@ class Chemistry:
                 
             self.q_grid = tmp_q
             self.dqdt_grid = tmp_qdot    
-                
+                            
         # Convert T to ge for fun and update particle density
-        #if not self.grid.isothermal:
+        #if not self.grid.isothermal:        
         newdata['n'] = self.grid.particle_density(newdata, z - dz)
-        newdata['ge'] = 1.5 * newdata['n'] * k_B * newdata['T']
+        #newdata['ge'] = 1.5 * newdata['n'] * k_B * newdata['T']
         newdata['de'] = self.grid.electron_density(newdata, z - dz)
         newdata['Ts'] = self.grid.hydr.Ts(newdata, z - dz)
                         
@@ -161,7 +163,7 @@ class Chemistry:
     def EvolveDengo(self, data, dt):
         """
         Solve rate equations, which evolve ion fractions and gas energy.
-        """    
+        """
                 
         newdata = {}
         for key in data.keys():
@@ -173,24 +175,29 @@ class Chemistry:
             network = self.chemnet.networks[element]
             network.init_single_temperature(data['T'])
             for reaction in network.reactions.keys():
+                prefix, suffix = reaction.split('_')
+                prefix = convert_ion_name(prefix, convention='underscore')
                 val = network.reactions[reaction].coeff_fn(network)
-                kwargs[reaction] = val
+                kwargs['%s_%s' % (prefix, suffix)] = val 
                                         
         kwargs_by_cell = self.sort_kwargs_by_cell(kwargs)
-        
+                
         # Loop over grid and solve chemistry            
         for cell in xrange(self.grid.dims):
                                 
             # Construct q vector
             q = np.zeros(len(self.grid.qmap))
             for i, species in enumerate(self.grid.qmap):
-                q[i] = data[species][cell]            
-                        
-            self.solver.set_initial_value(q, 0.0).set_f_params(kwargs_by_cell[cell]).set_jac_params(kwargs_by_cell[cell])
+                q[i] = data[species][cell]       
+            
+            args = []
+            for kw in kwargs_by_cell[cell]:
+                args.append((kw, kwargs_by_cell[cell][kw]))
+                                                                
+            self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)
-            new_q = self.solver.y 
                                     
-            for i, value in enumerate(new_q):
+            for i, value in enumerate(self.solver.y ):
                 newdata[self.grid.qmap[i]][cell] = value
         
         return newdata

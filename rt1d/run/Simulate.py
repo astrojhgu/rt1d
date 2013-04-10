@@ -12,21 +12,28 @@ Description: Run a simulation.
 
 import rt1d
 import numpy as np
-from ..util import parse_kwargs, ReadParameterFile
 from ..physics.Constants import s_per_myr
+from ..util import parse_kwargs, ReadParameterFile
     
 class Simulation:
     """
-    Run a radiative transfer simulation from input parameter file, which
-    can be a dictionary or a path to a text file.
+    Run a radiative transfer simulation from input parameter file (which
+    can be a dictionary or a path to a text file) and/or kwargs.
     """
-    def __init__(self, pf=None, init_grid=True, init_rs=True, init_tabs=True):
-        if type(pf) is str:
-            pf = ReadParameterFile(pf)
-        elif type(pf) is dict:
-            pf = parse_kwargs(**pf)
+    def __init__(self, pf=None, init_grid=True, init_rs=True, init_tabs=True, 
+        **kwargs):
+        if pf is not None:
+            if type(pf) is str:
+                pf = ReadParameterFile(pf)
+            elif type(pf) is dict:
+                pf = parse_kwargs(**pf)
         else:
-            pf = parse_kwargs(**{'problem_type': 1})
+            pf = {}
+            
+        if kwargs:
+            pf.update(parse_kwargs(**kwargs))
+        else:
+            pf.update(parse_kwargs(**{'problem_type': 1}))
                         
         self.pf = pf
         

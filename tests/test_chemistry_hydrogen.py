@@ -22,13 +22,14 @@ T = np.logspace(3, 6, dims)
 grid = rt1d.Grid(dims = dims)
 
 # Set initial conditions
-grid.set_chemistry(isothermal = True)
-grid.set_density(rho0 = 1e-3 * rt1d.Constants.m_H)
-grid.set_ionization(state = 'neutral')  
+grid.set_physics(isothermal=True)
+grid.set_chemistry(Z=1)
+grid.set_density(rho0=1e-3*rt1d.Constants.m_H)
+grid.set_ionization(state='neutral')  
 grid.set_temperature(T)
 
 # Initialize chemistry network / solver
-chem = rt1d.Chemistry(grid, rt = False, dengo = False)
+chem = rt1d.Chemistry(grid, rt=False, dengo=False)
 
 # Only need to calculate coefficients once for this test
 chem.chemnet.SourceIndependentCoefficients(chem.grid.data['T'])
@@ -61,7 +62,7 @@ pb = rt1d.run.ProgressBar(tf)
 
 while t <= tf:
     pb.update(t)
-    data = chem.Evolve(data, dt = dt)
+    data = chem.Evolve(data, t=t, dt=dt)
     t += dt 
     
     new_dt = timestep.Limit(chem.chemnet.q, chem.chemnet.dqdt)

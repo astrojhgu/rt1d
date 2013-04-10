@@ -26,10 +26,10 @@ pl.loglog(z, sim.grid.cosm.TCMB(sim.grid.cosm.zdec) * \
     label=r'analytic')
 pl.loglog(z, sim.grid.cosm.TCMB(z), color = 'k', ls = ':')
 
-z, T = anl.CellEvolution(field='T', redshift=True)
-pl.loglog(z, T, color='b', label='rt1d')
-z, Ts = anl.CellEvolution(field='Ts', redshift=True)
-pl.loglog(z, Ts, color='b', ls = '--')
+z1, T = anl.CellEvolution(field='T', redshift=True)
+pl.loglog(z1, T, color='b', label='rt1d')
+z2, Ts = anl.CellEvolution(field='Ts', redshift=True)
+pl.loglog(z2, Ts, color='b', ls = '--')
 
 pl.xlabel(r'$z$')
 pl.ylabel(r'$T_K$')
@@ -45,7 +45,7 @@ pl.ylim(1, 2e3)
 #except:
 #    pass
     
-pl.legend(frameon=False, loc='lower right')    
+pl.legend(frameon=False, loc='lower right')   
 raw_input('')    
 
 

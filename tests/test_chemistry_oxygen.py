@@ -16,19 +16,20 @@ import pylab as pl
 import chianti.core as cc
 
 dims = 32
-T = np.logspace(3, 8, dims)
+T = np.logspace(4, 8, dims)
 
 # Initialize grid object
 grid = rt1d.Grid(dims = dims)
 
 # Set initial conditions
-grid.set_chemistry(Z = 8, abundance = 'sun_photospheric', isothermal = True)
-grid.set_density(rho0 = rt1d.Constants.m_H)
+grid.set_physics(isothermal=True)
+grid.set_chemistry(Z=8)
+grid.set_density(rho0=rt1d.Constants.m_H*16)
 grid.set_temperature(T)
-grid.set_ionization(state = 'neutral')  
+grid.set_ionization(state='neutral')
 
 # Initialize chemistry network / solver
-chem = rt1d.Chemistry(grid, dengo = True)
+chem = rt1d.Chemistry(grid, dengo=True)
 
 # To compute timestep
 timestep = rt1d.run.ComputeTimestep(grid)
@@ -48,24 +49,22 @@ pl.draw()
 
 # Evolve chemistry
 data = grid.data
-dt = rt1d.Constants.s_per_myr / 1e3
-dt_max = 2 * rt1d.Constants.s_per_myr
+dt = rt1d.Constants.s_per_myr
 t = 0.0
-tf = 1e2 * rt1d.Constants.s_per_myr
+tf = rt1d.Constants.s_per_gyr
 
 # Initialize progress bar
 pb = rt1d.run.ProgressBar(tf)
 
-while t <= tf:
+while t < tf:
     pb.update(t)
-    data = chem.Evolve(data, dt = dt)  # kwargs not making it to RateEquations...
+    data = chem.Evolve(data, t=t, dt=dt)  # kwargs not making it to RateEquations...
     t += dt 
     
-    new_dt = timestep.IonLimited(chem.chemnet.q, chem.chemnet.dqdt)
-    dt = min(min(min(new_dt, 2 * dt), dt_max), tf - t)
-
-    if dt == 0:
-        break
+    new_dt = timestep.Limit(chem.chemnet.q, chem.chemnet.dqdt)
+    dt = min(min(new_dt, 2 * dt), tf - t)
+    
+    pb.update(t)
 
 pb.finish()    
         
@@ -73,6 +72,7 @@ for ion in grid.all_ions:
     ax.scatter(T, data[ion], color = 'b', s = 50, 
         facecolors='none', marker = 'o')
 pl.draw()   
+pl.savefig('oxygen_test.png')
 raw_input('')
 
 

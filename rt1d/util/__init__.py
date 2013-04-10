@@ -205,4 +205,71 @@ def readtab(fn, start = 0, stop = None, header = False, output_dict = True):
     else: 
         return out
         
+def ion_to_roman(ion):
+    ints = (10, 9, 5, 4, 1)
+    nums = ('X','IX','V','IV','I')
+    result = ""
+    for i in range(len(ints)):
+       count = int(ion / ints[i])
+       result += nums[i] * count
+       ion -= ints[i] * count
+    return result
+    
+def roman_to_ion(ion):
+    nums = ['X', 'V', 'I']
+    ints = [10, 5, 1]
+    places = []
+    for i in xrange(len(ion)):
+       c = ion[i]
+       value = ints[nums.index(c)]
+       
+       # If the next place holds a larger number, this value is negative.
+       try:
+          nextvalue = ints[nums.index(ion[i+1])]
+          if nextvalue > value:
+             value *= -1
+       except IndexError:
+          pass
+
+       places.append(value)
+       
+    tot = 0
+    for n in places: 
+        tot += n
+        
+    # Easiest test for validity...
+    if ion_to_roman(tot) == ion:
+       return tot
+    else:
+       raise ValueError, 'input is not a valid roman numeral: %s' % input    
+
+def convert_ion_name(name, convention='roman'):
+    """ Convert species names to a particular convention."""
+
+    if name in ['ge', 'de']:
+        return name
+
+    split = name.split('_')    
+    if len(split) == 1:
+        convention_in = 'roman'
+    else:
+        convention_in = 'underscore'
+        
+    if convention_in == convention:
+        return name    
+    
+    if convention_in == 'underscore':
+        element = split[0].upper()
+        ion = ion_to_roman(int(split[1]))
+        return '%s%s' % (element, ion)    
+
+    # Isolate roman numerals
+    element = name.split('I')[0]
+    element = element.split('V')[0]
+    element = element.split('X')[0]
+    ion = name.split(element)[-1]
+    
+    return '%s_%s' % (element.lower(), roman_to_ion(ion))
+            
+        
                         

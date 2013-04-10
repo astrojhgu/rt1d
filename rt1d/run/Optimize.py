@@ -45,15 +45,16 @@ class Optimization:
         
         # Use Grid class to carry info about absorbing species
         self.grid = rt1d.Grid()
-        self.grid.set_chemistry(Z=self.Z, isothermal=self.isothermal, 
+        self.grid.set_physics(isothermal=self.isothermal, 
             secondary_ionization=self.secondary_ionization)
+        self.grid.set_chemistry(Z=self.Z)
         
         # Initialize radiation source
         if self.rs is None:
-            self.rs = rt1d.sources.RadiationSourceIdealized(self.grid, 
+            self.rs = rt1d.sources.RadiationSource(self.grid, 
                 self.logN, **{'spectrum_file': self.fn})
         elif type(self.rs) is dict:
-            self.rs = rt1d.sources.RadiationSourceIdealized(self.grid, 
+            self.rs = rt1d.sources.RadiationSource(self.grid, 
                 self.logN, **self.rs)        
         
         # What integrals are we comparing to?

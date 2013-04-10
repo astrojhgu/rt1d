@@ -56,6 +56,9 @@ which for me (in bash) looks like: ::
 
 Once this is all done, you should be off to the races.
 
+NOTE: As of 04.08.2013 the dengo stuff is still unstable. Need to write 
+converter for differing naming conventions.
+
 
 Example
 -------

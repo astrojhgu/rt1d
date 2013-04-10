@@ -26,7 +26,7 @@ pf = \
  'source_evolving': 0,
  'spectrum_type': ['mcd', 'pl'],
  'spectrum_fraction': [0.5, 0.5],
- 'spectrum_alpha': [None, 1.2],
+ 'spectrum_alpha': [None, -1.2],
  'spectrum_Emin': [13.6, 1e2],
  'spectrum_Emax': [1e4, 1e4],
  'spectrum_fcol': [1, None],

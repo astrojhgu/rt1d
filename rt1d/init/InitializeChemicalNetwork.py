@@ -11,7 +11,9 @@ Description: ChemicalNetwork object just needs to have methods called
 
 """
 
+import copy
 import numpy as np
+from ..util import convert_ion_name
 from ..physics.Constants import k_B, sigma_T, m_e, c, s_per_myr
 
 try:
@@ -30,33 +32,36 @@ class DengoChemicalNetwork:
         self._initialize()
     
     def _initialize(self):
-        """
-        Create list of ChemicalNetwork objects (one for each element).
-        """
+        """ Create list of ChemicalNetwork objects (one for each element). """
         
         self.networks = {}
-        for element in self.grid.elements:
-            
+        for element in self.grid.ions_by_parent.keys():
             chem_net = ChemicalNetwork()
-            
-            # If this is hydrogen or helium, we need to do some extra work
-            if self._is_primordial(element):
-                pass
+            for ion in self.grid.ions_by_parent[element]:
+                dengo_name = convert_ion_name(ion)
                 
-            # Add cooling actions
-            for ca in cooling_registry.values():
-                if ca.name.startswith("%s_" % element):
-                    chem_net.add_cooling(ca)
-                    
-            # Add ionization reactions        
-            for s in reaction_registry.values():
-                if s.name.startswith("%s_" % element):
-                    chem_net.add_reaction(s)              
-                    
+                # Do something special!?
+                if self._is_primordial(element):
+                    continue
+                
+                # Add cooling actions
+                for ca in cooling_registry.values():
+                    if ca.name.split('_')[0] == dengo_name:
+                        chem_net.add_cooling(ca)
+                        
+                # Add ionization reactions        
+                for s in reaction_registry.values():
+                    if s.name.split('_')[0] == dengo_name:
+                        chem_net.add_reaction(s)
+            
+            if not self.grid.isothermal:
+                chem_net.add_cooling
+                        
             self.networks[element] = chem_net
         
-        self._set_RHS()
-        self._set_Jac()       
+        # For each chemical network object, set rate equation and Jacobian
+        self._set_rhs()
+        self._set_jac()
     
     def _is_primordial(self, element):
         if element in ['h', 'he']:
@@ -64,7 +69,7 @@ class DengoChemicalNetwork:
         else:
             return False
             
-    def _set_RHS(self):
+    def _set_rhs(self):
         """
         Create string representations of RHS of all ODEs.
         
@@ -75,12 +80,12 @@ class DengoChemicalNetwork:
         i = 0
         dedot = ''
         gedot = ''
-        self.dqdt = []
+        self.dqdt_eqs = []
         for element in self.grid.elements:
-            for ion in self.grid.ions_by_ion[element]:
-                expr = self.networks[element].rhs_string_equation(ion)
+            for ion in self.grid.ions_by_parent[element]:
+                expr = self.networks[element].rhs_string_equation(convert_ion_name(ion))
                 expr = self._translate_rate_str(expr)                
-                self.dqdt.append(expr)        
+                self.dqdt_eqs.append(expr)        
                 i += 1
                 
             de = self._translate_rate_str(self.networks[element].rhs_string_equation('de'))   
@@ -91,40 +96,56 @@ class DengoChemicalNetwork:
                 gedot += '+%s' % ge  
         
         # Electrons and gas energy
-        self.dqdt.append(dedot)
+        self.dqdt_eqs.append(dedot)
         if not self.grid.isothermal:
-            self.dqdt.append(gedot)
+            self.dqdt_eqs.append(gedot)
                         
-    def _set_Jac(self):
+    def _set_jac(self):
         """
         Create string representations of Jacobian.
         """        
         
         self.jac = []
-        
         for element in self.networks:
             chemnet = self.networks[element]
             for i, sp1 in enumerate(self.grid.all_species):
                 self.jac.append([])
                 for j, sp2 in enumerate(self.grid.all_species):
-                    expr = chemnet.jacobian_string_equation(sp1, sp2)
+                    expr = chemnet.jacobian_string_equation(convert_ion_name(sp1), 
+                        convert_ion_name(sp2))
                     expr = self._translate_rate_str(expr)
                     self.jac[i].append(expr)                
             
     def _translate_rate_str(self, expr):
         """
-        Convert dengo style rate equation strings to our dictionary / vector convention.
+        Convert dengo style rate equation strings to our dictionary / vector 
+        convention.
         """    
         
         # Ionization and recombination coefficients
         for species in self.grid.all_ions:
-            expr = expr.replace('%s_i' % species, 'kwargs[\'%s_i\']' % species)
-            expr = expr.replace('%s_r' % species, 'kwargs[\'%s_r\']' % species)
+            sp = convert_ion_name(species)
+            expr = expr.replace('%s_i' % sp, 'kwargs[\'%s_i\']' % species)
+            expr = expr.replace('%s_r' % sp, 'kwargs[\'%s_r\']' % species)
         
-        # Ions, de, or ge
-        for species in self.grid.all_species:    
-            expr = expr.replace('*%s' % species, '*q[%i]' % list(self.grid.qmap).index(species))  
-              
+        # Rename ions
+        for element in self.grid.ions_by_parent:
+            ions = copy.deepcopy(self.grid.ions_by_parent[element])
+            ions.reverse()
+            
+            for ion in ions:
+                sp = convert_ion_name(ion)
+                        
+                expr = expr.replace('%s' % sp,
+                    'q[%i]' % list(self.grid.qmap).index(ion))
+        
+        # Replace de and ge         
+        if self.grid.isothermal:
+            expr = expr.replace('de', 'q[-1]')
+        else:
+            expr = expr.replace('de', 'q[-2]')
+            expr = expr.replace('ge', 'q[-1]')
+                      
         # Cooling terms      
         expr = self._translate_cool_str(expr)      
               
@@ -137,28 +158,32 @@ class DengoChemicalNetwork:
         
         return expr
         
-    def RateEquations(self, t, q, **kwargs):
+    def RateEquations(self, t, q, args):
         """
         Compute RHS of rate equations.  
         """
         
-        dqdt = np.zeros_like(self.dqdt)
+        kwargs = dict(args)
+        self.q = q
+        self.dqdt = np.zeros(len(self.dqdt_eqs))
                         
         # Compute RHS of ODEs
-        for i, ode in enumerate(self.dqdt):
-            dqdt[i] = eval(self.dqdt[i]) 
+        for i, ode in enumerate(self.dqdt_eqs):
+            self.dqdt[i] = eval(ode) 
                 
-        return dqdt
+        return self.dqdt
         
-    def Jacobian(self, t, q, **kwargs):
+    def Jacobian(self, t, q, args):
         """
         Compute the Jacobian of the rate equations.
         """    
+                
+        kwargs = dict(args)
+        jac = np.zeros([len(self.dqdt_eqs)] * 2)
 
-        jac = np.zeros([len(self.dqdt)] * 2)
         for i, sp1 in enumerate(self.grid.all_species):
             for j, sp2 in enumerate(self.grid.all_species):
-                jac[i][j] = eval(self.jac[i][j])
+                jac[i,j] = eval(self.jac[i][j])
                 
         return jac   
         
@@ -170,7 +195,6 @@ class SimpleChemicalNetwork:
         self.coeff = RateCoefficients(grid)
 
         self.isothermal = self.grid.isothermal
-        self.expansion = self.grid.expansion       
 
         # For convenience 
         self.zeros_q = np.zeros(len(self.grid.all_species))
@@ -286,7 +310,7 @@ class SimpleChemicalNetwork:
         """
         Jacobian of the rate equations.
         """    
-                    
+                                        
         cell, Gamma, gamma, k_H, n, time = args        
                 
         if self.grid.expansion:

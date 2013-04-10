@@ -234,7 +234,7 @@ class Grid:
         if not hasattr(self, '_x_to_n_converter'):
             self._x_to_n_converter = {}
             for ion in self.all_ions:
-                self._x_to_n_converter[ion] = self.n_H \
+                self._x_to_n_converter[ion] = self.n_ref \
                     * self.species_abundances[ion]  
         
         return self._x_to_n_converter
@@ -316,7 +316,7 @@ class Grid:
             HeliumFractionByMass=HeliumFractionByMass,
             CMBTemperatureNow=CMBTemperatureNow)        
         
-    def set_chemistry(self, Z=1, abundance=[1.0]):
+    def set_chemistry(self, Z=1, abundance=1.0):
         """
         Initialize chemistry - which species we'll be solving for and their 
         abundances ('cosmic', 'sun_photospheric', 'sun_coronal', etc. are
@@ -326,6 +326,8 @@ class Grid:
         
         if type(Z) is not list:
             Z = [Z]
+        if type(abundance) not in [str, list]:
+            abundance = [abundance]    
         
         self.abundance = abundance
         
@@ -400,8 +402,13 @@ class Grid:
                     
             ele = ELEMENT(name)
             X += self.abundances_by_number[i] * ele.mass
-                                                
-        self.n_H = self.data['rho'] / m_H / X
+                     
+        # Set reference number density             
+        if 'h' in self.elements:                           
+            self.n_H = self.n_ref = self.data['rho'] / m_H / X
+        else:
+            self.n_H = self.n_ref = self.data['rho'] / m_H \
+                / ELEMENT(self.elements[0]).mass
         
     def set_temperature(self, T0):
         """
@@ -505,6 +512,7 @@ class Grid:
         if profile == 0:
             self.data['rho'][isclump] *= overdensity
             self.n_H[isclump] *= overdensity
+            self.n_ref[isclump] *= overdensity
             self.data['T'][isclump] = temperature
         #if profile == 1:
         #    self.data['rho'] += self.data['rho'] * overdensity \
@@ -536,7 +544,7 @@ class Grid:
         for i, Z in enumerate(self.Z):
             for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
                 x_i_jp1 = self.data[util.zion2name(Z, j + 1)]
-                self.data['de'] += j * x_i_jp1 * self.n_H \
+                self.data['de'] += j * x_i_jp1 * self.n_ref \
                     * self.element_abundances[i]    
                 
     def particle_density(self, data, z=0):
@@ -556,7 +564,7 @@ class Grid:
         for i, Z in enumerate(self.Z):
             for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
                 x_i_jp1 = data[util.zion2name(Z, j + 1)]
-                de += j * x_i_jp1 * self.n_H * (1. + z)**3 / (1. + self.zi)**3 \
+                de += j * x_i_jp1 * self.n_ref * (1. + z)**3 / (1. + self.zi)**3 \
                     * self.element_abundances[i]
 
         return de

@@ -43,7 +43,7 @@ class RadiationSource:
         # Create Source/SpectrumPars attributes
         self.SourcePars = sort(self.pf, prefix='source', make_list=False)
         self.SpectrumPars = sort(self.pf, prefix='spectrum')
-                        
+                          
         # Number of spectral components
         self.N = len(self.SpectrumPars['type'])
         
@@ -91,7 +91,9 @@ class RadiationSource:
         
         self.Emin = min(self.SpectrumPars['Emin'])
         self.Emax = max(self.SpectrumPars['Emax'])
-        
+        self.logEmin = np.log10(self.Emin)
+        self.logEmax = np.log10(self.Emax)
+                
         for i, comp in enumerate(self.SpectrumPars['type']):
             if self.SpectrumPars['EminNorm'][i] == None:
                 self.SpectrumPars['EminNorm'][i] = self.SpectrumPars['Emin'][i]
@@ -135,7 +137,6 @@ class RadiationSource:
             self.Lbol = self.BolometricLuminosity(0.0)    
              
         # Normalize spectrum
-        #if self.SourcePars['type'] < 3:
         self.LuminosityNormalizations = self.NormalizeSpectrumComponents(0.0)
         
         if self.pf['optically_thin']:
@@ -490,7 +491,7 @@ class RadiationSource:
         elif Type == 2:
             Lnu = self.MultiColorDisk(E, i, Type, t)
         elif Type == 3: 
-            Lnu = self.PowerLaw(E, i, Type, t)    
+            Lnu = self.PowerLaw(E, i, t)    
         elif Type == 4:
             Lnu = self.QuasarTemplate(E, i, Type, t)    
         else:
@@ -505,7 +506,8 @@ class RadiationSource:
     def Spectrum(self, E, t = 0.0, only = None):
         """
         Return fraction of bolometric luminosity emitted at energy E.
-        """
+        [Spectrum] = eV**-1
+        """       
                
         emission = 0
         for i, Type in enumerate(self.SpectrumPars['type']):
@@ -531,7 +533,7 @@ class RadiationSource:
         nu = E * erg_per_ev / h
         return 2.0 * h * nu**3 / c**2 / (np.exp(h * nu / k_B / T) - 1.0)
         
-    def PowerLaw(self, E, i, Type, t = 0.0):    
+    def PowerLaw(self, E, i, t=0.0):    
         """
         A simple power law X-ray spectrum - this is proportional to the *energy* emitted
         at E, not the number of photons.  
@@ -591,14 +593,12 @@ class RadiationSource:
                             
     def NormalizeSpectrumComponents(self, t = 0):
         """
-        Normalize each component of spectrum to some fraction of the bolometric luminosity.
+        Normalize each component of spectrum to some fraction of the 
+        bolometric luminosity.
         """
         
-        if self.SourcePars['type'] < 3:
-            Lbol = self.BolometricLuminosity(t)
-        else:
-            return np.ones(self.N)
-        
+        Lbol = self.BolometricLuminosity(t)
+
         normalizations = np.zeros(self.N)
         
         # Series of power-laws - enforce continuity
@@ -628,6 +628,7 @@ class RadiationSource:
                 integral, err = quad(self.Intensity, 
                     self.SpectrumPars['EminNorm'][i], 
                     self.SpectrumPars['EmaxNorm'][i], args = (i, component, t,))
+                
                 normalizations[i] = self.SpectrumPars['fraction'][i] * Lbol \
                     / integral
             
