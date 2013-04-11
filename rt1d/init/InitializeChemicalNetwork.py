@@ -19,6 +19,8 @@ from ..physics.Constants import k_B, sigma_T, m_e, c, s_per_myr
 try:
     import dengo.primordial_rates, dengo.primordial_cooling
     import dengo.oxygen_rates, dengo.oxygen_cooling
+    import dengo.carbon_rates, dengo.carbon_cooling
+    import dengo.magnesium_rates, dengo.magnesium_cooling
     from dengo.chemical_network import ChemicalNetwork, \
         reaction_registry, cooling_registry
 except ImportError:
@@ -41,22 +43,20 @@ class DengoChemicalNetwork:
                 dengo_name = convert_ion_name(ion)
                 
                 # Do something special!?
-                if self._is_primordial(element):
-                    continue
+                #if self._is_primordial(element):
+                #    continue
                 
                 # Add cooling actions
-                for ca in cooling_registry.values():
-                    if ca.name.split('_')[0] == dengo_name:
-                        chem_net.add_cooling(ca)
+                if not self.grid.isothermal:
+                    for ca in cooling_registry.values():
+                        if ca.name.split('_')[0] == dengo_name:
+                            chem_net.add_cooling(ca)
                         
                 # Add ionization reactions        
                 for s in reaction_registry.values():
                     if s.name.split('_')[0] == dengo_name:
                         chem_net.add_reaction(s)
-            
-            if not self.grid.isothermal:
-                chem_net.add_cooling
-                        
+                                    
             self.networks[element] = chem_net
         
         # For each chemical network object, set rate equation and Jacobian
@@ -111,6 +111,7 @@ class DengoChemicalNetwork:
             for i, sp1 in enumerate(self.grid.all_species):
                 self.jac.append([])
                 for j, sp2 in enumerate(self.grid.all_species):
+                    print i, sp1, j, sp2
                     expr = chemnet.jacobian_string_equation(convert_ion_name(sp1), 
                         convert_ion_name(sp2))
                     expr = self._translate_rate_str(expr)
@@ -169,7 +170,7 @@ class DengoChemicalNetwork:
                         
         # Compute RHS of ODEs
         for i, ode in enumerate(self.dqdt_eqs):
-            self.dqdt[i] = eval(ode) 
+            self.dqdt[i] = eval(ode)
                 
         return self.dqdt
         

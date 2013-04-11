@@ -393,9 +393,13 @@ class Grid:
                 else:
                     self.n_H = self.n_ref = self.data['rho'] / m_H    
                 return
+            else:
+                self.n_H = self.n_ref = self.data['rho'] / m_H \
+                    / ELEMENT(self.elements[0]).mass
+                return    
                             
         # Set hydrogen number density (which normalizes all other species)
-        X = 0
+        X = 0.0
         for i in xrange(len(self.abundances_by_number) - 1):
             name = util.z2element(i + 1)
             if not name.strip():
@@ -404,7 +408,7 @@ class Grid:
             ele = ELEMENT(name)
             X += self.abundances_by_number[i] * ele.mass
                      
-        # Set reference number density             
+        # Set reference number density
         if 'h' in self.elements:                           
             self.n_H = self.n_ref = self.data['rho'] / m_H / X
         else:

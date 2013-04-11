@@ -23,7 +23,8 @@ class Source:
         
     def SpectrumCDF(self, E):
         """
-        Returns cumulative energy output contributed by photons at or less than energy E.
+        Returns cumulative energy output contributed by photons at or less 
+        than energy E.
         """    
         
         return integrate(self.rs.Spectrum, small_number, E)[0] 
@@ -55,7 +56,7 @@ class Source:
         return integrate(integrand, self.rs.EminNorm, self.rs.EmaxNorm)[0]
                 
     def PlotSpectrum(self, color = 'k', components = True, t = 0, normalized = True,
-        bins = 100, mp = None, label = None):
+        bins = 100, ax=None, label = None):
         
         if not normalized:
             Lbol = self.rs.BolometricLuminosity(t)
@@ -82,26 +83,25 @@ class Source:
                 EE.append(tmpE)
                 FF.append(tmpF)
         
-        if mp is None:
-            self.ax = pl.subplot(111)
-        else:
-            self.ax = mp
+        if ax is None:
+            ax = pl.subplot(111)
                     
-        self.ax.loglog(E, np.array(F) * Lbol, color = color, ls = ls[0], 
+        ax.loglog(E, np.array(F) * Lbol, color = color, ls = ls[0], 
             label = label)
         
         if components and self.rs.N > 1:
             for i in xrange(self.rs.N):
-                self.ax.loglog(EE[i], np.array(FF[i]) * Lbol, color = color, 
+                ax.loglog(EE[i], np.array(FF[i]) * Lbol, color = color, 
                     ls = ls[i + 1])
         
-        self.ax.set_xlabel(r'$h\nu \ (\mathrm{eV})$')
+        ax.set_xlabel(r'$h\nu \ (\mathrm{eV})$')
         
         if normalized:
-            self.ax.set_ylabel(r'$L_{\nu} / L_{\mathrm{bol}}$')
+            ax.set_ylabel(r'$L_{\nu} / L_{\mathrm{bol}}$')
         else:
-            self.ax.set_ylabel(r'$L_{\nu} \ (\mathrm{erg \ s^{-1}})$')
+            ax.set_ylabel(r'$L_{\nu} \ (\mathrm{erg \ s^{-1}})$')
                 
         pl.draw()
               
+        return ax 
             

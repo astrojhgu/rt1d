@@ -30,7 +30,7 @@ big_number = 1e5
 
 sptypes = {'poly': 0, 'bb': 1, 'mcd': 2, 'pl': 3, 'qso': 4, 
     'user': 5}
-srctypes = {'test': 0, 'star': 1, 'bh': 2, 'diffuse': 3}
+srctypes = {'test': 0, 'star': 1, 'bh': 2, 'diffuse': 3, 'byhand': 4}
 
 class RadiationSource:
     def __init__(self, grid=None, logN=None, init_tabs=True, **kwargs):
@@ -72,11 +72,11 @@ class RadiationSource:
         # Should also be function of absorbers
         
         # Just a set of power-laws? (only for photons below 13.6 eV)
-        self.plseries = np.all(np.array(self.SpectrumPars['type']) == 1) and \
-                        np.all(np.array(self.SpectrumPars['Emax']) < E_th[0])
+        self.plseries = np.all(np.array(self.SpectrumPars['type']) == sptypes['pl']) \
+                    and np.all(np.array(self.SpectrumPars['Emax']) <= E_LL)
 
         self._initialize()
-        if init_tabs:
+        if init_tabs:   # Set default to False?
             self.create_integral_table(logN=logN) 
             
     def _initialize(self):
@@ -493,7 +493,7 @@ class RadiationSource:
         elif Type == 3: 
             Lnu = self.PowerLaw(E, i, t)    
         elif Type == 4:
-            Lnu = self.QuasarTemplate(E, i, Type, t)    
+            Lnu = self.QuasarTemplate(E, i, Type, t)
         else:
             Lnu = 0.0
             
@@ -503,7 +503,7 @@ class RadiationSource:
         else:
             return Lnu     
                 
-    def Spectrum(self, E, t = 0.0, only = None):
+    def Spectrum(self, E, t=0.0, only=None):
         """
         Return fraction of bolometric luminosity emitted at energy E.
         [Spectrum] = eV**-1
@@ -511,7 +511,7 @@ class RadiationSource:
                
         emission = 0
         for i, Type in enumerate(self.SpectrumPars['type']):
-            if not (self.SpectrumPars['Emin'][i] <= E <= self.SpectrumPars['Emax'][i]):
+            if not (self.SpectrumPars['Emin'][i] <= E < self.SpectrumPars['Emax'][i]):
                 continue
                 
             if only is not None and Type != only:
@@ -541,7 +541,7 @@ class RadiationSource:
 
         return E**self.SpectrumPars['alpha'][i]
     
-    def MultiColorDisk(self, E, i, Type, t = 0.0):
+    def MultiColorDisk(self, E, i, Type, t=0.0):
         """
         Soft component of accretion disk spectra.
         """         
@@ -561,7 +561,7 @@ class RadiationSource:
     def QuasarTemplate(self, E, i, Type, t = 0.0):
         """
         Quasar spectrum of Sazonov, Ostriker, & Sunyaev 2004.
-        """    
+        """
         
         op = (E < 10)
         uv = (E >= 10) & (E < 2e3) 
@@ -591,7 +591,7 @@ class RadiationSource:
         
         return F
                             
-    def NormalizeSpectrumComponents(self, t = 0):
+    def NormalizeSpectrumComponents(self, t=0):
         """
         Normalize each component of spectrum to some fraction of the 
         bolometric luminosity.
@@ -605,29 +605,39 @@ class RadiationSource:
         if self.plseries:
             
             # Stitch Lyman-series PLs together
-            for i, component in enumerate(self.SourcePars['type']):
+            for i, component in enumerate(self.SpectrumPars['type']):
                 if i == 0:
                     normalizations[i] = 1.0
                 else:
-                    normalizations[i] = self.Intensity(self.SpectrumPars['Emax'][i-1], 
-                    i - 1) / self.Intensity(self.SpectrumPars['Emin'][i], i)
-                
-            # Normalize them    
-            integral = 0
+                    alpha_diff = self.SpectrumPars['alpha'][i-1] \
+                               - self.SpectrumPars['alpha'][i]
+                    normalizations[i] = \
+                        self.SpectrumPars['Emin'][i]**alpha_diff
+                                
+            # Normalize them - can do these integrals analytically
+            integral = 0.0
             for i, component in enumerate(self.SpectrumPars['type']):
-                tmp, err = quad(self._Intensity, self.SpectrumPars['EminNorm'][i], 
-                    self.SpectrumPars['EmaxNorm'][i], args = (i,))    
+                if self.SpectrumPars['alpha'][i] == 0.:
+                    tmp = (self.SpectrumPars['EmaxNorm'][i] \
+                        - self.SpectrumPars['EminNorm'][i])
+                elif self.SpectrumPars['alpha'][i] == -1.:
+                    tmp = np.log(self.SpectrumPars['EmaxNorm'][i] \
+                        / self.SpectrumPars['EminNorm'][i])
+                else:
+                    al = self.SpectrumPars['alpha'][i]
+                    tmp = (self.SpectrumPars['EmaxNorm'][i]**(al+1) \
+                        - self.SpectrumPars['EminNorm'][i]**(al+1)) / (al+1)
                 
                 integral += tmp * normalizations[i]
                 
-            normalizations *= (1.0 / integral)    
+            normalizations *= (Lbol / integral)
                 
-        # General spectrum, continuity of components not requried
-        else:        
-            for i, component in enumerate(self.SpectrumPars['type']):                        
-                integral, err = quad(self.Intensity, 
+        # General spectrum, continuity of components not required
+        else:
+            for i, component in enumerate(self.SpectrumPars['type']):
+                integral, err = quad(self.Intensity,
                     self.SpectrumPars['EminNorm'][i], 
-                    self.SpectrumPars['EmaxNorm'][i], args = (i, component, t,))
+                    self.SpectrumPars['EmaxNorm'][i], args=(i, component, t,))
                 
                 normalizations[i] = self.SpectrumPars['fraction'][i] * Lbol \
                     / integral

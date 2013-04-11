@@ -24,6 +24,8 @@ try:
 except ImportError:
     rank = 0
     size = 1
+    
+tiny_ion = 1e-12 
 
 class Chemistry:
     def __init__(self, grid, dengo=False, rt=False):
@@ -46,7 +48,7 @@ class Chemistry:
         self.solver = ode(self.chemnet.RateEquations, 
             jac=self.chemnet.Jacobian).set_integrator('vode', 
             method='bdf', nsteps=1e4, with_jacobian=True,
-            atol=1e-12, rtol=1e-8)
+            atol=1e-8, rtol=1e-8)
             
         self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.all_species)])
         self.zeros_grid_x_abs = np.zeros_like(self.grid.zeros_grid_x_absorbers)
@@ -84,7 +86,7 @@ class Chemistry:
             z = dz = 0
                 
         if self.dengo:
-            return self.EvolveDengo(data, dt)
+            return self.EvolveDengo(data, t, dt)
         else:
             if 'he_1' in self.grid.absorbers:
                 i = self.grid.absorbers.index('he_1')
@@ -160,7 +162,7 @@ class Chemistry:
                         
         return newdata    
 
-    def EvolveDengo(self, data, dt):
+    def EvolveDengo(self, data, t, dt):
         """
         Solve rate equations, which evolve ion fractions and gas energy.
         """
@@ -170,17 +172,19 @@ class Chemistry:
             newdata[key] = copy.deepcopy(data[key])
        
         # Create all kwargs
-        kwargs = {}
-        for element in self.chemnet.networks:
-            network = self.chemnet.networks[element]
-            network.init_single_temperature(data['T'])
-            for reaction in network.reactions.keys():
-                prefix, suffix = reaction.split('_')
-                prefix = convert_ion_name(prefix, convention='underscore')
-                val = network.reactions[reaction].coeff_fn(network)
-                kwargs['%s_%s' % (prefix, suffix)] = val 
+        
+        if t == 0 or not self.grid.isothermal:
+            self.kwargs = {}
+            for element in self.chemnet.networks:
+                network = self.chemnet.networks[element]
+                network.init_single_temperature(data['T'])
+                for reaction in network.reactions.keys():
+                    prefix, suffix = reaction.split('_')
+                    prefix = convert_ion_name(prefix, convention='underscore')
+                    val = network.reactions[reaction].coeff_fn(network)
+                    self.kwargs['%s_%s' % (prefix, suffix)] = val 
                                         
-        kwargs_by_cell = self.sort_kwargs_by_cell(kwargs)
+        kwargs_by_cell = self.sort_kwargs_by_cell(self.kwargs)
                 
         # Loop over grid and solve chemistry            
         for cell in xrange(self.grid.dims):
@@ -197,8 +201,13 @@ class Chemistry:
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)
                                     
-            for i, value in enumerate(self.solver.y ):
-                newdata[self.grid.qmap[i]][cell] = value
+            for i, value in enumerate(self.solver.y):
+                if self.grid.qmap[i] in self.grid.all_ions:
+                    limit = tiny_ion
+                else:
+                    limit = value
+                    
+                newdata[self.grid.qmap[i]][cell] = max(value, limit)
         
         return newdata
     
