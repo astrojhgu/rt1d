@@ -64,6 +64,7 @@ tf = rt1d.Constants.s_per_gyr
 
 # Initialize progress bar
 pb = rt1d.run.ProgressBar(tf)
+pb.start()
 
 while t < tf:
     pb.update(t)

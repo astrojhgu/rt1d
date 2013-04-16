@@ -69,7 +69,7 @@ class Radiation:
                 
         # Compute source independent rate coefficients
         if (not self.grid.isothermal) or (t == 0):
-            self.kwargs.update(self.chem.chemnet.SourceIndependentCoefficients(data['T']))
+            self.kwargs.update(self.chem.chemnet.SourceIndependentCoefficients(data['Tk']))
 
         # SOLVE
         newdata = self.chem.Evolve(data, t, dt, **self.kwargs)

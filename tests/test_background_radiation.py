@@ -29,7 +29,7 @@ pf = \
  'source_type': ['star', 'diffuse'],
  'source_ion': [None, 1e-15],
  'source_temperature': [1e5, None],
- 'spectrum_pars': [src1, None],
+ 'spectrum_pars': [src1, {'type': 6}],
 }
 
 sim2 = rt1d.run.Simulation(pf=pf)

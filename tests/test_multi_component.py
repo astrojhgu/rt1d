@@ -33,8 +33,8 @@ pf = \
  'spectrum_logN': [0., 20.], 
 }
 
-pf2 = pf.copy()
-pf2['source_evolving'] = 0
+#pf2 = pf.copy()
+#pf2['source_evolving'] = 0
 
 sim = rt1d.run.Simulation(pf=pf)
 sim.run()

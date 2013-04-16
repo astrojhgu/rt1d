@@ -177,7 +177,7 @@ class Chemistry:
             self.kwargs = {}
             for element in self.chemnet.networks:
                 network = self.chemnet.networks[element]
-                network.init_single_temperature(data['T'])
+                network.init_single_temperature(data['Tk'])
                 for reaction in network.reactions.keys():
                     prefix, suffix = reaction.split('_')
                     prefix = convert_ion_name(prefix, convention='underscore')

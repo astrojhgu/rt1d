@@ -128,7 +128,7 @@ class Simulation:
         else:
             return np.interp(0.5, self.data[dd]['he_1'], self.grid.r_mid)
         
-    def ComputeIonizationFrontEvolution(self, T0 = None):
+    def ComputeIonizationFrontEvolution(self, T0=None):
         """
         Find the position of the I-front at all times, and compute value of 
         analytic solution.
@@ -152,8 +152,8 @@ class Simulation:
         self.rIF = np.array(self.rIF)[order]
         self.ranl = np.array(self.ranl)[order]
                 
-    def PlotIonizationFrontEvolution(self, mp = None, anl = True, T0 = None, 
-        color = 'k', ls = '--', label = None, plot_error = True, plot_solution = True):
+    def PlotIonizationFrontEvolution(self, mp=None, anl=True, T0=None, 
+        color='k', ls='--', label=None, plot_error=True, plot_solution=True):
         """
         Compute analytic and numerical I-front radii vs. time and plot.
         """    
@@ -168,7 +168,7 @@ class Simulation:
             mp = multipanel(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
 
         if anl: 
-            mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle = '-', color = 'k')
+            mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle='-', color='k')
         
         if plot_solution:
             mp.grid[0].plot(self.t / self.trec, self.rIF, 
@@ -194,9 +194,9 @@ class Simulation:
             
         return mp
             
-    def IonizationProfile(self, species = 'h', t = [1, 10, 100], color = 'k', 
-        annotate = False, xscale = 'linear', yscale = 'log', ax = None,
-        normx = False, marker=None, s=50, facecolors=None):
+    def IonizationProfile(self, species='h', t=[1, 10, 100], color='k', 
+        annotate=False, xscale='linear', yscale='log', ax=None,
+        normx=False, marker=None, s=50, facecolors=None):
         """
         Plot radial profiles of species fraction (for H or He) at times t (Myr).
         """      
@@ -278,11 +278,11 @@ class Simulation:
             
             if marker is None:
                 ax.plot(self.grid.r_mid / cm_per_kpc,
-                    self.data[dd]['T'], ls=ls[line_num], color=color, 
+                    self.data[dd]['Tk'], ls=ls[line_num], color=color, 
                     label=lab)
             else:
                 ax.scatter(self.grid.r_mid / cm_per_kpc,
-                    self.data[dd]['T'], color=color, 
+                    self.data[dd]['Tk'], color=color, 
                     label=lab, marker=marker, s=s,
                     facecolors=facecolors)
                                         

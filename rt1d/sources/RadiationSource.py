@@ -16,9 +16,9 @@ from scipy.integrate import quad, romberg
 
 import h5py, re
 import numpy as np
+from ..static.IntegralTables import IntegralTable
+from ..static.InterpolationTables import LookupTable
 from ..util import parse_kwargs, sort, evolve, readtab
-from ..init.InitializeInterpolation import LookupTable
-from ..init.InitializeIntegralTables import IntegralTable
 from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB
@@ -28,9 +28,8 @@ E_th = [13.6, 24.6, 54.4]
 small_number = 1e-3
 big_number = 1e5
 
-sptypes = {'poly': 0, 'bb': 1, 'mcd': 2, 'pl': 3, 'qso': 4, 
-    'user': 5}
-srctypes = {'test': 0, 'star': 1, 'bh': 2, 'diffuse': 3, 'byhand': 4}
+sptypes = {'poly':0, 'bb':1, 'mcd':2, 'pl':3, 'qso':4, 'user':5, 'toy':6}
+srctypes = {'test':0, 'star':1, 'bh':2, 'diffuse':3}
 
 class RadiationSource:
     def __init__(self, grid=None, logN=None, init_tabs=True, **kwargs):
@@ -41,7 +40,7 @@ class RadiationSource:
         self._load_spectrum()        
                                 
         # Create Source/SpectrumPars attributes
-        self.SourcePars = sort(self.pf, prefix='source', make_list=False)
+        self.SourcePars = sort(self.pf, prefix='source', make_list=False)        
         self.SpectrumPars = sort(self.pf, prefix='spectrum')
                           
         # Number of spectral components
@@ -100,8 +99,8 @@ class RadiationSource:
             if self.SpectrumPars['EmaxNorm'][i] == None:
                 self.SpectrumPars['EmaxNorm'][i] = self.SpectrumPars['Emax'][i]    
         
-        self.EminNorm = min(self.SpectrumPars['EminNorm'])
-        self.EmaxNorm = max(self.SpectrumPars['EmaxNorm'])
+        self.EminNorm = self.SpectrumPars['EminNorm']
+        self.EmaxNorm = self.SpectrumPars['EmaxNorm']
                          
         # Correct later if using multi-group approach
         self.E = np.array(self.SpectrumPars['E'])
@@ -597,6 +596,11 @@ class RadiationSource:
         bolometric luminosity.
         """
         
+        # If diffuse source of constant ionizing/heating background,
+        # source needs no detailed spectrum.
+        if self.SpectrumPars['type'] == [6]:
+            return np.ones(self.N)
+                    
         Lbol = self.BolometricLuminosity(t)
 
         normalizations = np.zeros(self.N)
@@ -618,15 +622,15 @@ class RadiationSource:
             integral = 0.0
             for i, component in enumerate(self.SpectrumPars['type']):
                 if self.SpectrumPars['alpha'][i] == 0.:
-                    tmp = (self.SpectrumPars['EmaxNorm'][i] \
-                        - self.SpectrumPars['EminNorm'][i])
+                    tmp = (self.EmaxNorm[i] \
+                        - self.EminNorm[i])
                 elif self.SpectrumPars['alpha'][i] == -1.:
-                    tmp = np.log(self.SpectrumPars['EmaxNorm'][i] \
-                        / self.SpectrumPars['EminNorm'][i])
+                    tmp = np.log(self.EmaxNorm[i] \
+                        / self.EminNorm[i])
                 else:
                     al = self.SpectrumPars['alpha'][i]
-                    tmp = (self.SpectrumPars['EmaxNorm'][i]**(al+1) \
-                        - self.SpectrumPars['EminNorm'][i]**(al+1)) / (al+1)
+                    tmp = (self.EmaxNorm[i]**(al+1) \
+                        - self.EminNorm[i]**(al+1)) / (al+1)
                 
                 integral += tmp * normalizations[i]
                 
@@ -636,8 +640,8 @@ class RadiationSource:
         else:
             for i, component in enumerate(self.SpectrumPars['type']):
                 integral, err = quad(self.Intensity,
-                    self.SpectrumPars['EminNorm'][i], 
-                    self.SpectrumPars['EmaxNorm'][i], args=(i, component, t,))
+                    self.EminNorm[i], 
+                    self.EmaxNorm[i], args=(i, component, t,))
                 
                 normalizations[i] = self.SpectrumPars['fraction'][i] * Lbol \
                     / integral

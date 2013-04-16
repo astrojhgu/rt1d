@@ -35,8 +35,8 @@ class ProgressBar:
     
     def start(self):
         if rank == 0:
-            self.pbar = progressbar.ProgressBar(widgets = self.widget, 
-                maxval = self.maxval).start()
+            self.pbar = progressbar.ProgressBar(widgets=self.widget, 
+                maxval=self.maxval).start()
         
     def update(self, value):
         if hasattr(self, 'pbar'):

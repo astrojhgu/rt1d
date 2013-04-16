@@ -175,7 +175,7 @@ class Hydrogen:
             (self.cosm.TCMB(z)**-1. + x_c * Tk**-1. + x_a * Tc**-1.)
     
     def Ts(self, data, z):
-        Tk = data['T']
+        Tk = data['Tk']
         Ja = 0.0
         nH = self.cosm.nH0 * (1. + z)**3
         ne = data['de']      

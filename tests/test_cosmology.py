@@ -26,7 +26,7 @@ pl.loglog(z, sim.grid.cosm.TCMB(sim.grid.cosm.zdec) * \
     label=r'analytic')
 pl.loglog(z, sim.grid.cosm.TCMB(z), color = 'k', ls = ':')
 
-z1, T = anl.CellEvolution(field='T', redshift=True)
+z1, T = anl.CellEvolution(field='Tk', redshift=True)
 pl.loglog(z1, T, color='b', label='rt1d')
 z2, Ts = anl.CellEvolution(field='Ts', redshift=True)
 pl.loglog(z2, Ts, color='b', ls = '--')

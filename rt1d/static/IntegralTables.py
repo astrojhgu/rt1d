@@ -198,7 +198,7 @@ class IntegralTable:
         """
         
         if rank == 0:
-            print '\nTabulating integral quantities...'
+            print '\nTabulating integral quantities...'        
                 
         # Loop over integrals
         h = 0
@@ -231,7 +231,8 @@ class IntegralTable:
                 else:
                     dims.append(1)
                 
-                pb = ProgressBar(self.elements_per_table, name)
+                pb = ProgressBar(self.elements_per_table, name)                
+                pb.start()
                                                               
                 tab = np.zeros(dims)
                 for j, ind in enumerate(self.indices_N):

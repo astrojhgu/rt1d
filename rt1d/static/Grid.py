@@ -349,7 +349,7 @@ class Grid:
       
         self.all_species.append('de')
         if not self.isothermal:
-            self.all_species.append('T')
+            self.all_species.append('Tk')
             
         # Create blank data fields
         self.data = {}
@@ -422,9 +422,9 @@ class Grid:
         """
         
         if isinstance(T0, Iterable):
-            self.data['T'] = T0
+            self.data['Tk'] = T0
         else:
-            self.data['T'] = T0 * np.ones(self.dims)
+            self.data['Tk'] = T0 * np.ones(self.dims)
             
     def set_ionization(self, Z=None, x=None, state=None, perturb=0):
         """
@@ -441,7 +441,7 @@ class Grid:
         elif state == 'equilibrium':
             np.seterr(all = 'ignore')   # This tends to produce divide by zero errors
             for Z in self.Z:
-                eq = cc.ioneq(Z, self.data['T'])
+                eq = cc.ioneq(Z, self.data['Tk'])
                 
                 for i in xrange(1 + Z):
                     mask = np.isnan(eq.Ioneq[i])
