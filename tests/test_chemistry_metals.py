@@ -27,7 +27,7 @@ Z = 6   # INPUT
 colors = ['k', 'b', 'g', 'r', 'c', 'm', 'y'] * 2
 
 # Initialize grid object
-grid = rt1d.Grid(dims = dims)
+grid = rt1d.Grid(dims=dims)
 
 # Set initial conditions - one particle per cc
 grid.set_physics(isothermal=True)
@@ -43,17 +43,17 @@ chem = rt1d.Chemistry(grid, dengo=True)
 timestep = rt1d.run.ComputeTimestep(grid)
 
 # Plot Equilibrium solution
-#np.seterr(all = 'ignore')
-#Teq = np.logspace(np.log10(np.min(T)), np.log10(np.max(T)), 128)
-#eq = cc.ioneq(Z, Teq)
-#ax = pl.subplot(111)
-#for i in xrange(eq.Ioneq.shape[0]):
-#    ax.loglog(Teq, eq.Ioneq[i], color=colors[i], ls = '-')
-#ax.set_xlabel(r'$T \ (\mathrm{K})$')
-#ax.set_ylabel('Species Fraction')
-#ax.set_xlim(min(T), max(T))
-#ax.set_ylim(5e-9, 1.5)
-#pl.draw()
+np.seterr(all = 'ignore')
+Teq = np.logspace(np.log10(np.min(T)), np.log10(np.max(T)), 128)
+eq = cc.ioneq(Z, Teq)
+ax = pl.subplot(111)
+for i in xrange(eq.Ioneq.shape[0]):
+    ax.loglog(Teq, eq.Ioneq[i], color=colors[i], ls = '-')
+ax.set_xlabel(r'$T \ (\mathrm{K})$')
+ax.set_ylabel('Species Fraction')
+ax.set_xlim(min(T), max(T))
+ax.set_ylim(5e-9, 1.5)
+pl.draw()
 
 # Evolve chemistry
 data = grid.data
@@ -63,6 +63,7 @@ tf = rt1d.Constants.s_per_gyr
 
 # Initialize progress bar
 pb = rt1d.run.ProgressBar(tf)
+pb.start()
 
 while t < tf:
     pb.update(t)
@@ -76,12 +77,11 @@ while t < tf:
 
 pb.finish()    
         
-#for i, ion in enumerate(grid.all_ions):
-#    ax.scatter(T, data[ion], color=colors[i], s = 50, 
-#        facecolors='none', marker = 'o')
-#pl.draw()   
-#pl.savefig('oxygen_test.png')
-#raw_input('')
+for i, ion in enumerate(grid.all_ions):
+    ax.scatter(T, data[ion], color=colors[i], s = 50, 
+        facecolors='none', marker = 'o')
+pl.draw()   
+raw_input('')
 
 
 

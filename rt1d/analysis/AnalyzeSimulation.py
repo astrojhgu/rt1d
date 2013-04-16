@@ -12,9 +12,9 @@ Description: Functions to calculate various quantities from our rt1d datasets.
 import os, re
 import numpy as np
 import pylab as pl
-from .Multiplot import *
+from ..static.Grid import Grid
+from multiplot import multipanel
 from ..physics.Constants import *
-from ..init.InitializeGrid import Grid
 
 linestyles = ['-', '--', ':', '-.']
 
@@ -165,7 +165,7 @@ class Simulation:
             mp = mp    
             hadmp = True
         else: 
-            mp = multiplot(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
+            mp = multipanel(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
 
         if anl: 
             mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle = '-', color = 'k')

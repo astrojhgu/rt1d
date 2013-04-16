@@ -6,7 +6,7 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Thu Dec 27 16:27:51 2012
 
-Description: 
+Description: Wrapper for Python progressbar.
 
 """
 
@@ -25,16 +25,15 @@ except ImportError:
     size = 1    
 
 class ProgressBar:
-    def __init__(self, maxval, name = 'rt1d'):
+    def __init__(self, maxval, name='rt1d'):
         self.maxval = maxval
         
         if pb and rank == 0:
             self.widget = ["%s: " % name, progressbar.Percentage(), ' ', \
               progressbar.Bar(marker = progressbar.RotatingMarker()), ' ', \
               progressbar.ETA(), ' ']
-            self._start()
     
-    def _start(self):
+    def start(self):
         if rank == 0:
             self.pbar = progressbar.ProgressBar(widgets = self.widget, 
                 maxval = self.maxval).start()

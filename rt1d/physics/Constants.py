@@ -6,8 +6,7 @@ Created on 2009-09-01.
 
 Description: Contains various constants that may be of use.
 
-Notes: 
-      -All units are cgs unless stated otherwise.
+Note:  All units are cgs unless stated otherwise.
 
 """
 
@@ -43,10 +42,19 @@ m_p = 1.67262158e-24    		# Proton mass - [m_p] = g
 m_n = 1.67492729e-24            # Neutron mass - [m_n] = g
 sigma_T = 6.65e-25			    # Cross section for Thomson scattering - [sigma_T] = cm^2
 alpha_FS = 1 / 137.035999070    # Fine structure constant - unitless
-Ryd = 2.1798719e-11             # Rydberg in cgs units
+Ryd = 2.1798719e-11             # Rydberg in erg
 
 erg_per_ev = e / erg_per_j
 erg_per_kev = 1e3 * erg_per_ev
+
+# Convert specific intensities from eV^-1 to Hz^-1
+ev_per_hz = h / erg_per_ev
+
+# Convert mass density from CGS to Msun / Mpc^3
+rho_cgs = cm_per_mpc**3 / g_per_msun
+
+# Convert accretion rate density from cgs to Msun / yr / Mpc^3
+rhodot_cgs = s_per_yr * cm_per_mpc**3 / g_per_msun
 
 # Stefan-Boltzmann constant - [sigma_SB] = erg / cm^2 / deg^4 / s
 sigma_SB = 2.0 * pi**5 * k_B**4 / 15.0 / c**2 / h**3
@@ -67,6 +75,8 @@ nu_alpha = E_LyA * erg_per_ev / h
 nu_beta = E_LyB * erg_per_ev / h
 nu_LL = E_LL * erg_per_ev / h
 dnu = nu_LL - nu_alpha
+
+nu_0_mhz = nu_0 / 1e6
 
 # Helium
 m_He = m_HeI = 2.0 * (m_p + m_n + m_e)

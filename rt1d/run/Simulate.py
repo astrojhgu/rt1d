@@ -134,6 +134,7 @@ class Simulation:
                     
         dt_history = []
         pb = rt1d.run.ProgressBar(tf)
+        pb.start()
         while t < tf:
                                          
             # Evolve by dt

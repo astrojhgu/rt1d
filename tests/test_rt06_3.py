@@ -12,6 +12,7 @@ Description:
 
 import rt1d
 import pylab as pl
+from multiplot import multipanel
 
 sim = rt1d.run.Simulation(pf = {'problem_type': 3, 'grid_cells': 256})
 sim.run()
@@ -21,8 +22,7 @@ anl = rt1d.analyze.Simulation(sim.checkpoints)
 t = [1, 3, 5, 15]
 ls = [':', '--', '-.', '-']
 
-mp = rt1d.analyze.multiplot(dims = (2, 1), useAxesGrid = False, 
-    share_all = False)
+mp = multipanel(dims=(2, 1), useAxesGrid=False, share_all=False)
     
 # Plot initial conditions
 mp.grid[0].semilogy(anl.grid.r_mid / anl.grid.length_units, anl.data[0]['h_1'], 

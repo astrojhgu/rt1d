@@ -63,8 +63,9 @@ class Hydrogen:
         self.kappa_e = interpolate.interp1d(T_He, kappa_He, 
             kind = 'cubic', bounds_error = False, fill_value = 0.0)
         
-        self.tabulated_coeff = {'kappa_H': kappa_HH, 'T_H': T_HH, 
-                                'kappa_e': kappa_He, 'T_e': T_He}
+        self.tabulated_coeff = {'kappa_H': np.array(kappa_HH), 
+                                'kappa_e': np.array(kappa_He), 
+                                'T_H': np.array(T_HH), 'T_e': np.array(T_He)}
                                 
     def CollisionalIonizationRate(self, T):
         """

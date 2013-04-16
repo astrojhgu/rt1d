@@ -37,16 +37,16 @@ class Chemistry:
         self.rtON = rt
         
         if dengo:
-            from ..init.InitializeChemicalNetwork import \
+            from ..static.ChemicalNetwork import \
                 DengoChemicalNetwork as ChemicalNetwork
         else:
-            from ..init.InitializeChemicalNetwork import \
+            from ..static.ChemicalNetwork import \
                 SimpleChemicalNetwork as ChemicalNetwork
         
         self.chemnet = ChemicalNetwork(grid)
         
         self.solver = ode(self.chemnet.RateEquations, 
-            jac=self.chemnet.Jacobian).set_integrator('vode', 
+            jac=self.chemnet.Jacobian).set_integrator('vode',
             method='bdf', nsteps=1e4, with_jacobian=True,
             atol=1e-8, rtol=1e-8)
             

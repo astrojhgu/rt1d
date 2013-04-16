@@ -1,4 +1,4 @@
-from ComputeRateCoefficients import RateCoefficients
-from .SecondaryElectrons import SecondaryElectrons
-from Cosmology import Cosmology
+import CrossSections
 from Hydrogen import Hydrogen
+from Cosmology import Cosmology
+from SecondaryElectrons import SecondaryElectrons

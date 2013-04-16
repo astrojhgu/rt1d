@@ -11,16 +11,17 @@ Description: Single zone ionization/recombination + heating/cooling test.
 """
 
 import rt1d
+from multiplot import multipanel
 
 sim = rt1d.run.Simulation(pf = {'problem_type': 0, 'optically_thin': 1})
 sim.run()
 
 anl = rt1d.analyze.Simulation(sim.checkpoints)
 
-t, z, xHI = anl.CellTimeEvolution(field = 'h_1')
-t, z, T = anl.CellTimeEvolution(field = 'T')
+t, xHI = anl.CellEvolution(field = 'h_1')
+t, T = anl.CellEvolution(field = 'T')
 
-mp = rt1d.analyze.multiplot(dims = (2, 1), share_all = False, 
+mp = multipanel(dims = (2, 1), share_all = False, 
     useAxesGrid = False, panel_size = (0.5, 1))
     
 s_per_yr = rt1d.physics.Constants.s_per_yr

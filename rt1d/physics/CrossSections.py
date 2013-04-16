@@ -44,4 +44,8 @@ def PhotoIonizationCrossSection(E, species = 0):
                                 
     return params[species][1] * F_y * 1e-18
     
+sigma_0 = [PhotoIonizationCrossSection(E_th[i]) for i in xrange(3)]
+def ApproximatePhotoIonizationCrossSection(E, species = 0):
+    return sigma_0[species] * (E_th[species] / E)**3                         
+    
     

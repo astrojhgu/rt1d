@@ -58,7 +58,9 @@ class SpinTemperature:
         # Fiducial Jalpha (energy units)
         J0 = (h * nu_alpha) * c * n_H / 4. / np.pi / nu_alpha
         
-        tau_GP = (1. - x_HII) * np.pi * (e * c / 10.)**2 * n_H * f12 / H / m_e / nu_alpha
+        # Gunn-Peterson optical depth
+        tau_GP = (1. - x_HII) * np.pi * (e * c / 10.)**2 * n_H * f12 \
+            / H / m_e / nu_alpha
         
         P10 = (4. / 27.) * H * tau_GP * (Sc * Jc + Si * Ji) / J0
                 

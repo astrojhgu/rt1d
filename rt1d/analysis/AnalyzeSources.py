@@ -16,6 +16,7 @@ from ..physics.Constants import *
 from scipy.integrate import quad as integrate
 
 ls = ['-', '--', '-.', ':']
+small_number = 1e-5
 
 class Source:
     def __init__(self, rs):

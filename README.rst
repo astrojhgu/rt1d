@@ -38,6 +38,10 @@ simulations is very small (characteristic ionization timescale very
 short).  The example problem given below should run in about a minute on a 
 single CPU.
 
+Some of the rt1d/test scripts and built-in analysis routines use a module for 
+making multi-panel plots, which can be found 
+`here <https://bitbucket.org/mirochaj/multiplot>`_.
+
 (Optional)
 The code is written such that running with an arbitrary chemical composition 
 is possible (in principle) using dengo (written by Matthew Turk and 
