@@ -573,11 +573,49 @@ class IntegralTable:
         f = h5py.File(fn)
         for i, axis in enumerate(self.axes):
             ds = f.create_dataset(self.axes_names[i], data=axis)
-            ds.attrs.create('axis', data=True)
+            ds.attrs.create('axis', data=i)
+            ds.attrs.create('logN', data=int(self.axes_names[i][0:4]=='logN'))
         
         for tab in self.tabs:
-            f.create_dataset(tab, data=self.tabs[tab])    
+            f.create_dataset(tab, data=self.tabs[tab])
+            
+        f.close()
+    
+    def load(self, fn):
+        """ Load table from hdf5. """
         
-        f.close()    
+        import h5py
+        
+        axes = []
+        self.tabs = {}
+        f = h5py.File(fn)
+        for element in f.keys():
+            if f[element].attrs.get('axis') is not None:
+                axes.append([int(f[element].attrs.get('axis')), element, 
+                    f[element].value])
+                continue
+            
+            self.tabs[element] = f[element].value    
+                
+        f.close()
+        print 'Read integral table from %s.' % fn
+        
+        axis, names, values = zip(*axes)
+                
+        # See if parameter file and integral table are consistent
+        ok = True
+        for i, axis in enumerate(names):
+            if np.all(np.array(values[i]) == self.axes[i]):
+                continue
+            
+            print 'WARNING: Axis \'%s\' has %i elements. Expected %i.' \
+                % (np.array(values[i]).size, self.axes[i].size)
+            ok = False
+            
+        if not ok:
+            raise ValueError('Axes of integral table inconsistent!')    
+                
+        return self.tabs
+               
                     
             

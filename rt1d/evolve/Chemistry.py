@@ -172,7 +172,6 @@ class Chemistry:
             newdata[key] = copy.deepcopy(data[key])
        
         # Create all kwargs
-        
         if t == 0 or not self.grid.isothermal:
             self.kwargs = {}
             for element in self.chemnet.networks:
@@ -183,8 +182,16 @@ class Chemistry:
                     prefix = convert_ion_name(prefix, convention='underscore')
                     val = network.reactions[reaction].coeff_fn(network)
                     self.kwargs['%s_%s' % (prefix, suffix)] = val 
+                
+                #for action in network.cooling_actions.keys():
+                #    prefix, suffix = reaction.split('_')
+                #    prefix = convert_ion_name(prefix, convention='underscore')
+                #    val = network.cooling_actions[action].coeff_fn(network)
+                #    self.kwargs['%s_%s' % (prefix, suffix)] = val     
                                         
         kwargs_by_cell = self.sort_kwargs_by_cell(self.kwargs)
+
+        print kwargs_by_cell[0].keys()
                 
         # Loop over grid and solve chemistry            
         for cell in xrange(self.grid.dims):

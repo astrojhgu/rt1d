@@ -64,7 +64,7 @@ class DengoChemicalNetwork:
         
         # For each chemical network object, set rate equation and Jacobian
         self._set_rhs()
-        self._set_jac()
+        #self._set_jac()
     
     def _is_primordial(self, element):
         if element in ['h', 'he']:
@@ -159,18 +159,34 @@ class DengoChemicalNetwork:
         else:
             expr = expr.replace('de', 'q[-2]')
             expr = expr.replace('ge', 'q[-1]')
-                      
-        # Cooling terms      
-        expr = self._translate_cool_str(expr)      
-              
-        return expr      
+                                    
+        return expr   
         
     def _translate_cool_str(self, expr):
-        """
-        Convert dengo style energy equation strings to dictionary / vector convention
-        """      
+        for species in self.grid.all_ions:
+            sp = convert_ion_name(species)
+            expr = expr.replace('%s_c_%s_c' % (sp, sp), 
+                'kwargs[\'%s_c\']' % species)
         
-        return expr
+        # Rename ions
+        for element in self.grid.ions_by_parent:
+            ions = copy.deepcopy(self.grid.ions_by_parent[element])
+            ions.reverse()
+            
+            for ion in ions:
+                sp = convert_ion_name(ion)
+                        
+                expr = expr.replace('%s' % sp,
+                    'q[%i]' % list(self.grid.qmap).index(ion))
+        
+        # Replace de and ge         
+        if self.grid.isothermal:
+            expr = expr.replace('de', 'q[-1]')
+        else:
+            expr = expr.replace('de', 'q[-2]')
+            expr = expr.replace('ge', 'q[-1]')
+                                    
+        return expr   
         
     def RateEquations(self, t, q, args):
         """

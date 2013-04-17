@@ -316,7 +316,7 @@ class Grid:
             HeliumFractionByMass=HeliumFractionByMass,
             CMBTemperatureNow=CMBTemperatureNow)        
         
-    def set_chemistry(self, Z=1, abundance=1.0):
+    def set_chemistry(self, Z=1, abundance=1.0, energy=False):
         """
         Initialize chemistry - which species we'll be solving for and their 
         abundances ('cosmic', 'sun_photospheric', 'sun_coronal', etc. are
@@ -346,10 +346,15 @@ class Grid:
                 self.all_ions.append(name)
                 self.all_species.append(name)
                 self.ions_by_parent[element_name].append(name)
-      
+
+        self.solve_ge = False      
         self.all_species.append('de')
         if not self.isothermal:
-            self.all_species.append('Tk')
+            if energy:
+                self.solve_ge = True
+                self.all_species.append('ge')
+            else:    
+                self.all_species.append('Tk')
             
         # Create blank data fields
         self.data = {}
@@ -489,6 +494,17 @@ class Grid:
         
         # Set electron density
         self._set_electron_density()
+        
+        if self.solve_ge:
+            self.set_gas_energy()
+        
+    def set_gas_energy(self):
+        """
+        Store ge.
+        """    
+        
+        self.data['n'] = self.particle_density(self.data)
+        self.data['ge'] = 1.5 * self.data['n'] * k_B * self.data['Tk']
         
     def set_ics(self, data):
         """

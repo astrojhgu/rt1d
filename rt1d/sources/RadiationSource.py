@@ -223,29 +223,26 @@ class RadiationSource:
         if self.discrete or self.SourcePars['type'] == 3:
             return
         
-        # Overide defaults if supplied - this is dangerous
-        if logN is not None:
-            self.pf.update({'spectrum_dlogN': [np.diff(tmp) for tmp in logN]})
-            self.pf.update({'spectrum_logNmin': [np.min(tmp) for tmp in logN]})
-            self.pf.update({'spectrum_logNmax': [np.max(tmp) for tmp in logN]})
         
-        self.tab = IntegralTable(self.pf, self, self.grid, logN)
-            
-        # Tabulate away!
         if self.SourcePars['table'] is None:
+            # Overide defaults if supplied - this is dangerous
+            if logN is not None:
+                self.pf.update({'spectrum_dlogN': [np.diff(tmp) for tmp in logN]})
+                self.pf.update({'spectrum_logNmin': [np.min(tmp) for tmp in logN]})
+                self.pf.update({'spectrum_logNmax': [np.max(tmp) for tmp in logN]})
+            
+            # Tabulate away!            
+            self.tab = IntegralTable(self.pf, self, self.grid, logN)
             self.tabs = self.tab.TabulateRateIntegrals()  
         else:
-            self.tabs = self.SourcePars['table']
+            self.tab = IntegralTable(self.pf, self, self.grid, logN)
+            self.tabs = self.tab.load(self.SourcePars['table'])
                 
         self.tables = {}
         for tab in self.tabs:
             self.tables[tab] = \
                 LookupTable(self.pf, tab, self.tab.logN, self.tabs[tab], 
-                    self.tab.logx, self.tab.t)
-    
-    def dump(self, fn=None):
-        """ Dump integral table to file."""
-        self.tab.dump(fn)                  
+                    self.tab.logx, self.tab.t)                 
     
     @property
     def sigma(self):
