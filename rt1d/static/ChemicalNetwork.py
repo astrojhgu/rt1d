@@ -22,6 +22,9 @@ try:
     import dengo.carbon_rates, dengo.carbon_cooling
     import dengo.magnesium_rates, dengo.magnesium_cooling
     import dengo.neon_rates, dengo.neon_cooling
+    import dengo.nitrogen_rates, dengo.nitrogen_cooling
+    import dengo.silicon_rates, dengo.silicon_cooling
+    import dengo.sulfur_rates, dengo.sulfur_cooling
     from dengo.chemical_network import ChemicalNetwork, \
         reaction_registry, cooling_registry
 except ImportError:
@@ -105,16 +108,27 @@ class DengoChemicalNetwork:
         Create string representations of Jacobian.
         """        
         
-        self.jac = []
-        for element in self.networks:
+        # Create empty jacobian
+        self.jac = [['0']*len(self.grid.all_species) \
+            for sp in self.grid.all_species]
+            
+        for i, sp1 in enumerate(self.grid.all_species):
+            
+            for element in self.grid.ions_by_parent:
+                if sp1 in self.grid.ions_by_parent[element]:
+                    break
+                    
             chemnet = self.networks[element]
-            for i, sp1 in enumerate(self.grid.all_species):
-                self.jac.append([])
-                for j, sp2 in enumerate(self.grid.all_species):
-                    expr = chemnet.jacobian_string_equation(convert_ion_name(sp1), 
-                        convert_ion_name(sp2))
-                    expr = self._translate_rate_str(expr)
-                    self.jac[i].append(expr)                
+            names = [species.name for species in chemnet.required_species]
+            
+            for j, sp2 in enumerate(self.grid.all_species):                    
+                if convert_ion_name(sp2) not in names:
+                    continue    
+                
+                expr = chemnet.jacobian_string_equation(convert_ion_name(sp1), 
+                    convert_ion_name(sp2))
+                expr = self._translate_rate_str(expr)
+                self.jac[i][j] = expr
             
     def _translate_rate_str(self, expr):
         """

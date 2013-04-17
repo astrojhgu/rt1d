@@ -15,16 +15,16 @@ import numpy as np
 import pylab as pl
 import chianti.core as cc
 
-dims = 32
-T = np.logspace(4, 8, dims)
-
 #
 ##
-Z = 6   # INPUT
+Z = 8
+dims = 32
 ##
 #
 
 colors = ['k', 'b', 'g', 'r', 'c', 'm', 'y'] * 2
+
+T = np.logspace(4, 8, dims)
 
 # Initialize grid object
 grid = rt1d.Grid(dims=dims)
@@ -32,17 +32,14 @@ grid = rt1d.Grid(dims=dims)
 # Set initial conditions - one particle per cc
 grid.set_physics(isothermal=True)
 grid.set_chemistry(Z=Z)
-grid.set_density(rho0=rt1d.Constants.m_H*2*Z)
+grid.set_density(rho0=10*rt1d.Constants.m_H*2*Z)
 grid.set_temperature(T)
-grid.set_ionization(state='neutral')
+grid.set_ionization()
 
 # Initialize chemistry network / solver
 chem = rt1d.Chemistry(grid, dengo=True)
 
-# To compute timestep
-timestep = rt1d.run.ComputeTimestep(grid)
-
-# Plot Equilibrium solution
+# Plot equilibrium solution
 np.seterr(all = 'ignore')
 Teq = np.logspace(np.log10(np.min(T)), np.log10(np.max(T)), 128)
 eq = cc.ioneq(Z, Teq)
@@ -55,31 +52,14 @@ ax.set_xlim(min(T), max(T))
 ax.set_ylim(5e-9, 1.5)
 pl.draw()
 
-# Evolve chemistry
-data = grid.data
+# Evolve chemistry in one big step
 dt = rt1d.Constants.s_per_gyr
-t = 0.0
-tf = rt1d.Constants.s_per_gyr
-
-# Initialize progress bar
-pb = rt1d.run.ProgressBar(tf)
-pb.start()
-
-while t < tf:
-    pb.update(t)
-    data = chem.Evolve(data, t=t, dt=dt)
-    t += dt 
+data = chem.Evolve(grid.data, t=0, dt=dt)
     
-    new_dt = timestep.Limit(chem.chemnet.q, chem.chemnet.dqdt)
-    dt = min(min(new_dt, 2 * dt), tf - t)
-    
-    pb.update(t)
-
-pb.finish()    
-        
+# Plot up solution
 for i, ion in enumerate(grid.all_ions):
-    ax.scatter(T, data[ion], color=colors[i], s = 50, 
-        facecolors='none', marker = 'o')
+    ax.scatter(T, data[ion], color=colors[i], s=50, 
+        facecolors='none', marker='o')
 pl.draw()   
 raw_input('')
 
