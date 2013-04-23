@@ -36,7 +36,7 @@ class SimpleChemicalNetwork:
     def __init__(self, grid):
         self.grid = grid
         
-        from ..physics.ComputeRateCoefficients import RateCoefficients
+        from ..physics.RateCoefficients import RateCoefficients
         self.coeff = RateCoefficients(grid)
 
         self.isothermal = self.grid.isothermal
