@@ -156,7 +156,6 @@ class Chemistry:
         # Convert T to ge for fun and update particle density
         #if not self.grid.isothermal:        
         newdata['n'] = self.grid.particle_density(newdata, z - dz)
-        #newdata['ge'] = 1.5 * newdata['n'] * k_B * newdata['T']
         newdata['de'] = self.grid.electron_density(newdata, z - dz)
         newdata['Ts'] = self.grid.hydr.Ts(newdata, z - dz)
                         
@@ -190,8 +189,6 @@ class Chemistry:
                 #    self.kwargs['%s_%s' % (prefix, suffix)] = val     
                                         
         kwargs_by_cell = self.sort_kwargs_by_cell(self.kwargs)
-
-        print kwargs_by_cell[0].keys()
                 
         # Loop over grid and solve chemistry            
         for cell in xrange(self.grid.dims):

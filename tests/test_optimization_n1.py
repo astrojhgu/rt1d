@@ -14,6 +14,7 @@ we have an ~analytic solution that we can compare to.
 import rt1d, ndmin
 import numpy as np
 import pylab as pl
+from multiplot import multipanel
 
 erg_per_ev = rt1d.physics.Constants.erg_per_ev 
 
@@ -66,8 +67,8 @@ Lbins = np.linspace(Lmono-0.1, Lmono+0.1, 51)
 histE, binsE = np.histogram(sedop.sampler.chain[...,0], bins = Ebins)
 histLE, binsLE = np.histogram(sedop.sampler.chain[...,1], bins = Lbins)
 
-# Grab multiplot class from rt1d for multipanel hists
-mp = rt1d.analyze.multiplot(dims = (1, 2), useAxesGrid = False)
+# Grab multiplot class
+mp = multipanel(dims = (1, 2), useAxesGrid = False)
 
 mp.grid[0].plot(ndmin.util.rebin(Ebins), histE, color = 'k', 
     drawstyle = 'steps-mid')
@@ -93,7 +94,7 @@ Eopt, LEopt = np.array(pars[:len(pars) / 2]), np.array(pars[len(pars) / 2:])
 best_phi = sedop.discrete_tabs(Eopt, LEopt)['logPhi_h_1']
 best_psi = sedop.discrete_tabs(Eopt, LEopt)['logPsi_h_1']
 
-mp = rt1d.analyze.multiplot(dims = (2, 1), useAxesGrid = False)
+mp = multipanel(dims = (2, 1), useAxesGrid = False)
 
 mp.grid[0].loglog(10**sedop.logN[0], 10**sedop.rs.tabs['logPhi_h_1'], color = 'k')
 mp.grid[0].loglog(10**sedop.logN[0], 10**best_phi, color = 'b')

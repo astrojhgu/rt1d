@@ -1,8 +1,0 @@
-SourceType               = 4
-SourceSFRLXNormalization = 1
-SpectrumType             = 4
-SpectrumMinEnergy        = 1e2
-SpectrumMaxEnergy        = 1e4
-SpectrumMinNormEnergy    = 1e2
-SpectrumMaxNormEnergy    = 1e4
-SpectrumPowerLawIndex    = 1.5

@@ -112,7 +112,10 @@ def SpectrumParameters():
         "spectrum_Emin": 13.6,  
         "spectrum_Emax": 1e2,  
         "spectrum_EminNorm": None,
-        "spectrum_EmaxNorm": None, 
+        "spectrum_EmaxNorm": None,
+        
+        "spectrum_linewidth": None,
+        "spectrum_linecenter": None, 
          
         "spectrum_logN": 0,
         "spectrum_fcol": 1.7,

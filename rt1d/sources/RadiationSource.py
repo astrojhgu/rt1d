@@ -18,7 +18,7 @@ import h5py, re
 import numpy as np
 from ..static.IntegralTables import IntegralTable
 from ..static.InterpolationTables import LookupTable
-from ..util import parse_kwargs, sort, evolve, readtab
+from ..util import parse_kwargs, sort, evolve, readtab, Gauss1D, boxcar
 from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
 
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB
@@ -28,7 +28,8 @@ E_th = [13.6, 24.6, 54.4]
 small_number = 1e-3
 big_number = 1e5
 
-sptypes = {'poly':0, 'bb':1, 'mcd':2, 'pl':3, 'qso':4, 'user':5, 'toy':6}
+sptypes = {'poly':0, 'bb':1, 'mcd':2, 'pl':3, 'qso':4, 'user':5, 'toy':6,
+    'line':7}
 srctypes = {'test':0, 'star':1, 'bh':2, 'diffuse':3}
 
 class RadiationSource:
@@ -490,6 +491,8 @@ class RadiationSource:
             Lnu = self.PowerLaw(E, i, t)    
         elif Type == 4:
             Lnu = self.QuasarTemplate(E, i, Type, t)
+        elif Type == 7:
+            Lnu = self.SpectralLine(E, i, Type, t)
         else:
             Lnu = 0.0
             
@@ -554,7 +557,7 @@ class RadiationSource:
             * self.BlackBody(E, T) / self.T_in
         return quad(integrand, self.T_out, self.T_in)[0]
         
-    def QuasarTemplate(self, E, i, Type, t = 0.0):
+    def QuasarTemplate(self, E, i, Type, t=0):
         """
         Quasar spectrum of Sazonov, Ostriker, & Sunyaev 2004.
         """
@@ -586,6 +589,11 @@ class RadiationSource:
                     E**(self.Beta - self.Gamma)) * E**-self.Beta
         
         return F
+        
+    def SpectralLine(self, E, i, Type, t=0):
+        line_pars = np.array([0., 1., self.SpectrumPars['linecenter'][i], 
+            self.SpectrumPars['linewidth'][i]])    
+        return Gauss1D(E, line_pars)   
                             
     def NormalizeSpectrumComponents(self, t=0):
         """

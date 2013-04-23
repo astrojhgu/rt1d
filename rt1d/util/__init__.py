@@ -271,5 +271,34 @@ def convert_ion_name(name, convention='roman'):
     
     return '%s_%s' % (element.lower(), roman_to_ion(ion))
             
+def Gauss1D(x, pars):
+    """ DOC """
+    return pars[0] + pars[1] * np.exp(-(x - pars[2])**2 / 2. / pars[3]**2)
+
+def boxcar(x, x1, x2):
+    """ DOC """
+    if hasattr(x, 'size'):
+        y = 1.0 * np.ones_like(x)
+        y[x < x1] = 0.0
+        y[x > x2] = 0.0
+        return y
+        
+    if x1 <= x <= x2:
+        return 1.0
+    
+    return 0.0
+
+def step(x, x0, pre_step=0.0):
+    """ DOC """
+    if hasattr(x, 'size'):
+        y = (1.0 - pre_step) * np.ones_like(x)
+        y[x <= x0] = pre_step
+        return y
+        
+    if x <= x0:
+        return 0.0
+    
+    return 1.0
+     
         
                         

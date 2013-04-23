@@ -56,8 +56,8 @@ class Source:
         
         return integrate(integrand, self.rs.EminNorm, self.rs.EmaxNorm)[0]
                 
-    def PlotSpectrum(self, color = 'k', components = True, t = 0, normalized = True,
-        bins = 100, ax=None, label = None):
+    def PlotSpectrum(self, color='k', components=True, t=0, normalized=True,
+        bins=100, ax=None, label=None):
         
         if not normalized:
             Lbol = self.rs.BolometricLuminosity(t)

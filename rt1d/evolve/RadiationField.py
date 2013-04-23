@@ -63,6 +63,12 @@ class RadiationField:
             else:
                 self.A_npc = source.Lbol / 4. / np.pi / self.grid.r_mid**2
                 self.pp_corr = 4. * np.pi * self.grid.r_mid**2
+                                        
+    @property
+    def finite_c(self):
+        if self.pf['infinite_c']:
+            return False
+        return True            
             
     def SourceDependentCoefficients(self, data, t, z=None, **kwargs):
         """

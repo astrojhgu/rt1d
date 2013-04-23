@@ -1,5 +1,0 @@
-SpectrumFile            = popII_1msunperyr_s99.hdf5
-ForceIntegralTabulation = 1
-SourceTimeEvolution     = 1
-DiscreteSpectrum        = 1
-AgeBins                 = 200

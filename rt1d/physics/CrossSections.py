@@ -19,7 +19,7 @@ params = [[4.298e-1, 5.475e4, 3.288e1, 2.963, 0.0, 0.0, 0.0],
           [13.61, 9.492e2, 1.469, 3.188, 2.039, 4.434e-1, 2.136],
           [1.72, 1.369e4, 3.288e1, 2.963, 0.0, 0.0, 0.0]]
 
-def PhotoIonizationCrossSection(E, species = 0):
+def PhotoIonizationCrossSection(E, species=0):
     """ 
     Returns photoionization cross section for HI, HeI, or HeII from the fits of
     Verner et al. 1996.  HI is the first 7-element sub-array in 'params', HeI
@@ -36,6 +36,9 @@ def PhotoIonizationCrossSection(E, species = 0):
     
     """
     
+    if E < E_th[species]:
+        return 0.0
+    
     x = (E / params[species][0]) - params[species][5]
     y = np.sqrt(x**2 + params[species][6]**2)
     F_y = ((x - 1.0)**2 + params[species][4]**2) * \
@@ -44,8 +47,11 @@ def PhotoIonizationCrossSection(E, species = 0):
                                 
     return params[species][1] * F_y * 1e-18
     
-sigma_0 = [PhotoIonizationCrossSection(E_th[i]) for i in xrange(3)]
-def ApproximatePhotoIonizationCrossSection(E, species = 0):
-    return sigma_0[species] * (E_th[species] / E)**3                         
+sigma0 = PhotoIonizationCrossSection(E_th[0])
+def ApproximatePhotoIonizationCrossSection(E, species=0):
+    if E < E_th[species]:
+        return 0.0
+    return sigma0 * (E_th[species] / E)**3                         
     
+
     

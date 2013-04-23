@@ -29,17 +29,20 @@ class Radiation:
         # Initialize RT solver
         if self.srcs is not None:
             self.rfield = RadiationField(grid, sources, **kwargs)
-        
+    
     @property
     def finite_c(self):
-        if self.pf['infinite_c']:
-            return False
+        if hasattr(self, 'rfield'):
+            return self.rfield.finite_c
+        return False        
         
-        return True
-    
     def Evolve(self, data, t, dt, z=None, **kwargs):
         """
         This routine calls our solvers and updates 'data' -> 'newdata'
+        
+        PhotonPackage guide: 
+        pack = [EmissionTime, EmissionTimeInterval, NHI, NHeI, NHeII, E]
+        
         """
         
         # Make data globally accessible
@@ -48,12 +51,22 @@ class Radiation:
         # Figure out which processors will solve which cells and create newdata dict
         #self.solve_arr, newdata = self.control.DistributeDataAcrossProcessors(data, lb)
         
+        # Set up photon packages    
+        if self.finite_c and t == 0:
+            self.data['photon_packages'] = []
+        
         # Compute source dependent rate coefficients
         self.kwargs = {}
         if self.pf['radiative_transfer']:
-            Gamma_src, gamma_src, Heat_src = \
-                self.rfield.SourceDependentCoefficients(data, t, z, **kwargs)
-
+            
+            if self.finite_c:
+                raise NotImplementedError('Finite speed-of-light solver not implemented.')
+            
+            else:    
+                Gamma_src, gamma_src, Heat_src = \
+                    self.rfield.SourceDependentCoefficients(data, t, z, 
+                        **kwargs)
+                
             if len(self.srcs) > 1:
                 for i, src in enumerate(self.srcs):
                     self.kwargs.update({'Gamma_%i' % i: Gamma_src[i], 

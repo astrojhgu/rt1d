@@ -35,15 +35,6 @@ pl.xlabel(r'$z$')
 pl.ylabel(r'$T_K$')
 pl.xlim(10, sim.grid.zi)
 pl.ylim(1, 2e3)
-
-#try:
-#    import glorb
-#    ds = glorb.analysis.Analyze21cm(glorb.run.RadioBackground(**{'zi': 1100, 
-#        'zfl': 6, 'dz': 1}))
-#    pl.loglog(ds.data['z'], ds.data['Tk'], color='g', label='cosmorec')
-#    pl.loglog(ds.data['z'], ds.data['Ts'], color='g', ls='--')    
-#except:
-#    pass
     
 pl.legend(frameon=False, loc='lower right')   
 raw_input('')    

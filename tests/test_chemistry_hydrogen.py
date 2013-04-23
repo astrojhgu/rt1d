@@ -16,7 +16,7 @@ import pylab as pl
 import chianti.core as cc
 
 dims = 32
-T = np.logspace(3, 6, dims)
+T = np.logspace(np.log10(5000), 5, dims)
 
 # Initialize grid object
 grid = rt1d.Grid(dims = dims)
@@ -24,15 +24,15 @@ grid = rt1d.Grid(dims = dims)
 # Set initial conditions
 grid.set_physics(isothermal=True)
 grid.set_chemistry(Z=1)
-grid.set_density(rho0=1e-3*rt1d.Constants.m_H)
-grid.set_ionization(state='neutral')  
+grid.set_density(rho0=rt1d.Constants.m_H)
+grid.set_ionization()  
 grid.set_temperature(T)
 
 # Initialize chemistry network / solver
 chem = rt1d.Chemistry(grid, rt=False, dengo=False)
 
-# Only need to calculate coefficients once for this test
-chem.chemnet.SourceIndependentCoefficients(chem.grid.data['T'])
+# Compute rate coefficients once (isothermal)
+chem.chemnet.SourceIndependentCoefficients(grid.data['Tk'])
 
 # To compute timestep
 timestep = rt1d.run.ComputeTimestep(grid)
