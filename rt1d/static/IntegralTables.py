@@ -1,5 +1,6 @@
 """
-InitializeIntegralTables.py
+
+IntegralTables.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder

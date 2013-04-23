@@ -1,6 +1,6 @@
 """
 
-InitializeGrid.py
+Grid.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
@@ -17,7 +17,7 @@ from ..util import parse_kwargs, rebin
 from ..physics.Hydrogen import Hydrogen
 from ..physics.Cosmology import Cosmology
 from ..physics.Constants import k_B, cm_per_kpc, s_per_myr, m_H
-from ..physics.ComputeCrossSections import PhotoIonizationCrossSection
+from ..physics.CrossSections import PhotoIonizationCrossSection
 
 try:
     import chianti.core as cc

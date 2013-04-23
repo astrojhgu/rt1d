@@ -10,16 +10,14 @@ Description: Initialize a radiation source.
 
 """
 
-
-from ..physics.Constants import *
-from scipy.integrate import quad, romberg
-
 import h5py, re
 import numpy as np
+from ..physics.Constants import *
+from scipy.integrate import quad, romberg
 from ..static.IntegralTables import IntegralTable
 from ..static.InterpolationTables import LookupTable
 from ..util import parse_kwargs, sort, evolve, readtab, Gauss1D, boxcar
-from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
+from ..physics.CrossSections import PhotoIonizationCrossSection as sigma_E
 
 np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB
                             # will return 0 as it should for x large

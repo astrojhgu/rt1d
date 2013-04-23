@@ -1,5 +1,5 @@
 """
-ComputeCrossSections.py
+CrossSections.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
