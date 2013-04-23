@@ -1,6 +1,6 @@
 """
 
-test_cross_sections.py
+test_physics_cross_sections.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder

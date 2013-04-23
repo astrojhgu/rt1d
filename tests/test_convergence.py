@@ -18,17 +18,18 @@ colors = ['c', 'm', 'r', 'g', 'b', 'k']
 
 mp = None
 for i, res in enumerate([2**n for n in np.arange(5, 10)]):
-    sim = rt1d.run.Simulation(pf = {'problem_type': 1, 'grid_cells': res})
+    sim = rt1d.run.Simulation(problem_type=1, grid_cells=res)
     sim.run()
+    
     anl = rt1d.analyze.Simulation(sim.checkpoints)
 
     plot_anl = plot_sol = True
     if res < 1024:
         plot_anl = plot_sol = False
     
-    mp = anl.PlotIonizationFrontEvolution(color = colors[i], mp = mp, 
-        anl = plot_anl, label = r'$\Delta x = 1 / %i$' % res,
-        plot_solution = plot_sol)
+    mp = anl.PlotIonizationFrontEvolution(color = colors[i], mp=mp, 
+        anl=plot_anl, label=r'$\Delta x = 1 / %i$' % res,
+        plot_solution=plot_sol)
         
     pl.draw()    # seems a bit redundant
         

@@ -221,4 +221,25 @@ class Optimization:
                     self.rs.tab.Nall[i], absorber))
                     
         return tau_E
+        
+    def dump(self, fn):
+        """
+        Write optimization result to HDF5 file.
+        """    
+        
+        if rank > 0:
+            return
+            
+        f = h5py.File(fn)
+        f.create_dataset('chain', data=self.sampler.chain)
+        
+        if self.mcmc:
+            f.create_dataset('post', data=self.sampler.post)
+        else:
+            f.create_dataset('cost', data=self.sampler.cost)
+        
+        print 'Wrote chain to %s.' % fn    
+        f.close()
+        
+            
                 

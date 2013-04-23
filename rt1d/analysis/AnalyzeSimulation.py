@@ -106,7 +106,7 @@ class Simulation:
             if T0 is not None: 
                 T = T0
             else: 
-                T = self.data['dd0000']['T'][0]
+                T = self.data['dd0000']['Tk'][0]
                 
             n_H = self.grid.n_H[0]
             self.Qdot = self.pf['source_qdot']

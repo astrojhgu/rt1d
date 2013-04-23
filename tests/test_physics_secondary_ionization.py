@@ -1,6 +1,6 @@
 """
 
-test_secondary_ionization.py
+test_physics_secondary_ionization.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder

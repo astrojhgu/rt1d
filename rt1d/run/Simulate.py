@@ -130,7 +130,10 @@ class Simulation:
                 
         max_timestep = self.pf['time_units'] * self.pf['max_timestep']
         
-        print '\nSolving radiative transfer...'
+        if self.pf['radiative_transfer']:
+            print '\nEvolving radiative transfer...'
+        else:
+            print '\nEvolving chemical reactions...'
                     
         dt_history = []
         pb = rt1d.run.ProgressBar(tf)

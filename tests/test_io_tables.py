@@ -1,6 +1,6 @@
 """
 
-test_io.py
+test_io_tables.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder

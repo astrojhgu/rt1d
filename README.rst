@@ -30,8 +30,9 @@ Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis
 modules also use on matplotlib, though if you'd rather make your plots with 
 something else, this dependence is not necessary.
 
-(Optional)
-|If you have the Python 
+Dependencies (Optional)
+-----------------------
+If you have the Python 
 `progressbar <https://code.google.com/p/python-progressbar>`_ installed, rt1d 
 will use it. Don't be alarmed if the time-to-completion estimate you're given 
 is absurd at first -- the time-step at the beginning of radiative transfer 

@@ -1,6 +1,6 @@
 """
 
-test_cosmology.py
+test_physics_cosmology.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
