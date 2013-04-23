@@ -137,5 +137,5 @@ pl.close()
 ax = c.TemperatureProfile(t = [10, 30, 100])
 d.TemperatureProfile(t = [10, 30, 100], color = 'b', ax = ax)
 
-raw_input('done')
+raw_input('See! Monochromatic SEDs don\'t do so great.')
 pl.close()

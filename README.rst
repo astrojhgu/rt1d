@@ -27,9 +27,10 @@ Dependencies
 ------------
 
 Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis 
-modules also rely on matplotlib, though if you'd rather make your plots with 
+modules also use on matplotlib, though if you'd rather make your plots with 
 something else, this dependence is not necessary.
 
+(Optional)
 If you have the Python 
 `progressbar <https://code.google.com/p/python-progressbar>`_ installed, rt1d 
 will use it. Don't be alarmed if the time-to-completion estimate you're given 
@@ -42,10 +43,10 @@ Some of the rt1d/test scripts and built-in analysis routines use a module for
 making multi-panel plots, which can be found 
 `here <https://bitbucket.org/mirochaj/multiplot>`_.
 
-(Optional)
 The code is written such that running with an arbitrary chemical composition 
-is possible (in principle) using dengo (written by Matthew Turk and 
-Devin Silvia). Its sub-dependencies can all be installed using pip: ::
+is possible (in principle) using `dengo <https://bitbucket.org/MatthewTurk/dengo>`_ 
+(written by Matthew Turk and Devin Silvia). Its sub-dependencies can all be 
+installed using pip: ::
 
     pip install sympy
     pip install periodic
@@ -60,16 +61,15 @@ which for me (in bash) looks like: ::
 
 Once this is all done, you should be off to the races.
 
-NOTE: As of 04.08.2013 the dengo stuff is still unstable. Need to write 
-converter for differing naming conventions.
-
+The dengo stuff is still pretty unstable, though rt1d/tests/test_chemistry_metals.py
+should work.
 
 Example
 -------
 
 rt1d is meant to be modular. For instance, rather than running a full 
-radiative transfer simulation on a grid, you can also run single-zone 
-non-equilibrium chemistry tests without any radiation at all.
+radiative transfer simulation on a grid, you can also run non-equilibrium 
+chemistry tests without any radiation at all.
 
 However, there are also modules one can use to avoid writing rt1d scripts. 
 They are located in the rt1d/run directory.  In a Python terminal (or script), 
