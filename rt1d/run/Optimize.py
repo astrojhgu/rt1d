@@ -12,7 +12,7 @@ Description:
 
 import rt1d, copy
 import numpy as np
-from ..physics.ComputeCrossSections import PhotoIonizationCrossSection as sigma_E
+from ..physics.CrossSections import PhotoIonizationCrossSection as sigma_E
 
 try:
     import ndmin
