@@ -31,7 +31,7 @@ modules also use on matplotlib, though if you'd rather make your plots with
 something else, this dependence is not necessary.
 
 (Optional)
-If you have the Python 
+|If you have the Python 
 `progressbar <https://code.google.com/p/python-progressbar>`_ installed, rt1d 
 will use it. Don't be alarmed if the time-to-completion estimate you're given 
 is absurd at first -- the time-step at the beginning of radiative transfer 
