@@ -1,6 +1,6 @@
 """
 
-test_multifreq.py
+test_multi_frequency.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
@@ -21,22 +21,23 @@ sim_d = rt1d.run.Simulation(pf = {'problem_type': 0.1,
 sim_t = rt1d.run.Simulation(pf = {'problem_type': 0, 'optically_thin': 1,
     'dtDataDump': None, 'logdtDataDump': 0.25})
     
-sim_c.run()
-sim_d.run()
+#print 'This problem is very slow with a continuous SED.'    
+#sim_c.run()
+#sim_d.run()
 sim_t.run()    
 
 anl_c = rt1d.analyze.Simulation(sim_c.checkpoints)
 anl_d = rt1d.analyze.Simulation(sim_d.checkpoints)
 anl_t = rt1d.analyze.Simulation(sim_t.checkpoints)
 
-t1, z1, xHI1 = anl_c.CellTimeEvolution(field = 'h_1')
-t1, z1, T1 = anl_c.CellTimeEvolution(field = 'T')
+t1, xHI1 = anl_c.CellEvolution(field='h_1')
+t1, T1 = anl_c.CellEvolution(field='Tk')
 
-t2, z2, xHI2 = anl_d.CellTimeEvolution(field = 'h_1')
-t2, z2, T2 = anl_d.CellTimeEvolution(field = 'T')
+t2, xHI2 = anl_d.CellEvolution(field='h_1')
+t2, T2 = anl_d.CellEvolution(field='Tk')
 
-t3, z3, xHI3 = anl_t.CellTimeEvolution(field = 'h_1')
-t3, z3, T3 = anl_t.CellTimeEvolution(field = 'T')
+t3, xHI3 = anl_t.CellEvolution(field='h_1')
+t3, T3 = anl_t.CellEvolution(field='Tk')
 
 mp = rt1d.analyze.multiplot(dims = (2, 1), share_all = False, 
     useAxesGrid = False, panel_size = (0.5, 1))

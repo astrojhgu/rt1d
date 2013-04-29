@@ -56,7 +56,8 @@ class Simulation:
                     OmegaBaryonNow=pf['OmegaBaryonNow'],
                     HubbleParameterNow=pf['HubbleParameterNow'],
                     HeliumFractionByMass=pf['HeliumFractionByMass'], 
-                    CMBTemperatureNow=pf['CMBTemperatureNow'])    
+                    CMBTemperatureNow=pf['CMBTemperatureNow'],
+                    HighRedshiftApprox=pf['HighRedshiftApprox'])    
                 grid.set_chemistry(Z=pf['Z'], abundance=pf['abundances'])
                 grid.set_density(grid.cosm.rho_b_z0 \
                     * (1. + pf['initial_redshift'])**3)
@@ -133,7 +134,7 @@ class Simulation:
         if self.pf['radiative_transfer']:
             print '\nEvolving radiative transfer...'
         else:
-            print '\nEvolving chemical reactions...'
+            print '\nEvolving ion densities...'
                     
         dt_history = []
         pb = rt1d.run.ProgressBar(tf)
@@ -172,7 +173,7 @@ class Simulation:
             dt_history.append((t, dt))
             
             if self.pf['save_rate_coefficients']:
-                self.checkpoints.store_kwargs(t, z, self.rt.kwargs)
+                self.checkpoints.store_kwargs(t, z, self.rt.kwargs)    
                 
             pb.update(t)
             

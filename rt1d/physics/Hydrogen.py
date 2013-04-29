@@ -32,7 +32,7 @@ kappa_He = [2.39e-10, 3.37e-10, 5.30e-10, 7.46e-10, 1.05e-9, 1.63e-9, 2.26e-9, 3
             7.15e-9, 7.71e-9, 8.17e-9, 8.32e-9, 8.37e-9, 8.29e-9, 8.11e-9]
 
 class Hydrogen:
-    def __init__(self, cosm = None):
+    def __init__(self, cosm=None):
         if cosm is None:
             from .Cosmology import Cosmology
             self.cosm = Cosmology()
@@ -147,14 +147,19 @@ class Hydrogen:
                 
         return RateCoefficientSum * T_star / A10 / self.cosm.TCMB(z)    
     
-    def WouthuysenFieldCouplingCoefficient(self, z, Ja):
+    def WouthuysenFieldCouplingCoefficient(self, z, Ja, Tk=None):
         """
         Return Lyman-alpha coupling coefficient.
         """
         
-        Sa = 1. # for now
+        return 1.81e11 * self.Sa(Tk) * Ja / (1. + z)
         
-        return 1.81e11 * Sa * Ja / (1. + z)
+    def Sa(self, Tk):
+        #if Tk is None:
+        return 1.0
+        
+        #alpha = 
+        #return np.exp(-1.79 * alpha)    
     
     def SpinTemp(self, z, Tk, Ja, nH, ne):
         """

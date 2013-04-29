@@ -10,19 +10,20 @@ Description:
 
 """
 
-import rt1d, time
+import rt1d
 import pylab as pl
 import numpy as np
 
 grid = rt1d.Grid(length_units = 3e23) # 100 kpc grid
     
 # Set initial conditions
-grid.set_chemistry(Z = [1], abundance = 'cosmic', isothermal = 0)
-grid.set_density(rho0 = 1e-27)
+grid.set_physics(isothermal=0)
+grid.set_chemistry(Z=1)
+grid.set_density(rho0=1e-27)
 
 # Initialize radiation source
 src_pars = {'problem_type': 2, 'photon_conserving': 1}
-src = rt1d.sources.RadiationSourceIdealized(grid, **src_pars)
+src = rt1d.sources.RadiationSource(grid=grid, **src_pars)
 
 # Plot Phi
 pl.scatter(src.tab.N[0], 10**src.tabs['logPhi_h_1'], 
@@ -36,7 +37,7 @@ pl.xlabel(r'Column Density $N_{\mathrm{HI}} \ (\mathrm{cm}^{-2})$')
 pl.ylabel(r'$\Phi_{\mathrm{HI}}$')
 pl.draw()
 
-time.sleep(2)
+raw_input('<enter> for Psi.')
 pl.close()
 
 # Plot Psi
@@ -46,7 +47,7 @@ pl.xlabel(r'Column Density $N_{\mathrm{HI}} \ (\mathrm{cm}^{-2})$')
 pl.ylabel(r'$\Psi_{\mathrm{HI}}$')
 pl.draw()
 
-time.sleep(2)
+raw_input('<enter> for optical depth.')
 pl.close()
 
 # Plot optical depth

@@ -15,24 +15,31 @@ from .Constants import h
 from scipy.integrate import quad
 
 E_th = [13.6, 24.6, 54.4]
+
+# HI is the first 7-element sub-array in 'params', HeI is the second, and 
+# HeII is the third.  In order, the coefficients in these arrays are:
+# E_0, sigma_0, y_a, P, y_w, y_0, y_1
 params = [[4.298e-1, 5.475e4, 3.288e1, 2.963, 0.0, 0.0, 0.0],
           [13.61, 9.492e2, 1.469, 3.188, 2.039, 4.434e-1, 2.136],
           [1.72, 1.369e4, 3.288e1, 2.963, 0.0, 0.0, 0.0]]
 
 def PhotoIonizationCrossSection(E, species=0):
     """ 
-    Returns photoionization cross section for HI, HeI, or HeII from the fits of
-    Verner et al. 1996.  HI is the first 7-element sub-array in 'params', HeI
-    is the second, and HeII is the third.  In order, the coefficients in these arrays are:
+    Compute bound-free absorption cross section from Verner & Ferland (1996).
+    
+    Returns photoionization cross section for HI, HeI, or HeII from the fits
+    Verner & Ferland (1996).  
+
+    Parameters
+    ----------
+    E : float
+        Photon energy (eV)
+    species : int
+        Species ID number. HI = 0 (default), HeI = 1, HeII = 2
         
-        E_0, sigma_0, y_a, P, y_w, y_0, y_1
-        
-        Also:
-        species = 0 for HI
-        species = 1 for HeI
-        species = 2 for HeII
-        
-        Note: The units are cm^2.
+    Returns
+    -------
+    Cross section in cm**2.    
     
     """
     

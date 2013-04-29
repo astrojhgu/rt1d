@@ -21,7 +21,8 @@ from .Constants import c, G, km_per_mpc, m_H, m_He, sigma_SB
 class Cosmology:
     def __init__(self, OmegaMatterNow=0.272, OmegaLambdaNow=0.728,
         OmegaBaryonNow=0.044, HubbleParameterNow=0.702, 
-        HeliumFractionByMass=0.2477, CMBTemperatureNow=2.725):
+        HeliumFractionByMass=0.2477, CMBTemperatureNow=2.725, 
+        HighRedshiftApprox=False, SigmaEight=0.807, PrimordialIndex=0.96):
                 
         self.OmegaMatterNow = OmegaMatterNow
         self.OmegaBaryonNow = OmegaBaryonNow
@@ -29,6 +30,9 @@ class Cosmology:
         self.OmegaCDMNow = self.OmegaMatterNow - self.OmegaBaryonNow
         self.HubbleParameterNow = HubbleParameterNow * 100 / km_per_mpc
         self.CMBTemperatureNow = CMBTemperatureNow
+        self.HighRedshiftApprox = HighRedshiftApprox
+        self.SigmaEight = self.sigma8 = SigmaEight
+        self.PrimordialIndex = PrimordialIndex
         
         self.CriticalDensityNow = (3 * self.HubbleParameterNow**2) \
             / (8 * np.pi * G)
@@ -52,6 +56,8 @@ class Cosmology:
         
         self.nH = lambda z: self.nH0 * (1. + z)**3
         self.nHe = lambda z: self.nHe0 * (1. + z)**3
+        
+        self.delta_c0 = 1.686
         
     def TimeToRedshiftConverter(self, t_i, t_f, z_i):
         """
@@ -88,11 +94,13 @@ class Cosmology:
         return 1. / (1. + z)
         
     def EvolutionFunction(self, z):
-        return np.sqrt(self.OmegaMatterNow * (1.0 + z)**3  + self.OmegaLambdaNow)
+        return self.OmegaMatterNow * (1.0 + z)**3  + self.OmegaLambdaNow
         
-    def HubbleParameter(self, z):	        
-        return self.HubbleParameterNow * np.sqrt(self.OmegaMatterNow * (1.0 + z)**3 + 
-            self.OmegaLambdaNow) 
+    def HubbleParameter(self, z):
+        if self.HighRedshiftApprox:
+            return self.HubbleParameterNow * np.sqrt(self.OmegaMatterNow) \
+                * (1. + z)**1.5
+        return self.HubbleParameterNow * np.sqrt(self.EvolutionFunction(z)) 
     
     def HubbleLength(self, z):
         return c / self.HubbleParameter(z)
@@ -101,10 +109,14 @@ class Cosmology:
         return 2. / 3. / self.HubbleParameter(z)
         
     def OmegaMatter(self, z):
-        return self.OmegaMatterNow * (1.0 + z)**3 / self.EvolutionFunction(z)**2
+        if self.HighRedshiftApprox:
+            return 1.0
+        return self.OmegaMatterNow * (1.0 + z)**3 / self.EvolutionFunction(z)
     
     def OmegaLambda(self, z):
-	    return self.OmegaLambdaNow / self.EvolutionFunction(z)**2
+        if self.HighRedshiftApprox:
+            return 0.0
+	    return self.OmegaLambdaNow / self.EvolutionFunction(z)
     
     def MeanMatterDensity(self, z):
         return self.OmegaMatter(z) * self.CriticalDensity(z)

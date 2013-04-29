@@ -132,8 +132,9 @@ class CheckPoints:
             
             if t is not None:
                 tmp.update({'time': t})
-            if z is not None:
-                tmp.update({'redshift': z})
+            if self.grid.expansion:
+                if z is not None:
+                    tmp.update({'redshift': z})
             
             if dump_type == 'dd':
                 self.data[self.name(t=t)] = tmp
@@ -234,14 +235,14 @@ class CheckPoints:
             if type(self.pf[key]) is types.NoneType:
                 continue
                 
-            pf.create_dataset(key, data = self.pf[key])
+            pf.create_dataset(key, data=self.pf[key])
         
         for dd in self.data.keys():
             grp = f.create_group('dd%s' % str(dd).zfill(4))
-            grp.attrs.create('is_data', data = True)
+            grp.attrs.create('is_data', data=True)
             
             for key in self.data[dd]:
-                grp.create_dataset(key, data = self.data[dd][key])
+                grp.create_dataset(key, data=self.data[dd][key])
                 
             del grp    
             

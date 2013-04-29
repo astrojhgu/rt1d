@@ -47,7 +47,7 @@ class SecondaryElectrons:
             
             f.close()
 
-    def DepositionFraction(self, xHII, E=None, channel = 'heat'):
+    def DepositionFraction(self, xHII, E=None, channel='heat'):
         """
         Return the fraction of secondary electron energy deposited as heat, or further ionizations.
         The parameter 'channel' determines which we want, and could be:

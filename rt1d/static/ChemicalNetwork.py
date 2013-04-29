@@ -16,7 +16,6 @@ import numpy as np
 from ..util import convert_ion_name
 from ..physics.Constants import k_B, sigma_T, m_e, c, s_per_myr
 
-
 try:
     have_dengo = True    
     import dengo.primordial_rates, dengo.primordial_cooling

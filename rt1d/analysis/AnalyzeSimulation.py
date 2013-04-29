@@ -12,6 +12,7 @@ Description: Functions to calculate various quantities from our rt1d datasets.
 import os, re
 import numpy as np
 import pylab as pl
+from ..run import Simulation
 from ..static.Grid import Grid
 from multiplot import multipanel
 from ..physics.Constants import *
@@ -20,6 +21,9 @@ linestyles = ['-', '--', ':', '-.']
 
 class Simulation:
     def __init__(self, checkpoints, rs=None):
+        
+        if isinstance(checkpoints, Simulation):
+            checkpoints = checkpoints.checkpoints
         
         # Load contents of hdf5 file
         if type(checkpoints) is str:

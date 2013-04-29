@@ -279,20 +279,7 @@ class Grid:
     def cosm(self):
         if not hasattr(self, '_cosm'):
             self._cosm = Cosmology()
-        return self._cosm
-            
-    def ColumnDensity(self, data):
-        """ Compute column densities for all absorbing species. """    
-        
-        N = {}
-        Nc = {}
-        logN = {}
-        for absorber in self.absorbers:
-            Nc[absorber] = self.dr * data[absorber] * self.x_to_n[absorber]            
-            N[absorber] = np.cumsum(Nc[absorber])
-            logN[absorber] = np.log10(N[absorber])
-            
-        return N, logN, Nc
+        return self._cosm            
                 
     def set_physics(self, isothermal=False, compton_scattering=False,
         secondary_ionization=0, expansion=False, recombination='B'):
@@ -307,14 +294,16 @@ class Grid:
         
     def set_cosmology(self, initial_redshift=1e3, OmegaMatterNow=0.272, 
         OmegaLambdaNow=0.728, OmegaBaryonNow=0.044, HubbleParameterNow=0.702, 
-        HeliumFractionByMass=0.2477, CMBTemperatureNow=2.725):
+        HeliumFractionByMass=0.2477, CMBTemperatureNow=2.725, 
+        HighRedshiftApprox=False):
         
         self.zi = initial_redshift
         self._cosm = Cosmology(OmegaMatterNow=OmegaMatterNow, 
             OmegaLambdaNow=OmegaLambdaNow, OmegaBaryonNow=OmegaBaryonNow,
             HubbleParameterNow=HubbleParameterNow, 
             HeliumFractionByMass=HeliumFractionByMass,
-            CMBTemperatureNow=CMBTemperatureNow)        
+            CMBTemperatureNow=CMBTemperatureNow, 
+            HighRedshiftApprox=HighRedshiftApprox)        
         
     def set_chemistry(self, Z=1, abundance=1.0, energy=False):
         """
@@ -589,6 +578,19 @@ class Grid:
                     * self.element_abundances[i]
 
         return de
+
+    def ColumnDensity(self, data):
+        """ Compute column densities for all absorbing species. """    
+        
+        N = {}
+        Nc = {}
+        logN = {}
+        for absorber in self.absorbers:
+            Nc[absorber] = self.dr * data[absorber] * self.x_to_n[absorber]            
+            N[absorber] = np.cumsum(Nc[absorber])
+            logN[absorber] = np.log10(N[absorber])
+            
+        return N, logN, Nc
 
     def _set_qmap(self):
         """

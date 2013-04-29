@@ -251,7 +251,7 @@ class RadiationSource:
         if not self.discrete:
             return None
         if not hasattr(self, '_sigma_all'):
-            self._sigma_all = sigma_E(self.E)
+            self._sigma_all = np.array(map(sigma_E, self.E))
         
         return self._sigma_all
         

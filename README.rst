@@ -25,13 +25,13 @@ or visit the 'Downloads' page for a tarball.
 
 Dependencies
 ------------
-
-Currently, rt1d depends on h5py, numpy, and scipy.  The built-in analysis 
-modules also use on matplotlib, though if you'd rather make your plots with 
-something else, this dependence is not necessary.
+Currently, rt1d depends on numpy, h5py, and scipy.
 
 Dependencies (Optional)
 -----------------------
+The built-in analysis modules also use on matplotlib, though if you'd rather
+make your plots with something else, this dependence is not necessary.
+
 If you have the Python 
 `progressbar <https://code.google.com/p/python-progressbar>`_ installed, rt1d 
 will use it. Don't be alarmed if the time-to-completion estimate you're given 
@@ -67,14 +67,13 @@ should work.
 
 Example
 -------
+rt1d is meant to be modular. Rather than running a full radiative transfer
+calculation on a grid, you can also run non-equilibrium chemistry tests
+without any radiation at all.
 
-rt1d is meant to be modular. For instance, rather than running a full 
-radiative transfer simulation on a grid, you can also run non-equilibrium 
-chemistry tests without any radiation at all.
-
-However, there are also modules one can use to avoid writing rt1d scripts. 
-They are located in the rt1d/run directory.  In a Python terminal (or script), 
-it's as easy as typing:
+If you'd like to write your own rt1d scripts, it would be useful to have a look
+at rt1d/run/Simulate.py, which houses a convenience class (Simulation) that 
+initializes a calculation from a parameter file or via keyword arguments:
 
 >>>
 >>> import rt1d
@@ -102,12 +101,17 @@ session and use built-in analysis routines, or look at the raw data itself:
 >>> anl = rt1d.analyze.Simulation(sim.checkpoints) 
 >>> 
 >>> # Some built-in analysis routines
->>> anl.PlotIFrontEvolution()               # Plot the I-front radius vs. time
->>> anl.IonizationProfile(t = [1, 10, 100]) # Plot neutral/ionized fractions vs. radius at 1, 10, 100 Myr
+>>> anl.PlotIFrontEvolution()           # Plot the I-front radius vs. time
+>>> anl.IonizationProfile(t=[1,10,100]) # Plot neutral/ionized fractions vs. radius at 1, 10, 100 Myr
 >>> 
 >>> # Look at min and max values of the neutral fraction in data dump 50
->>> print sim.data[50]['h_1'].min(), sim.data[50]['h_1'].max()
+>>> print sim.checkpoints.data['dd0050']['h_1'].min()
+>>> print sim.checkpoints.data['dd0050']['h_1'].max()
 >>>
+
+To see what pre-defined problem types are available, have a look at
+rt1d/util/ProblemTypes.py, or for a list of all available input parameters,
+see rt1d/util/SetDefaultParameterValues.py.
 
 More examples on the way.
 
