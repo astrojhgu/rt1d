@@ -10,8 +10,8 @@ that will be more suitable for Enzo and rt1d.
 
 Notes: Run this script inside of whatever directory you download the Furlanetto 
 & Stoever 2010 results in.  It will produce files called secondary_electron*.dat, 
-and one file called secondary_electron_data.h5.  This last one is the most important,
-and will be used when SecondaryIonization = 3.
+and one file called secondary_electron_data.hdf5.  This last one is the most 
+important, and will be used when secondary_ionization = 3.
      
 """
 
@@ -168,7 +168,7 @@ for i in np.arange(1, 9):
     exec('f%i.close()' % i)           
                 
 # Make HDF5 file as well (containing everything)
-f = h5py.File('secondary_electron_data.h5', 'w')
+f = h5py.File('secondary_electron_data.hdf5', 'w')
 
 f.create_dataset('electron_energy', data = energies)
 f.create_dataset('ionized_fraction', data = np.array(x))

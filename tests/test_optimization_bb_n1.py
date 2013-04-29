@@ -34,7 +34,7 @@ sedop = rt1d.run.Optimization(logN=logN, Z=Z, nfreq=1,
 # Run optimization
 sedop(1e5, burn=1e3, err=0.01, step = [5, 0.05], afreq=10, gamma=0.99)
 
-# Compute likelihood/cost by brute force
+# Compute cost function by brute force
 E = np.linspace(15, 50, 100)
 LE = np.linspace(0.6, 1.0, 100)
 lnL = np.zeros([len(E), len(LE)])
@@ -42,7 +42,7 @@ for i in xrange(len(E)):
     for j in xrange(len(LE)):
         lnL[i,j] = sedop.cost([E[i], LE[j]])
 
-# Plot contours of likelihood, analytic solution, and last 1000 steps of chain
+# Plot contours of cost function, analytic solution, and last 1000 steps of chain
 pl.contour(E, LE, lnL.T, 3, colors='k', linestyles=[':', '--', '-'])
 pl.plot(sedop.sampler.chain[-1e3:,0], sedop.sampler.chain[-1e3:,1], 
     color='b')

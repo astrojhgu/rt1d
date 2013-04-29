@@ -44,6 +44,9 @@ Some of the rt1d/test scripts and built-in analysis routines use a module for
 making multi-panel plots, which can be found 
 `here <https://bitbucket.org/mirochaj/multiplot>`_.
 
+If you'd like to find the optical discrete SED for a given continuous spectrum,
+you'll need `ndmin <https://bitbucket.org/mirochaj/ndmin>`_.
+
 The code is written such that running with an arbitrary chemical composition 
 is possible (in principle) using `dengo <https://bitbucket.org/MatthewTurk/dengo>`_ 
 (written by Matthew Turk and Devin Silvia). Its sub-dependencies can all be 

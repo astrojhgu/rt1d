@@ -27,7 +27,7 @@ class SecondaryElectrons:
         if self.Method == 3:
             rt1d = os.environ.get("RT1D")
             if rt1d:
-                f = h5py.File("%s/input/secondary_electron_data.h5" % rt1d, 'r')
+                f = h5py.File("%s/input/secondary_electron_data.hdf5" % rt1d, 'r')
             else:
                 raise Exception('Error loading secondary electron data.')    
                 
