@@ -44,7 +44,7 @@ Some of the rt1d/test scripts and built-in analysis routines use a module for
 making multi-panel plots, which can be found 
 `here <https://bitbucket.org/mirochaj/multiplot>`_.
 
-If you'd like to find the optical discrete SED for a given continuous spectrum,
+If you'd like to find the optimal discrete SED for a given continuous spectrum,
 you'll need `ndmin <https://bitbucket.org/mirochaj/ndmin>`_.
 
 The code is written such that running with an arbitrary chemical composition 
@@ -65,8 +65,8 @@ which for me (in bash) looks like: ::
 
 Once this is all done, you should be off to the races.
 
-The dengo stuff is still pretty unstable, though rt1d/tests/test_chemistry_metals.py
-should work.
+The dengo-based stuff is still pretty unstable, 
+though rt1d/tests/test_chemistry_metals.py should work.
 
 Example
 -------

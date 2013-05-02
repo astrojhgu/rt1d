@@ -12,7 +12,6 @@ Description:
 
 import rt1d
 import pylab as pl
-
 from rt1d.physics.Constants import *
 
 bb_pars = {
@@ -44,8 +43,10 @@ src = rt1d.analyze.Source(rt1d.sources.RadiationSource(init_tabs=False,
 ax = bb.PlotSpectrum()
 ax = src.PlotSpectrum(ax=ax, color='b')
 
-ax.set_xlim(10, 20)
+ax.set_xlim(10, 14.)
+ax.set_xscale('linear')
 ax.set_yscale('log')
+ax.plot([E_LyB]*2, ax.get_ylim(), color='k', ls=':')
 pl.draw()
 
 raw_input('')

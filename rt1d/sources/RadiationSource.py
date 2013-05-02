@@ -156,7 +156,7 @@ class RadiationSource:
     def _init_bh(self):
         self.r_in = self.DiskInnermostRadius(self.M0)
         self.r_out = self.SourcePars['rmax'] * self.GravitationalRadius(self.M0)
-        self.fcol = self.SpectrumPars['fcol'][self.SpectrumPars['type'].index(3)]
+        self.fcol = self.SpectrumPars['fcol'][self.SpectrumPars['type'].index(2)]
         self.T_in = self.DiskInnermostTemperature(self.M0)
         self.T_out = self.DiskTemperature(self.M0, self.r_out)
         self.Lbol = self.BolometricLuminosity(0.0)
