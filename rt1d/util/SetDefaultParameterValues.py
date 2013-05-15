@@ -142,6 +142,8 @@ def SpectrumParameters():
         "spectrum_dE": 5.,
         "spectrum_dt": s_per_myr,
         
+        "spectrum_normed_by": 'energy',
+        
         }
         
     return pf

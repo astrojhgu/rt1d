@@ -52,7 +52,7 @@ class Cosmology:
         self.nH0 = (1. - self.Y) * self.rho_b_z0 / m_H
         self.nHe0 = self.y * self.nH0
         self.ne0 = self.nH0 + 2. * self.nHe0
-        self.rho_n_z0 = self.nH0 + self.nHe0 + self.ne0
+        self.rho_n_z0 = self.nH0 + self.nHe0 #+ self.ne0
         
         self.nH = lambda z: self.nH0 * (1. + z)**3
         self.nHe = lambda z: self.nHe0 * (1. + z)**3

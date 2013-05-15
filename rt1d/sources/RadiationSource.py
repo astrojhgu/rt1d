@@ -642,12 +642,21 @@ class RadiationSource:
         # General spectrum, continuity of components not required
         else:
             for i, component in enumerate(self.SpectrumPars['type']):
-                integral, err = quad(self.Intensity,
-                    self.EminNorm[i], 
-                    self.EmaxNorm[i], args=(i, component, t,))
+                if self.SpectrumPars['normed_by'][i] == 'energy':                    
+                    integral, err = quad(self.Intensity,
+                        self.EminNorm[i], 
+                        self.EmaxNorm[i], args=(i, component, t,))
+                    
+                    normalizations[i] = self.SpectrumPars['fraction'][i] * Lbol \
+                        / integral
+                else:
+                    integral, err = quad(lambda EE: self.Intensity(EE) / EE,
+                        self.EminNorm[i], 
+                        self.EmaxNorm[i], args=(i, component, t,))
                 
-                normalizations[i] = self.SpectrumPars['fraction'][i] * Lbol \
-                    / integral
+                    normalizations[i] = self.SpectrumPars['qdot'][i] * Lbol \
+                        / integral
+                            
             
         return normalizations
         

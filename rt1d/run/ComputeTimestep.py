@@ -15,7 +15,7 @@ import numpy as np
 huge_dt = 1e30  # seconds
 
 class ComputeTimestep:
-    def __init__(self, grid, epsilon = 0.1):
+    def __init__(self, grid, epsilon=0.1):
         self.grid = grid
         self.epsilon = epsilon
     

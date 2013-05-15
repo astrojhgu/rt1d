@@ -56,8 +56,7 @@ class RateCoefficients:
                 
                 return alpha
         else:
-            print 'Unrecognized RecombinationMethod.  Should be A or B.'
-            return 0.0          
+            raise ValueError('Unrecognized RecombinationMethod.  Should be A or B.')
         
     def DielectricRecombinationRate(self, T):
         """

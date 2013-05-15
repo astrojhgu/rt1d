@@ -5,8 +5,8 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on 2010-10-18.
 
-Description: This routine essentially runs the show.  The method 'EvolvePhotons' is the
-driver of rt1d, calling our solvers which call all the various physics modules.
+Description: Just keeping this routine around to look at the finite c 
+implementation - need to transfer it to RadiationField class
      
 """
 

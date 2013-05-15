@@ -34,4 +34,3 @@ ax.set_ylim(1e-6, 2e-3)
 pl.draw()
 
 raw_input('')
-          

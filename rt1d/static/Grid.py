@@ -37,7 +37,19 @@ tiny_number = 1e-8  # A relatively small species fraction
 
 class Grid:
     def __init__(self, dims=64, length_units=cm_per_kpc, start_radius=0.01):
-        """ Initialize grid object. """
+        """
+        Initialize grid object. 
+        
+        Parameters
+        ----------
+        dims : int
+            Number of resolution elements in grid.
+        length_units : float
+            Size of domain in centimeters.
+        start_radius : float
+            Radius (in code units) within which to ignore.
+        
+        """
         
         self.dims = int(dims)
         self.length_units = length_units
@@ -369,7 +381,7 @@ class Grid:
 
     def set_density(self, rho0=None):
         """
-        Initialize gas density and from that, the hydrogen number density 
+        Initialize gas density, and from that, the hydrogen number density
         (which normalizes all other number densities).
         """                
         
@@ -399,8 +411,7 @@ class Grid:
             if not name.strip():
                 continue
                     
-            ele = ELEMENT(name)
-            X += self.abundances_by_number[i] * ele.mass
+            X += self.abundances_by_number[i] * ELEMENT(name).mass
                      
         # Set reference number density
         if 'h' in self.elements:                           

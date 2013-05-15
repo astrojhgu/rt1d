@@ -14,12 +14,12 @@ import rt1d
 import pylab as pl
 import numpy as np
 
-grid = rt1d.Grid(length_units = 3e23) # 100 kpc grid
+grid = rt1d.Grid(length_units=3e23) # 100 kpc grid
     
 # Set initial conditions
 grid.set_physics(isothermal=0)
 grid.set_chemistry(Z=1)
-grid.set_density(rho0 = 1e-27)
+grid.set_density(rho0=1e-27)
 
 # Initialize radiation source
 src_pars = {'problem_type': 2, 'photon_conserving': 1, 
@@ -49,6 +49,6 @@ for i, table in enumerate(tables):
     pl.ylabel(labels[i])
     pl.draw()
     
-    raw_input('<enter> for %s.' % table)
+    raw_input('<enter> for %s' % table)
     pl.close()
     

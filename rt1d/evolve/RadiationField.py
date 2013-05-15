@@ -116,7 +116,8 @@ class RadiationField:
         for h, src in enumerate(self.srcs):        
             if not src.SourceOn(t):
                 continue
-                
+            
+            # "Diffuse" sources have parameterized rates    
             if src.SourcePars['type'] == 3:
                 self.Gamma[h] = src.ionization_rate(z, **kwargs)
                 self.gamma[h] = src.secondary_ionization_rate(z, **kwargs)

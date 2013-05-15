@@ -6,7 +6,7 @@ Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Thu May  2 10:46:44 2013
 
-Description: 
+Description: Plot a simple multi-color disk accretion spectrum.
 
 """
 

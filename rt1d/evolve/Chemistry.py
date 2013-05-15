@@ -151,7 +151,7 @@ class Chemistry:
             nothing = MPI.COMM_WORLD.Allreduce(self.dqdt_grid, tmp_qdot)
                 
             self.q_grid = tmp_q
-            self.dqdt_grid = tmp_qdot    
+            self.dqdt_grid = tmp_qdot
                             
         # Convert T to ge for fun and update particle density
         #if not self.grid.isothermal:        

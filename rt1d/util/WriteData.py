@@ -234,8 +234,11 @@ class CheckPoints:
         for key in self.pf:
             if type(self.pf[key]) is types.NoneType:
                 continue
-                
-            pf.create_dataset(key, data=self.pf[key])
+            
+            try:    
+                pf.create_dataset(key, data=self.pf[key])
+            except TypeError:
+                pass
         
         for dd in self.data.keys():
             grp = f.create_group('dd%s' % str(dd).zfill(4))

@@ -1,12 +1,13 @@
 """
 
-test_lyman_alpha.py
+test_sed_lw.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
 Created on: Thu Apr 11 10:03:21 2013
 
-Description: 
+Description: Plot LW spectrum of a 10^5 K BB to make sure fitting power-laws
+between Lyman series resonances looks the way we expect.
 
 """
 

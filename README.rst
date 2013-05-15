@@ -20,9 +20,6 @@ To clone a copy and install: ::
     cd rt1d
     python setup.py install
 
-or visit the 'Downloads' page for a tarball.
-
-
 Dependencies
 ------------
 Currently, rt1d depends on numpy, h5py, and scipy.
