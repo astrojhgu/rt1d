@@ -134,6 +134,10 @@ class Chemistry:
 
             for i, value in enumerate(self.solver.y):
                 newdata[self.grid.all_species[i]][cell] = self.solver.y[i]
+        
+        # Fix negative values
+        for ion in self.grid.ions:
+            newdata[ion][newdata[ion] < tiny_ion] = tiny_ion
                                                                 
         # Collect results        
         if size > 1:

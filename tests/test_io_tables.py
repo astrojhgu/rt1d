@@ -14,7 +14,7 @@ and successfully run a simultion with the version on disk.
 import os, rt1d
 
 sim = rt1d.run.Simulation(problem_type=2)
-sim.rs.all_sources[0].tab.dump('bbtab.hdf5')
+sim.rs.all_sources[0].tab.save('bbtab.hdf5')
 
 sim2 = rt1d.run.Simulation(problem_type=2, source_table='bbtab.hdf5')
 sim2.run()

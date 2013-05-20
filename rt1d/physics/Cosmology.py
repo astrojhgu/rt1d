@@ -166,7 +166,7 @@ class Cosmology:
         
     def ComovingLineElement(self, z):
         """
-        Comoving differential line element at redshift z (i.e. dl/dz).
+        Comoving differential line element at redshift z.
         """     
         
         return c / self.HubbleParameter(z)

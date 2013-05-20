@@ -54,7 +54,7 @@ data = chem.Evolve(grid.data, t=0, dt=dt)
 
 # Plot up solution
 ax.scatter(T, data['he_1'], color='b', s=50, marker='o')                  
-ax.scatter(T, data['he_2'], color='b', s=50, alpha=0.5, marker='o')     
+ax.scatter(T, data['he_2'], color='b', s=50, alpha=0.25, marker='o')     
 ax.scatter(T, data['he_3'], color='b', s=50, facecolors='none', marker='o')            
 pl.draw()    
 raw_input('')

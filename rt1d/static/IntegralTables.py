@@ -31,26 +31,29 @@ scipy.seterr(all = 'ignore')
 
 class IntegralTable: 
     def __init__(self, pf, source, grid, logN=None):
+        """
+        Initialize a table of integral quantities.
+        """
         self.pf = pf
         self.src = source
         self.grid = grid
         
         # Move this stuff to TableProperties
         if logN is None:
-            # Required bounds of table assuming minimum species fraction
-            self.logNlimits = \
-                self.TableBoundsAuto(self.src.SpectrumPars['smallest_x'])
             
+            # Required bounds of table assuming minimum species fraction
+            self.logNlimits = self.TableBoundsAuto(self.src.SpectrumPars['smallest_x'])
+                        
             # Only override automatic table properties if the request table size
             # is *bigger* than the default one.
             self.N = []
             self.logN = []
             for i, absorber in enumerate(self.grid.absorbers):
                 
-                if self.src.SpectrumPars['logNmin'] < self.logNlimits[i][0]:
+                if self.src.SpectrumPars['logNmin'][i] is not None:
                     self.logNlimits[i][0] = self.src.SpectrumPars['logNmin'][i]
                 
-                if self.src.SpectrumPars['logNmax'] < self.logNlimits[i][1]:
+                if self.src.SpectrumPars['logNmax'][i] is not None:
                     self.logNlimits[i][1] = self.src.SpectrumPars['logNmax'][i]
                 
                 logNmin, logNmax = self.logNlimits[i]
@@ -70,7 +73,7 @@ class IntegralTable:
         
         self.logx = np.array([-np.inf])
         if self.pf['secondary_ionization'] > 1:
-            self.esec = SecondaryElectrons(method = self.pf['secondary_ionization'])
+            self.esec = SecondaryElectrons(method=self.pf['secondary_ionization'])
             if self.pf['secondary_ionization'] == 2:
                 self.logx = np.linspace(self.src.SpectrumPars['logxmin'][0], 0,
                     abs(self.src.SpectrumPars['logxmin'][0]) \
@@ -105,7 +108,7 @@ class IntegralTable:
         for absorber in self.grid.absorbers:
             self.sigma_th[absorber] = self.grid.ioniz_thresholds[absorber]
         
-    def TableBoundsAuto(self, xmin = 1e-5):
+    def TableBoundsAuto(self, xmin=1e-5):
         """
         Calculate what the bounds of the table must be for a 
         given grid.
@@ -116,7 +119,7 @@ class IntegralTable:
             n = self.grid.species_abundances[absorber] * self.grid.n_H
             logNmin = math.floor(np.log10(xmin[i] * np.min(n) * np.min(self.grid.dr)))
             logNmax = math.ceil(np.log10(np.sum(n * self.grid.dr)))
-            logNlimits.append((logNmin, logNmax))
+            logNlimits.append([logNmin, logNmax])
             
         return logNlimits
         
@@ -206,7 +209,7 @@ class IntegralTable:
         tabs = {}
         i_donor = 0
         while h < len(self.IntegralList):
-            integral = self.IntegralList[h]    
+            integral = self.IntegralList[h]
                         
             donor = self.grid.absorbers[i_donor]
             for i, absorber in enumerate(self.grid.absorbers):
@@ -258,6 +261,8 @@ class IntegralTable:
                     
                 tabs[name] = np.squeeze(tab).copy()
                 
+                pb.finish()
+                
             if re.search('Wiggle', name):
                 if self.grid.metals:
                     if self.grid.absorbers[i_donor + 1] in self.grid.metal_ions:
@@ -272,8 +277,6 @@ class IntegralTable:
             else:
                 h += 1
                 i_donor = 0
-
-            pb.finish()
                        
         if rank == 0:                        
             print 'Integral tabulation complete.'
@@ -395,7 +398,7 @@ class IntegralTable:
                 / self.sigma_th[absorber]
                 
         integral = quad(integrand, max(self.sigma_th[absorber], self.src.Emin), 
-            self.src.Emax)[0] / erg_per_ev    
+            self.src.Emax, limit=1000)[0] / erg_per_ev    
             
         if not self.pf['photon_conserving']:
             integral *= self.sigma_th[absorber]
@@ -423,7 +426,7 @@ class IntegralTable:
                 / self.sigma_th[absorber]
         
         integral = quad(integrand, max(self.sigma_th[absorber], self.src.Emin), 
-            self.src.Emax)[0]
+            self.src.Emax, limit=1000)[0]
             
         if not self.pf['photon_conserving']:
             integral *= self.sigma_th[absorber]
@@ -564,8 +567,12 @@ class IntegralTable:
         
         pass
                                   
-    def dump(self, fn=None):
+    def save(self, fn=None):
         """ Write table to hdf5. """
+        
+        if rank > 0:
+            return
+        
         import h5py
         
         if fn is None:

@@ -38,7 +38,7 @@ def GridParameters():
         "time_units": s_per_myr,  
         
         "Z": [1],
-        "abundances": [1.],
+        "abundance": [1.],
         "initial_ionization": [1.2e-3],
         "initial_temperature": 1e4,
         
@@ -131,13 +131,13 @@ def SpectrumParameters():
                 
         "spectrum_table": None,
         
-        "spectrum_logNmin": [16],
-        "spectrum_logNmax": [21],
-        "spectrum_logxmin": [-4],
-
-        "spectrum_smallest_x": 1e-8,
-        
+        "spectrum_logNmin": None,
+        "spectrum_logNmax": None,
         "spectrum_dlogN": [0.2],
+        
+        "spectrum_smallest_x": [1e-8],
+        
+        "spectrum_logxmin": [-4],
         "spectrum_dlogx": 0.1,
         "spectrum_dE": 5.,
         "spectrum_dt": s_per_myr,

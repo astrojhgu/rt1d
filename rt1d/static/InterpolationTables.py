@@ -11,11 +11,19 @@ Description:
 """
 
 import numpy as np
-from scipy.interpolate import interp1d, interp2d, RectBivariateSpline, \
-    LinearNDInterpolator
+from mathutils.interpolate import LinearNDInterpolator
+from scipy.interpolate import interp1d, RectBivariateSpline
 
 class LookupTable:
-    def __init__(self, pf, name, logN, table, logx = None, t = None):
+    def __init__(self, pf, name, logN, table, logx=None, t=None):
+        """
+        Initialize lookup table object for interpolation in N-D.
+        
+        Parameters
+        ----------
+        pf : dict
+        
+        """
         self.pf = pf
         self.name = name
         self.logN = np.array(logN)
@@ -47,28 +55,37 @@ class LookupTable:
         # Initialize
         self._init()
         
-    def __call__(self, logN, logx = None, t = None):
+    def __call__(self, logN, logx=None, t=None):
         """
         Perform interpolation in self.D dimensions.
+        
+        Parameters
+        ----------
+        logN : np.ndarray
+            Contains column densities at which to evaluate integral.
+            Shape = (N_cells, N_absorbers)
         """
         
         # If we are beyond bounds of integral table, fix    
         for i in xrange(self.Nd):
-            logN[..., i][logN[..., i] < self.logNmin[i]] = self.logNmin[i]
-            logN[..., i][logN[..., i] > self.logNmax[i]] = self.logNmax[i]
+            logN[...,i][logN[...,i] < self.logNmin[i]] = self.logNmin[i]
+            logN[...,i][logN[...,i] > self.logNmax[i]] = self.logNmax[i]
             
         if self.adv_secondary_ionization and logx is not None:
             logx[logx < self.logxmin] = self.logxmin
             logx[logx > self.logxmax] = self.logxmax
             
-        # Compute result    
-        if self.D == 1 or self.basename in ['logPhi', 'logTau']:
+        # Compute result
+        if self.D == 1:
             logresult = self.interp(logN[...,0])
         elif self.D == 2:
             ax2 = self._extra_axis(logx, t)
-            logresult = np.zeros_like(logN[..., 0])
+            logresult = np.zeros_like(logN[...,0])
             for i in xrange(logN.shape[0]):
-                logresult[i] = self.interp(logN[i, 0], ax2[i]).squeeze()
+                logresult[i] = self.interp(logN[i,0], ax2[i]).squeeze()
+        else:
+            logresult = \
+                np.array([self.interp(tuple(Ncol)) for Ncol in logN])
             
         return logresult
             
@@ -79,15 +96,13 @@ class LookupTable:
         return t        
         
     def _init(self):
-        """
-        Set up interpolation table.
-        """
+        """ Create interpolation table. """
         
         # Set up interpolation tables
         if self.D == 1:
             self.interp = \
                 interp1d(self.logN[0], self.table, 
-                    kind=self.pf['interp_method'])        
+                    kind=self.pf['interp_method'])
         elif self.D == 2:
             
             if self.adv_secondary_ionization:
@@ -103,27 +118,8 @@ class LookupTable:
             else:    
                 self.interp = \
                     RectBivariateSpline(self.logN[0], ax2, self.table)
-            
         else:    
+            if self.Ed:
+                raise NotImplemented('Haven\'t implemented time and secondary ionization option yet.')
             
-            # or scipy.ndimage.map_coordinates
-        
-            Ngrid = []
-            for element in self.tab.N:
-                Ngrid.append(element * np.ones([len(element)] * self.tab.Nd))
-                        
-            Nrav = []
-            for element in Ngrid:
-                Nrav.append(element.ravel())
-            
-            pts = np.array(Nrav).T
-                        
-            #print pts.shape, self.tabs['logPhi_h_1'].ravel().shape
-            
-            self.tables = {}
-            for tab in self.tabs:
-                print tab, pts.shape, self.tabs[tab].ravel().shape
-                self.tables[tab] = LinearNDInterpolator(pts, self.tabs[tab].ravel())
-                    
-        
-        
+            self.interp = LinearNDInterpolator(self.logN, self.table)

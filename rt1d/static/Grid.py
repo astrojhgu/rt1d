@@ -230,10 +230,13 @@ class Grid:
                 #ion.vernerCross(energy = np.logspace(1, 5, 1000))
                 if absorber == 'h_1':
                     self._bf_xsections[absorber] = lambda E: \
-                        PhotoIonizationCrossSection(E, species = 0)
+                        PhotoIonizationCrossSection(E, species=0)
                 elif absorber == 'he_1':
                     self._bf_xsections[absorber] = lambda E: \
-                        PhotoIonizationCrossSection(E, species = 1)
+                        PhotoIonizationCrossSection(E, species=1)
+                elif absorber == 'he_2':
+                    self._bf_xsections[absorber] = lambda E: \
+                        PhotoIonizationCrossSection(E, species=2)        
                 
         return self._bf_xsections
         
@@ -319,10 +322,26 @@ class Grid:
         
     def set_chemistry(self, Z=1, abundance=1.0, energy=False):
         """
-        Initialize chemistry - which species we'll be solving for and their 
-        abundances ('cosmic', 'sun_photospheric', 'sun_coronal', etc. are
-        acceptable arguments if we have chianti). Creates initial (empty)
-        data dictionary to population with other set_* routines.
+        Initialize chemistry.
+        
+        This routine sets the chemical composition of the medium being 
+        simulated.
+        
+        Parameters
+        ----------
+        Z : int, list
+            Atomic number(s) of elements to include in calculation.
+        abundance : float, list, str
+            Abundance(s) (relative to hydrogen) of elements.
+            If chiantiPy is installed, can be a string. Some acceptable
+            abundance strings are:
+                'cosmic', 'sun_photospheric', 'sun_coronal'
+            
+        Example
+        -------
+        grid = Grid(dims=32)
+        grid.set_chemistry(Z=[1,2], abundance='cosmic')  
+        
         """                
         
         if type(Z) is not list:
@@ -381,8 +400,18 @@ class Grid:
 
     def set_density(self, rho0=None):
         """
-        Initialize gas density, and from that, the hydrogen number density
-        (which normalizes all other number densities).
+        Initialize gas density, and from that, the hydrogen number density.
+        
+        Setting the gas density is necessary for computing the hydrogen 
+        number density, which normalizes fractional abundances of elements
+        to proper number densities of all species.
+
+        Parameters
+        ----------
+        rho0 : float, array
+            Density of medium in g / cm**3. Can be a float (uniform medium),
+            or an array of values the same size as the grid itself.
+
         """                
         
         if isinstance(rho0, Iterable):
@@ -422,8 +451,13 @@ class Grid:
         
     def set_temperature(self, T0):
         """
-        Set initial temperature in grid.  If type(T0) is float, assume uniform
-        temperature everywhere.  Otherwise, pass T0 as an array of values.
+        Set initial temperature in grid.  
+        
+        Parameters
+        ----------
+        T0 : float, array
+            Initial temperature in grid. Can be constant value (corresponding
+            to uniform medium), or an array of values like the grid.
         """
         
         if isinstance(T0, Iterable):
@@ -434,14 +468,18 @@ class Grid:
     def set_ionization(self, Z=None, x=None, state=None, perturb=0):
         """
         Set initial ionization state.  If Z is None, assume constant ion fraction 
-        of 1 / (1 + Z) for all elements.  Can be overrideen by 'state', which can be
+        of 1 / (1 + Z) for all elements.  Can be overridden by 'state', which can be
         'equilibrium', and maybe eventually other options (e.g. perturbed out of
         equilibrium slightly, perhaps).
         """       
         
         if x is not None:
-            self.data[util.zion2name(Z, Z)].fill(1. - x)
-            self.data[util.zion2name(Z, Z + 1)].fill(x)
+            if type(x) is list:
+                for i, frac in enumerate(x):
+                    self.data[util.zion2name(Z, i)].fill(frac)
+            else:    
+                self.data[util.zion2name(Z, 1)].fill(1. - x)
+                self.data[util.zion2name(Z, 2)].fill(x)
             
         elif state == 'equilibrium':
             np.seterr(all = 'ignore')   # This tends to produce divide by zero errors

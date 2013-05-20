@@ -57,7 +57,7 @@ class Source:
         return integrate(integrand, self.rs.EminNorm, self.rs.EmaxNorm)[0]
                 
     def PlotSpectrum(self, color='k', components=True, t=0, normalized=True,
-        bins=100, ax=None, label=None):
+        bins=100, ax=None, label=None, ls='-'):
         
         if not normalized:
             Lbol = self.rs.BolometricLuminosity(t)
@@ -87,8 +87,8 @@ class Source:
         if ax is None:
             ax = pl.subplot(111)
                     
-        ax.loglog(E, np.array(F) * Lbol, color = color, ls = ls[0], 
-            label = label)
+        ax.loglog(E, np.array(F) * Lbol, color=color, ls=ls, 
+            label=label)
         
         if components and self.rs.N > 1:
             for i in xrange(self.rs.N):

@@ -30,7 +30,10 @@ More notes:
 """
 
 import numpy as np
+from .SetDefaultParameterValues import SetAllDefaults
 from ..physics.Constants import m_H, cm_per_kpc, cm_per_mpc, s_per_myr
+
+defs = SetAllDefaults()
 
 def ProblemType(ptype):
     """
@@ -191,6 +194,8 @@ def ProblemType(ptype):
              
     if ptype >= 10:
         pf.update({'species': [1, 2], 'abundances': [1.0, 0.08],
-            'initial_ionization':[pf['initial_ionization']]*2})
+            'initial_ionization': [pf['initial_ionization']]*2,
+            'spectrum_dlogN': defs['spectrum_dlogN']*3,
+            'spectrum_smallest_x': defs["spectrum_smallest_x"]*3})
                      
     return pf    

@@ -222,7 +222,6 @@ class RadiationSource:
         if self.discrete or self.SourcePars['type'] == 3:
             return
         
-        
         if self.SourcePars['table'] is None:
             # Overide defaults if supplied - this is dangerous
             if logN is not None:
@@ -232,11 +231,14 @@ class RadiationSource:
             
             # Tabulate away!            
             self.tab = IntegralTable(self.pf, self, self.grid, logN)
-            self.tabs = self.tab.TabulateRateIntegrals()  
+            self.tabs = self.tab.TabulateRateIntegrals()
         else:
             self.tab = IntegralTable(self.pf, self, self.grid, logN)
             self.tabs = self.tab.load(self.SourcePars['table'])
-                
+        
+        self.setup_interp()
+        
+    def setup_interp(self):            
         self.tables = {}
         for tab in self.tabs:
             self.tables[tab] = \

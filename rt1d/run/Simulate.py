@@ -58,7 +58,7 @@ class Simulation:
                     HeliumFractionByMass=pf['HeliumFractionByMass'], 
                     CMBTemperatureNow=pf['CMBTemperatureNow'],
                     HighRedshiftApprox=pf['HighRedshiftApprox'])    
-                grid.set_chemistry(Z=pf['Z'], abundance=pf['abundances'])
+                grid.set_chemistry(Z=pf['Z'], abundance=pf['abundance'])
                 grid.set_density(grid.cosm.rho_b_z0 \
                     * (1. + pf['initial_redshift'])**3)
                 grid.set_temperature(grid.cosm.TCMB(pf['initial_redshift']))
@@ -70,7 +70,7 @@ class Simulation:
                     z=pf['initial_redshift'])
                     
             else:
-                grid.set_chemistry(Z=pf['Z'], abundance=pf['abundances'])
+                grid.set_chemistry(Z=pf['Z'], abundance=pf['abundance'])
                 grid.set_density(pf['density_units'])
                 
                 for i, Z in enumerate(pf['Z']):
