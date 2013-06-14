@@ -25,16 +25,17 @@ except ImportError:
     size = 1    
 
 class ProgressBar:
-    def __init__(self, maxval, name='rt1d'):
-        self.maxval = maxval
+    def __init__(self, maxval, name='rt1d', use=True):
+        self.maxval = maxval            
+        self.use = use
         
-        if pb and rank == 0:
+        if pb and rank == 0 and use:
             self.widget = ["%s: " % name, progressbar.Percentage(), ' ', \
               progressbar.Bar(marker = progressbar.RotatingMarker()), ' ', \
               progressbar.ETA(), ' ']
     
     def start(self):
-        if rank == 0:
+        if rank == 0 and self.use:
             self.pbar = progressbar.ProgressBar(widgets=self.widget, 
                 maxval=self.maxval).start()
         

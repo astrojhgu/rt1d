@@ -510,8 +510,9 @@ class RadiationSource:
                
         emission = 0
         for i, Type in enumerate(self.SpectrumPars['type']):
-            if not (self.SpectrumPars['Emin'][i] <= E < self.SpectrumPars['Emax'][i]):
-                continue
+            if not self.SpectrumPars['extrapolate'][i]:
+                if not (self.SpectrumPars['Emin'][i] <= E <= self.SpectrumPars['Emax'][i]):
+                    continue
                 
             if only is not None and Type != only:
                 continue 
@@ -646,20 +647,19 @@ class RadiationSource:
             for i, component in enumerate(self.SpectrumPars['type']):
                 if self.SpectrumPars['normed_by'][i] == 'energy':                    
                     integral, err = quad(self.Intensity,
-                        self.EminNorm[i], 
-                        self.EmaxNorm[i], args=(i, component, t,))
+                        self.EminNorm[i], self.EmaxNorm[i], 
+                        args=(i, component, t,))
                     
                     normalizations[i] = self.SpectrumPars['fraction'][i] * Lbol \
                         / integral
                 else:
                     integral, err = quad(lambda EE: self.Intensity(EE) / EE,
-                        self.EminNorm[i], 
-                        self.EmaxNorm[i], args=(i, component, t,))
+                        self.EminNorm[i], self.EmaxNorm[i], 
+                        args=(i, component, t,))
                 
                     normalizations[i] = self.SpectrumPars['qdot'][i] * Lbol \
                         / integral
                             
-            
         return normalizations
         
     def BolometricLuminosity(self, t=0.0, M=None):

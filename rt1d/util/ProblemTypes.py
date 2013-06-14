@@ -193,8 +193,8 @@ def ProblemType(ptype):
             pf.update({'spectrum_LE': [0.24, 0.35, 0.23, 0.06]})
              
     if ptype >= 10:
-        pf.update({'species': [1, 2], 'abundances': [1.0, 0.08],
-            'initial_ionization': [pf['initial_ionization']]*2,
+        pf.update({'Z': [1, 2], 'abundance': [1.0, 0.08],
+            'initial_ionization': [pf['initial_ionization'][0]]*2,
             'spectrum_dlogN': defs['spectrum_dlogN']*3,
             'spectrum_smallest_x': defs["spectrum_smallest_x"]*3})
                      

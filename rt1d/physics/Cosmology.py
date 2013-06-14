@@ -22,7 +22,7 @@ class Cosmology:
     def __init__(self, OmegaMatterNow=0.272, OmegaLambdaNow=0.728,
         OmegaBaryonNow=0.044, HubbleParameterNow=0.702, 
         HeliumFractionByMass=0.2477, CMBTemperatureNow=2.725, 
-        HighRedshiftApprox=False, SigmaEight=0.807, PrimordialIndex=0.96):
+        approx_highz=False, SigmaEight=0.807, PrimordialIndex=0.96):
                 
         self.OmegaMatterNow = OmegaMatterNow
         self.OmegaBaryonNow = OmegaBaryonNow
@@ -30,7 +30,7 @@ class Cosmology:
         self.OmegaCDMNow = self.OmegaMatterNow - self.OmegaBaryonNow
         self.HubbleParameterNow = HubbleParameterNow * 100 / km_per_mpc
         self.CMBTemperatureNow = CMBTemperatureNow
-        self.HighRedshiftApprox = HighRedshiftApprox
+        self.approx_highz = approx_highz
         self.SigmaEight = self.sigma8 = SigmaEight
         self.PrimordialIndex = PrimordialIndex
         
@@ -58,6 +58,7 @@ class Cosmology:
         self.nHe = lambda z: self.nHe0 * (1. + z)**3
         
         self.delta_c0 = 1.686
+        self.TcmbNow = self.CMBTemperatureNow
         
     def TimeToRedshiftConverter(self, t_i, t_f, z_i):
         """
@@ -97,7 +98,7 @@ class Cosmology:
         return self.OmegaMatterNow * (1.0 + z)**3  + self.OmegaLambdaNow
         
     def HubbleParameter(self, z):
-        if self.HighRedshiftApprox:
+        if self.approx_highz:
             return self.HubbleParameterNow * np.sqrt(self.OmegaMatterNow) \
                 * (1. + z)**1.5
         return self.HubbleParameterNow * np.sqrt(self.EvolutionFunction(z)) 
@@ -109,12 +110,12 @@ class Cosmology:
         return 2. / 3. / self.HubbleParameter(z)
         
     def OmegaMatter(self, z):
-        if self.HighRedshiftApprox:
+        if self.approx_highz:
             return 1.0
         return self.OmegaMatterNow * (1.0 + z)**3 / self.EvolutionFunction(z)
     
     def OmegaLambda(self, z):
-        if self.HighRedshiftApprox:
+        if self.approx_highz:
             return 0.0
 	    return self.OmegaLambdaNow / self.EvolutionFunction(z)
     
@@ -167,7 +168,7 @@ class Cosmology:
     def ComovingLineElement(self, z):
         """
         Comoving differential line element at redshift z.
-        """     
+        """
         
         return c / self.HubbleParameter(z)
         

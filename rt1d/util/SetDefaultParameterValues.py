@@ -141,6 +141,7 @@ def SpectrumParameters():
         "spectrum_dlogx": 0.1,
         "spectrum_dE": 5.,
         "spectrum_dt": s_per_myr,
+        "spectrum_extrapolate": False,
         
         "spectrum_normed_by": 'energy',
         
