@@ -42,6 +42,8 @@ def GridParameters():
         "initial_ionization": [1.2e-3],
         "initial_temperature": 1e4,
         
+        "approx_helium": 0,
+        
         "clump": 0,  
         "clump_position": 0.1,  
         "clump_radius": 0.05,  

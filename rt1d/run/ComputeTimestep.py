@@ -44,10 +44,10 @@ class ComputeTimestep:
                     np.min(dt[..., self.grid.types == 0]))
             elif mth == 'electrons':
                 new_dt = min(new_dt, 
-                    np.min(dt[..., self.grid.all_species.index('de')]))
-            elif mth == 'temperature' and 'T' in self.grid.all_species:
+                    np.min(dt[..., self.grid.evolving_fields.index('de')]))
+            elif mth == 'temperature' and 'T' in self.grid.evolving_fields:
                 new_dt = min(new_dt, 
-                    np.min(dt[..., self.grid.all_species.index('T')]))
+                    np.min(dt[..., self.grid.evolving_fields.index('T')]))
             elif mth == 'hubble' and self.grid.expansion:
                 new_dt = min(new_dt, self.epsilon \
                     * self.grid.cosm.HubbleTime(z))

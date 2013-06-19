@@ -41,8 +41,8 @@ class SimpleChemicalNetwork:
         self.isothermal = self.grid.isothermal
 
         # For convenience 
-        self.zeros_q = np.zeros(len(self.grid.all_species))
-        self.zeros_jac = np.zeros([len(self.grid.all_species)] * 2)
+        self.zeros_q = np.zeros(len(self.grid.evolving_fields))
+        self.zeros_jac = np.zeros([len(self.grid.evolving_fields)] * 2)
         
     def RateEquations(self, t, q, args):
         """
@@ -76,12 +76,13 @@ class SimpleChemicalNetwork:
             nHII = n_H * xHII
                 
             if 2 in self.grid.Z:
-                qhe1, qhe2, qhe3, qe = (2, 3, 4, 5)
-                he1, he2 = (1, 2)
                 n_He = self.grid.element_abundances[1] * n_H
-                xHeI = q[qhe1]
-                xHeII = q[qhe2]
-                xHeIII = q[qhe2 + 1]
+                if not self.grid.approx_helium:
+                    qhe1, qhe2, qhe3, qe = (2, 3, 4, 5)
+                    he1, he2 = (1, 2)
+                    xHeI = q[qhe1]
+                    xHeII = q[qhe2]
+                    xHeIII = q[qhe2 + 1]
                 
         elif 2 in self.grid.Z:    
             qhe1, qhe2, qhe3, qe = (0, 1, 2, 3)
@@ -101,9 +102,12 @@ class SimpleChemicalNetwork:
                 - gamma[h1][h1] * xHI
             self.dqdt[qh2] = -self.dqdt[qh1]   
             self.dqdt[qe] = self.dqdt[qh2] * n_H
+            
+            if self.grid.approx_helium:
+                self.dqdt[qe] *= (1. + n_H / n_He)
                                 
         # Helium rate equations
-        if 2 in self.grid.Z:
+        if 2 in self.grid.Z and not self.grid.approx_helium:
             self.dqdt[qhe1] = \
                 -1. * (Gamma[he1] + self.Beta[cell][he1] * n_e) * xHeI \
                 + (self.alpha[cell][he1] + self.xi[cell]) * n_e * xHeII
@@ -112,7 +116,7 @@ class SimpleChemicalNetwork:
                 + self.alpha[cell][he2] * n_e * xHeIII
             self.dqdt[qhe3] = -(self.dqdt[qhe2] + self.dqdt[qhe1])
             self.dqdt[qe] += (self.dqdt[qhe2] + self.dqdt[qhe2+1]) * n_He
-                            
+
         # Temperature evolution
         if not self.isothermal:
             phoheat, ioncool, reccool, exccool = np.zeros(4)
@@ -123,14 +127,14 @@ class SimpleChemicalNetwork:
                 reccool += self.eta[cell][h1] * xHII * n_H
                 exccool += self.psi[cell][h1] * xHI * n_H
             
-            if 2 in self.grid.Z:
+            if 2 in self.grid.Z and not self.grid.approx_helium:
                 phoheat += k_H[he1] * xHeI * n_He + k_H[he2] * xHeII * n_He
                 ioncool += self.zeta[cell][he1] * xHeI * n_He \
                          + self.zeta[cell][he2] * xHeI * n_He
                 reccool += self.eta[cell][he1] * xHeII * n_He \
                          + self.eta[cell][he2] * xHeIII * n_He
                 exccool += self.psi[cell][he1] * xHeI * n_He \
-                         + self.psi[cell][he2] * xHeII * n_He \
+                         + self.psi[cell][he2] * xHeII * n_He
             
             hubcool = 0.0
             compton = 0.0
@@ -174,15 +178,17 @@ class SimpleChemicalNetwork:
             nHII = n_H * xHII
                 
             if 2 in self.grid.Z:
-                qhe1, qhe2, qhe3, qe = (2, 3, 4, 5)
-                he1, he2 = (1, 2)
                 n_He = self.grid.element_abundances[1] * n_H
-                xHeI = q[qhe1]
-                xHeII = q[qhe2]
-                xHeIII = q[qhe3]
-                nHeI = n_He * xHeI
-                nHeII = n_He * xHeII
-                nHeIII = n_He * xHeIII
+                
+                if not self.grid.approx_helium:
+                    qhe1, qhe2, qhe3, qe = (2, 3, 4, 5)
+                    he1, he2 = (1, 2)                
+                    xHeI = q[qhe1]
+                    xHeII = q[qhe2]
+                    xHeIII = q[qhe3]
+                    nHeI = n_He * xHeI
+                    nHeII = n_He * xHeII
+                    nHeIII = n_He * xHeIII
                 
         elif 2 in self.grid.Z:    
             qhe1, qhe2, qhe3, qe = (0, 1, 2, 3)
@@ -219,7 +225,7 @@ class SimpleChemicalNetwork:
                      + np.sum(gamma[h1]) * n_H
             J[qe][qh2] = -J[qe][qh2]
             J[qe][qe] = self.Beta[cell][h1] * n_H * xHI \
-                    - self.alpha[cell][h1] * n_H * xHII
+                    - self.alpha[cell][h1] * n_H * xHII     
                     
             # Gas energy
             if not self.isothermal:                
@@ -228,8 +234,8 @@ class SimpleChemicalNetwork:
                           + self.psi[cell][h1] - self.eta[cell][h1]))
                 J[-1][qh2] = -J[-1][qh1]
 
-        if 2 in self.grid.Z:
-            
+        if 2 in self.grid.Z and not self.grid.approx_helium:
+
             # First - diagonal elements
             J[qhe1][qhe1] = \
                 -1. * (Gamma[he1] + self.Beta[cell][he1] * n_e) \
@@ -321,10 +327,10 @@ class SimpleChemicalNetwork:
             self.alpha[...,i] = self.coeff.RadiativeRecombinationRate(i, T)
             self.zeta[...,i] = self.coeff.CollisionalIonizationCoolingRate(i, T)
             self.eta[...,i] = self.coeff.RecombinationCoolingRate(i, T)
-            self.psi[...,i] = self.coeff.CollisionalExcitationCoolingRate(i, T)            
-                        
+            self.psi[...,i] = self.coeff.CollisionalExcitationCoolingRate(i, T)
+
         # Di-electric recombination
-        if 2 in self.grid.Z:
+        if 2 in self.grid.Z and not self.grid.approx_helium:
             self.xi = self.coeff.DielectricRecombinationRate(T)
             self.omega = self.coeff.DielectricRecombinationCoolingRate(T)
         
@@ -414,10 +420,10 @@ class DengoChemicalNetwork:
         """        
         
         # Create empty jacobian
-        self.jac = [['0']*len(self.grid.all_species) \
-            for sp in self.grid.all_species]
+        self.jac = [['0']*len(self.grid.evolving_fields) \
+            for sp in self.grid.evolving_fields]
             
-        for i, sp1 in enumerate(self.grid.all_species):
+        for i, sp1 in enumerate(self.grid.evolving_fields):
             
             for element in self.grid.ions_by_parent:
                 if sp1 in self.grid.ions_by_parent[element]:
@@ -426,7 +432,7 @@ class DengoChemicalNetwork:
             chemnet = self.networks[element]
             names = [species.name for species in chemnet.required_species]
             
-            for j, sp2 in enumerate(self.grid.all_species):                    
+            for j, sp2 in enumerate(self.grid.evolving_fields):                    
                 if convert_ion_name(sp2) not in names:
                     continue    
                 
@@ -516,8 +522,8 @@ class DengoChemicalNetwork:
         kwargs = dict(args)
         jac = np.zeros([len(self.dqdt_eqs)] * 2)
 
-        for i, sp1 in enumerate(self.grid.all_species):
-            for j, sp2 in enumerate(self.grid.all_species):
+        for i, sp1 in enumerate(self.grid.evolving_fields):
+            for j, sp2 in enumerate(self.grid.evolving_fields):
                 jac[i,j] = eval(self.jac[i][j])
                 
         return jac                      

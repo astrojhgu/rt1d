@@ -108,6 +108,9 @@ class IntegralTable:
         for absorber in self.grid.absorbers:
             self.sigma_th[absorber] = self.grid.ioniz_thresholds[absorber]
         
+        if self.grid.approx_helium:
+            self.sigma_th['he_1'] = self.grid.ioniz_thresholds['he_1']
+        
     def TableBoundsAuto(self, xmin=1e-5):
         """
         Calculate what the bounds of the table must be for a 
@@ -305,6 +308,11 @@ class IntegralTable:
         for absorber in self.grid.absorbers:
             tau += self.OpticalDepth(N[self.grid.absorbers.index(absorber)], 
                 absorber)
+                
+            if self.grid.approx_helium:
+                Nhe = self.grid.abundance[1] \
+                    * N[self.grid.absorbers.index('h_1')]
+                tau += self.OpticalDepth(Nhe, 'he_1')  
     
         return tau
                

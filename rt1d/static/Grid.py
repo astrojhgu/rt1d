@@ -122,8 +122,12 @@ class Grid:
         """ Return list of absorbers (don't include electrons). """
         if not hasattr(self, '_absorbing_species'):
             self._absorbing_species = copy.copy(self.neutrals)
-            for ion in self.ions_by_parent:
-                self._absorbing_species.extend(self.ions_by_parent[ion][1:-1])
+            for parent in self.ions_by_parent:
+                if self.approx_helium:
+                    if parent == 'he':
+                        self._absorbing_species.remove('he_1')
+                        continue
+                self._absorbing_species.extend(self.ions_by_parent[parent][1:-1])
             
         return self._absorbing_species
         
@@ -178,7 +182,7 @@ class Grid:
     @property
     def types(self):
         """
-        Return list (matching all_species) with integers describing
+        Return list (matching evolving_fields) with integers describing
         species type:
             0 = neutral
            +1 = ion
@@ -187,7 +191,7 @@ class Grid:
         
         if not hasattr(self, '_species_types'):
             self._species_types = []
-            for species in self.all_species:
+            for species in self.evolving_fields:
                 if species in self.neutrals:
                     self._species_types.append(0)
                 elif species in self.ions:
@@ -213,6 +217,9 @@ class Grid:
                     self._ioniz_thresholds[absorber] = 24.4
                 elif absorber == 'he_2':
                     self._ioniz_thresholds[absorber] = 54.4
+        
+            if self.approx_helium:
+                self._ioniz_thresholds['he_1'] = 24.4
                     
         return self._ioniz_thresholds
         
@@ -236,7 +243,11 @@ class Grid:
                         PhotoIonizationCrossSection(E, species=1)
                 elif absorber == 'he_2':
                     self._bf_xsections[absorber] = lambda E: \
-                        PhotoIonizationCrossSection(E, species=2)        
+                        PhotoIonizationCrossSection(E, species=2) 
+                        
+            if self.approx_helium:
+                self._bf_xsections['he_1'] = lambda E: \
+                        PhotoIonizationCrossSection(E, species=1)           
                 
         return self._bf_xsections
         
@@ -320,7 +331,7 @@ class Grid:
             CMBTemperatureNow=CMBTemperatureNow, 
             HighRedshiftApprox=HighRedshiftApprox)        
         
-    def set_chemistry(self, Z=1, abundance=1.0, energy=False):
+    def set_chemistry(self, Z=1, abundance=1.0, energy=False, approx_helium=0):
         """
         Initialize chemistry.
         
@@ -336,6 +347,13 @@ class Grid:
             If chiantiPy is installed, can be a string. Some acceptable
             abundance strings are:
                 'cosmic', 'sun_photospheric', 'sun_coronal'
+        energy : bool
+            Solve for internal energy or temperature? (not sure if this is
+            used anywhere)
+        approx_helium : bool
+            If True, sets singly ionized helium fraction to HI fraction, and
+            assumes doubly ionized helium fraction is zero. Rate equations for
+            helium are not solved - only additional cooling is accounted for.
             
         Example
         -------
@@ -350,12 +368,15 @@ class Grid:
             abundance = [abundance]    
         
         self.abundance = abundance
+        self.approx_helium = approx_helium
         
         self.Z = np.array(Z)
         self.ions_by_parent = {} # Ions sorted by parent element in dictionary
+        self.parents_by_ion = {} # From ion name, determine parent element
         self.elements = []       # Just a list of element names
-        self.all_ions = []       # All ion species
-        self.all_species = []    # Anything with an ODE we'll later solve
+        self.all_ions = []       # All ion species          
+        self.tracked_fields = [] # Anything we're keeping track of
+        self.evolving_fields = []# Anything with an ODE we'll later solve
           
         for element in self.Z:
             element_name = util.z2element(element)
@@ -364,21 +385,27 @@ class Grid:
             for ion in xrange(element + 1):
                 name = util.zion2name(element, ion + 1)
                 self.all_ions.append(name)
-                self.all_species.append(name)
                 self.ions_by_parent[element_name].append(name)
+                self.parents_by_ion[name] = element_name
+                self.tracked_fields.append(name)
+                
+                if self.approx_helium and element_name == 'he':
+                    continue
+                    
+                self.evolving_fields.append(name)
 
         self.solve_ge = False      
-        self.all_species.append('de')
+        self.evolving_fields.append('de')
         if not self.isothermal:
             if energy:
                 self.solve_ge = True
-                self.all_species.append('ge')
+                self.evolving_fields.append('ge')
             else:    
-                self.all_species.append('Tk')
+                self.evolving_fields.append('Tk')
             
         # Create blank data fields
         self.data = {}
-        for field in self.all_species:
+        for field in self.tracked_fields:
             self.data[field] = np.zeros(self.dims)
             
         # Read abundances from chianti
@@ -474,10 +501,12 @@ class Grid:
         """       
         
         if x is not None:
-            if type(x) is list:
+            try:
+                if self.approx_helium and not np.allclose(x):
+                    raise ValueError('If approx_helium, initial ionized fractions must be equal!')
                 for i, frac in enumerate(x):
                     self.data[util.zion2name(Z, i)].fill(frac)
-            else:    
+            except TypeError:    
                 self.data[util.zion2name(Z, 1)].fill(1. - x)
                 self.data[util.zion2name(Z, 2)].fill(x)
             
@@ -651,7 +680,7 @@ class Grid:
         """
         
         self.qmap = []
-        for species in self.all_species:
+        for species in self.evolving_fields:
             self.qmap.append(species)
             
     def ShellVolume(self, r, dr):

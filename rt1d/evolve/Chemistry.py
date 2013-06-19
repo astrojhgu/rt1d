@@ -50,7 +50,7 @@ class Chemistry:
             method='bdf', nsteps=1e4, with_jacobian=True,
             atol=1e-8, rtol=1e-8)
             
-        self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.all_species)])
+        self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.evolving_fields)])
         self.zeros_grid_x_abs = np.zeros_like(self.grid.zeros_grid_x_absorbers)
         self.zeros_grid_x_abs2 = np.zeros_like(self.grid.zeros_grid_x_absorbers2)
     
@@ -112,8 +112,8 @@ class Chemistry:
                 continue
 
             # Construct q vector
-            q = np.zeros(len(self.grid.all_species))
-            for i, species in enumerate(self.grid.all_species):
+            q = np.zeros(len(self.grid.evolving_fields))
+            for i, species in enumerate(self.grid.evolving_fields):
                 q[i] = data[species][cell]
                                     
             kwargs_cell = kwargs_by_cell[cell]
@@ -133,7 +133,13 @@ class Chemistry:
             self.dqdt_grid[cell] = self.chemnet.dqdt.copy()
 
             for i, value in enumerate(self.solver.y):
-                newdata[self.grid.all_species[i]][cell] = self.solver.y[i]
+                newdata[self.grid.evolving_fields[i]][cell] = self.solver.y[i]
+        
+            # Update helium if approximate treatment in use
+            if self.grid.approx_helium:
+                newdata['he_1'][cell] = newdata['h_1'][cell]
+                newdata['he_2'][cell] = newdata['h_2'][cell]
+                newdata['he_3'][cell] = 0.0
         
         # Fix negative values
         for ion in self.grid.ions:

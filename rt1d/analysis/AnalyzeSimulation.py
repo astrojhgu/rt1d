@@ -211,9 +211,12 @@ class Simulation:
         ax.set_xscale('log')
         ax.set_yscale('log')
         
+        fields = self.grid.ions_by_parent[species]
         if species == 'h':
-            fields = self.grid.ions_by_parent[species]
             labels = [r'$x_{\mathrm{HI}}$', r'$x_{\mathrm{HII}}$']
+        elif species == 'he':
+            labels = [r'$x_{\mathrm{HeI}}$', r'$x_{\mathrm{HeII}}$', 
+                r'$x_{\mathrm{HeIII}}$']
         
         for dd in self.data.keys():
             t_time_units = self.data[dd]['time'] / self.pf['time_units']
@@ -234,13 +237,12 @@ class Simulation:
                 else:
                     ax.scatter(self.grid.r_mid / cm_per_kpc,
                         self.data[dd][field], marker=marker, s=s, 
-                        color = color, label = lab[i],
-                        facecolors=facecolors)
+                        color=color, label=lab[i], facecolors=facecolors)
                     
         ax.set_xscale(xscale)
         ax.set_yscale(yscale)    
-        ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
-        ax.set_ylabel(r'Species Fraction')  
+        ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
+        ax.set_ylabel(r'Species Fraction')
         ax.set_ylim(1e-5, 1.5)
         
         if annotate:
