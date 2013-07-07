@@ -37,5 +37,5 @@ pl.legend(loc = 'lower right', frameon = False)
 pl.annotate('Points from Zygelman (2005)', (1.5, 1e-8), ha = 'left')
 pl.annotate('Lines are spline fit to points', (1.5, 5e-9), ha = 'left')
 raw_input('')
-pl.close()     
+
    

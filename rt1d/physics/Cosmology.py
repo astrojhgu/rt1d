@@ -23,6 +23,11 @@ class Cosmology:
         OmegaBaryonNow=0.044, HubbleParameterNow=0.702, 
         HeliumFractionByMass=0.2477, CMBTemperatureNow=2.725, 
         approx_highz=False, SigmaEight=0.807, PrimordialIndex=0.96):
+        """Initialize a Cosmology object.
+        
+        :param: OmegaMatterNow: Pretty self-explanatory.
+        
+        """
                 
         self.OmegaMatterNow = OmegaMatterNow
         self.OmegaBaryonNow = OmegaBaryonNow

@@ -1,14 +1,14 @@
-"""
-
-RadiationSource.py
-
-Author: Jordan Mirocha
-Affiliation: University of Colorado at Boulder
-Created on: Sun Jul 22 16:28:08 2012
-
-Description: Initialize a radiation source.
-
-"""
+#"""
+#
+#RadiationSource.py
+#
+#Author: Jordan Mirocha
+#Affiliation: University of Colorado at Boulder
+#Created on: Sun Jul 22 16:28:08 2012
+#
+#Description: Initialize a radiation source.
+#
+#"""
 
 import h5py, re
 import numpy as np
@@ -30,8 +30,18 @@ sptypes = {'poly':0, 'bb':1, 'mcd':2, 'pl':3, 'qso':4, 'user':5, 'toy':6,
     'line':7}
 srctypes = {'test':0, 'star':1, 'bh':2, 'diffuse':3}
 
-class RadiationSource:
+class RadiationSource(object):
+    """ Class for creation and manipulation of radiation sources. """
     def __init__(self, grid=None, logN=None, init_tabs=True, **kwargs):
+        """ 
+        Initialize a radiation source object. 
+    
+        Parameters
+        ----------
+        grid: rt1d.static.Grid.Grid instance
+        logN: column densities over which to tabulate integral quantities
+    
+        """    
         self.pf = parse_kwargs(**kwargs)
         self.grid = grid
                 
@@ -503,9 +513,23 @@ class RadiationSource:
             return Lnu     
                 
     def Spectrum(self, E, t=0.0, only=None):
-        """
+        r"""
         Return fraction of bolometric luminosity emitted at energy E.
-        [Spectrum] = eV**-1
+        
+        Elsewhere denoted as :math:`I_{\nu}`, normalized such that
+        :math:`\int I_{\nu} d\nu = 1`
+        
+        Parameters
+        ----------
+        E: float
+            Emission energy in eV
+        t: float
+            Time in seconds since source turned on.    
+                    
+        Returns
+        -------
+        Fraction of bolometric luminosity emitted at E in units of eV\ :sup:`-1`\ 
+                
         """       
                
         emission = 0

@@ -37,8 +37,8 @@ class Radiate:
         #self.cosm = Cosmology(pf)
         #self.control = ControlSimulation(pf)
         self.coeff = RateCoefficients(pf, rs, g)
-        #self.Ts = SpinTemperature(pf)   
-        #self.HI = Hydrogen(pf)  
+        #self.Ts = SpinTemperature(pf)
+        #self.HI = Hydrogen(pf)
                 
         # Grid/units/etc
         self.GridDimensions = int(pf["GridDimensions"])

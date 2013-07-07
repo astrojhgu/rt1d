@@ -186,7 +186,7 @@ def CosmologyParameters():
         "HubbleParameterNow": 0.702,
         "HeliumFractionByMass": 0.2477,
         "CMBTemperatureNow": 2.725,
-        "HighRedshiftApprox": 0,
+        "approx_highz": 0,
         "SigmaEight": 0.807
         }
         

@@ -6,6 +6,7 @@ import types
 import numpy as np
 from collections import Iterable
 from .WriteData import CheckPoints
+from .ProgressBar import ProgressBar
 from .ProblemTypes import ProblemType
 from .SetDefaultParameterValues import *
 from .ReadParameterFile import ReadParameterFile, ReadRestartFile

@@ -38,7 +38,7 @@ tiny_number = 1e-8  # A relatively small species fraction
 class Grid:
     def __init__(self, dims=64, length_units=cm_per_kpc, start_radius=0.01):
         """
-        Initialize grid object. 
+        Initialize grid object.
         
         Parameters
         ----------
@@ -321,7 +321,7 @@ class Grid:
     def set_cosmology(self, initial_redshift=1e3, OmegaMatterNow=0.272, 
         OmegaLambdaNow=0.728, OmegaBaryonNow=0.044, HubbleParameterNow=0.702, 
         HeliumFractionByMass=0.2477, CMBTemperatureNow=2.725, 
-        HighRedshiftApprox=False):
+        approx_highz=False):
         
         self.zi = initial_redshift
         self._cosm = Cosmology(OmegaMatterNow=OmegaMatterNow, 
@@ -329,7 +329,7 @@ class Grid:
             HubbleParameterNow=HubbleParameterNow, 
             HeliumFractionByMass=HeliumFractionByMass,
             CMBTemperatureNow=CMBTemperatureNow, 
-            HighRedshiftApprox=HighRedshiftApprox)        
+            approx_highz=approx_highz)        
         
     def set_chemistry(self, Z=1, abundance=1.0, energy=False, approx_helium=0):
         """

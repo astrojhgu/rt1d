@@ -13,7 +13,7 @@ Description:
 import rt1d
 import pylab as pl
 
-sim = rt1d.run.Simulation(pf = {'problem_type': 1})
+sim = rt1d.run.Simulation(problem_type=1)
 sim.run()
 
 anl = rt1d.analyze.Simulation(sim.checkpoints)
@@ -22,7 +22,7 @@ anl.PlotIonizationFrontEvolution()
 raw_input('<enter> for radial profiles of xHI & xHII')
 pl.close()
 
-anl.IonizationProfile(t = [10, 100, 500], annotate = True)
+anl.IonizationProfile(t=[10, 100, 500], annotate=True)
 
 raw_input('')
 

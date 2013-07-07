@@ -169,7 +169,7 @@ class Simulation:
             mp = mp    
             hadmp = True
         else: 
-            mp = multipanel(dims = (2, 1), panel_size = (1, 1), useAxesGrid = False)
+            mp = multipanel(dims=(2, 1))
 
         if anl: 
             mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle='-', color='k')

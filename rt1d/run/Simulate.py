@@ -13,7 +13,7 @@ Description: Run a simulation.
 import rt1d
 import numpy as np
 from ..physics.Constants import s_per_myr
-from ..util import parse_kwargs, ReadParameterFile
+from ..util import parse_kwargs, ReadParameterFile, ProgressBar
     
 class Simulation:
     """
@@ -57,7 +57,7 @@ class Simulation:
                     HubbleParameterNow=pf['HubbleParameterNow'],
                     HeliumFractionByMass=pf['HeliumFractionByMass'], 
                     CMBTemperatureNow=pf['CMBTemperatureNow'],
-                    HighRedshiftApprox=pf['HighRedshiftApprox'])    
+                    approx_highz=pf['approx_highz'])    
                 grid.set_chemistry(Z=pf['Z'], abundance=pf['abundance'],
                     approx_helium=pf['approx_helium'])
                 grid.set_density(grid.cosm.rho_b_z0 \
@@ -139,7 +139,7 @@ class Simulation:
             print '\nEvolving ion densities...'
                     
         dt_history = []
-        pb = rt1d.run.ProgressBar(tf)
+        pb = rt1d.util.ProgressBar(tf)
         pb.start()
         while t < tf:
                                          

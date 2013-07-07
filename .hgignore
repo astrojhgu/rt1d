@@ -9,3 +9,6 @@ build/*
 *.h5
 *.png
 MANIFEST
+doc/_build
+doc/_templates
+doc/_static
