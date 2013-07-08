@@ -38,7 +38,7 @@ class Simulation:
         
         # Initialize grid object
         if init_grid:
-            grid = rt1d.Grid(dims=pf['grid_cells'], 
+            grid = rt1d.static.Grid(dims=pf['grid_cells'], 
                 length_units=pf['length_units'], 
                 start_radius=pf['start_radius'])
             
@@ -109,13 +109,13 @@ class Simulation:
         # Initialize radiation source and radiative transfer solver    
         if init_rs:     
             if self.pf['radiative_transfer']:
-                self.rs = rt1d.sources.RadiationSources(grid, 
+                self.rs = rt1d.sources.CompositeSource(grid, 
                     init_tabs=init_tabs, **pf)
                 allsrcs = self.rs.all_sources    
             else:
                 allsrcs = None
                 
-            self.rt = rt1d.Radiation(self.grid, allsrcs, **self.pf)
+            self.rt = rt1d.evolve.Radiation(self.grid, allsrcs, **self.pf)
 
     def run(self):
         self.__call__() 

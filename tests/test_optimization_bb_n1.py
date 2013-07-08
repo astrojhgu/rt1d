@@ -53,7 +53,7 @@ Emono = sedop.rs.hnu_bar[0]
 Lmono = sedop.rs.fLbol_ionizing[0]
 
 # Plot what we expect    
-pl.scatter([Emono]*2, [Lmono]*2, color = 'k', marker = '+', s = 100)
+pl.scatter([Emono]*2, [Lmono]*2, color='k', marker='+', s=100)
 
 # Nice labels
 pl.xlabel(r'$h\nu \ (\mathrm{eV})$')

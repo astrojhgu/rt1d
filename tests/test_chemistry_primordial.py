@@ -19,19 +19,20 @@ dims = 32
 T = np.logspace(np.log10(3e3), 6, dims)
 
 # Initialize grid object
-grid = rt1d.Grid(dims = dims)
+grid = rt1d.static.Grid(dims = dims)
 
 # Set initial conditions
-grid.set_chemistry(Z = [1, 2], abundance = [1., 0.08], isothermal = True)
-grid.set_density(rho0 = 1e-3 * rt1d.Constants.m_H)
+grid.set_physics(isothermal=True)
+grid.set_chemistry(Z=[1, 2], abundance=[1., 0.08])
+grid.set_density(rho0 = 1e-3 * rt1d.physics.Constants.m_H)
 grid.set_temperature(T)
-grid.set_ionization(state = 'neutral')  
+grid.set_ionization(state='neutral')  
 
 # Initialize chemistry network / solver
-chem = rt1d.Chemistry(grid, dengo = False, rt = False)
+chem = rt1d.evolve.Chemistry(grid, dengo=False, rt=False)
 
-# Only need to calculate coefficients once for this test
-chem.chemnet.SourceIndependentCoefficients(chem.grid.data['T'])
+# Compute rate coefficients once (isothermal)
+chem.chemnet.SourceIndependentCoefficients(grid.data['Tk'])
 
 # To compute timestep
 timestep = rt1d.run.ComputeTimestep(grid)
@@ -55,18 +56,18 @@ pl.draw()
 
 # Evolve chemistry
 data = grid.data
-dt = rt1d.Constants.s_per_myr / 1e3
-dt_max = 2 * rt1d.Constants.s_per_myr
+dt = rt1d.physics.Constants.s_per_myr / 1e3
+dt_max = 2 * rt1d.physics.Constants.s_per_myr
 t = 0.0
-tf = 1e2 * rt1d.Constants.s_per_myr
+tf = 1e2 * rt1d.physics.Constants.s_per_myr
 
 # Initialize progress bar
-pb = rt1d.util.Progressbar(tf)
+pb = rt1d.util.ProgressBar(tf)
 pb.start()
 
 while t <= tf:
     pb.update(t)
-    data = chem.Evolve(data, dt = dt)
+    data = chem.Evolve(data, t=t, dt=dt)
     t += dt 
     
     new_dt = timestep.Limit(chem.chemnet.q, chem.chemnet.dqdt)

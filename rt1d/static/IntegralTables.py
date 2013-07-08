@@ -11,11 +11,11 @@ Description: Tabulate integrals that appear in the rate equations.
 """
 
 import numpy as np
-from ..run import ProgressBar
-import os, re, scipy, itertools, math, copy
+from ..util import ProgressBar
 from scipy.integrate import quad, trapz
 from ..physics.Constants import erg_per_ev
 from ..physics.SecondaryElectrons import *
+import os, re, scipy, itertools, math, copy
 
 try:
     from mpi4py import MPI

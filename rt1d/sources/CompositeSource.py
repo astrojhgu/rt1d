@@ -12,12 +12,14 @@ over said instances in ionization and heating rate calculations.
 """
 
 import re
-from ..util import parse_kwargs
-from collections import Iterable
 from .RadiationSource import RadiationSource
 
-class RadiationSources:
+class CompositeSource:
+    """ Class for stitching together several radiation sources. """
     def __init__(self, grid=None, logN=None, init_tabs=True, **kwargs):
+        """
+        Initialize composite radiation source object.        
+        """
         self.pf = kwargs.copy()
         self.grid = grid
         

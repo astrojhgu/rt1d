@@ -5,34 +5,37 @@
 
 rt1d
 ==============================
-rt1d is a 1D radiative transfer code developed to study the ionization and
-thermal evolution of gas in the vicinity of stars, accreting black holes, or
-really any source of ultraviolet and/or X-ray photons you can think of. It was
-also designed to facilitate detailed studies of numerical effects that may
-arise in radiative transfer simulations.
+`rt1d <https://bitbucket.org/mirochaj/rt1d>`_ is a 1D radiative transfer code
+developed to study the ionization and thermal evolution of gas in the vicinity
+of stars, accreting black holes, or really any source of ultraviolet and/or
+X-ray photons you can think of. It was also designed to facilitate detailed
+studies of numerical effects that may arise in radiative transfer simulations.
 
 A paper including some discussion of its inner-workings can be found
 `here <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
 
-Physics Available
------------------
-* Secondary ionization and heating via Shull & vanSteenberg (1985), Ricotti,
-  Gnedin, & Shull (2002), or Furlanetto & Stoever (2010).
-* Time-dependent source luminosity and/or SED.
-* Continuous or discrete SEDs, choice to of using multi-group or
-  multi-frequency methods for discrete calculations.
-* Choice between photon-conserving or non-photon-conserving algorithms.
-* Choice to treat speed-of-light explicitly.
-* Can use `dengo <https://bitbucket.org/MatthewTurk/dengo>`_ package to create
-  advanced chemical networks, though they are not yet coupled to the
-  radiation field.
+Currently, rt1d has support for the following:
+    * Standard non-equilibrium chemistry solver for hydrogen and helium.
+    * Time-dependent source luminosities and SEDs.
+    * Continuous or discrete SEDs, choice of using multi-group or
+      multi-frequency methods for discrete SEDs.
+    * Photon-conserving and non-photon-conserving algorithms.
+    * Infinite speed-of-light approximation or explicit treatment of the speed-of-light.
+    * Secondary ionization and heating rates from Shull & vanSteenberg (1985), Ricotti,
+      Gnedin, & Shull (2002), or Furlanetto & Stoever (2010).
+    * Cosmological expansion.
+    * Time-dependent ionizing backgrounds.
+    * Can use `dengo <https://bitbucket.org/MatthewTurk/dengo>`_ package to create
+      advanced chemical networks, though they are not yet coupled to the
+      radiation field.
 
-Topics
-------
+Contents
+--------
 .. toctree::
    :maxdepth: 3
    
    Home <self>
    install
-   getting_started
+   structure
    examples
+   analysis

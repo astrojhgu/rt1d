@@ -15,7 +15,7 @@ import pylab as pl
 import numpy as np
 import rt1d, h5py, os
 
-sim = rt1d.run.Simulation(pf = {'problem_type': 2, 'stop_time': 10})
+sim = rt1d.run.Simulation(problem_type=2, stop_time=10)
 if not os.path.exists('bbspec.hdf5'):
     f = h5py.File('bbspec.hdf5')
     f.create_dataset('E', data=np.linspace(13.6, 100, 100))
@@ -24,15 +24,15 @@ if not os.path.exists('bbspec.hdf5'):
     f.close()
 
 # Read spectrum from file
-simf = rt1d.run.Simulation(pf={'problem_type': 2, 'spectrum_file': 'bbspec.hdf5',
-    'stop_time': 10})
+simf = rt1d.run.Simulation(problem_type=2.1, spectrum_file='bbspec.hdf5',
+    stop_time=10)
     
 # Read spectrum from array    
-simd = rt1d.run.Simulation(pf={'problem_type': 2, 
-    'spectrum_E': np.linspace(13.6, 100, 100),
-    'spectrum_LE': np.array(map(sim.rs.src[0].Spectrum, 
+simd = rt1d.run.Simulation(problem_type=2.1, 
+    spectrum_E=np.linspace(13.6, 100, 100),
+    spectrum_LE=np.array(map(sim.rs.src[0].Spectrum, 
         np.linspace(13.6, 100, 100))),
-    'stop_time': 10})
+    stop_time=10)
         
 # Run the sims to make sure we get the same answer (100 bins should be very close)        
 simf.run()

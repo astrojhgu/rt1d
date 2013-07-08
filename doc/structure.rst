@@ -1,5 +1,5 @@
-Getting Started
-===============
+Code Structure
+==============
 In this section, we'll demonstrate how all the pieces of a radiative transfer
 calculation are initialized: the grid, the chemical network, the radiation
 source, and the radiation field itself.
@@ -15,7 +15,7 @@ Include a figure here showing a cartoon of what happens when rt1d is run.
 
 The Grid
 --------
-The grid object is at the core of any calculation. It carries information
+The :doc:`grid` is at the core of any calculation. It carries information
 about the physical properties of the medium in which we're propagating
 radiation, like the chemical species it contains, its initial temperature and
 ionization state, and plenty of convenience functions for accessing various
@@ -42,28 +42,31 @@ To get going, let's initialize a simple grid: ::
 
 Note properties of the Grid class - they are useful!    
     
-The Chemical Network
---------------------
+Chemical Networks
+-----------------
 Though the grid contains information about the chemical species to be evolved
 in the calculation, it contains no information about *how* they'll be evolved. 
-That's where the Chemistry and ChemicalNetwork classes comes into play. The
+That's where the Chemistry and :doc:`chemical_network` classes comes into play. The
 It creates the evolution 
 equations that will be solved, and contains links to routines that calculate
 various rate coefficients
 
     >>> chem = rt1d.Chemistry(grid)
 
-The Radiation Source
---------------------
-    
-    
-Now we have a grid object that contains all we need to start doing some RT.  
-
+Radiation Sources
+-----------------
 Let's initialize a monochromatic source of UV photons, emitted at 
 :math:`h\nu = 13.6 \ \text{eV}`, at a rate of 
 :math:`\dot{Q} = 5\times 10^{48} \ \text{s}^{-1}`: ::
 
     >>> rs = rt1d.sources.RadiationSource(spectrum_E=[13.6], spectrum_LE=[1.0], source_qdot=5e48)
+
+The :doc:`sources` class can be used separately as well.
+
+The Radiation Field
+-------------------
+Now we have all we need to start doing some RT.  
+
 
 
 

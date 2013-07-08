@@ -27,17 +27,17 @@ colors = ['k', 'b', 'g', 'r', 'c', 'm', 'y'] * 2
 T = np.logspace(4, 8, dims)
 
 # Initialize grid object
-grid = rt1d.Grid(dims=dims)
+grid = rt1d.static.Grid(dims=dims)
 
 # Set initial conditions - one particle per cc
 grid.set_physics(isothermal=True)
 grid.set_chemistry(Z=Z)
-grid.set_density(rho0=10*rt1d.Constants.m_H*2*Z)
+grid.set_density(rho0=10*rt1d.physics.Constants.m_H*2*Z)
 grid.set_temperature(T)
 grid.set_ionization()
 
 # Initialize chemistry network / solver
-chem = rt1d.Chemistry(grid, dengo=True)
+chem = rt1d.evolve.Chemistry(grid, dengo=True)
 
 # Plot equilibrium solution
 np.seterr(all = 'ignore')
@@ -53,7 +53,7 @@ ax.set_ylim(5e-9, 1.5)
 pl.draw()
 
 # Evolve chemistry in one big step
-dt = rt1d.Constants.s_per_gyr
+dt = rt1d.physics.Constants.s_per_gyr
 data = chem.Evolve(grid.data, t=0, dt=dt)
     
 # Plot up solution

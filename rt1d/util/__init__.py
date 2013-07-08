@@ -82,7 +82,7 @@ def sort(pf, prefix='spectrum', make_list=True, make_array=False):
     return result
     
 class evolve:
-    """ Make thing the may or may not evolve with time callable. """
+    """ Make things that may or may not evolve with time callable. """
     def __init__(self, val):
         self.val = val
         self.callable = val == types.FunctionType

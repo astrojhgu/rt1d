@@ -110,6 +110,7 @@ def SpectrumParameters():
         "spectrum_evolving": False,
         
         "spectrum_fraction": 1,
+        
         "spectrum_alpha": -1.5,
         "spectrum_Emin": 13.6,  
         "spectrum_Emax": 1e2,  

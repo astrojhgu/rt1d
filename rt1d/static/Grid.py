@@ -35,7 +35,7 @@ except ImportError:
 
 tiny_number = 1e-8  # A relatively small species fraction
 
-class Grid:
+class Grid(object):
     def __init__(self, dims=64, length_units=cm_per_kpc, start_radius=0.01):
         """
         Initialize grid object.
@@ -48,7 +48,7 @@ class Grid:
             Size of domain in centimeters.
         start_radius : float
             Radius (in code units) within which to ignore.
-        
+            
         """
         
         self.dims = int(dims)
@@ -438,9 +438,8 @@ class Grid:
         rho0 : float, array
             Density of medium in g / cm**3. Can be a float (uniform medium),
             or an array of values the same size as the grid itself.
-
-        """                
-        
+            
+        """
         if isinstance(rho0, Iterable):
             self.data['rho'] = rho0
         else:

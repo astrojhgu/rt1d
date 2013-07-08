@@ -32,7 +32,7 @@ class RadiationField:
         # See if all sources are diffuse
         self.all_diffuse = 1
         for src in self.srcs:
-            self.all_diffuse *= int(src.SourcePars['type'] == 3)
+            self.all_diffuse *= int(src.SourcePars['type'] == 'diffuse')
             
         if self.all_diffuse:
             return
@@ -118,10 +118,10 @@ class RadiationField:
                 continue
             
             # "Diffuse" sources have parameterized rates    
-            if src.SourcePars['type'] == 3:
-                self.Gamma[h] = src.ionization_rate(z, **kwargs)
-                self.gamma[h] = src.secondary_ionization_rate(z, **kwargs)
-                self.k_H[h] = src.heating_rate(z, **kwargs)
+            if src.SourcePars['type'] == 'diffuse':
+                self.Gamma[h] = src.src.ionization_rate(z, **kwargs)
+                self.gamma[h] = src.src.secondary_ionization_rate(z, **kwargs)
+                self.k_H[h] = src.src.heating_rate(z, **kwargs)
                 continue    
                 
             self.h = h
@@ -135,7 +135,7 @@ class RadiationField:
                 self.k_H[h] = src.Heat_bar * self.pp_corr
                 self.gamma[h] = src.gamma_bar * self.pp_corr
                 continue
-                                     
+
             # Normalizations
             self.A = {}
             for absorber in self.grid.absorbers:                        

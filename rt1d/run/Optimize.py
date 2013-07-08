@@ -44,7 +44,7 @@ class Optimization:
         self.mcmc = mcmc
         
         # Use Grid class to carry info about absorbing species
-        self.grid = rt1d.Grid()
+        self.grid = rt1d.static.Grid()
         self.grid.set_physics(isothermal=self.isothermal, 
             secondary_ionization=self.secondary_ionization)
         self.grid.set_chemistry(Z=self.Z)
@@ -125,12 +125,12 @@ class Optimization:
             tau = np.zeros(self.tau_dims)
         else:
             tau = self.tau(E)
-            
+                        
         # Compute discrete versions of phi & psi
         # NOTE: if ionization thresholds all below smallest emission energy,
         # integrals for all species are identical.
         discrete_tables = self.discrete_tabs(E, LE, tau)
-        
+                
         # Keep only one element if we're doing optically thin optimization
         if self.thinlimit:
             mask = 0

@@ -19,17 +19,17 @@ dims = 32
 T = np.logspace(np.log10(5000), 5, dims)
 
 # Initialize grid object
-grid = rt1d.Grid(dims = dims)
+grid = rt1d.static.Grid(dims = dims)
 
 # Set initial conditions
 grid.set_physics(isothermal=True)
 grid.set_chemistry(Z=1)
-grid.set_density(rho0=rt1d.Constants.m_H)
+grid.set_density(rho0=rt1d.physics.Constants.m_H)
 grid.set_ionization()  
 grid.set_temperature(T)
 
 # Initialize chemistry network / solver
-chem = rt1d.Chemistry(grid, rt=False, dengo=False)
+chem = rt1d.evolve.Chemistry(grid, rt=False, dengo=False)
 
 # Compute rate coefficients once (isothermal)
 chem.chemnet.SourceIndependentCoefficients(grid.data['Tk'])
@@ -52,13 +52,13 @@ pl.draw()
 
 # Evolve chemistry
 data = grid.data
-dt = rt1d.Constants.s_per_myr / 1e3
-dt_max = 1e2 * rt1d.Constants.s_per_myr
+dt = rt1d.physics.Constants.s_per_myr / 1e3
+dt_max = 1e2 * rt1d.physics.Constants.s_per_myr
 t = 0.0
-tf = 10 * rt1d.Constants.s_per_gyr
+tf = 10 * rt1d.physics.Constants.s_per_gyr
 
 # Initialize progress bar
-pb = rt1d.util.Progressbar(tf)
+pb = rt1d.util.ProgressBar(tf)
 pb.start()
 
 while t <= tf:

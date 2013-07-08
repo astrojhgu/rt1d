@@ -15,7 +15,7 @@ import pylab as pl
 from ..physics.Constants import *
 from scipy.integrate import quad as integrate
 
-ls = ['-', '--', '-.', ':']
+allls = ['-', '--', '-.', ':']
 small_number = 1e-5
 
 class Source:
@@ -78,8 +78,7 @@ class Source:
                     np.log10(self.rs.SpectrumPars['Emax'][i]), bins)
                 tmpF = []
                 for energy in tmpE:
-                    tmpF.append(self.rs.Spectrum(energy, t = t, 
-                        only = component))
+                    tmpF.append(self.rs.Spectrum(energy, t=t, i=i))
                 
                 EE.append(tmpE)
                 FF.append(tmpF)
@@ -92,8 +91,8 @@ class Source:
         
         if components and self.rs.N > 1:
             for i in xrange(self.rs.N):
-                ax.loglog(EE[i], np.array(FF[i]) * Lbol, color = color, 
-                    ls = ls[i + 1])
+                ax.loglog(EE[i], np.array(FF[i]) * Lbol, color=color, 
+                    ls=allls[i+1])
         
         ax.set_xlabel(r'$h\nu \ (\mathrm{eV})$')
         

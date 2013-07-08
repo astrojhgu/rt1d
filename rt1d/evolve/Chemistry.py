@@ -27,11 +27,22 @@ except ImportError:
     
 tiny_ion = 1e-12 
 
-class Chemistry:
-    def __init__(self, grid, dengo=False, rt=False):
+class Chemistry(object):
+    """ Class for creation and manipulation of radiation sources. """
+    def __init__(self, grid, rt=False, dengo=False):
         """
-        Initialize chemistry solver with InitializeGrid.Grid class instance.
+        Create a chemistry object.
+        
+        Parameters
+        ----------
+        grid: rt1d.static.Grid.Grid instance
+        dengo: bool
+            Use dengo?
+        rt: bool
+            Use radiative transfer?
+            
         """
+
         self.grid = grid
         self.dengo = dengo
         self.rtON = rt
@@ -58,7 +69,7 @@ class Chemistry:
     def load_balance(self):
         """
         Return array the same size as the grid, each element noting
-        the processor that solves that cell. 
+        the processor responsible for solving chemistry in that cell. 
         """        
         
         if not hasattr(self, '_proc_dist'):

@@ -19,17 +19,17 @@ dims = 32
 T = np.logspace(np.log10(5000), 6, dims)
 
 # Initialize grid object
-grid = rt1d.Grid(dims=dims)
+grid = rt1d.static.Grid(dims=dims)
 
 # Set initial conditions
 grid.set_physics(isothermal=True)
 grid.set_chemistry(Z=[1,2], abundance=[1.0, 0.08])
-grid.set_density(rho0=rt1d.Constants.m_H)
+grid.set_density(rho0=rt1d.physics.Constants.m_H)
 grid.set_temperature(T)
 grid.set_ionization()#state='neutral')
 
 # Initialize chemistry network / solver
-chem = rt1d.Chemistry(grid, rt=False, dengo=False)
+chem = rt1d.evolve.Chemistry(grid, rt=False, dengo=False)
 
 # Compute rate coefficients once (isothermal)
 chem.chemnet.SourceIndependentCoefficients(grid.data['Tk'])
@@ -49,7 +49,7 @@ ax.set_ylim(5e-9, 1.5)
 pl.draw()
 
 # Evolve chemistry
-dt = rt1d.Constants.s_per_gyr
+dt = rt1d.physics.Constants.s_per_gyr
 data = chem.Evolve(grid.data, t=0, dt=dt)
 
 # Plot up solution

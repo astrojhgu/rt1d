@@ -90,11 +90,11 @@ def ProblemType(ptype):
               "initial_temperature": 1e2,
               "initial_ionization": [1e-8],
               
-              "source_type": 1,
+              "source_type": 'star',
               "source_qdot": 1e12,
               "source_lifetime": 0.5,
               
-              "spectrum_type": 1,
+              "spectrum_type": 'bb',
               "tau_ifront": [0],
               
               "spectrum_Emin": 13.6,
@@ -114,10 +114,10 @@ def ProblemType(ptype):
               "length_units": 6.6 * cm_per_kpc, 
               "stop_time": 500.0, 
               "isothermal": 1,
-              "species": [1],
+              "Z": [1],
               "initial_temperature": 1e4,
               "initial_ionization": [1.2e-3], 
-              "source_type": 0, 
+              "source_type": 'toy', 
               "source_qdot": 5e48, 
               "spectrum_E": [13.6],
               "spectrum_LE": [1.0],
@@ -133,13 +133,13 @@ def ProblemType(ptype):
               "stop_time": 500.0, 
               "isothermal": 0,
               "restricted_timestep": ['ions', 'energy'],
-              "species": [1],
+              "Z": [1],
               "secondary_ionization": 0,
               "initial_temperature": 1e2,
               "initial_ionization": [1.2e-3], 
-              "source_type": 1, 
+              "source_type": 'star', 
               "source_temperature": 1e5,
-              "spectrum_type": 1,
+              "spectrum_type": 'bb',
               "source_qdot": 5e48,
               "spectrum_EminNorm": 1e-1,
               "spectrum_EmaxNorm": 5e2
@@ -159,9 +159,9 @@ def ProblemType(ptype):
               "isothermal": 0,  
               "initial_temperature": 8e3,
               "initial_ionization": [1e-6],
-              "source_type": 1, 
+              "source_type": 'star', 
               "source_qdot": 1e6,
-              "spectrum_type": 1,
+              "spectrum_type": 'bb',
               
               "restricted_timestep": ['ions', 'electrons', 'energy'],
               
@@ -182,6 +182,7 @@ def ProblemType(ptype):
              
     if ptype_mod1 != 0:
         pf.update({'photon_conserving': 1})
+        pf.update({'source_type': 'toy'})
         
         # Change discrete spectrum: 0.1 = Mirocha et al. 2012
         #                           0.2 = Wise & Abel 2011

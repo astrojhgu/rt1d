@@ -8,7 +8,7 @@ Created on: Sat Mar 23 17:17:16 2013
 
 Description: Demonstrate how to construct a multi-component SED.
 Here, we use a multi-color disk + power-law spectrum often 
-used to emission from the vicinity of an accreting black hole.
+used to model emission from the vicinity of an accreting black hole.
 
 """
 
@@ -32,9 +32,6 @@ pf = \
  'spectrum_fcol': [1, None],
  'spectrum_logN': [0., 20.], 
 }
-
-#pf2 = pf.copy()
-#pf2['source_evolving'] = 0
 
 sim = rt1d.run.Simulation(pf=pf)
 sim.run()

@@ -29,23 +29,23 @@ colors = ['k', 'b', 'g', 'r', 'c', 'm', 'y'] * 2
 T = np.logspace(4, 8, dims)
 
 # Initialize grid object
-grid = rt1d.Grid(dims = dims)
+grid = rt1d.static.Grid(dims = dims)
 
 # Set initial conditions - densities corresponding to 1 H-atom per cc
 grid.set_physics(isothermal=True)
 grid.set_chemistry(Z=Z, abundance=abundance)
-grid.set_density(rho0=10*rt1d.Constants.m_H * 12)
+grid.set_density(rho0=10*rt1d.physics.Constants.m_H * 12)
 grid.set_temperature(T)
 grid.set_ionization()
 
 # Initialize chemistry network / solver
-chem = rt1d.Chemistry(grid, dengo=True)
+chem = rt1d.evolve.Chemistry(grid, dengo=True)
 
 # Plot equilibrium solution (nicely)
 np.seterr(all = 'ignore')
 Teq = np.logspace(np.log10(np.min(T)), np.log10(np.max(T)), 128)
 
-mp = multipanel(dims=(len(grid.Z),1), panel_size=(1, len(grid.Z)), share_all=False)
+mp = multipanel(dims=(len(grid.Z),1), panel_size=(1, len(grid.Z)))
 for i, element in enumerate(grid.elements):
     eq = cc.ioneq(grid.Z[i], Teq)
     
@@ -63,7 +63,7 @@ mp.global_xlabel(r'$T \ (\mathrm{K})$')
 mp.fix_ticks()
 
 # Evolve chemistry
-dt = rt1d.Constants.s_per_gyr
+dt = rt1d.physics.Constants.s_per_gyr
 data = chem.Evolve(grid.data, t=0, dt=dt)
 
 # Plot solutions

@@ -1,2 +1,2 @@
 from .RadiationSource import RadiationSource
-from .RadiationSources import RadiationSources
+from .CompositeSource import CompositeSource

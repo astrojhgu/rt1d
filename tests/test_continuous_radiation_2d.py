@@ -14,7 +14,7 @@ import rt1d
 import pylab as pl
 import numpy as np
 
-grid = rt1d.Grid(length_units=3e23) # 100 kpc grid
+grid = rt1d.static.Grid(length_units=3e23) # 100 kpc grid
     
 # Set initial conditions
 grid.set_physics(isothermal=0)
@@ -43,8 +43,8 @@ for i, table in enumerate(tables):
         color = 'k', s = 50)
     pl.scatter(src.tab.N[0], 10**src.tabs[table][..., -1], 
         color = 'b', s = 50)    
-    pl.loglog(10**logN, 10**src.tables[table](logN, logx1), color = 'k')
-    pl.loglog(10**logN, 10**src.tables[table](logN, logx2), color = 'b')
+    pl.loglog(10**logN, 10**src.tables[table](logN, logx1), color='k')
+    pl.loglog(10**logN, 10**src.tables[table](logN, logx2), color='b')
     pl.xlabel(r'Column Density $N_{\mathrm{HI}} \ (\mathrm{cm}^{-2})$')
     pl.ylabel(labels[i])
     pl.draw()

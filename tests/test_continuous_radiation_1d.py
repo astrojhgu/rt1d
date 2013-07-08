@@ -14,7 +14,7 @@ import rt1d
 import pylab as pl
 import numpy as np
 
-grid = rt1d.Grid(length_units = 3e23) # 100 kpc grid
+grid = rt1d.static.Grid(length_units=3e23) # 100 kpc grid
     
 # Set initial conditions
 grid.set_physics(isothermal=0)
@@ -56,8 +56,6 @@ pl.loglog(10**logN, 10**src.tables['logTau'](logN), color = 'k')
 pl.xlabel(r'Column Density $N_{\mathrm{HI}} \ (\mathrm{cm}^{-2})$')
 pl.ylabel(r'$\tau$')
 pl.draw()
-
-time.sleep(2)
 
 
 
