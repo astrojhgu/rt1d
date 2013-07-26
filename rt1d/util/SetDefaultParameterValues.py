@@ -51,6 +51,20 @@ def GridParameters():
         "clump_temperature": 100,    
         "clump_ionization": 1e-6,
         "clump_profile": 0,
+        
+        # These have shape len(absorbers)
+        "tables_logNmin": [None],
+        "tables_logNmax": [None],
+        "tables_dlogN": [0.2],        
+        "tables_xmin": [1e-8],
+        #
+        
+        "tables_logxmin": -4,
+        "tables_dlogx": 0.1,
+        "tables_dE": 5.,
+        
+        "tables_times": None,
+        "tables_dt": s_per_myr,
                 
         }
 
@@ -79,7 +93,7 @@ def PhysicsParameters():
 def SourceParameters():
     pf = \
         {
-        "source_type": 0,  
+        "source_type": 'star',  
         
         "source_temperature": 1e5,  
         "source_qdot": 5e48,
@@ -103,6 +117,33 @@ def SourceParameters():
         
     return pf
     
+def StellarParameters():
+    pf = \
+        {        
+        "source_temperature": 1e5,  
+        "source_qdot": 5e48,
+        
+        "spectrum_Emin": 13.6,  
+        "spectrum_Emax": 1e2,  
+        "spectrum_EminNorm": None,
+        "spectrum_EmaxNorm": None,
+        }
+        
+    return pf
+
+def BlackHoleParameters():
+    pf = \
+        {
+        "source_mass": 1e5,
+        "spectrum_alpha": -1.5,
+        "spectrum_Emin": 2e2,  
+        "spectrum_Emax": 3e4,  
+        "spectrum_EminNorm": None,
+        "spectrum_EmaxNorm": None,
+        }
+        
+    return pf    
+        
 def SpectrumParameters():
     pf = \
         {        
@@ -116,11 +157,8 @@ def SpectrumParameters():
         "spectrum_Emax": 1e2,  
         "spectrum_EminNorm": None,
         "spectrum_EmaxNorm": None,
-        
-        "spectrum_linewidth": None,
-        "spectrum_linecenter": None, 
          
-        "spectrum_logN": 0,
+        "spectrum_logN": -inf,
         "spectrum_fcol": 1.7,
         "spectrum_file": None,
         "spectrum_pars": None,
@@ -128,26 +166,12 @@ def SpectrumParameters():
         "spectrum_multigroup": 0,
         "spectrum_bands": None,
           
-        "spectrum_t": None,  
+        "spectrum_t": None,
         "spectrum_E": None,
-        "spectrum_LE": None,  
+        "spectrum_LE": None,
                 
         "spectrum_table": None,
-        
-        "spectrum_logNmin": None,
-        "spectrum_logNmax": None,
-        "spectrum_dlogN": [0.2],
-        
-        "spectrum_smallest_x": [1e-8],
-        
-        "spectrum_logxmin": [-4],
-        "spectrum_dlogx": 0.1,
-        "spectrum_dE": 5.,
-        "spectrum_dt": s_per_myr,
-        "spectrum_extrapolate": False,
-        
-        "spectrum_normed_by": 'energy',
-        
+                        
         }
         
     return pf

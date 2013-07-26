@@ -1,2 +1,1 @@
-import analysis as analyze
-import run, sources, evolve, static
+import run, sources, evolve, static, analyze

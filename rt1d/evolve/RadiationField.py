@@ -28,7 +28,7 @@ class RadiationField:
         
     def _initialize(self):    
         self.Ns = len(self.srcs)
-        
+                
         # See if all sources are diffuse
         self.all_diffuse = 1
         for src in self.srcs:
@@ -119,9 +119,9 @@ class RadiationField:
             
             # "Diffuse" sources have parameterized rates    
             if src.SourcePars['type'] == 'diffuse':
-                self.Gamma[h] = src.src.ionization_rate(z, **kwargs)
-                self.gamma[h] = src.src.secondary_ionization_rate(z, **kwargs)
-                self.k_H[h] = src.src.heating_rate(z, **kwargs)
+                self.Gamma[h] = src.ionization_rate(z, **kwargs)
+                self.gamma[h] = src.secondary_ionization_rate(z, **kwargs)
+                self.k_H[h] = src.heating_rate(z, **kwargs)
                 continue    
                 
             self.h = h

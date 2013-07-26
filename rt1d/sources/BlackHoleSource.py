@@ -14,6 +14,7 @@ import numpy as np
 from scipy.integrate import quad
 from ..physics.Constants import *
 from .StellarSource import _Planck
+from ..util.SetDefaultParameterValues import BlackHoleParameters
 
 sptypes = {'pl':0, 'mcd':1, 'qso':2}
 
@@ -140,7 +141,13 @@ class BlackHoleSource(object):
         return E**self.spec_pars['alpha'][i]
     
     def _MultiColorDisk(self, E, i, Type, t=0.0):
-        """ Soft component of accretion disk spectra. """         
+        """
+        Soft component of accretion disk spectra. 
+        
+        References
+        ----------
+        Mitsuda et al. 1984, PASJ, 36, 741.
+        """         
         
         # If t > 0, re-compute mass, inner radius, and inner temperature
         if t > 0 and self.spec_pars['evolving'] and t != self.last_renormalized:
@@ -156,7 +163,11 @@ class BlackHoleSource(object):
         
     def _QuasarTemplate(self, E, i, Type, t=0):
         """
-        Quasar spectrum of Sazonov, Ostriker, & Sunyaev 2004.
+        Broadband quasar template spectrum.
+        
+        References
+        ----------
+        Sazonov, S., Ostriker, J.P., & Sunyaev, R.A. 2004, MNRAS, 347, 144.
         """
         
         op = (E < 10)

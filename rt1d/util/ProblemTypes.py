@@ -45,7 +45,7 @@ def ProblemType(ptype):
     if abs(ptype_int) > 10:
         ptype_int -= 10 * np.sign(ptype_int)
         
-    ptype_mod1 = round(ptype - ptype_int, 1)
+    ptype_mod1 = ptype % 1  # used to do: round(ptype - ptype_int, 1) # why?
         
     # Single-zone, cosmological expansion test         
     if ptype_int == -1:
@@ -58,12 +58,12 @@ def ProblemType(ptype):
               "grid_cells": 1,
               "length_units": 1e-4*cm_per_kpc, # 100 milliparsecs 
               "start_radius": 0.99, # cell = 1 milliparsec across
-              "dtDataDump": 10., 
-              "dzDataDump": 5.,
+              "dtDataDump": 1., 
+              "dzDataDump": 0.1,
               "initial_redshift": 1e3,
               "initial_ionization": [0.049],
               "final_redshift": 10,
-              "stop_time": 450.,
+              "stop_time": 500.,
               "restricted_timestep": ['electrons', 'ions', 'temperature',
                   'hubble'],
              }
@@ -196,7 +196,7 @@ def ProblemType(ptype):
     if ptype >= 10:
         pf.update({'Z': [1, 2], 'abundance': [1.0, 0.08],
             'initial_ionization': [pf['initial_ionization'][0]]*2,
-            'spectrum_dlogN': defs['spectrum_dlogN']*3,
-            'spectrum_smallest_x': defs["spectrum_smallest_x"]*3})
+            'tables_dlogN': defs['tables_dlogN']*3,
+            'tables_xmin': defs["tables_xmin"]*3})
                      
     return pf    

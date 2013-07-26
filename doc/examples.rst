@@ -2,14 +2,21 @@ Examples
 ========
 See below.
 
-
 Basics
 ------
- * :doc:`example_rt06_1`
+.. toctree::
+   :maxdepth: 3
+
+   :doc:`example_rt06_1`
  
 
-Radiative Transfer Comparison Project (`Iliev et al. 2006 <http://adsabs.harvard.edu/abs/2006MNRAS.371.1057I>`_)
------
- * :doc:`example_rt06_1`
+Advanced
+--------
+.. toctree::
+   :maxdepth: 3
 
-   
+   Multi-component SEDs.
+   Time variable SEDs.
+   Using dengo to generate complex chemical networks.
+   Finding the optimal discrete SED for a given continuous spectrum.
+     

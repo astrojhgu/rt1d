@@ -23,13 +23,10 @@ except ImportError:
     rank = 0
     size = 1
 
-GlobalDir = os.getcwd()
-
 class CheckPoints:
     def __init__(self, pf=None, grid=None, time_units=s_per_myr,
         dtDataDump=5., dzDataDump=None, logdtDataDump=None, logdzDataDump=None,
-        stop_time=100.,
-        initial_timestep=1.0, source_lifetime=np.inf,
+        stop_time=100., initial_timestep=1.0, source_lifetime=np.inf,
         final_redshift=None, initial_redshift=None):
         self.pf = pf
         self.data = {}
@@ -179,7 +176,7 @@ class CheckPoints:
         # If dt won't take us all the way to the next DD, don't modify dt
         if self.dd(t=t+dt)[0] <= next_dd:
             if (src_on_now and src_on_next) or (not src_on_now):
-                return dt
+                return dt        
             
         if next_dd <= self.NDD:    
             next_dt = self.DDtimes[next_dd] - t
@@ -201,6 +198,9 @@ class CheckPoints:
         last_rd = int(self.dd(z=z)[1])
         next_rd = last_rd + 1
 
+        if next_rd == self.NRD:
+            return None
+            
         return z - self.DDredshifts[next_rd]
             
     def dd(self, t=None, z=None):

@@ -6,13 +6,11 @@ Affiliation: University of Colorado at Boulder
 Created on 2010-10-25.
 
 Description: Compute the bound-free absorption cross-sections via the fitting
-formulae of Verner et al. 1996, and eventually others.
+formulae of Verner et al. 1996.
      
 """
 
-import numpy as np
-from .Constants import h
-from scipy.integrate import quad
+from numpy import sqrt
 
 E_th = [13.6, 24.6, 54.4]
 
@@ -25,10 +23,7 @@ params = [[4.298e-1, 5.475e4, 3.288e1, 2.963, 0.0, 0.0, 0.0],
 
 def PhotoIonizationCrossSection(E, species=0):
     """ 
-    Compute bound-free absorption cross section from Verner & Ferland (1996).
-    
-    Returns photoionization cross section for HI, HeI, or HeII from the fits
-    Verner & Ferland (1996).  
+    Compute bound-free absorption cross section for hydrogen or helium.
 
     Parameters
     ----------
@@ -39,7 +34,11 @@ def PhotoIonizationCrossSection(E, species=0):
         
     Returns
     -------
-    Cross section in cm**2.    
+    Cross section in cm**2 using fits from Verner et al. (1996).    
+    
+    References
+    ----------
+    Verner, D.A., Ferland, G.J., and Korista, K.T., ApJ, 465, 487
     
     """
     
@@ -47,10 +46,10 @@ def PhotoIonizationCrossSection(E, species=0):
         return 0.0
     
     x = (E / params[species][0]) - params[species][5]
-    y = np.sqrt(x**2 + params[species][6]**2)
+    y = sqrt(x**2 + params[species][6]**2)
     F_y = ((x - 1.0)**2 + params[species][4]**2) * \
         y**(0.5 * params[species][3] - 5.5) * \
-        (1.0 + np.sqrt(y / params[species][2]))**-params[species][3]
+        (1.0 + sqrt(y / params[species][2]))**-params[species][3]
                                 
     return params[species][1] * F_y * 1e-18
     

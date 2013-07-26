@@ -45,7 +45,7 @@ class RadiationSource(object):
                 
         # Modify parameter file if spectrum_file provided
         #self._load_spectrum()        
-                                
+            
         # Create Source/SpectrumPars attributes
         self.SourcePars = sort(self.pf, prefix='source', make_list=False)        
         self.SpectrumPars = sort(self.pf, prefix='spectrum')
@@ -93,6 +93,11 @@ class RadiationSource(object):
             self.E = np.array(self.SpectrumPars['E'])
             self.LE = np.array(self.SpectrumPars['LE'])
             self.Nfreq = len(self.E)
+            
+        if self.src._name == 'DiffuseSource':
+            self.ionization_rate = self.src.ionization_rate
+            self.secondary_ionization_rate = self.src.secondary_ionization_rate
+            self.heating_rate = self.src.heating_rate
                 
         # We don't allow multi-component discrete spectra...for now
         # would we ever want/need this? lines on top of continuous spectrum perhaps...
@@ -107,7 +112,7 @@ class RadiationSource(object):
 
         # Create lookup tables for integral quantities
         if init_tabs and grid is not None:
-            self._create_integral_table(logN=logN)         
+            self._create_integral_table(logN=logN) 
         
     @property
     def _normL(self):
@@ -127,9 +132,9 @@ class RadiationSource(object):
         if re.search('.hdf5', fn):    
             f = h5py.File(fn)
             try:
-                self.pf['spectrum_t'] = f['t'].value
+                self.pf['tables_times'] = f['t'].value
             except:
-                self.pf['spectrum_t'] = None
+                self.pf['tables_times'] = None
                 self.pf['spectrum_evolving'] = False
                     
             self.pf['spectrum_E'] = f['E'].value
@@ -158,9 +163,9 @@ class RadiationSource(object):
         if self.SourcePars['table'] is None:
             # Overide defaults if supplied - this is dangerous
             if logN is not None:
-                self.pf.update({'spectrum_dlogN': [np.diff(tmp) for tmp in logN]})
-                self.pf.update({'spectrum_logNmin': [np.min(tmp) for tmp in logN]})
-                self.pf.update({'spectrum_logNmax': [np.max(tmp) for tmp in logN]})
+                self.pf.update({'tables_dlogN': [np.diff(tmp) for tmp in logN]})
+                self.pf.update({'tables_logNmin': [np.min(tmp) for tmp in logN]})
+                self.pf.update({'tables_logNmax': [np.max(tmp) for tmp in logN]})
             
             # Tabulate away!            
             self.tab = IntegralTable(self.pf, self, self.grid, logN)
@@ -378,6 +383,8 @@ class RadiationSource(object):
         """       
                
         emission = 0
+        
+        # Loop over spectral components
         for j in xrange(self.src.N):
             if i is not None:
                 if j != i:
@@ -392,7 +399,7 @@ class RadiationSource(object):
                 
             if self.SpectrumPars['logN'][j] > 0:
                 tmp *= np.exp(-10.**self.SpectrumPars['logN'][j] \
-                    * (sigma_E(E, 0) + y * sigma_E(E, 1)))       
+                    * (sigma_E(E, 0) + y * sigma_E(E, 1)))
                 
             emission += tmp 
             

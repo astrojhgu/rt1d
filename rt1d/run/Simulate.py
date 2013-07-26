@@ -162,12 +162,15 @@ class Simulation:
             
             # Limit timestep further based on next DD and max allowed increase
             dt = min(new_dt, 2 * dt)
-            dt = min(self.checkpoints.next_dt(t, dt), max_timestep)
+            dt = min(dt, self.checkpoints.next_dt(t, dt))
+            dt = min(dt, max_timestep)
             
             # Limit timestep based on next RD
             if self.checkpoints.redshift_dumps:
                 dz = self.checkpoints.next_dz(z, dz)
-                dt = min(dt, dz*self.grid.cosm.dtdz(z))
+                
+                if dz is not None:
+                    dt = min(dt, dz*self.grid.cosm.dtdz(z))    
                                 
             self.checkpoints.update(data, t, z)
                     

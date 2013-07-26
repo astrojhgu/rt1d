@@ -42,7 +42,7 @@ class IntegralTable:
         if logN is None:
             
             # Required bounds of table assuming minimum species fraction
-            self.logNlimits = self.TableBoundsAuto(self.src.SpectrumPars['smallest_x'])
+            self.logNlimits = self.TableBoundsAuto(self.pf['tables_xmin'])
                         
             # Only override automatic table properties if the request table size
             # is *bigger* than the default one.
@@ -50,15 +50,15 @@ class IntegralTable:
             self.logN = []
             for i, absorber in enumerate(self.grid.absorbers):
                 
-                if self.src.SpectrumPars['logNmin'][i] is not None:
-                    self.logNlimits[i][0] = self.src.SpectrumPars['logNmin'][i]
+                if self.pf['tables_logNmin'][i] is not None:
+                    self.logNlimits[i][0] = self.pf['tables_logNmin'][i]
                 
-                if self.src.SpectrumPars['logNmax'][i] is not None:
-                    self.logNlimits[i][1] = self.src.SpectrumPars['logNmax'][i]
+                if self.pf['tables_logNmax'][i] is not None:
+                    self.logNlimits[i][1] = self.pf['tables_logNmax'][i]
                 
                 logNmin, logNmax = self.logNlimits[i]
                 
-                d = int((logNmax - logNmin) / self.src.SpectrumPars['dlogN'][i]) + 1
+                d = int((logNmax - logNmin) / self.pf['tables_dlogN'][i]) + 1
             
                 self.logN.append(np.linspace(logNmin, logNmax, d))
                 self.N.append(np.logspace(logNmin, logNmax, d))
@@ -75,12 +75,12 @@ class IntegralTable:
         if self.pf['secondary_ionization'] > 1:
             self.esec = SecondaryElectrons(method=self.pf['secondary_ionization'])
             if self.pf['secondary_ionization'] == 2:
-                self.logx = np.linspace(self.src.SpectrumPars['logxmin'][0], 0,
-                    abs(self.src.SpectrumPars['logxmin'][0]) \
-                    / self.src.SpectrumPars['dlogx'][0] + 1)
+                self.logx = np.linspace(self.pf['tables_logxmin'][0], 0,
+                    abs(self.pf['tables_logxmin'][0]) \
+                    / self.pf['tables_dlogx'][0] + 1)
                 self.E = np.linspace(self.src.Emin, self.src.Emax,
                     (self.src.Emax - self.src.Emin) \
-                    / self.src.SpectrumPars['dE'][0] + 1)
+                    / self.pf['tables_dE'][0] + 1)
             elif self.pf['secondary_ionization'] == 3:
                 self.logx = self.esec.logx
                 self.E = self.esec.E
@@ -89,11 +89,11 @@ class IntegralTable:
             
         # Times
         if self.pf['spectrum_evolving']:
-            if self.pf['spectrum_t'] is None:
+            if self.pf['tables_times'] is None:
                 stop = self.pf['stop_time'] * self.pf['time_units']
-                self.t = np.linspace(0, stop, 1 + stop / self.pf['spectrum_dt'])
+                self.t = np.linspace(0, stop, 1 + stop / self.pf['tables_dt'])
             else:
-                self.t = self.pf['spectrum_t']  
+                self.t = self.pf['tables_times']  
         else:
             self.t = np.array([0])
                                     
@@ -113,8 +113,7 @@ class IntegralTable:
         
     def TableBoundsAuto(self, xmin=1e-5):
         """
-        Calculate what the bounds of the table must be for a 
-        given grid.
+        Calculate what the bounds of the table must be for a given grid.
         """
         
         logNlimits = []

@@ -101,12 +101,12 @@ class Optimization:
             
         if self.mcmc:
             self.sampler = ndmin.MarkovChain(lambda p: self.cost(p, err), 
-                dx = step, limits = limits)
-            self.sampler.burn_in(burn, guess=guess, dx=step, pca=burn)
+                cov=np.diag(step), limits=limits)
+            self.sampler.burn_in(burn, guess=guess)
             
             if steps > 0:
-                self.sampler.run(steps, guess=self.sampler.xarr_ML_b, 
-                    dx=self.sampler.stepsize, evec=self.sampler.eigenvectors)    
+                self.sampler.run(steps, guess=self.sampler.xarr_ML, 
+                    eigval=self.sampler.eigenvals, eigvec=self.sampler.eigenvecs)    
         else:    
             self.sampler = ndmin.Annealer(self.cost, limits=limits, 
                 step=step, afreq=afreq, gamma=gamma)
@@ -160,7 +160,9 @@ class Optimization:
                     cost -= np.sum((disc - cont)[mask]**2 / err**2)
                 else:
                     cost += np.max(np.abs(disc - cont)[mask])
-                    cost += np.mean(np.abs(disc - cont)[mask])
+                    
+                    if not self.thinlimit:
+                        cost += np.mean(np.abs(disc - cont)[mask])
         
         return cost
     
