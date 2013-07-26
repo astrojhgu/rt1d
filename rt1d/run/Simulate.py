@@ -62,7 +62,7 @@ class Simulation:
                     approx_helium=pf['approx_helium'])
                 grid.set_density(grid.cosm.rho_b_z0 \
                     * (1. + pf['initial_redshift'])**3)
-                grid.set_temperature(grid.cosm.TCMB(pf['initial_redshift']))
+                grid.set_temperature(grid.cosm.Tgas(pf['initial_redshift']))
                 
                 for i, Z in enumerate(pf['Z']):
                     grid.set_ionization(Z=Z, x=pf['initial_ionization'][i])

@@ -76,7 +76,7 @@ class Radiation:
             Gamma = np.sum(Gamma_src, axis=0)
             gamma = np.sum(gamma_src, axis=0)
             Heat = np.sum(Heat_src, axis=0)
-                        
+                                    
             # Each is grid x absorbers, or grid x [absorbers, absorbers] for gamma
             self.kwargs.update({'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma})
                 

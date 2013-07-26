@@ -42,7 +42,7 @@ def ProblemType(ptype):
     """
     
     ptype_int = int(ptype)
-    if abs(ptype_int) > 10:
+    if abs(ptype_int) > 10: # Multiply by 10 rather than add 10?
         ptype_int -= 10 * np.sign(ptype_int)
         
     ptype_mod1 = ptype % 1  # used to do: round(ptype - ptype_int, 1) # why?

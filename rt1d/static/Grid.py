@@ -449,15 +449,16 @@ class Grid(object):
             if self.Z == np.ones(1):
                 self.abundances_by_number = self.element_abundances = np.ones(1)
                 if self.expansion:
-                    self.n_H = self.n_ref = \
+                    self.n_H = \
                         (1. - self.cosm.Y) * self.data['rho'] / m_H
                 else:
-                    self.n_H = self.n_ref = self.data['rho'] / m_H    
-                return
+                    self.n_H = self.data['rho'] / m_H
             else:
-                self.n_H = self.n_ref = self.data['rho'] / m_H \
+                self.n_H = self.data['rho'] / m_H \
                     / ELEMENT(self.elements[0]).mass
-                return    
+                    
+            self.n_ref = copy.deepcopy(self.n_H)
+            return    
                             
         # Set hydrogen number density (which normalizes all other species)
         X = 0.0
@@ -598,9 +599,10 @@ class Grid(object):
         # First, modify density and temperature
         if profile == 0:
             self.data['rho'][isclump] *= overdensity
+            self.data['n'][isclump] *= overdensity
             self.n_H[isclump] *= overdensity
             self.n_ref[isclump] *= overdensity
-            self.data['T'][isclump] = temperature
+            self.data['Tk'][isclump] = temperature
         #if profile == 1:
         #    self.data['rho'] += self.data['rho'] * overdensity \
         #        * np.exp(-(gridarr - position)**2 / 2. / radius**2)

@@ -11,6 +11,7 @@ Description:
 """
 
 import pylab as pl
+import numpy as np
 from rt1d.physics.CrossSections import *
 
 E = np.logspace(np.log10(13.6), 4)
