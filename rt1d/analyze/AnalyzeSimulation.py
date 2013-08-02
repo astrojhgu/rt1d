@@ -14,8 +14,13 @@ import numpy as np
 import pylab as pl
 from ..run import Simulation
 from ..static.Grid import Grid
-from multiplot import multipanel
 from ..physics.Constants import *
+
+try:
+    from multiplot import multipanel
+    multiplot = True
+except ImportError:
+    multiplot = False
 
 linestyles = ['-', '--', ':', '-.']
 
@@ -169,6 +174,9 @@ class Simulation:
             mp = mp    
             hadmp = True
         else: 
+            if not multiplot:
+                raise ImportError('multiplot package required by this method.')
+
             mp = multipanel(dims=(2, 1))
 
         if anl: 

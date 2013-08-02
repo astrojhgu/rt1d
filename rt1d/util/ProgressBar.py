@@ -35,7 +35,7 @@ class ProgressBar:
               progressbar.ETA(), ' ']
     
     def start(self):
-        if rank == 0 and self.use:
+        if pb and rank == 0 and self.use:
             self.pbar = progressbar.ProgressBar(widgets=self.widget, 
                 maxval=self.maxval).start()
         
