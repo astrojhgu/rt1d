@@ -177,6 +177,8 @@ def ProblemType(ptype):
               "clump_temperature": 40.,
               "clump_profile": 0,
               "clump_ionization": 1e-6,
+              
+              "interp_method": 'linear',
 
              }
              

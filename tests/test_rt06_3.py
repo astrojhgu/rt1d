@@ -14,22 +14,23 @@ import rt1d
 import pylab as pl
 from multiplot import multipanel
 
-sim = rt1d.run.Simulation(problem_type=3, grid_cells=64,
-    interp_method='linear', tables_dlogN=[0.05])
+sim = rt1d.run.Simulation(problem_type=3, grid_cells=256,
+    tables_dlogN=[0.05])
 sim.run()
 
 anl = rt1d.analyze.Simulation(sim.checkpoints)
 
+# Plot solutions at 1, 3, 5, 15 Myr
 t = [1, 3, 5, 15]
 ls = [':', '--', '-.', '-']
 
 mp = multipanel(dims=(2, 1))
     
 # Plot initial conditions
-mp.grid[0].semilogy(anl.grid.r_mid / anl.grid.length_units, anl.data['dd0000']['h_1'], 
-    color='b', ls='-')
-mp.grid[1].semilogy(anl.grid.r_mid / anl.grid.length_units, anl.data['dd0000']['Tk'], 
-    color='b', ls='-')    
+mp.grid[0].semilogy(anl.grid.r_mid / anl.grid.length_units, 
+    anl.data['dd0000']['h_1'], color='b', ls='-')
+mp.grid[1].semilogy(anl.grid.r_mid / anl.grid.length_units, 
+    anl.data['dd0000']['Tk'], color='b', ls='-')    
     
 ct = 0
 for dd in anl.data.keys():

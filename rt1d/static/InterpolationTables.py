@@ -11,9 +11,14 @@ Description:
 """
 
 import numpy as np
-from mathutils.interpolate import LinearNDInterpolator
 from scipy.interpolate import interp1d, RectBivariateSpline
 
+try:
+    from mathutils.interpolate import LinearNDInterpolator
+    mathutils = True
+except ImportError:
+    mathutils = False
+        
 spline_err = "interp_method == cubic and there are infs in our table!"
 spline_err += "\nSpline interpolation is global, so any infs will render *all*"
 spline_err += "\ninterpolated values NaN. Try linear interpolation, or narrow"
@@ -130,5 +135,8 @@ class LookupTable:
         else:    
             if self.Ed:
                 raise NotImplemented('Haven\'t implemented time and secondary ionization option yet.')
+            
+            if not mathutils:
+                raise ImportError('mathutils package required for N > 2')
             
             self.interp = LinearNDInterpolator(self.logN, self.table)
