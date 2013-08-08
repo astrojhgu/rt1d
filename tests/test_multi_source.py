@@ -16,7 +16,7 @@ import pylab as pl
 
 src1 = {'type': 'bb', 'Emin': 13.6, 'Emax': 1e2,
     'EminNorm': 0.0, 'EmaxNorm': np.inf}
-src2 = {'type': 'pl', 'Emin': 100, 'Emax': 1e3, 'alpha': 1.5,
+src2 = {'type': 'pl', 'Emin': 100, 'Emax': 1e3, 'alpha': -1.5,
     'logN': 20.}
 
 pf = \
@@ -24,13 +24,13 @@ pf = \
  'problem_type': 2,
  'stop_time': 30,
  'source_type': ['star', 'bh'],
- 'source_mass': [None, 1e2],
+ 'source_mass': [None, 1e3],
  'source_rmax': [None, 1e3],
  'source_temperature': [1e5, None],
  'spectrum_pars': [src1, src2],
 }
 
-sim = rt1d.run.Simulation(pf={'problem_type': 2})
+sim = rt1d.run.Simulation(problem_type=2)
 sim.run()
 
 sim2 = rt1d.run.Simulation(pf=pf)
