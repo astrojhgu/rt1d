@@ -30,7 +30,7 @@ mp = multipanel(dims=(2, 1))
 mp.grid[0].semilogy(anl.grid.r_mid / anl.grid.length_units, 
     anl.data['dd0000']['h_1'], color='b', ls='-')
 mp.grid[1].semilogy(anl.grid.r_mid / anl.grid.length_units, 
-    anl.data['dd0000']['Tk'], color='b', ls='-')    
+    anl.data['dd0000']['Tk'], color='b', ls='-')
     
 ct = 0
 for dd in anl.data.keys():

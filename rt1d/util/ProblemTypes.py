@@ -45,7 +45,7 @@ def ProblemType(ptype):
     if abs(ptype_int) > 10: # Multiply by 10 rather than add 10?
         ptype_int -= 10 * np.sign(ptype_int)
         
-    ptype_mod1 = ptype % 1  # used to do: round(ptype - ptype_int, 1) # why?
+    ptype_mod1 = round(ptype - ptype_int, 1)
         
     # Single-zone, cosmological expansion test         
     if ptype_int == -1:

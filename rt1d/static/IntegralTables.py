@@ -610,7 +610,7 @@ class IntegralTable:
                     f[element].value])
                 continue
             
-            self.tabs[element] = f[element].value    
+            self.tabs[element] = f[element].value
                 
         f.close()
         print 'Read integral table from %s.' % fn
