@@ -40,7 +40,7 @@ anl_t = rt1d.analyze.Simulation(sim_t.checkpoints)
 t3, xHI3 = anl_t.CellEvolution(field='h_1')
 t3, T3 = anl_t.CellEvolution(field='Tk')
 
-mp = multipanel(dims=(2, 1), panel_size=(0.5, 1))
+mp = multipanel(dims=(2, 1))
     
 s_per_yr = rt1d.physics.Constants.s_per_yr
 #mp.grid[0].loglog(t1 / s_per_yr, xHI1, color = 'k')

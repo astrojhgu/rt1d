@@ -15,6 +15,7 @@ from scipy.integrate import quad
 from ..physics.Constants import *
 from .StellarSource import _Planck
 from ..util.SetDefaultParameterValues import BlackHoleParameters
+from ..physics.CrossSections import PhotoIonizationCrossSection as sigma_E
 
 sptypes = {'pl':0, 'mcd':1, 'qso':2}
 
@@ -60,6 +61,8 @@ class BlackHoleSource(object):
         self.T_in = self._DiskInnermostTemperature(self.M0)
         self.T_out = self._DiskTemperature(self.M0, self.r_out)
         self.Lbol = self.Luminosity(0.0)
+        
+        self.disk_history = {}
         
         if 2 in self.spec_pars['type']:
             self.fcol = self.spec_pars['fcol'][self.spec_pars['type'].index('mcd')]
@@ -147,6 +150,7 @@ class BlackHoleSource(object):
         References
         ----------
         Mitsuda et al. 1984, PASJ, 36, 741.
+        
         """         
         
         # If t > 0, re-compute mass, inner radius, and inner temperature
@@ -223,13 +227,20 @@ class BlackHoleSource(object):
         """
                         
         if self.type_by_name[i] == 'pl': 
-            return self._PowerLaw(E, i, t)    
+            Lnu = self._PowerLaw(E, i, t)    
         elif self.type_by_name[i] == 'mcd':
-            return self._MultiColorDisk(E, i, t)
+            Lnu = self._MultiColorDisk(E, i, t)
         elif self.type_by_name[i] == 'qso':
-            return self._QuasarTemplate(E, i, t)
+            Lnu = self._QuasarTemplate(E, i, t)
         else:
-            return 0.0
+            Lnu = 0.0
+            
+        if self.spec_pars['logN'][i] > 0:
+            Lnu *= np.exp(-10.**self.spec_pars['logN'][i] \
+                * (sigma_E(E, 0) + y * sigma_E(E, 1)))  
+        
+        return Lnu          
+            
             
     def _NormalizeSpectrum(self, t=0.):
         norms = np.zeros(self.N)
@@ -238,7 +249,7 @@ class BlackHoleSource(object):
             integral, err = quad(self._Intensity,
                 self.spec_pars['EminNorm'][i], self.spec_pars['EmaxNorm'][i], 
                 args=(i, t,))
-            
+                
             norms[i] = self.spec_pars['fraction'][i] * Lbol / integral
             
         return norms
@@ -248,8 +259,8 @@ class BlackHoleSource(object):
         Returns the bolometric luminosity of a source in units of erg/s.  
         For accreting black holes, the bolometric luminosity will increase 
         with time, hence the optional 't' and 'M' arguments.
-        """        
-        
+        """
+
         if not self.SourceOn(t):
             return 0.0
             

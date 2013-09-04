@@ -54,10 +54,11 @@ class Cosmology:
 
         # Hydrogen, helium, electron, and baryon densities today (z = 0)
         self.rho_b_z0 = self.MeanBaryonDensity(0)
+        self.rho_m_z0 = self.MeanMatterDensity(0)
         self.nH0 = (1. - self.Y) * self.rho_b_z0 / m_H
         self.nHe0 = self.y * self.nH0
         self.ne0 = self.nH0 + 2. * self.nHe0
-        self.rho_n_z0 = self.nH0 + self.nHe0 #+ self.ne0
+        #self.n0 = self.nH0 + self.nHe0 + self.ne0
         
         self.nH = lambda z: self.nH0 * (1. + z)**3
         self.nHe = lambda z: self.nHe0 * (1. + z)**3
@@ -180,7 +181,7 @@ class Cosmology:
     def ProperLineElement(self, z):
         """
         Proper differential line element at redshift z (i.e. dl/dz).
-        """    
+        """
         
         return self.ComovingLineElement(z) / (1. + z)
         

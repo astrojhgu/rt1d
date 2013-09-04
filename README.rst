@@ -59,6 +59,8 @@ installed using pip: ::
 
     pip install sympy
     pip install periodic
+    pip install jinja2
+    pip install docutils
     pip install ChiantiPy
     
 The chianti database itself can be downloaded 

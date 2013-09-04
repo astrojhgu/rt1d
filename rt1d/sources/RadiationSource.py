@@ -79,7 +79,7 @@ class RadiationSource(object):
             self.src = DiffuseSource(self.pf, self.SourcePars, 
                 self.SpectrumPars)
         else:
-            raise ValueError('')
+            raise NotImplementedError('Unrecognized source_type')
                               
         # Number of spectral components
         self.N = len(self.SpectrumPars['type'])                  
@@ -382,10 +382,10 @@ class RadiationSource(object):
                 
         """       
                
-        emission = 0
+        emission = 0.0
         
         # Loop over spectral components
-        for j in xrange(self.src.N):
+        for j in xrange(self.N):
             if i is not None:
                 if j != i:
                     continue
@@ -393,15 +393,9 @@ class RadiationSource(object):
             if not (self.SpectrumPars['Emin'][j] <= E <= \
                     self.SpectrumPars['Emax'][j]):
                 continue        
-                    
-            tmp = self._normL[j] * \
-                self.src._Intensity(E, j, t) / self.Lbol0
-                
-            if self.SpectrumPars['logN'][j] > 0:
-                tmp *= np.exp(-10.**self.SpectrumPars['logN'][j] \
-                    * (sigma_E(E, 0) + y * sigma_E(E, 1)))
-                
-            emission += tmp 
+            
+            emission += self._normL[j] * \
+                self.src._Intensity(E, i=j, t=t) / self.Lbol0
             
         return emission
         

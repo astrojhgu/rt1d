@@ -20,7 +20,7 @@ bh_pars = {
            'spectrum_type': ['mcd', 'pl'],
            'spectrum_fraction': [0.5, 0.5],
            'spectrum_alpha': [None, -1.2],
-           'spectrum_Emin': [13.6, 13.6],
+           'spectrum_Emin': [10.2, 13.6],
            'spectrum_Emax': [1e4, 1e4],
            'spectrum_fcol': [1, None],
            'spectrum_logN': [0., 20.], 
@@ -32,5 +32,3 @@ bh = rt1d.analyze.Source(rt1d.sources.RadiationSource(init_tabs=False,
 ax = bh.PlotSpectrum()
 ax.set_ylim(1e-6, 2e-3)
 pl.draw()
-
-raw_input('')

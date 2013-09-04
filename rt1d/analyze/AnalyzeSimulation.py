@@ -101,7 +101,7 @@ class Simulation:
         
         return E, F, out
             
-    def StromgrenSphere(self, t, sol = 0, T0 = None):
+    def StromgrenSphere(self, t, sol=0, T0=None):
         """
         Classical analytic solution for expansion of an HII region in an 
         isothermal medium.  Given the time in seconds, will return the I-front 
@@ -123,6 +123,8 @@ class Simulation:
             self.trec = 1. / self.alpha_HII / self.data['dd0000']['h_1'][0] / n_H # s
             self.rs = (3. * self.Qdot \
                     / 4. / np.pi / self.alpha_HII / n_H**2)**(1. / 3.)  # cm
+        else:
+            raise NotImplementedError('')
         
         return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) \
             + self.pf['start_radius']
@@ -341,7 +343,7 @@ class Simulation:
         
         return time, value
     
-    def IonizationRate(self, t = 1, absorber = 'h_1', color = 'k', ls = '-', 
+    def IonizationRate(self, t=1, absorber='h_1', color = 'k', ls = '-', 
         legend = True, plot_recomb = False, total_only = False, src = 0):
         """
         Plot total ionization rate, and lines for primary, secondary, and 

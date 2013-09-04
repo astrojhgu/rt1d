@@ -86,6 +86,11 @@ def PhysicsParameters():
         
         "clumping_factor": 1,
         
+        "approx_highz": 0,
+        "approx_Salpha": 3, # 1 = Salpha = 1
+                            # 2 = Chuzhoy, Alvarez, & Shapiro (2005),
+                            # 3 = Furlanetto & Pritchard (2006)
+        
         }
         
     return pf
@@ -211,7 +216,6 @@ def CosmologyParameters():
         "HubbleParameterNow": 0.702,
         "HeliumFractionByMass": 0.2477,
         "CMBTemperatureNow": 2.725,
-        "approx_highz": 0,
         "SigmaEight": 0.807
         }
         

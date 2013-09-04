@@ -11,8 +11,9 @@ Description: Container for hydrogen physics stuff.
 """
 
 import numpy as np
+from scipy.special import gamma
 import scipy.interpolate as interpolate
-from .Constants import A10, T_star, m_p, m_e, erg_per_ev, h, c
+from .Constants import A10, T_star, m_p, m_e, erg_per_ev, h, c, E_LyA, E_LL
 
 # Rate coefficients for spin de-excitation - from Zygelman originally
 
@@ -31,13 +32,23 @@ T_He = [1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0, 30
 kappa_He = [2.39e-10, 3.37e-10, 5.30e-10, 7.46e-10, 1.05e-9, 1.63e-9, 2.26e-9, 3.11e-9, 4.59e-9, 5.92e-9,
             7.15e-9, 7.71e-9, 8.17e-9, 8.32e-9, 8.37e-9, 8.29e-9, 8.11e-9]
 
+l_LyA = h * c / E_LyA / erg_per_ev
+
+g23 = gamma(2./3.)
+g13 = gamma(1./3.)
+
+c1 = 4. * np.pi / 3. / np.sqrt(3.) / g23
+c2 = 8. * np.pi / 3. / np.sqrt(3.) / g13
+
 class Hydrogen:
-    def __init__(self, cosm=None):
+    def __init__(self, cosm=None, approx_Salpha=1):
         if cosm is None:
             from .Cosmology import Cosmology
             self.cosm = Cosmology()
         else:
             self.cosm = cosm
+            
+        self.approx_S = approx_Salpha
         
         self.nmax = 23
         self.fbarII = 0.72
@@ -154,13 +165,32 @@ class Hydrogen:
         
         return 1.81e11 * self.Sa(Tk) * Ja / (1. + z)
         
-    def Sa(self, Tk):
-        #if Tk is None:
-        return 1.0
+    def tauGP(self, z, xHII=0.):
+        """ Gunn-Peterson optical depth. """
+        return 1.5 * self.cosm.nH(z) * (1. - xHII) * l_LyA**3 * 50e6 \
+            / self.cosm.HubbleParameter(z)
         
-        #alpha = 
-        #return np.exp(-1.79 * alpha)    
-    
+    def Sa(self, z=None, Tk=None, xHII=0.0):
+        """
+        Account for line profile effects.
+        """
+        
+        if self.approx_S == 1:
+            return 1.0
+        elif self.approx_S == 2:
+            return np.exp(-0.37 * np.sqrt(1. + z) * Tk**(-2./3.)) \
+                / (1. + 0.4 / Tk)
+        elif self.approx_S == 3:
+            gamma = 1. / self.tauGP(z, xHII=xHII) / (1. + 0.4 / Tk)
+            alpha = 0.717 * Tk**(-2./3.) * (1e-6 / gamma)**(1. / 3.)
+            return 1. - c1 * alpha - c2 * alpha**2 + 4. * alpha**3 / 3.
+        else:
+            raise NotImplementedError('')
+            
+    def ELyn(self, n):
+        """ Return energy of Lyman-n photon in eV. """
+        return E_LL * (1. - 1. / n**2)
+        
     def SpinTemp(self, z, Tk, Ja, nH, ne):
         """
         Returns spin temperature given:
@@ -174,7 +204,7 @@ class Hydrogen:
 
         x_c = self.CollisionalCouplingCoefficient(Tk, z, nH, ne)
         x_a = self.WouthuysenFieldCouplingCoefficient(z, Ja)
-        Tc = Tk # for now
+        Tc = Tk
                 
         return (1.0 + x_c + x_a) / \
             (self.cosm.TCMB(z)**-1. + x_c * Tk**-1. + x_a * Tc**-1.)
@@ -197,19 +227,5 @@ class Hydrogen:
             np.sqrt(0.15 * (1.0 + z) / self.cosm.OmegaMatterNow / self.cosm.h70**2 / 10.) * \
             (1.0 - self.cosm.TCMB(z) / Ts)
             
-    def AbsorptionSignal(self, z, Tk, Ja):
-        """
-        Signal assuming neutral medium.
-        """        
-        
-        nH = self.cosm.nH0 * (1. + z)**3
-        Ts = self.Ts(z, Tk, Ja, nH, 0.0)
-        
-        return 27. * \
-            (self.cosm.OmegaBaryonNow * self.cosm.h70**2 / 0.023) * \
-            np.sqrt(0.15 * (1.0 + z) / self.cosm.OmegaMatterNow / self.cosm.h70**2 / 10.) * \
-            (1.0 - self.cosm.TCMB(z) / Ts)
-            
-            
-            
+
             
