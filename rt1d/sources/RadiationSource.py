@@ -396,7 +396,7 @@ class RadiationSource(object):
             
             emission += self._normL[j] * \
                 self.src._Intensity(E, i=j, t=t) / self.Lbol0
-            
+                        
         return emission
         
     def BolometricLuminosity(self, t=0.0, M=None):

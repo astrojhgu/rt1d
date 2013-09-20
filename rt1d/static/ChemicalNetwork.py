@@ -16,20 +16,20 @@ import numpy as np
 from ..util import convert_ion_name
 from ..physics.Constants import k_B, sigma_T, m_e, c, s_per_myr
 
-#try:
-have_dengo = True    
-import dengo.primordial_rates, dengo.primordial_cooling
-import dengo.oxygen_rates, dengo.oxygen_cooling
-import dengo.carbon_rates, dengo.carbon_cooling
-import dengo.magnesium_rates, dengo.magnesium_cooling
-import dengo.neon_rates, dengo.neon_cooling
-import dengo.nitrogen_rates, dengo.nitrogen_cooling
-import dengo.silicon_rates, dengo.silicon_cooling
-import dengo.sulfur_rates, dengo.sulfur_cooling
-from dengo.chemical_network import ChemicalNetwork, \
-    reaction_registry, cooling_registry
-#except ImportError:
-#    have_dengo = False 
+try:
+    have_dengo = True    
+    import dengo.primordial_rates, dengo.primordial_cooling
+    import dengo.oxygen_rates, dengo.oxygen_cooling
+    import dengo.carbon_rates, dengo.carbon_cooling
+    import dengo.magnesium_rates, dengo.magnesium_cooling
+    import dengo.neon_rates, dengo.neon_cooling
+    import dengo.nitrogen_rates, dengo.nitrogen_cooling
+    import dengo.silicon_rates, dengo.silicon_cooling
+    import dengo.sulfur_rates, dengo.sulfur_cooling
+    from dengo.chemical_network import ChemicalNetwork, \
+        reaction_registry, cooling_registry
+except ImportError:
+    have_dengo = False 
         
 class SimpleChemicalNetwork:
     def __init__(self, grid):
