@@ -76,6 +76,7 @@ nu_alpha = E_LyA * erg_per_ev / h
 nu_beta = E_LyB * erg_per_ev / h
 nu_LL = E_LL * erg_per_ev / h
 dnu = nu_LL - nu_alpha
+J21_num = 1e-21 / E_LyA / erg_per_ev
 
 nu_0_mhz = nu_0 / 1e6
 

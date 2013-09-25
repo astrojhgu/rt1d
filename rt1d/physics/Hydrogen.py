@@ -175,6 +175,8 @@ class Hydrogen:
         Account for line profile effects.
         """
         
+        if self.approx_S == 0:
+            raise NotImplementedError('')
         if self.approx_S == 1:
             return 1.0
         elif self.approx_S == 2:
