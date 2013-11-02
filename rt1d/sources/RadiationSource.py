@@ -18,6 +18,7 @@ from .SimpleSource import SimpleSource
 from .StellarSource import StellarSource
 from .DiffuseSource import DiffuseSource
 from .BlackHoleSource import BlackHoleSource
+from .ParameterizedSource import ParameterizedSource
 from ..static.IntegralTables import IntegralTable
 from ..static.InterpolationTables import LookupTable
 from ..util import parse_kwargs, sort, evolve, readtab, Gauss1D, boxcar
@@ -78,6 +79,9 @@ class RadiationSource(object):
         elif self.SourcePars['type'] == 'diffuse':
             self.src = DiffuseSource(self.pf, self.SourcePars, 
                 self.SpectrumPars)
+        elif self.SourcePars['type'] == 'parameterized':
+            self.src = ParameterizedSource(self.pf, self.SourcePars, 
+                self.SpectrumPars)        
         else:
             raise NotImplementedError('Unrecognized source_type')
                               
@@ -380,7 +384,7 @@ class RadiationSource(object):
         Fraction of bolometric luminosity emitted at E in units of 
         eV\ :sup:`-1`\.
                 
-        """       
+        """   
                
         emission = 0.0
         

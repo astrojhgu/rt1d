@@ -94,6 +94,7 @@ class evolve:
     
     
 class ELEMENT:
+    """ Substitute for periodic package, only knows about H and He. """
     def __init__(self, name):
         self.name = name
     

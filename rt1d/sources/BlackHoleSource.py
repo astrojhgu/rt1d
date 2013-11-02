@@ -295,3 +295,25 @@ class BlackHoleSource(object):
                     
         return np.log(M / self.M0) * (self.epsilon / (1. - self.epsilon)) * t_edd
         
+    def Comptonize(self):
+        """
+        Comptonize an input spectrum.
+        """
+        
+        pass
+        
+        #self.spec_pars['fsc']
+        
+    def NRGreen(self, E, E0, gamma):
+        """
+        Non-relativistic Green's function from Steiner et al. 2009.
+        """
+        
+        const = (gamma - 1.) * (gamma - 2.) / (1. + 2 * gamma)
+        
+        if E >= E0:
+            return const * (E / E0)**-gamma / E0
+        else:
+            return const * (E / E0)**(gamma + 1.) / E0
+        
+        

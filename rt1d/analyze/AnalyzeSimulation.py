@@ -12,6 +12,7 @@ Description: Functions to calculate various quantities from our rt1d datasets.
 import os, re
 import numpy as np
 import pylab as pl
+from math import floor, ceil
 from ..run import Simulation
 from ..static.Grid import Grid
 from ..physics.Constants import *
@@ -54,9 +55,12 @@ class Simulation:
             
             f.close()
             
-            self.grid = Grid(dims = self.pf['grid_cells'], 
-                length_units = self.pf['length_units'], 
-                start_radius = self.pf['start_radius'])
+            self.grid = Grid(dims=self.pf['grid_cells'], 
+                length_units=self.pf['length_units'], 
+                start_radius=self.pf['start_radius'],
+                approx_Salpha=self.pf['approx_Salpha'],
+                approx_lya=self.pf['approx_lya'])
+                
             self.grid.set_ics(self.data['dd0000'])
             self.grid.initialize(self.pf)
         
@@ -169,7 +173,7 @@ class Simulation:
         Compute analytic and numerical I-front radii vs. time and plot.
         """    
 
-        self.ComputeIonizationFrontEvolution(T0 = T0)
+        self.ComputeIonizationFrontEvolution(T0=T0)
 
         hadmp = False
         if mp is not None: 
@@ -182,9 +186,8 @@ class Simulation:
             mp = multipanel(dims=(2, 1))
 
         if anl: 
-            mp.grid[0].plot(self.t / self.trec, self.ranl, linestyle='-', 
-                color='k')
-        
+            mp.grid[1].plot(self.t / self.trec, self.ranl, ls='-', color='k')
+            
         if plot_solution:
             mp.grid[1].plot(self.t / self.trec, self.rIF, 
                 color = color, ls = ls)
@@ -194,18 +197,19 @@ class Simulation:
         
         if plot_error:
             mp.grid[0].plot(self.t / self.trec, self.rIF / self.ranl, 
-                color = color, ls = ls, label = label)
+                color=color, ls=ls, label=label)
             mp.grid[0].set_xlim(0, max(self.t / self.trec))
             mp.grid[0].set_ylim(0.94, 1.05)
             mp.grid[0].set_xlabel(r'$t / t_{\mathrm{rec}}$')
             mp.grid[0].set_ylabel(r'$r_{\mathrm{num}} / r_{\mathrm{anl}}$') 
-            mp.grid[1].xaxis.set_ticks(np.linspace(0, 4, 5))
-            mp.grid[0].xaxis.set_ticks(np.linspace(0, 4, 5))
+            mp.grid[1].set_xticks(np.linspace(0, 4, 5))
+            mp.grid[0].set_xticks(np.linspace(0, 4, 5))
+            mp.grid[1].set_xticklabels(np.linspace(0, 4, 5))
+            mp.grid[0].set_xticklabels(np.linspace(0, 4, 5))
         
-        if not hadmp: 
-            mp.fix_ticks()      
-        else:
-            pl.draw()
+        mp.fix_ticks()
+        
+        pl.draw()
             
         return mp
             
@@ -266,7 +270,7 @@ class Simulation:
             
     def TemperatureProfile(self, t = [10,30,100], color = 'k', ls=None, 
         xscale = 'linear', yscale = 'log', ax = None, normx = False, 
-        marker=None, s=50, facecolors=None, label=None):
+        marker=None, s=50, facecolors='none', label=None):
         """
         Plot radial profiles of temperature at times t (Myr).
         """  
@@ -317,7 +321,59 @@ class Simulation:
         ax.set_ylabel(r'Temperature $(K)$')
         pl.draw()
         
-        return ax             
+        return ax       
+        
+    def BrightnessTemperatureProfile(self, t=[10, 20, 30], z=None, 
+        color = 'k', ls=None, 
+        xscale='linear', yscale='linear', ax = None, normx = False, 
+        marker=None, s=50, facecolors='none', label=None):
+        """
+        Plot radial profiles of temperature at times t (Myr).
+        """
+        
+        if ax is None:
+            ax = pl.subplot(111)
+        
+        if ls is None:
+            ls = linestyles
+        else:
+            ls = [ls] * len(t)
+        
+        for dd in self.data.keys():
+            t_time_units = self.data[dd]['time'] / self.pf['time_units']
+            if t_time_units not in t: 
+                continue
+                
+            line_num = t.index(t_time_units)
+            if line_num > 0:
+                lab = None
+            else:
+                lab = label
+                
+            z = self.data[dd]['redshift']
+            xHII = self.data[dd]['h_2']
+            Ts = self.data[dd]['Ts']#self.grid.hydr.Ts(self.data[dd], z)
+            dTb = self.grid.hydr.DifferentialBrightnessTemperature(z, xHII, 
+                0.0, Ts)
+            
+            if marker is None:
+                ax.plot(self.grid.r_mid / cm_per_kpc, dTb,
+                    ls=ls[line_num], color=color, 
+                    label=lab)
+            else:
+                ax.scatter(self.grid.r_mid / cm_per_kpc, dTb,
+                    color=color, 
+                    label=lab, marker=marker, s=s,
+                    facecolors=facecolors)
+        
+        ax.set_xscale(xscale)
+        ax.set_yscale(yscale)
+        ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
+        ax.set_ylabel(r'$\delta T_b \ (\mathrm{mK})$')
+        ax.set_ylim(floor(dTb.min()), ceil(dTb.max()))
+        pl.draw()
+        
+        return ax
         
     def CellEvolution(self, cell=0, field='x_HI', redshift=False):
         """
@@ -500,31 +556,4 @@ class Simulation:
         self.heat = heat
         self.cool, self.zeta, self.eta, self.psi = (cool, zeta, eta, psi)
     
-    def take_derivative(self, cell=None, t=None, z=None, field='T', wrt='t'):
-        """ Evaluate derivative of `field' with respect to `wrt' at z. """
-        
-        if wrt in ['t', 'z', 'logt', 'logz']:
-            t, z, val = self.CellEvolution(cell=cell, field=field)
-        
-        # Take all derivatives wrt z, convert afterwards
-        x = self.data_asc['z']
-        y = self.data_asc[field]
-        xp, fp = central_difference(x, y)
-        
-        if wrt == 'nu':
-            fp *= -1.0 * (1. + xp)**2 / nu_0_mhz  
-        elif wrt == 'logt':            
-            spline = scipy.interpolate.interp1d(x, y)
-            fp *= -2.0 * (1. + xp) / spline(xp) / 3.
-        else:
-            print 'Unrecognized option for wrt.'
 
-        # x-values must be monotonically increasing - fix dep. on 'wrt'
-        if not np.all(np.diff(xp) > 0):
-            xp, fp = list(xp), list(fp)
-            xp.reverse()
-            fp.reverse()
-            xp, fp = np.array(xp), np.array(fp)        
-                                        
-        return np.interp(z, xp, fp)
-         

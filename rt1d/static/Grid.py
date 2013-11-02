@@ -36,7 +36,8 @@ except ImportError:
 tiny_number = 1e-8  # A relatively small species fraction
 
 class Grid(object):
-    def __init__(self, dims=64, length_units=cm_per_kpc, start_radius=0.01):
+    def __init__(self, dims=64, length_units=cm_per_kpc, start_radius=0.01,
+        approx_Salpha=1, approx_lya=0):
         """
         Initialize grid object.
         
@@ -54,7 +55,9 @@ class Grid(object):
         self.dims = int(dims)
         self.length_units = length_units
         self.start_radius = start_radius
-        
+        self.approx_Salpha = approx_Salpha
+        self.approx_lya = approx_lya
+
         # Compute cell centers and edges        
         self.r_edg = self.r = \
             np.linspace(self.R0, length_units, self.dims + 1)
@@ -298,7 +301,8 @@ class Grid(object):
     @property
     def hydr(self):
         if not hasattr(self, '_hydr'):
-            self._hydr = Hydrogen(self.cosm)
+            self._hydr = Hydrogen(self.cosm, approx_Salpha=self.approx_Salpha,
+                approx_lya=self.approx_lya)
         return self._hydr    
             
     @property

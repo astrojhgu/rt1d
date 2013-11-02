@@ -30,7 +30,7 @@ def SetAllDefaults():
 def GridParameters():
     pf = \
         {
-        "grid_cells": 32,
+        "grid_cells": 64,
         "start_radius": 0.01,
         
         "density_units": 1e-3 * m_H,
@@ -83,16 +83,18 @@ def PhysicsParameters():
         "expansion": 0,  
         "compton_scattering": 0,
         "recombination": 'B', 
-        
+                
         "clumping_factor": 1,
         
         "approx_highz": 0,
-        "approx_Salpha": 3, # 1 = Salpha = 1
+        "approx_Salpha": 1, # 1 = Salpha = 1
                             # 2 = Chuzhoy, Alvarez, & Shapiro (2005),
                             # 3 = Furlanetto & Pritchard (2006)
         
+        "approx_lya": 0, # 0 = calculate it!
+                         # 1 = Ts -> Tk
         }
-        
+            
     return pf
     
 def SourceParameters():
@@ -102,6 +104,7 @@ def SourceParameters():
         
         "source_temperature": 1e5,  
         "source_qdot": 5e48,
+        "source_Lbol": None,
         "source_mass": 1e3,  
         "source_fduty": 1,
         "source_tbirth": 0,
@@ -117,6 +120,7 @@ def SourceParameters():
         "source_lya": 0,
         
         "source_table": None,
+        "source_normalized": False,
         
         }
         
@@ -140,11 +144,13 @@ def BlackHoleParameters():
     pf = \
         {
         "source_mass": 1e5,
+        "source_rmax": 1e3,
         "spectrum_alpha": -1.5,
         "spectrum_Emin": 2e2,  
         "spectrum_Emax": 3e4,  
         "spectrum_EminNorm": None,
         "spectrum_EmaxNorm": None,
+        "spectrum_fsc": 1.,
         }
         
     return pf    
@@ -176,6 +182,7 @@ def SpectrumParameters():
         "spectrum_LE": None,
                 
         "spectrum_table": None,
+        "spectrum_function": None,
                         
         }
         
@@ -191,7 +198,7 @@ def ControlParameters():
         'logdzDataDump': None,
         "stop_time": 500,
         "initial_redshift": 20.,
-        "final_redshift": 6.,
+        "final_redshift": None,
         "initial_timestep": 1e-8,
         "max_timestep": 1.,
         "restricted_timestep": ['ions'],

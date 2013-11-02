@@ -63,7 +63,7 @@ class Radiation:
                 raise NotImplementedError('Finite speed-of-light solver not implemented.')
             
             else:    
-                Gamma_src, gamma_src, Heat_src = \
+                Gamma_src, gamma_src, Heat_src, Ja_src = \
                     self.rfield.SourceDependentCoefficients(data, t, z, 
                         **kwargs)
                 
@@ -72,13 +72,28 @@ class Radiation:
                     self.kwargs.update({'Gamma_%i' % i: Gamma_src[i], 
                         'gamma_%i' % i: gamma_src[i],
                         'Heat_%i' % i: Heat_src[i]})
+                    
+                    if not self.pf['approx_lya']:
+                        self.kwargs.update({'Ja_%i' % i: Ja_src[i]})
             
             Gamma = np.sum(Gamma_src, axis=0)
             gamma = np.sum(gamma_src, axis=0)
             Heat = np.sum(Heat_src, axis=0)
+            
+            # Compute Lyman-Alpha emission
+            if not self.pf['approx_lya']:
+                Ja = np.sum(Ja_src, axis=0)
+            
+            # Molecule destruction
+            #kdiss = np.sum(kdiss_src, axis=0)
+            
                                     
             # Each is grid x absorbers, or grid x [absorbers, absorbers] for gamma
+            # For Ja, just has len(grid)
             self.kwargs.update({'Gamma': Gamma, 'Heat': Heat, 'gamma': gamma})
+            
+            if not self.pf['approx_lya']:
+                self.kwargs.update({'Ja': Ja})
                 
         # Compute source independent rate coefficients
         if (not self.grid.isothermal) or (t == 0):

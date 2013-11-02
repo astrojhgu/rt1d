@@ -40,7 +40,9 @@ class Simulation:
         if init_grid:
             grid = rt1d.static.Grid(dims=pf['grid_cells'], 
                 length_units=pf['length_units'], 
-                start_radius=pf['start_radius'])
+                start_radius=pf['start_radius'],
+                approx_Salpha=pf['approx_Salpha'],
+                approx_lya=pf['approx_lya'])
             
             grid.set_physics(isothermal=pf['isothermal'], 
                 compton_scattering=pf['compton_scattering'],
@@ -130,6 +132,12 @@ class Simulation:
         z = self.pf['initial_redshift']
         dz = self.pf['dzDataDump']
         zf = self.pf['final_redshift']
+        
+        # Modify tf if expansion is ON, i.e., use final_redshift to 
+        # decide when simulation ends.
+        if self.pf['expansion'] and self.pf['final_redshift'] is not None:
+            print "WARNING: cosm.LookbackTime uses high-z approximation."
+            tf = self.grid.cosm.LookbackTime(zf, z)
                 
         max_timestep = self.pf['time_units'] * self.pf['max_timestep']
         
@@ -159,21 +167,24 @@ class Simulation:
                 self.rt.chem.dqdt_grid, z=z, tau=tau_tot, 
                 tau_ifront=self.pf['tau_ifront'],
                 method=self.pf['restricted_timestep'])
-            
+
             # Limit timestep further based on next DD and max allowed increase
             dt = min(new_dt, 2 * dt)
             dt = min(dt, self.checkpoints.next_dt(t, dt))
             dt = min(dt, max_timestep)
-            
+
             # Limit timestep based on next RD
             if self.checkpoints.redshift_dumps:
                 dz = self.checkpoints.next_dz(z, dz)
-                
+
                 if dz is not None:
                     dt = min(dt, dz*self.grid.cosm.dtdz(z))    
-                                
+
+            # Compute spin-temperature
+            data['Ts'] = self.grid.hydr.Ts(data, z)
+
             self.checkpoints.update(data, t, z)
-                    
+
             # Save timestep history
             dt_history.append((t, dt))
             

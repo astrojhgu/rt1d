@@ -14,7 +14,7 @@ import copy
 import numpy as np
 from ..util import parse_kwargs
 from ..physics.SecondaryElectrons import *
-from ..physics.Constants import erg_per_ev
+from ..physics.Constants import erg_per_ev, E_LyA, ev_per_hz
 
 class RadiationField:
     def __init__(self, grid, sources, **kwargs):
@@ -79,7 +79,15 @@ class RadiationField:
         self.k_H = np.array(self.Ns*[np.zeros_like(self.grid.zeros_grid_x_absorbers)])
         self.Gamma = np.array(self.Ns*[np.zeros_like(self.grid.zeros_grid_x_absorbers)])
         self.gamma = np.array(self.Ns*[np.zeros_like(self.grid.zeros_grid_x_absorbers2)])
-        
+
+        if self.pf['approx_lya']:
+            self.Ja = [None] * self.Ns
+        else:
+            self.Ja = np.array(self.Ns * [np.zeros(self.grid.dims)])
+
+        # H2 dissociation
+        #self.kdiss = np.array(self.Ns*[np.zeros_like(self.grid.zeros_grid_x_absorbers)])
+
         # Column density to cells (N) and of cells (Nc)
         if not self.pf['optically_thin'] or self.all_diffuse:
             self.N, self.logN, self.Nc = self.grid.ColumnDensity(data)
@@ -167,10 +175,19 @@ class RadiationField:
                         pass
                 
                 continue
-            
+                
             """
             For sources with continuous SEDs.
             """
+            
+            # This could be post-processed, but eventually may be more
+            # sophisticated
+            if self.pf['approx_lya']:
+                self.Ja = None
+            else:
+                self.Ja[h] = src.Spectrum(E_LyA) * ev_per_hz \
+                    * src.Lbol / 4. / np.pi / self.grid.r_mid**2 \
+                    / E_LyA / erg_per_ev 
             
             # Initialize some arrays/dicts
             self.PhiN = {}
@@ -292,7 +309,7 @@ class RadiationField:
             # Compute total optical depth too
             self.tau_tot = 10**self.src.tables["logTau"](self.logN_by_cell)
 
-        return self.Gamma, self.gamma, self.k_H
+        return self.Gamma, self.gamma, self.k_H, self.Ja
         
     def MultiFreqCoefficients(self, data, absorber):
         """

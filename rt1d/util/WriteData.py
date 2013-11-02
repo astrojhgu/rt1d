@@ -105,6 +105,10 @@ class CheckPoints:
         nothing = self.update(data, t=0., z=self.initial_redshift)
     
     def store_kwargs(self, t=None, z=None, kwargs=None):
+        """
+        Add datasets to self.data (fields that aren't in the grid by default).
+        """
+        
         to_write, dump_type = self.write_now(t=t, z=z)
         if not to_write:
             return    

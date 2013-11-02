@@ -39,9 +39,9 @@ sim.run()
 anl = rt1d.analyze.Simulation(sim.checkpoints)
 
 anl.IonizationProfile(t=[1, 5, 10], color='k')
-raw_input('')
+raw_input('<enter> for temperature profile')
 pl.close()
 
 anl.TemperatureProfile(t=[1, 5, 10], color='k')
-raw_input('')
+raw_input('<done>')
 pl.close()

@@ -178,9 +178,8 @@ class Chemistry(object):
         #if not self.grid.isothermal:        
         newdata['n'] = self.grid.particle_density(newdata, z - dz)
         newdata['de'] = self.grid.electron_density(newdata, z - dz)
-        newdata['Ts'] = self.grid.hydr.Ts(newdata, z - dz)
                         
-        return newdata    
+        return newdata  
 
     def EvolveDengo(self, data, t, dt):
         """

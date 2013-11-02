@@ -32,6 +32,9 @@ T_He = [1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0, 30
 kappa_He = [2.39e-10, 3.37e-10, 5.30e-10, 7.46e-10, 1.05e-9, 1.63e-9, 2.26e-9, 3.11e-9, 4.59e-9, 5.92e-9,
             7.15e-9, 7.71e-9, 8.17e-9, 8.32e-9, 8.37e-9, 8.29e-9, 8.11e-9]
 
+T_HH = np.array(T_HH)
+T_He = np.array(T_He)
+
 l_LyA = h * c / E_LyA / erg_per_ev
 
 g23 = gamma(2./3.)
@@ -41,7 +44,7 @@ c1 = 4. * np.pi / 3. / np.sqrt(3.) / g23
 c2 = 8. * np.pi / 3. / np.sqrt(3.) / g13
 
 class Hydrogen:
-    def __init__(self, cosm=None, approx_Salpha=1):
+    def __init__(self, cosm=None, approx_Salpha=1, approx_lya=0):
         if cosm is None:
             from .Cosmology import Cosmology
             self.cosm = Cosmology()
@@ -49,6 +52,7 @@ class Hydrogen:
             self.cosm = cosm
             
         self.approx_S = approx_Salpha
+        self.approx_lya = approx_lya
         
         self.nmax = 23
         self.fbarII = 0.72
@@ -69,15 +73,41 @@ class Hydrogen:
         self.nu_beta = self.E_LyB * erg_per_ev / h
         self.dnu = self.nu_LL - self.nu_alpha #(13.6 - 11.18) * erg_per_ev / h  
         
-        self.kappa_H = interpolate.interp1d(T_HH, kappa_HH, 
-            kind = 'cubic', bounds_error = False, fill_value = 0.0)
-        self.kappa_e = interpolate.interp1d(T_He, kappa_He, 
-            kind = 'cubic', bounds_error = False, fill_value = 0.0)
+        self.kappa_H_pre = interpolate.interp1d(T_HH, kappa_HH, 
+            kind='cubic', bounds_error=False, fill_value=0.0)
+        self.kappa_e_pre = interpolate.interp1d(T_He, kappa_He, 
+            kind='cubic', bounds_error=False, fill_value=0.0)
         
         self.tabulated_coeff = {'kappa_H': np.array(kappa_HH), 
                                 'kappa_e': np.array(kappa_He), 
                                 'T_H': np.array(T_HH), 'T_e': np.array(T_He)}
-                                
+    
+    def _kappa(self, Tk, Tarr, spline):
+        if Tk < Tarr[0]:
+            return T_HH[0]
+        elif Tk > Tarr[-1]:
+            return Tarr[-1]
+        else:
+            return spline(Tk)
+                               
+    def kappa_H(self, Tk):
+        if type(Tk) is float:            
+            return self._kappa(Tk, T_HH, self.kappa_H_pre)
+        else:
+            tmp = np.zeros_like(Tk)
+            for i in range(len(Tk)):
+                tmp[i] = self._kappa(Tk[i], T_HH, self.kappa_H_pre)
+            return tmp
+            
+    def kappa_e(self, Tk):                           
+        if type(Tk) is float:            
+            return self._kappa(Tk, T_He, self.kappa_e_pre)
+        else:
+            tmp = np.zeros_like(Tk)
+            for i in range(len(Tk)):
+                tmp[i] = self._kappa(Tk[i], T_He, self.kappa_H_pre)
+            return tmp
+            
     def CollisionalIonizationRate(self, T):
         """
         From Fukugita & Kawasaki 1996 (I think).
@@ -205,7 +235,7 @@ class Hydrogen:
         """
 
         x_c = self.CollisionalCouplingCoefficient(Tk, z, nH, ne)
-        x_a = self.WouthuysenFieldCouplingCoefficient(z, Ja)
+        x_a = self.WouthuysenFieldCouplingCoefficient(z, Ja, Tk)
         Tc = Tk
                 
         return (1.0 + x_c + x_a) / \
@@ -213,7 +243,17 @@ class Hydrogen:
     
     def Ts(self, data, z):
         Tk = data['Tk']
-        Ja = 0.0
+        
+        if self.approx_lya == 0:
+            if 'Ja' in data.keys():
+                Ja = data['Ja']
+            else:
+                Ja = np.zeros_like(Tk)
+        elif self.approx_lya == 1:
+            return Tk
+        else:
+            raise ValueError('approx_lya can only be 0 or 1!')
+        
         nH = self.cosm.nH0 * (1. + z)**3
         ne = data['de']      
         

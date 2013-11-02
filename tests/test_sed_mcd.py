@@ -13,12 +13,13 @@ Description: Plot a simple multi-color disk accretion spectrum.
 import rt1d
 import pylab as pl
 
-bh_pars = {
-           'source_type': 'bh', 
-           'spectrum_type': 'mcd',
-           'spectrum_Emin':50.,
-           'spectrum_Emax':1e3,
-          }
+bh_pars = \
+{
+    'source_type': 'bh', 
+    'spectrum_type': 'mcd',
+    'spectrum_Emin':50.,
+    'spectrum_Emax':1e3,
+}
 
 bh = rt1d.analyze.Source(rt1d.sources.RadiationSource(init_tabs=False, 
     **bh_pars))
