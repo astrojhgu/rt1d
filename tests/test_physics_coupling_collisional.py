@@ -20,11 +20,13 @@ hydr = Hydrogen()
 # Relevant temperature range
 T = np.logspace(0, 4, 500)
 
-# Plot coupling coefficients vs. temperature (tabulated and interpolated)
+# Plot coupling coefficients vs. temperature (tabulated)
 pl.scatter(hydr.tabulated_coeff['T_H'], 
     hydr.tabulated_coeff['kappa_H'], color = 'k')
 pl.scatter(hydr.tabulated_coeff['T_e'], 
     hydr.tabulated_coeff['kappa_e'], color = 'k')
+    
+# Interpolated values
 pl.loglog(T, hydr.kappa_H(T), color = 'k', ls = '-', 
     label = r'$\kappa_{10}^{\mathrm{HH}}$')
 pl.loglog(T, hydr.kappa_e(T), color = 'k', ls = '--', 

@@ -84,14 +84,14 @@ class Hydrogen:
     
     def _kappa(self, Tk, Tarr, spline):
         if Tk < Tarr[0]:
-            return T_HH[0]
+            return spline(Tarr[0])
         elif Tk > Tarr[-1]:
-            return Tarr[-1]
+            return spline(Tarr[-1])
         else:
             return spline(Tk)
                                
     def kappa_H(self, Tk):
-        if type(Tk) is float:            
+        if type(Tk) in [float, np.float64]:            
             return self._kappa(Tk, T_HH, self.kappa_H_pre)
         else:
             tmp = np.zeros_like(Tk)
@@ -100,12 +100,12 @@ class Hydrogen:
             return tmp
             
     def kappa_e(self, Tk):                           
-        if type(Tk) is float:            
+        if type(Tk) in [float, np.float64]:
             return self._kappa(Tk, T_He, self.kappa_e_pre)
         else:
             tmp = np.zeros_like(Tk)
             for i in range(len(Tk)):
-                tmp[i] = self._kappa(Tk[i], T_He, self.kappa_H_pre)
+                tmp[i] = self._kappa(Tk[i], T_He, self.kappa_e_pre)
             return tmp
             
     def CollisionalIonizationRate(self, T):
@@ -150,35 +150,38 @@ class Hydrogen:
         return self.cosm.nH0 * (1. + z)**3 * c / 4. / np.pi / self.nu_alpha
     
     def frec(self, n):
-        if n == 2: return 1.0
-        if n == 3: return 0.0
-        if n == 4: return 0.2609
-        if n == 5: return 0.3078
-        if n == 6: return 0.3259
-        if n == 7: return 0.3353
-        if n == 8: return 0.3410
-        if n == 9: return 0.3448
-        if n == 10: return 0.3476
-        if n == 11: return 0.3496
-        if n == 12: return 0.3512
-        if n == 13: return 0.3524
-        if n == 14: return 0.3535
-        if n == 15: return 0.3543
-        if n == 16: return 0.3550
-        if n == 17: return 0.3556
-        if n == 18: return 0.3561
-        if n == 19: return 0.3565
-        if n == 20: return 0.3569
-        if n == 21: return 0.3572
-        if n == 22: return 0.3575
-        if n == 23: return 0.3578
-        if n == 24: return 0.3580
-        if n == 25: return 0.3582
-        if n == 26: return 0.3584
-        if n == 27: return 0.3586
-        if n == 28: return 0.3587
-        if n == 29: return 0.3589    
-        if n == 30: return 0.3590
+        """ From Pritchard & Furlanetto 2006. """
+        if n == 2:    return 1.0
+        elif n == 3:  return 0.0
+        elif n == 4:  return 0.2609
+        elif n == 5:  return 0.3078
+        elif n == 6:  return 0.3259
+        elif n == 7:  return 0.3353
+        elif n == 8:  return 0.3410
+        elif n == 9:  return 0.3448
+        elif n == 10: return 0.3476
+        elif n == 11: return 0.3496
+        elif n == 12: return 0.3512
+        elif n == 13: return 0.3524
+        elif n == 14: return 0.3535
+        elif n == 15: return 0.3543
+        elif n == 16: return 0.3550
+        elif n == 17: return 0.3556
+        elif n == 18: return 0.3561
+        elif n == 19: return 0.3565
+        elif n == 20: return 0.3569
+        elif n == 21: return 0.3572
+        elif n == 22: return 0.3575
+        elif n == 23: return 0.3578
+        elif n == 24: return 0.3580
+        elif n == 25: return 0.3582
+        elif n == 26: return 0.3584
+        elif n == 27: return 0.3586
+        elif n == 28: return 0.3587
+        elif n == 29: return 0.3589
+        elif n == 30: return 0.3590
+        else:
+            raise ValueError('Only know frec for 2 <= 2 <= 30!')
     
     # Look at line 905 in astrophysics.cc of jonathan's code
     
