@@ -42,7 +42,8 @@ class Simulation:
                 length_units=pf['length_units'], 
                 start_radius=pf['start_radius'],
                 approx_Salpha=pf['approx_Salpha'],
-                approx_lya=pf['approx_lya'])
+                approx_lya=pf['approx_lya'],
+                logarithmic_grid=pf['logarithmic_grid'])
             
             grid.set_physics(isothermal=pf['isothermal'], 
                 compton_scattering=pf['compton_scattering'],

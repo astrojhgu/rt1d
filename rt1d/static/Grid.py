@@ -37,7 +37,7 @@ tiny_number = 1e-8  # A relatively small species fraction
 
 class Grid(object):
     def __init__(self, dims=64, length_units=cm_per_kpc, start_radius=0.01,
-        approx_Salpha=1, approx_lya=0):
+        approx_Salpha=1, approx_lya=0, logarithmic_grid=False):
         """
         Initialize grid object.
         
@@ -57,10 +57,18 @@ class Grid(object):
         self.start_radius = start_radius
         self.approx_Salpha = approx_Salpha
         self.approx_lya = approx_lya
+        self.log_grid = logarithmic_grid
 
-        # Compute cell centers and edges        
-        self.r_edg = self.r = \
-            np.linspace(self.R0, length_units, self.dims + 1)
+        # Compute cell centers and edges
+        if logarithmic_grid:
+            self.r_edg = self.r = \
+                np.logspace(np.log10(self.R0), np.log10(length_units), 
+                self.dims + 1)            
+        else:
+            self.r_edg = self.r = \
+                np.linspace(self.R0, length_units, self.dims + 1)
+        
+        # Compute interior cell walls, spacing, and mid-points        
         self.r_int = self.r_edg[0:-1]
         self.dr = np.diff(self.r_edg)
         self.r_mid = rebin(self.r_edg)
@@ -85,7 +93,7 @@ class Grid(object):
                 
     @property
     def R0(self):
-        """ Start radius in lenght_units. """
+        """ Start radius in length_units. """
         return self.start_radius * self.length_units
         
     @property

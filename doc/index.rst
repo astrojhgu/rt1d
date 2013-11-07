@@ -28,6 +28,7 @@ Currently, rt1d has support for the following:
     * Can use `dengo <https://bitbucket.org/MatthewTurk/dengo>`_ package to create
       advanced chemical networks, though they are not yet coupled to the
       radiation field.
+    * Optimization of multi-frequency SEDs using method of `Mirocha et al. (2012) <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
 
 Contents
 --------

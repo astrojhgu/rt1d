@@ -117,24 +117,24 @@ print 'Verifying optimal discrete SED with rt1d...\n'
 Run rt1d to see how this solution works.
 """
 
-#continuous = rt1d.run.Simulation(pf = {'problem_type': 2, 'grid_cells': 32})
-#continuous.run()
-#
-#discrete = rt1d.run.Simulation(pf = {'problem_type': 2.1, 'grid_cells': 32, 
-#    'spectrum_E': Eopt, 'spectrum_LE': LEopt})
-#discrete.run()
-#
-#c = rt1d.analyze.Simulation(continuous.checkpoints)    
-#d = rt1d.analyze.Simulation(discrete.checkpoints)
-#
-#ax = c.IonizationProfile(t = [10, 30, 100])
-#d.IonizationProfile(t = [10, 30, 100], color = 'b', ax = ax)
-#
-#raw_input('click <enter> for temperature profiles')
-#pl.close()
-#
-#ax = c.TemperatureProfile(t = [10, 30, 100])
-#d.TemperatureProfile(t = [10, 30, 100], color = 'b', ax = ax)
-#
-#raw_input('See! Monochromatic SEDs don\'t do so great.')
-#pl.close()
+continuous = rt1d.run.Simulation(pf = {'problem_type': 2, 'grid_cells': 32})
+continuous.run()
+
+discrete = rt1d.run.Simulation(pf = {'problem_type': 2.1, 'grid_cells': 32, 
+    'spectrum_E': Eopt, 'spectrum_LE': LEopt})
+discrete.run()
+
+c = rt1d.analyze.Simulation(continuous.checkpoints)    
+d = rt1d.analyze.Simulation(discrete.checkpoints)
+
+ax = c.IonizationProfile(t=[10, 30, 100])
+d.IonizationProfile(t=[10, 30, 100], color='b', ax=ax)
+
+raw_input('click <enter> for temperature profiles')
+pl.close()
+
+ax = c.TemperatureProfile(t=[10, 30, 100])
+d.TemperatureProfile(t=[10, 30, 100], color='b', ax=ax)
+
+raw_input('\nSee! Monochromatic SEDs don\'t do so great.')
+pl.close()

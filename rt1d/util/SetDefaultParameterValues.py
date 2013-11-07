@@ -32,6 +32,7 @@ def GridParameters():
         {
         "grid_cells": 64,
         "start_radius": 0.01,
+        "logarithmic_grid": False,
         
         "density_units": 1e-3 * m_H,
         "length_units": 6.6 * cm_per_kpc,  

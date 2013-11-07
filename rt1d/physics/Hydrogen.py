@@ -15,6 +15,11 @@ from scipy.special import gamma
 import scipy.interpolate as interpolate
 from .Constants import A10, T_star, m_p, m_e, erg_per_ev, h, c, E_LyA, E_LL
 
+try:
+    from mathutils.differentiate import central_difference
+except ImportError:
+    pass
+
 # Rate coefficients for spin de-excitation - from Zygelman originally
 
 # H-H collisions.
@@ -81,6 +86,27 @@ class Hydrogen:
         self.tabulated_coeff = {'kappa_H': np.array(kappa_HH), 
                                 'kappa_e': np.array(kappa_He), 
                                 'T_H': np.array(T_HH), 'T_e': np.array(T_He)}
+    
+        # High-resolution tables for differentiation
+        self._Tk_hi_H = np.logspace(np.log10(self.tabulated_coeff['T_H'].min()),
+            np.log10(self.tabulated_coeff['T_H'].max()), 1000)
+        self._kH_hi = np.array(map(self.kappa_H, self._Tk_hi_H))
+        
+        self._Tk_hi_e = np.logspace(np.log10(self.tabulated_coeff['T_e'].min()),
+            np.log10(self.tabulated_coeff['T_e'].max()), 1000)
+        self._ke_hi = np.array(map(self.kappa_e, self._Tk_hi_e))
+                
+        Tk_p_H, dkHdT = central_difference(self._Tk_hi_H, self._kH_hi)
+        dlogkH_dlogT = dkHdT * Tk_p_H / np.array(map(self.kappa_H, Tk_p_H))
+        
+        _kH_spline = interpolate.interp1d(Tk_p_H, dlogkH_dlogT)
+        self.dlogkH_dlogT = lambda T: _kH_spline(T)
+        
+        Tk_p_e, dkedT = central_difference(self._Tk_hi_e, self._ke_hi)
+        dlogke_dlogT = dkedT * Tk_p_e / np.array(map(self.kappa_e, Tk_p_e))
+        
+        _ke_spline = interpolate.interp1d(Tk_p_e, dlogke_dlogT)
+        self.dlogke_dlogT = lambda T: _ke_spline(T)
     
     def _kappa(self, Tk, Tarr, spline):
         if Tk < Tarr[0]:
@@ -186,6 +212,12 @@ class Hydrogen:
     # Look at line 905 in astrophysics.cc of jonathan's code
     
     def CollisionalCouplingCoefficient(self, Tk, z, nH, ne):
+        """
+        
+        References
+        ----------
+        Zygelman, B. 2005, ApJ, 622, 1356
+        """
         RateCoefficientSum = nH * self.kappa_H(Tk) + \
             ne * self.kappa_e(Tk)
                 
@@ -220,7 +252,7 @@ class Hydrogen:
             alpha = 0.717 * Tk**(-2./3.) * (1e-6 / gamma)**(1. / 3.)
             return 1. - c1 * alpha - c2 * alpha**2 + 4. * alpha**3 / 3.
         else:
-            raise NotImplementedError('')
+            raise NotImplementedError('approx_Sa must be in [1,2,3].')
             
     def ELyn(self, n):
         """ Return energy of Lyman-n photon in eV. """

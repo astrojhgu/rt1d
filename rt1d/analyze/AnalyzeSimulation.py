@@ -370,7 +370,7 @@ class Simulation:
         ax.set_yscale(yscale)
         ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
         ax.set_ylabel(r'$\delta T_b \ (\mathrm{mK})$')
-        ax.set_ylim(floor(dTb.min()), ceil(dTb.max()))
+        ax.set_ylim(dTb.min() - (dTb.min() % 5), dTb.max() + (5 - dTb.max() % 5))
         pl.draw()
         
         return ax

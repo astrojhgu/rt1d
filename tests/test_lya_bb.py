@@ -1,6 +1,6 @@
 """
 
-test_lya.py
+test_lya_bb.py
 
 Author: Jordan Mirocha
 Affiliation: University of Colorado at Boulder
