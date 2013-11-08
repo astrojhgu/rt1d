@@ -20,8 +20,8 @@ class Simulation:
     Run a radiative transfer simulation from input parameter file (which
     can be a dictionary or a path to a text file) and/or kwargs.
     """
-    def __init__(self, pf=None, init_grid=True, init_rs=True, init_tabs=True, 
-        **kwargs):
+    def __init__(self, pf=None, ics=None, grid=None, 
+        init_grid=True, init_rs=True, init_tabs=True, **kwargs):
         if pf is not None:
             if type(pf) is str:
                 pf = ReadParameterFile(pf)
@@ -38,59 +38,65 @@ class Simulation:
         
         # Initialize grid object
         if init_grid:
-            grid = rt1d.static.Grid(dims=pf['grid_cells'], 
-                length_units=pf['length_units'], 
-                start_radius=pf['start_radius'],
-                approx_Salpha=pf['approx_Salpha'],
-                approx_lya=pf['approx_lya'],
-                logarithmic_grid=pf['logarithmic_grid'])
-            
-            grid.set_physics(isothermal=pf['isothermal'], 
-                compton_scattering=pf['compton_scattering'],
-                secondary_ionization=pf['secondary_ionization'], 
-                expansion=pf['expansion'], 
-                recombination=pf['recombination'])
-            
-            # Set initial conditions
-            if pf['expansion']:
-                grid.set_cosmology(initial_redshift=pf['initial_redshift'],
-                    OmegaMatterNow=pf['OmegaMatterNow'], 
-                    OmegaLambdaNow=pf['OmegaLambdaNow'], 
-                    OmegaBaryonNow=pf['OmegaBaryonNow'],
-                    HubbleParameterNow=pf['HubbleParameterNow'],
-                    HeliumFractionByMass=pf['HeliumFractionByMass'], 
-                    CMBTemperatureNow=pf['CMBTemperatureNow'],
-                    approx_highz=pf['approx_highz'])    
-                grid.set_chemistry(Z=pf['Z'], abundance=pf['abundance'],
-                    approx_helium=pf['approx_helium'])
-                grid.set_density(grid.cosm.rho_b_z0 \
-                    * (1. + pf['initial_redshift'])**3)
-                grid.set_temperature(grid.cosm.Tgas(pf['initial_redshift']))
+            if grid is not None:
+                if ics is None:
+                    raise ValueError('If grid is supplied, must also supply ics!')
+                grid.set_ics(ics)
+                print "Need to check for conflicts between new and old grids."
+            else:    
+                grid = rt1d.static.Grid(dims=pf['grid_cells'], 
+                    length_units=pf['length_units'], 
+                    start_radius=pf['start_radius'],
+                    approx_Salpha=pf['approx_Salpha'],
+                    approx_lya=pf['approx_lya'],
+                    logarithmic_grid=pf['logarithmic_grid'])
                 
-                for i, Z in enumerate(pf['Z']):
-                    grid.set_ionization(Z=Z, x=pf['initial_ionization'][i])
+                grid.set_physics(isothermal=pf['isothermal'], 
+                    compton_scattering=pf['compton_scattering'],
+                    secondary_ionization=pf['secondary_ionization'], 
+                    expansion=pf['expansion'], 
+                    recombination=pf['recombination'])
                 
-                grid.data['n'] = grid.particle_density(grid.data, 
-                    z=pf['initial_redshift'])
+                # Set initial conditions
+                if pf['expansion']:
+                    grid.set_cosmology(initial_redshift=pf['initial_redshift'],
+                        OmegaMatterNow=pf['OmegaMatterNow'], 
+                        OmegaLambdaNow=pf['OmegaLambdaNow'], 
+                        OmegaBaryonNow=pf['OmegaBaryonNow'],
+                        HubbleParameterNow=pf['HubbleParameterNow'],
+                        HeliumFractionByMass=pf['HeliumFractionByMass'], 
+                        CMBTemperatureNow=pf['CMBTemperatureNow'],
+                        approx_highz=pf['approx_highz'])    
+                    grid.set_chemistry(Z=pf['Z'], abundance=pf['abundance'],
+                        approx_helium=pf['approx_helium'])
+                    grid.set_density(grid.cosm.rho_b_z0 \
+                        * (1. + pf['initial_redshift'])**3)
+                    grid.set_temperature(grid.cosm.Tgas(pf['initial_redshift']))
                     
-            else:
-                grid.set_chemistry(Z=pf['Z'], abundance=pf['abundance'],
-                    approx_helium=pf['approx_helium'])
-                grid.set_density(pf['density_units'])
-                
-                for i, Z in enumerate(pf['Z']):
-                    grid.set_ionization(Z=Z, x=pf['initial_ionization'][i])
-                
-                grid.set_temperature(pf['initial_temperature'])
-                grid.data['n'] = grid.particle_density(grid.data)
-                
-                if pf['clump']:
-                    grid.make_clump(position=pf['clump_position'], 
-                        radius=pf['clump_radius'], 
-                        temperature=pf['clump_temperature'], 
-                        overdensity=pf['clump_overdensity'],
-                        ionization=pf['clump_ionization'], 
-                        profile=pf['clump_profile'])
+                    for i, Z in enumerate(pf['Z']):
+                        grid.set_ionization(Z=Z, x=pf['initial_ionization'][i])
+                    
+                    grid.data['n'] = grid.particle_density(grid.data, 
+                        z=pf['initial_redshift'])
+                        
+                else:
+                    grid.set_chemistry(Z=pf['Z'], abundance=pf['abundance'],
+                        approx_helium=pf['approx_helium'])
+                    grid.set_density(pf['density_units'])
+                    
+                    for i, Z in enumerate(pf['Z']):
+                        grid.set_ionization(Z=Z, x=pf['initial_ionization'][i])
+                    
+                    grid.set_temperature(pf['initial_temperature'])
+                    grid.data['n'] = grid.particle_density(grid.data)
+                    
+                    if pf['clump']:
+                        grid.make_clump(position=pf['clump_position'], 
+                            radius=pf['clump_radius'], 
+                            temperature=pf['clump_temperature'], 
+                            overdensity=pf['clump_overdensity'],
+                            ionization=pf['clump_ionization'], 
+                            profile=pf['clump_profile'])
                     
             # To compute timestep
             self.timestep = rt1d.run.ComputeTimestep(grid, pf['epsilon_dt'])
