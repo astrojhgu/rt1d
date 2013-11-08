@@ -20,6 +20,7 @@ class CompositeSource:
         """
         Initialize composite radiation source object.        
         """
+        
         self.pf = kwargs.copy()
         self.grid = grid
         

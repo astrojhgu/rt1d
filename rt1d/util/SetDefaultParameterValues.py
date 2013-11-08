@@ -14,8 +14,7 @@ from numpy import inf
 from ..physics.Constants import m_H, cm_per_kpc, s_per_myr
 
 defaults = []
-pgroups = ['Grid', 'Source', 'Spectrum', 'Physics', 
-           'Cosmology', 'Control']
+pgroups = ['Grid', 'Source', 'Spectrum', 'Physics', 'Cosmology', 'Control']
 for grp in pgroups:
     defaults.append('%sParameters()' % grp)
     
@@ -23,7 +22,7 @@ def SetAllDefaults():
     pf = {'problem_type': 1}
     
     for pset in defaults:
-        eval('pf.update(%s)' % pset)
+        exec('pf.update(%s)' % pset)
         
     return pf
     
@@ -45,11 +44,11 @@ def GridParameters():
         
         "approx_helium": 0,
         
-        "clump": 0,  
-        "clump_position": 0.1,  
-        "clump_radius": 0.05,  
-        "clump_overdensity": 100,  
-        "clump_temperature": 100,    
+        "clump": 0,
+        "clump_position": 0.1,
+        "clump_radius": 0.05,
+        "clump_overdensity": 100,
+        "clump_temperature": 100,
         "clump_ionization": 1e-6,
         "clump_profile": 0,
         

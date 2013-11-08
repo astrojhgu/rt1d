@@ -170,7 +170,7 @@ class RadiationSource(object):
                 self.pf.update({'tables_dlogN': [np.diff(tmp) for tmp in logN]})
                 self.pf.update({'tables_logNmin': [np.min(tmp) for tmp in logN]})
                 self.pf.update({'tables_logNmax': [np.max(tmp) for tmp in logN]})
-            
+
             # Tabulate away!            
             self.tab = IntegralTable(self.pf, self, self.grid, logN)
             self.tabs = self.tab.TabulateRateIntegrals()

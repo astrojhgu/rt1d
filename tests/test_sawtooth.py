@@ -15,7 +15,8 @@ import pylab as pl
 import numpy as np
 from math import ceil
 from scipy.integrate import quad
-from rt1d.physics.Constants import E_LyA, E_LL, cm_per_kpc, erg_per_ev
+from rt1d.physics.Constants import E_LyA, E_LL, cm_per_kpc, erg_per_ev, \
+    ev_per_hz
 
 pars = {
     'source_type': 'star',
@@ -55,7 +56,7 @@ def J(r, E, nmax=23):
     En =  E_LL * (1. - 1. / n**2)
     #zmax = En * (1. + z) / E - 1.
     
-    return rs.Lbol * rs.Spectrum(En) / En / erg_per_ev / 4. / np.pi / r**2
+    return rs.Lbol * rs.Spectrum(En) * ev_per_hz / En / erg_per_ev / 4. / np.pi / r**2
     
 #def Q(r, nmax=23):
 #    return quad(lambda E: J(r, E, nmax=nmax) / E, E_LyA, E_LL)[0]

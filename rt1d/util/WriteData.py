@@ -86,7 +86,7 @@ class CheckPoints:
                                 
         self.DDtimes = np.unique(self.DDtimes)
         self.DDredshifts_asc = np.unique(self.DDredshifts)
-                 
+
         self.allDD = np.linspace(0, len(self.DDtimes)-1., len(self.DDtimes))
         self.allRD = np.linspace(len(self.DDredshifts)-1., 0,
             len(self.DDredshifts))
@@ -96,6 +96,17 @@ class CheckPoints:
                 
         if self.grid is not None:
             self.store_ics(grid.data)
+            
+    @property
+    def final_dd(self):
+        if not hasattr(self, '_final_dd'):
+            if self.redshift_dumps:
+                self._final_dd = self.name(t=max(self.RDtimes[-1], 
+                    self.DDtimes[-1]))
+            else:
+                self._final_dd = self.name(t=self.DDtimes[-1])
+
+        return self._final_dd
         
     def store_ics(self, data):
         """

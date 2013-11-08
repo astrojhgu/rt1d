@@ -268,8 +268,8 @@ class Simulation:
         
         return ax     
             
-    def TemperatureProfile(self, t = [10,30,100], color = 'k', ls=None, 
-        xscale = 'linear', yscale = 'log', ax = None, normx = False, 
+    def TemperatureProfile(self, t=[10,30,100], color='k', ls=None, 
+        xscale='linear', yscale='log', ax = None, normx=False, 
         marker=None, s=50, facecolors='none', label=None):
         """
         Plot radial profiles of temperature at times t (Myr).

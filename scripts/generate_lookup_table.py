@@ -14,6 +14,10 @@ import rt1d
 import pylab as pl
 import numpy as np
 
+# 
+fn = 'bb_1e5_h_he.hdf5'
+#
+
 # Initialize radiation source
 src_pars = \
     {
@@ -33,4 +37,4 @@ grid.set_density(rho0=1e-27)
 # Initialize radiation source - create lookup table
 src = rt1d.sources.RadiationSource(grid, **src_pars)
 
-src.tab.save()
+src.tab.save(fn)

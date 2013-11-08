@@ -42,7 +42,7 @@ class Simulation:
                 if ics is None:
                     raise ValueError('If grid is supplied, must also supply ics!')
                 grid.set_ics(ics)
-                print "Need to check for conflicts between new and old grids."
+                print "WARNING: Need to check for conflicts between new and old grids."
             else:    
                 grid = rt1d.static.Grid(dims=pf['grid_cells'], 
                     length_units=pf['length_units'], 
@@ -185,7 +185,7 @@ class Simulation:
                 dz = self.checkpoints.next_dz(z, dz)
 
                 if dz is not None:
-                    dt = min(dt, dz*self.grid.cosm.dtdz(z))    
+                    dt = min(dt, dz*self.grid.cosm.dtdz(z))
 
             # Compute spin-temperature
             data['Ts'] = self.grid.hydr.Ts(data, z)

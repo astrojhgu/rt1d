@@ -27,7 +27,7 @@ except ImportError:
 
 E_th = [13.6, 24.6, 54.4]
 
-scipy.seterr(all = 'ignore')
+scipy.seterr(all='ignore')
 
 class IntegralTable: 
     def __init__(self, pf, source, grid, logN=None):
@@ -38,7 +38,15 @@ class IntegralTable:
         self.src = source
         self.grid = grid
         
-        # Move this stuff to TableProperties
+        # need to not do this stuff if a table was supplied via source_table
+        # best way: save pf in hdf5 file, use it 
+        # just override table_* parameters...what else?
+        
+        
+        #if self.pf['source_table']:
+        #    self.load(self.pf['source_table'])
+            
+        # Move this stuff to TableProperties    
         if logN is None:
             
             # Required bounds of table assuming minimum species fraction
@@ -594,6 +602,28 @@ class IntegralTable:
         for tab in self.tabs:
             f.create_dataset(tab, data=self.tabs[tab])
             
+        # Save parameter file
+        pf_grp = f.create_group('parameters')
+        for par in self.pf:
+            if self.pf[par] is not None:
+                try:
+                    pf_grp.create_dataset(par, data=self.pf[par])
+                except TypeError:
+                    if type(self.pf[par]) is list:
+                        Nones = 0
+                        for i in range(len(self.pf[par])):
+                            if self.pf[par] is None:
+                                Nones += 1
+                        
+                        if Nones == len(self.pf[par]):
+                            pf_grp.create_dataset(par, data=[-99999] * Nones)
+                    else:
+                        raise ValueError('Dunno what to do here.')        
+                    
+                    
+            else:
+                pf_grp.create_dataset(par, data=-99999)
+            
         f.close()
     
     def load(self, fn):
@@ -624,7 +654,7 @@ class IntegralTable:
                 continue
             
             print 'WARNING: Axis \'%s\' has %i elements. Expected %i.' \
-                % (np.array(values[i]).size, self.axes[i].size)
+                % (axis, np.array(values[i]).size, self.axes[i].size)
             ok = False
             
         if not ok:

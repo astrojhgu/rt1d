@@ -19,13 +19,8 @@ way:
     Physics parameters
     
 More notes:
--Non-integer problem types are the same as their integer counterparts
- but with discrete SEDs rather than continuous ones.
 -A problem type > 10 (or < -10) corresponds to the same problem as 
  problem_type % 10, except helium is included.
--To compare apples to apples, remember to modify density_units so that the
- absolute number density of hydrogen remains unchanged. Or, modify
- the abundances parameter.
 
 """
 
@@ -44,8 +39,9 @@ def ProblemType(ptype):
     ptype_int = int(ptype)
     if abs(ptype_int) > 10: # Multiply by 10 rather than add 10?
         ptype_int -= 10 * np.sign(ptype_int)
-        
-    ptype_mod1 = round(ptype - ptype_int, 1)
+        ptype_mod1 = ptype % 1
+    else:    
+        ptype_mod1 = round(ptype - ptype_int, 1)
         
     # Single-zone, cosmological expansion test         
     if ptype_int == -1:
@@ -196,9 +192,17 @@ def ProblemType(ptype):
             pf.update({'spectrum_LE': [0.24, 0.35, 0.23, 0.06]})
              
     if ptype >= 10:
-        pf.update({'Z': [1, 2], 'abundance': [1.0, 0.08],
-            'initial_ionization': [pf['initial_ionization'][0]]*2,
-            'tables_dlogN': defs['tables_dlogN']*3,
-            'tables_xmin': defs["tables_xmin"]*3})
-                     
+        helium_pars = \
+            {
+             'Z': [1, 2], 
+             'abundance': [1.0, 0.08],
+             'initial_ionization': [pf['initial_ionization'][0]]*2,
+             'tables_dlogN': defs['tables_dlogN']*3,
+             'tables_xmin': defs["tables_xmin"]*3,
+             'tables_logNmin': defs['tables_logNmin']*3,
+             'tables_logNmax': defs['tables_logNmax']*3,
+            }
+            
+        pf.update(helium_pars)
+            
     return pf    
