@@ -24,7 +24,8 @@ class Radiation:
         self.srcs = sources
                 
         # Initialize chemistry network / solver
-        self.chem = Chemistry(grid, rt = kwargs['radiative_transfer'])
+        self.chem = Chemistry(grid, rt=kwargs['radiative_transfer'],
+            rtol=self.pf['solver_rtol'], atol=self.pf['solver_atol'])
         
         # Initialize RT solver
         if self.srcs is not None:
@@ -46,7 +47,7 @@ class Radiation:
         """
         
         # Make data globally accessible
-        self.data = data
+        self.data = data.copy()
                 
         # Figure out which processors will solve which cells and create newdata dict
         #self.solve_arr, newdata = self.control.DistributeDataAcrossProcessors(data, lb)

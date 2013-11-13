@@ -209,6 +209,9 @@ def ControlParameters():
         "parallelization": 0,
         "save_rate_coefficients": 1,
         
+        "solver_rtol": 1e-8,
+        "solver_atol": 1e-8,
+        
         "interp_method": 'cubic',
         }
         

@@ -8,6 +8,9 @@ Created on: Fri Sep 21 13:03:44 2012
 
 Description: 
 
+Notes: If we want to parallelize over the grid, we'll need to use different
+ODE integration routines, as scipy.integrate.ode is not re-entrant :(
+
 """
 
 import copy
@@ -17,19 +20,19 @@ from scipy.integrate import ode
 from ..util import convert_ion_name
 from ..physics.Constants import k_B
 
-try:
-    from mpi4py import MPI
-    rank = MPI.COMM_WORLD.rank
-    size = MPI.COMM_WORLD.size
-except ImportError:
-    rank = 0
-    size = 1
+#try:
+#    from mpi4py import MPI
+#    rank = MPI.COMM_WORLD.rank
+#    size = MPI.COMM_WORLD.size
+#except ImportError:
+#    rank = 0
+#    size = 1
     
 tiny_ion = 1e-12 
 
 class Chemistry(object):
-    """ Class for creation and manipulation of radiation sources. """
-    def __init__(self, grid, rt=False, dengo=False):
+    """ Class for evolving chemical reaction equations. """
+    def __init__(self, grid, rt=False, dengo=False, atol=1e-8, rtol=1e-8):
         """
         Create a chemistry object.
         
@@ -59,31 +62,31 @@ class Chemistry(object):
         self.solver = ode(self.chemnet.RateEquations, 
             jac=self.chemnet.Jacobian).set_integrator('vode',
             method='bdf', nsteps=1e4, with_jacobian=True,
-            atol=1e-8, rtol=1e-8)
+            atol=atol, rtol=rtol)
             
         self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.evolving_fields)])
         self.zeros_grid_x_abs = np.zeros_like(self.grid.zeros_grid_x_absorbers)
         self.zeros_grid_x_abs2 = np.zeros_like(self.grid.zeros_grid_x_absorbers2)
     
-    @property        
-    def load_balance(self):
-        """
-        Return array the same size as the grid, each element noting
-        the processor responsible for solving chemistry in that cell. 
-        """        
-        
-        if not hasattr(self, '_proc_dist'):
-            ascending = np.arange(size)
-            descending = list(ascending.copy())
-            descending.reverse()
-            single_permutation = np.concatenate((ascending, descending))
-            
-            D = size * 2
-            self._proc_dist = np.zeros(self.grid.dims)
-            for i in xrange(self.grid.dims):
-                self._proc_dist[i] = single_permutation[i % D]
-            
-        return self._proc_dist
+    #@property        
+    #def load_balance(self):
+    #    """
+    #    Return array the same size as the grid, each element noting
+    #    the processor responsible for solving chemistry in that cell. 
+    #    """        
+    #    
+    #    if not hasattr(self, '_proc_dist'):
+    #        ascending = np.arange(size)
+    #        descending = list(ascending.copy())
+    #        descending.reverse()
+    #        single_permutation = np.concatenate((ascending, descending))
+    #        
+    #        D = size * 2
+    #        self._proc_dist = np.zeros(self.grid.dims)
+    #        for i in xrange(self.grid.dims):
+    #            self._proc_dist[i] = single_permutation[i % D]
+    #        
+    #    return self._proc_dist
         
     def Evolve(self, data, t, dt, **kwargs):
         """
@@ -110,7 +113,7 @@ class Chemistry(object):
         newdata = {}
         for field in data:
             newdata[field] = data[field].copy()
-               
+                    
         kwargs_by_cell = self.sort_kwargs_by_cell(kwargs)
                                
         self.q_grid = np.zeros_like(self.zeros_gridxq)
@@ -119,8 +122,8 @@ class Chemistry(object):
         # Loop over grid and solve chemistry
         for cell in xrange(self.grid.dims):
 
-            if rank != self.load_balance[cell]:
-                continue
+            #if rank != self.load_balance[cell]:
+            #    continue
 
             # Construct q vector
             q = np.zeros(len(self.grid.evolving_fields))
@@ -136,7 +139,7 @@ class Chemistry(object):
                 args = (cell, self.grid.zeros_absorbers, 
                     self.grid.zeros_absorbers2, self.grid.zeros_absorbers, 
                     data['n'][cell], t)
-                            
+                                                        
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)
             
@@ -144,7 +147,7 @@ class Chemistry(object):
             self.dqdt_grid[cell] = self.chemnet.dqdt.copy()
 
             for i, value in enumerate(self.solver.y):
-                newdata[self.grid.evolving_fields[i]][cell] = self.solver.y[i]
+                newdata[self.grid.evolving_fields[i]][cell] = self.solver.y[i]# / 1e10
         
             # Update helium if approximate treatment in use
             if self.grid.approx_helium:
@@ -157,22 +160,22 @@ class Chemistry(object):
             newdata[ion][newdata[ion] < tiny_ion] = tiny_ion
                                                                 
         # Collect results        
-        if size > 1:
-            collected_data = {}
-            for key in newdata:
-                tmp = np.zeros_like(newdata[key])
-                nothing = MPI.COMM_WORLD.Allreduce(newdata[key], tmp)
-                collected_data[key] = tmp
-                del tmp    
-                
-            newdata = collected_data
-            tmp_q = np.zeros_like(self.q_grid)
-            tmp_qdot = np.zeros_like(self.q_grid)    
-            nothing = MPI.COMM_WORLD.Allreduce(self.q_grid, tmp_q)
-            nothing = MPI.COMM_WORLD.Allreduce(self.dqdt_grid, tmp_qdot)
-                
-            self.q_grid = tmp_q
-            self.dqdt_grid = tmp_qdot
+        #if size > 1:
+        #    collected_data = {}
+        #    for key in newdata:
+        #        tmp = np.zeros_like(newdata[key])
+        #        nothing = MPI.COMM_WORLD.Allreduce(newdata[key], tmp)
+        #        collected_data[key] = tmp
+        #        del tmp    
+        #        
+        #    newdata = collected_data
+        #    tmp_q = np.zeros_like(self.q_grid)
+        #    tmp_qdot = np.zeros_like(self.q_grid)    
+        #    nothing = MPI.COMM_WORLD.Allreduce(self.q_grid, tmp_q)
+        #    nothing = MPI.COMM_WORLD.Allreduce(self.dqdt_grid, tmp_qdot)
+        #        
+        #    self.q_grid = tmp_q
+        #    self.dqdt_grid = tmp_qdot
                             
         # Convert T to ge for fun and update particle density
         #if not self.grid.isothermal:        

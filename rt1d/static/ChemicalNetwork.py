@@ -71,7 +71,7 @@ class SimpleChemicalNetwork:
             qh1, qh2, qe = (0, 1, 2)
             h1 = 0
             xHI = q[qh1]
-            xHII = q[qh2]        
+            xHII = q[qh2] 
             nHI = n_H * xHI
             nHII = n_H * xHII
                 
@@ -84,7 +84,7 @@ class SimpleChemicalNetwork:
                     xHeII = q[qhe2]
                     xHeIII = q[qhe2 + 1]
                 
-        elif 2 in self.grid.Z:    
+        elif 2 in self.grid.Z:
             qhe1, qhe2, qhe3, qe = (0, 1, 2, 3)
             he1, he2 = (0, 1)
             n_He = self.grid.element_abundances[0] * n_H
@@ -151,6 +151,9 @@ class SimpleChemicalNetwork:
             self.dqdt[-1] = phoheat * to_temp + compton \
                 - n_e * (ioncool + reccool + exccool) * to_temp \
                 - hubcool
+                
+            if 2 in self.grid.Z:
+                self.dqdt[-1] -= n_e * xHeIII * n_He * self.omega[cell]
 
         # Multispecies : dqdt[-1] += n_e * xHeIII * n_He * omega
 
@@ -159,7 +162,7 @@ class SimpleChemicalNetwork:
     def Jacobian(self, t, q, args):
         """
         Jacobian of the rate equations.
-        """    
+        """
                                         
         cell, Gamma, gamma, k_H, n, time = args        
                 

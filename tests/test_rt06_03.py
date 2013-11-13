@@ -19,7 +19,7 @@ sim.run()
 anl = rt1d.analyze.Simulation(sim.checkpoints)
 
 t, xHI = anl.CellEvolution(field='h_1')
-t, T = anl.CellEvolution(field='T')
+t, T = anl.CellEvolution(field='Tk')
 
 mp = multipanel(dims=(2, 1), panel_size=(1, 0.5))
     
@@ -34,6 +34,6 @@ mp.grid[1].set_ylim(1e2, 1e5)
     
 mp.grid[0].set_ylabel(r'$x_{\mathrm{HI}}$')
 mp.grid[1].set_ylabel(r'$T \ (\mathrm{K})$')
-mp.grid[1].set_xlabel(r'$t \ (\mathrm{yr})$')
+mp.grid[0].set_xlabel(r'$t \ (\mathrm{yr})$')
 mp.fix_ticks()
-raw_input('')
+

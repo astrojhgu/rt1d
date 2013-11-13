@@ -57,12 +57,17 @@ class StellarSource(object):
         
         self.N = len(self.spec_pars['type'])
         
+        self.tau = self.src_pars['lifetime'] * self.pf['time_units']
+        
         if self.N != 1:
             raise ValueError('No support for multi-component stellar SEDs.')
         
     def SourceOn(self, t):
-        return True    
-        
+        if t < self.tau:
+            return True    
+        else:
+            return False
+            
     def Luminosity(self, t=None):
         return self.Lbol
         #self.Q / (np.sum(self.LE / self.E / erg_per_ev))
