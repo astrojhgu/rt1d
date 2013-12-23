@@ -26,5 +26,3 @@ bh = rt1d.analyze.Source(rt1d.sources.RadiationSource(init_tabs=False,
 
 ax = bh.PlotSpectrum()
 pl.draw()
-
-raw_input('')

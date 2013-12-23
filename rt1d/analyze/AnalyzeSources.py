@@ -86,6 +86,7 @@ class Source:
         if ax is None:
             ax = pl.subplot(111)
                     
+        self.E, self.F = E, F            
         ax.loglog(E, np.array(F) * Lbol, color=color, ls=ls, 
             label=label)
         
@@ -99,7 +100,7 @@ class Source:
         if normalized:
             ax.set_ylabel(r'$L_{\nu} / L_{\mathrm{bol}}$')
         else:
-            ax.set_ylabel(r'$L_{\nu} \ (\mathrm{erg \ s^{-1}})$')
+            ax.set_ylabel(r'$L_{\nu} \ (\mathrm{erg \ s^{-1} \ \mathrm{eV}^{-1}})$')
                 
         pl.draw()
               

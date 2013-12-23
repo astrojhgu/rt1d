@@ -150,7 +150,8 @@ def BlackHoleParameters():
         "spectrum_Emax": 3e4,  
         "spectrum_EminNorm": None,
         "spectrum_EmaxNorm": None,
-        "spectrum_fsc": 1.,
+        "spectrum_fsc": 0.1,
+        "spectrum_uponly": True,
         }
         
     return pf    
@@ -168,9 +169,13 @@ def SpectrumParameters():
         "spectrum_Emax": 1e2,  
         "spectrum_EminNorm": None,
         "spectrum_EmaxNorm": None,
+        
          
         "spectrum_logN": -inf,
         "spectrum_fcol": 1.7,
+        "spectrum_fsc": 0.1,
+        "spectrum_uponly": True,
+                
         "spectrum_file": None,
         "spectrum_pars": None,
         

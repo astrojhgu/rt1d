@@ -118,12 +118,13 @@ class Cosmology:
     def OmegaMatter(self, z):
         if self.approx_highz:
             return 1.0
-        return self.OmegaMatterNow * (1.0 + z)**3 / self.EvolutionFunction(z)
+        return self.OmegaMatterNow * (1. + z)**3 / self.EvolutionFunction(z)
     
     def OmegaLambda(self, z):
         if self.approx_highz:
             return 0.0
-	    return self.OmegaLambdaNow / self.EvolutionFunction(z)
+        
+        return self.OmegaLambdaNow / self.EvolutionFunction(z)
     
     def MeanMatterDensity(self, z):
         return self.OmegaMatter(z) * self.CriticalDensity(z)

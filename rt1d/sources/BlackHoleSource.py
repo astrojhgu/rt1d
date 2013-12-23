@@ -11,13 +11,13 @@ Description:
 """
 
 import numpy as np
-from scipy.integrate import quad
+from scipy.integrate import quad, romberg
 from ..physics.Constants import *
 from .StellarSource import _Planck
 from ..util.SetDefaultParameterValues import BlackHoleParameters
 from ..physics.CrossSections import PhotoIonizationCrossSection as sigma_E
 
-sptypes = {'pl':0, 'mcd':1, 'qso':2}
+sptypes = {'pl':0, 'mcd':1, 'qso':2, 'simpl':3}
 
 class BlackHoleSource(object):
     """ Class for creation and manipulation of compact object sources. """
@@ -66,6 +66,8 @@ class BlackHoleSource(object):
         
         if 2 in self.spec_pars['type']:
             self.fcol = self.spec_pars['fcol'][self.spec_pars['type'].index('mcd')]
+        if 3 in self.spec_pars['type']:
+            self.fcol = self.spec_pars['fcol'][self.spec_pars['type'].index('simpl')]    
         
         # Parameters for the Sazonov & Ostriker AGN template
         self.Alpha = 0.24
@@ -142,6 +144,74 @@ class BlackHoleSource(object):
         """
 
         return E**self.spec_pars['alpha'][i]
+        
+    def _SIMPL(self, E, i, t):
+        '''
+        Purpose:
+        --------
+        Convolve an input spectrum with a Comptonization kernel.
+    
+        Inputs:
+        -------
+        Gamma  - Power-law index, LE ~ E**(-Gamma)
+        fsc    - Fraction of seed photons that get scattered
+                 (assumes all input photons have same probability of being scattered
+                 and that scattering is energy-independent)
+        fref   - Of the photons that impact the disk after a scattering, this is the
+                 fraction that reflect back off the disk to the observer instead of 
+                 being absorbed and thermalized (default 1)
+        uponly - False: SIMPL-2, non-rel Comptonization, up- and down-scattering
+                 True:  SIMPL-1, relativistic Comptoniztion, up-scattering only
+    
+        Outputs: (dictionary)
+        --------
+        LE - Absorbed power-law luminosity array [keV s^-1]
+        E  - Energy array [keV]
+        dE - Differential energy array [keV]
+        
+        References
+        ----------
+        Steiner et al. (2009). Thanks Greg Salvesen for the code!
+        '''
+
+
+        # Input photon distribution
+        nin = lambda E0: self._MultiColorDisk(E0, i, t) / E0
+    
+        fsc = self.spec_pars['fsc'][i]
+
+        # Output photon distribution
+        integrand = lambda E0: nin(E0) * self._GreensFunction(E0, E, i)
+                
+        nout = (1.0 - fsc) * nin(E) + fsc \
+            * quad(integrand, self.spec_pars['Emin'][i],
+                self.spec_pars['Emax'][i])[0]
+                
+        # Output spectrum
+        return nout * E
+    
+    def _GreensFunction(self, Ein, Eout, i):
+        """
+        Must perform integral transform to compute output photon distribution.
+        """
+           
+        # Careful with Gamma...
+        # In Steiner et al. 2009, Gamma is n(E) ~ E**(-Gamma),
+        # but n(E) and L(E) are different by a factor of E (see below)        
+        Gamma = -self.spec_pars['alpha'][i] + 1.0
+        
+        if self.spec_pars['uponly'][i]:
+            if Eout >= Ein:
+                return (Gamma - 1.0) * (Eout / Ein)**(-1.0 * Gamma) / Ein
+            else:
+                return 0.0
+        else:
+            if Eout >= Ein:
+                return (Gamma - 1.0) * (Gamma + 2.0) / (1.0 + 2.0 * Gamma) * \
+                    (Eout / Ein)**(-1.0 * Gamma) / Ein
+            else:
+                return (Gamma - 1.0) * (Gamma + 2.0) / (1.0 + 2.0 * Gamma) * \
+                    (Eout / Ein)**(Gamma + 1.0) / Ein
     
     def _MultiColorDisk(self, E, i, Type, t=0.0):
         """
@@ -163,6 +233,7 @@ class BlackHoleSource(object):
                     
         integrand = lambda T: (T / self.T_in)**(-11. / 3.) \
             * _Planck(E, T) / self.T_in
+            
         return quad(integrand, self.T_out, self.T_in)[0]
         
     def _QuasarTemplate(self, E, i, Type, t=0):
@@ -232,6 +303,8 @@ class BlackHoleSource(object):
             Lnu = self._MultiColorDisk(E, i, t)
         elif self.type_by_name[i] == 'qso':
             Lnu = self._QuasarTemplate(E, i, t)
+        elif self.type_by_name[i] == 'simpl':
+            Lnu = self._SIMPL(E, i, t)
         else:
             Lnu = 0.0
             
@@ -241,14 +314,19 @@ class BlackHoleSource(object):
         
         return Lnu          
             
-            
     def _NormalizeSpectrum(self, t=0.):
         norms = np.zeros(self.N)
         Lbol = self.Luminosity()
         for i in xrange(self.N):
-            integral, err = quad(self._Intensity,
-                self.spec_pars['EminNorm'][i], self.spec_pars['EmaxNorm'][i], 
-                args=(i, t,))
+            # Treat simPL spectrum special
+            if self.type_by_name[i] == 'simpl':
+                integral, err = quad(self._MultiColorDisk,
+                    self.spec_pars['EminNorm'][i], self.spec_pars['EmaxNorm'][i], 
+                    args=(i, t,))
+            else:
+                integral, err = quad(self._Intensity,
+                    self.spec_pars['EminNorm'][i], self.spec_pars['EmaxNorm'][i], 
+                    args=(i, t,))
                 
             norms[i] = self.spec_pars['fraction'][i] * Lbol / integral
             
@@ -295,25 +373,5 @@ class BlackHoleSource(object):
                     
         return np.log(M / self.M0) * (self.epsilon / (1. - self.epsilon)) * t_edd
         
-    def Comptonize(self):
-        """
-        Comptonize an input spectrum.
-        """
-        
-        pass
-        
-        #self.spec_pars['fsc']
-        
-    def NRGreen(self, E, E0, gamma):
-        """
-        Non-relativistic Green's function from Steiner et al. 2009.
-        """
-        
-        const = (gamma - 1.) * (gamma - 2.) / (1. + 2 * gamma)
-        
-        if E >= E0:
-            return const * (E / E0)**-gamma / E0
-        else:
-            return const * (E / E0)**(gamma + 1.) / E0
-        
+
         

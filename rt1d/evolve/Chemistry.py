@@ -10,6 +10,7 @@ Description:
 
 Notes: If we want to parallelize over the grid, we'll need to use different
 ODE integration routines, as scipy.integrate.ode is not re-entrant :(
+Maybe not - MPI should be OK, multiprocessing should cause the problems.
 
 """
 
