@@ -19,6 +19,8 @@ from ..physics.CrossSections import PhotoIonizationCrossSection as sigma_E
 
 sptypes = {'pl':0, 'mcd':1, 'qso':2, 'simpl':3}
 
+tiny_number = 1e-12
+
 class BlackHoleSource(object):
     """ Class for creation and manipulation of compact object sources. """
     def __init__(self, pf, src_pars, spec_pars):
@@ -180,12 +182,12 @@ class BlackHoleSource(object):
     
         fsc = self.spec_pars['fsc'][i]
 
-        # Output photon distribution
-        integrand = lambda E0: nin(E0) * self._GreensFunction(E0, E, i)
-                
+        # Output photon distribution - integrate in log-space         
+        integrand = lambda E0: nin(10**E0) * self._GreensFunction(10**E0, E, i) * 10**E0
+
         nout = (1.0 - fsc) * nin(E) + fsc \
-            * quad(integrand, self.spec_pars['Emin'][i],
-                self.spec_pars['Emax'][i])[0]
+            * quad(integrand, np.log10(self.spec_pars['Emin'][i]),
+                np.log10(self.spec_pars['Emax'][i]))[0] * np.log(10.)
                 
         # Output spectrum
         return nout * E
@@ -197,7 +199,7 @@ class BlackHoleSource(object):
            
         # Careful with Gamma...
         # In Steiner et al. 2009, Gamma is n(E) ~ E**(-Gamma),
-        # but n(E) and L(E) are different by a factor of E (see below)        
+        # but n(E) and L(E) are different by a factor of E (see below)
         Gamma = -self.spec_pars['alpha'][i] + 1.0
         
         if self.spec_pars['uponly'][i]:
