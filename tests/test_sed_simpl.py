@@ -16,8 +16,8 @@ import numpy as np
 
 rmax = 1e2
 mass = 10.
-f_scatter = [0.01, 0.1, 0.5, 1.]
-gamma = [-2.5, -1.5]
+f_scatter = [0.1, 0.5]
+gamma = [-2.5]
 Emin = 10
 
 simpl = \
@@ -28,9 +28,9 @@ simpl = \
     'spectrum_type': 'simpl',
     'spectrum_Emin':Emin,
     'spectrum_Emax':5e4,
-    'spectrum_alpha': -1.5,
-    'spectrum_fsc': 0.5,
-    'spectrum_uponly': True,
+    'spectrum_alpha': -0.5,
+    'spectrum_fsc': 1.0,
+    'spectrum_logN': 22.,
 }
 
 mcd = \
@@ -68,6 +68,7 @@ for i, fsc in enumerate(f_scatter):
 ax.legend(loc='lower left')
 ax.set_ylim(1e-8, 1e-3)
 ax.set_xlim(1e2, 6e4)
+ax.fill_betweenx([1e-8, 1e-3], 5e2, 8e3, alpha=0.5, color='gray')
 pl.draw()
 
 pl.savefig('simpl_fsc_gamma.png')

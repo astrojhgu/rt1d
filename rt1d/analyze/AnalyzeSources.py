@@ -57,7 +57,7 @@ class Source:
         return integrate(integrand, self.rs.EminNorm, self.rs.EmaxNorm)[0]
                 
     def PlotSpectrum(self, color='k', components=True, t=0, normalized=True,
-        bins=100, ax=None, label=None, ls='-'):
+        bins=100, ax=None, label=None, ls='-', xunit='eV'):
         
         if not normalized:
             Lbol = self.rs.BolometricLuminosity(t)
@@ -86,8 +86,15 @@ class Source:
         if ax is None:
             ax = pl.subplot(111)
                     
+        if xunit == 'keV':
+            E = np.array(E) / 1e3
+            F = np.array(F) * 1e3
+        else:
+            E = np.array(E)
+            F = np.array(F)    
+                    
         self.E, self.F = E, F            
-        ax.loglog(E, np.array(F) * Lbol, color=color, ls=ls, 
+        ax.loglog(E, F * Lbol, color=color, ls=ls, 
             label=label)
         
         if components and self.rs.N > 1:
@@ -95,12 +102,15 @@ class Source:
                 ax.loglog(EE[i], np.array(FF[i]) * Lbol, color=color, 
                     ls=allls[i+1])
         
-        ax.set_xlabel(r'$h\nu \ (\mathrm{eV})$')
+        if xunit == 'keV':
+            ax.set_xlabel(r'$h\nu \ (\mathrm{keV})$')
+        else:
+            ax.set_xlabel(r'$h\nu \ (\mathrm{eV})$')
         
         if normalized:
             ax.set_ylabel(r'$L_{\nu} / L_{\mathrm{bol}}$')
         else:
-            ax.set_ylabel(r'$L_{\nu} \ (\mathrm{erg \ s^{-1} \ \mathrm{eV}^{-1}})$')
+            ax.set_ylabel(r'$L_{\nu} \ (\mathrm{erg \ s^{-1} \ \mathrm{keV}^{-1}})$')
                 
         pl.draw()
               

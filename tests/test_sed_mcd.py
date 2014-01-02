@@ -16,9 +16,11 @@ import pylab as pl
 bh_pars = \
 {
     'source_type': 'bh', 
+    'source_mass': 10.,
+    'source_max': 1e3,
     'spectrum_type': 'mcd',
-    'spectrum_Emin':50.,
-    'spectrum_Emax':1e3,
+    'spectrum_Emin':10.,
+    'spectrum_Emax':1e4,
 }
 
 bh = rt1d.analyze.Source(rt1d.sources.RadiationSource(init_tabs=False, 

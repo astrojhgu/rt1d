@@ -344,7 +344,7 @@ class RadiationSource(object):
             # Currently only BHs have a time-varying bolometric luminosity
             return self.BolometricLuminosity(t) * self.LE[bin] / self.E[bin] / erg_per_ev          
               
-    def _Intensity(self, E, i, Type, t=0):
+    def _Intensity(self, E, i, Type, t=0, absorb=True):
         """
         Return quantity *proportional* to fraction of bolometric luminosity emitted
         at photon energy E.  Normalization handled separately.
@@ -353,7 +353,7 @@ class RadiationSource(object):
         Lnu = self.src._Intensity(E, i, Type, t=t)
         
         # Apply absorbing column
-        if self.SpectrumPars['logN'][i] > 0:
+        if self.SpectrumPars['logN'][i] > 0 and absorb:
             return Lnu * np.exp(-10.**self.SpectrumPars['logN'][i] \
                 * (sigma_E(E, 0) + y * sigma_E(E, 1)))   
         else:

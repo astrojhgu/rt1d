@@ -183,16 +183,16 @@ class BlackHoleSource(object):
         fsc = self.spec_pars['fsc'][i]
 
         # Output photon distribution - integrate in log-space         
-        integrand = lambda E0: nin(10**E0) * self._GreensFunction(10**E0, E, i) * 10**E0
+        integrand = lambda E0: nin(10**E0) * self._GreensFunctionSIMPL(10**E0, E, i) * 10**E0
 
         nout = (1.0 - fsc) * nin(E) + fsc \
             * quad(integrand, np.log10(self.spec_pars['Emin'][i]),
                 np.log10(self.spec_pars['Emax'][i]))[0] * np.log(10.)
-                
+                                
         # Output spectrum
         return nout * E
     
-    def _GreensFunction(self, Ein, Eout, i):
+    def _GreensFunctionSIMPL(self, Ein, Eout, i):
         """
         Must perform integral transform to compute output photon distribution.
         """
@@ -293,7 +293,7 @@ class BlackHoleSource(object):
         else:
             return False
             
-    def _Intensity(self, E, i=0, t=0):
+    def _Intensity(self, E, i=0, t=0, absorb=True):
         """
         Return quantity *proportional* to fraction of bolometric luminosity 
         emitted at photon energy E.  Normalization handled separately.
@@ -310,7 +310,7 @@ class BlackHoleSource(object):
         else:
             Lnu = 0.0
             
-        if self.spec_pars['logN'][i] > 0:
+        if self.spec_pars['logN'][i] > 0 and absorb:
             Lnu *= np.exp(-10.**self.spec_pars['logN'][i] \
                 * (sigma_E(E, 0) + y * sigma_E(E, 1)))  
         
@@ -324,11 +324,11 @@ class BlackHoleSource(object):
             if self.type_by_name[i] == 'simpl':
                 integral, err = quad(self._MultiColorDisk,
                     self.spec_pars['EminNorm'][i], self.spec_pars['EmaxNorm'][i], 
-                    args=(i, t,))
+                    args=(i, t, False))
             else:
                 integral, err = quad(self._Intensity,
                     self.spec_pars['EminNorm'][i], self.spec_pars['EmaxNorm'][i], 
-                    args=(i, t,))
+                    args=(i, t, False))
                 
             norms[i] = self.spec_pars['fraction'][i] * Lbol / integral
             
