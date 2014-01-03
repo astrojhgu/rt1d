@@ -23,8 +23,8 @@ bh_pars = \
     'spectrum_Emax':1e4,
 }
 
-bh = rt1d.analyze.Source(rt1d.sources.RadiationSource(init_tabs=False, 
-    **bh_pars))
+src = rt1d.sources.RadiationSource(init_tabs=False, **bh_pars)
+bh = rt1d.analyze.Source(src)
 
 ax = bh.PlotSpectrum()
 pl.draw()

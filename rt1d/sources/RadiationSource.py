@@ -10,8 +10,8 @@ Description: Initialize a radiation source.
 
 """
 
-import h5py, re
 import numpy as np
+import h5py, re, os
 from scipy.integrate import quad
 from ..physics.Constants import *
 from .SimpleSource import SimpleSource
@@ -440,3 +440,42 @@ class RadiationSource(object):
                         
         return L / Q / erg_per_ev, Q            
 
+    def dump(self, fn, E, clobber=False):
+        """
+        Write SED out to file.
+        
+        Parameters
+        ----------
+        fn : str
+            Filename, suffix determines type. If 'hdf5' or 'h5' will write 
+            to HDF5 file, otherwise, to ASCII.
+        E : np.ndarray
+            Array of photon energies at which to sample SED. Units = eV.
+        
+        """
+
+        if os.path.exists(fn) and (clobber == False):
+            raise OSError('%s exists!')
+
+        if re.search('.hdf5', fn) or re.search('.h5', fn):
+            out = 'hdf5'
+        else:
+            out = 'ascii'
+            
+        LE = map(self.Spectrum, E)    
+            
+        if out == 'hdf5':
+            f = h5py.File(fn, 'w')    
+            f.create_dataset('E', data=E)
+            f.create_dataset('LE', data=LE)
+            f.close()
+        else:
+            f = open(fn, 'w')
+            print >> f, "# E     LE"
+            for i, nrg in enumerate(E):
+                print >> f, "%.8e %.8e" % (nrg, LE[i])
+            f.close()    
+    
+                        
+        
+        
