@@ -14,6 +14,7 @@ import numpy as np
 import pylab as pl
 from ..physics.Constants import *
 from scipy.integrate import quad as integrate
+from ..physics.CrossSections import PhotoIonizationCrossSection as sigma_E
 
 allls = ['-', '--', '-.', ':']
 small_number = 1e-5
@@ -55,7 +56,33 @@ class Source:
         integrand = lambda E: self.rs.Spectrum(E) * E
         
         return integrate(integrand, self.rs.EminNorm, self.rs.EmaxNorm)[0]
-                
+        
+    def EscapeFraction(self, i=0, logN=0.0):
+        if logN <= 0.0:
+            return 1.0
+                    
+        integrand1 = lambda E: self.rs.Spectrum(E) * sigma_E(E) \
+            * np.exp(-10.**logN \
+            * (sigma_E(E, 0) + y * sigma_E(E, 1))) / E
+        integrand2 = lambda E: self.rs.Spectrum(E) * sigma_E(E) / E    
+        
+        fesc_theory = integrate(integrand1, self.rs.spec_pars['Emin'][i], 
+            self.rs.spec_pars['Emax'][i])[0] / integrate(integrand2, 
+                self.rs.spec_pars['Emin'][i], 
+                self.rs.spec_pars['Emax'][i])[0]
+        
+        return fesc_theory, self.SpecificEscapeFraction(E=E_LL, i=i, logN=logN)
+    
+    def SpecificEscapeFraction(self, E, i=0, logN=0.0):
+        if logN <= 0.0:
+            return 1.0
+            
+        if E < E_LL:
+            return 1.0    
+    
+        return np.exp(-10.**logN \
+            * (sigma_E(E, 0) + y * sigma_E(E, 1)))
+                    
     def PlotSpectrum(self, color='k', components=True, t=0, normalized=True,
         bins=100, ax=None, label=None, ls='-', xunit='eV'):
         

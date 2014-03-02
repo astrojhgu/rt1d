@@ -19,10 +19,10 @@ sim.run()
 
 anl = rt1d.analyze.Simulation(sim.checkpoints)
 
-ax = anl.TemperatureProfile(t = [10, 100, 500])
+ax = anl.TemperatureProfile(t=[10, 100, 500])
 raw_input('<enter> for radial profiles of xHI & xHII')
 pl.close()
 
-ax = anl.IonizationProfile(t = [10, 100, 500])
+ax = anl.IonizationProfile(t=[10, 100, 500])
 raw_input('')
 

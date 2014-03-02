@@ -16,6 +16,7 @@ Notes:
 """
 
 import numpy as np
+from scipy.integrate import quad
 from .Constants import c, G, km_per_mpc, m_H, m_He, sigma_SB
 
 class Cosmology:
@@ -161,16 +162,16 @@ class Cosmology:
         Return comoving distance between redshift z0 and z, z0 < z.
         """
         
-        if self.highzapprox:
+        if self.approx_highz:
             return 2. * c * ((1. + z0)**-0.5 - (1. + z)**-0.5) \
                 / self.HubbleParameterNow / self.sqrtOmegaMatterNow
                 
         # Otherwise, do the integral - normalize to H0 for numerical reasons
         integrand = lambda z: self.HubbleParameterNow / self.HubbleParameter(z)
-        return c * romberg(integrand, z0, z) / self.HubbleParameterNow        
+        return c * quad(integrand, z0, z)[0] / self.HubbleParameterNow        
             
     def ProperRadialDistance(self, z0, z):
-        return self.ComovingDistance(z0, z) / (1. + z)    
+        return self.ComovingRadialDistance(z0, z) / (1. + z)    
         
     def ComovingLineElement(self, z):
         """

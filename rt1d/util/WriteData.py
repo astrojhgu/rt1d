@@ -256,7 +256,7 @@ class CheckPoints:
                 pass
         
         for dd in self.data.keys():
-            grp = f.create_group('dd%s' % str(dd).zfill(4))
+            grp = f.create_group(dd)
             grp.attrs.create('is_data', data=True)
             
             for key in self.data[dd]:

@@ -112,12 +112,12 @@ class IntegralTable:
         # corresponding indices
         self.TableProperties()
         
-        self.sigma_th = {}
+        self.E_th = {}
         for absorber in self.grid.absorbers:
-            self.sigma_th[absorber] = self.grid.ioniz_thresholds[absorber]
+            self.E_th[absorber] = self.grid.ioniz_thresholds[absorber]
         
         if self.grid.approx_helium:
-            self.sigma_th['he_1'] = self.grid.ioniz_thresholds['he_1']
+            self.E_th['he_1'] = self.grid.ioniz_thresholds['he_1']
         
     def TableBoundsAuto(self, xmin=1e-5):
         """
@@ -334,7 +334,7 @@ class IntegralTable:
         if self.src.continuous:
             integrand = lambda E: self.PartialOpticalDepth(E, N, absorber)                           
             result = quad(integrand, 
-                max(self.sigma_th[absorber], self.src.Emin),
+                max(self.E_th[absorber], self.src.Emin),
                 self.src.Emax)[0]
         else:                                                                                                                                                                                
             result = np.sum(self.PartialOpticalDepth(self.src.E, N, species)[self.src.E > E_th[species]])
@@ -410,13 +410,13 @@ class IntegralTable:
             integrand = lambda E: self.grid.bf_cross_sections[absorber](E) * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E \
-                / self.sigma_th[absorber]
+                / self.E_th[absorber]
                 
-        integral = quad(integrand, max(self.sigma_th[absorber], self.src.Emin), 
+        integral = quad(integrand, max(self.E_th[absorber], self.src.Emin), 
             self.src.Emax, limit=1000)[0] / erg_per_ev    
             
         if not self.pf['photon_conserving']:
-            integral *= self.sigma_th[absorber]
+            integral *= self.E_th[absorber]
             
         return integral 
         
@@ -438,13 +438,13 @@ class IntegralTable:
             integrand = lambda E: self.grid.bf_cross_sections[absorber](E) * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) \
-                / self.sigma_th[absorber]
+                / self.E_th[absorber]
         
-        integral = quad(integrand, max(self.sigma_th[absorber], self.src.Emin), 
+        integral = quad(integrand, max(self.E_th[absorber], self.src.Emin), 
             self.src.Emax, limit=1000)[0]
             
         if not self.pf['photon_conserving']:
-            integral *= self.sigma_th[absorber]
+            integral *= self.E_th[absorber]
         
         return integral
                               
@@ -453,7 +453,7 @@ class IntegralTable:
         Equation 2.20 in the manual.
         """        
         
-        Ei = self.sigma_th[absorber]
+        Ei = self.E_th[absorber]
         
         # Otherwise, continuous spectrum                
         if self.pf['photon_conserving']:
@@ -467,7 +467,7 @@ class IntegralTable:
                 PhotoIonizationCrossSection(E, absorber) * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E \
-                / self.sigma_th[absorber]    
+                / self.E_th[absorber]    
         
         c = self.E >= max(Ei, self.src.Emin)
         c &= self.E <= self.src.Emax                       
@@ -476,7 +476,7 @@ class IntegralTable:
         integral = trapz(samples, self.E[c]) / erg_per_ev         
         
         if not self.pf['photon_conserving']:
-            integral *= self.sigma_th[absorber]
+            integral *= self.E_th[absorber]
             
         return integral
                 
@@ -485,7 +485,7 @@ class IntegralTable:
         Equation 2.21 in the manual.
         """        
         
-        Ei = self.sigma_th[absorber]
+        Ei = self.E_th[absorber]
         
         # Otherwise, continuous spectrum    
         if self.pf['photon_conserving']:
@@ -499,7 +499,7 @@ class IntegralTable:
                 PhotoIonizationCrossSection(E, species) * \
                 self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) \
-                / self.sigma_th[absorber]
+                / self.E_th[absorber]
         
         c = self.E >= max(Ei, self.src.Emin)
         c &= self.E <= self.src.Emax
@@ -508,7 +508,7 @@ class IntegralTable:
         integral = trapz(samples, self.E[c])  
         
         if not self.pf['photon_conserving']:
-            integral *= self.sigma_th[absorber]
+            integral *= self.E_th[absorber]
         
         return integral
             
@@ -517,7 +517,7 @@ class IntegralTable:
         Equation 2.18 in the manual.
         """        
         
-        Ej = self.sigma_th[donor]
+        Ej = self.E_th[donor]
         
         # Otherwise, continuous spectrum                
         if self.pf['photon_conserving']:
@@ -532,7 +532,7 @@ class IntegralTable:
         #        PhotoIonizationCrossSection(E, species) * \
         #        self.src.Spectrum(E, t = t) * \
         #        np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / E \
-        #        / self.sigma_th[absorber]
+        #        / self.E_th[absorber]
             
         c = self.E >= max(Ej, self.src.Emin)
         c &= self.E <= self.src.Emax
@@ -541,7 +541,7 @@ class IntegralTable:
         integral = trapz(samples, self.E[c]) / erg_per_ev
             
         if not self.pf['photon_conserving']:
-            integral *= self.sigma_th[absorber]
+            integral *= self.E_th[absorber]
                                         
         return integral
                               
@@ -550,7 +550,7 @@ class IntegralTable:
         Equation 2.19 in the manual.
         """        
         
-        Ej = self.sigma_th[donor]
+        Ej = self.E_th[donor]
         
         # Otherwise, continuous spectrum    
         if self.pf['photon_conserving']:
@@ -562,7 +562,7 @@ class IntegralTable:
         #    integrand = lambda E: PhotoIonizationCrossSection(E, species) * \
         #        self.src.Spectrum(E, t = t) * \
         #        np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
-        #        / self.sigma_th[absorber]
+        #        / self.E_th[absorber]
                 
         c = self.E >= max(Ej, self.src.Emin)
         c &= self.E <= self.src.Emax
@@ -571,7 +571,7 @@ class IntegralTable:
         integral = trapz(samples, self.E[c])
             
         if not self.pf['photon_conserving']:
-            integral *= self.sigma_th[absorber]    
+            integral *= self.E_th[absorber]    
                 
         return integral
             

@@ -22,9 +22,17 @@ sim = rt1d.run.Simulation(problem_type=2, approx_lya=0, spectrum_Emin=E_LyA,
     length_units=10.*cm_per_kpc, grid_cells=128)
 sim.run()
 
+cosm = sim.grid.cosm
+
 anl = rt1d.analyze.Simulation(sim.checkpoints)
 
 ax = anl.TemperatureProfile(t=[1,3])
+ax.plot([0, 10], [2.725 * (1. + anl.data['dd0003']['redshift'])]*2, 
+    color='b', ls=':', label=r'$T_{\gamma}$')  
+ax.plot([0, 10], [cosm.Tgas(anl.data['dd0003']['redshift'])]*2, 
+    color='b', ls='--', label=r'$T_{\mathrm{ad}}$')      
+ax.legend(loc='upper right', frameon=False)
+pl.draw()
 raw_input('<enter> for radial profiles of xHI & xHII')
 pl.close()
 

@@ -48,7 +48,7 @@ class Simulation:
                 if key == 'parameters':
                     continue
                 
-                dd = int(key.strip('dd'))
+                dd = key#int(key.strip('dd'))
                 self.data[dd] = {}
                 for element in f[key]:
                     self.data[dd][element] = f[key][element].value    
@@ -60,9 +60,12 @@ class Simulation:
                 start_radius=self.pf['start_radius'],
                 approx_Salpha=self.pf['approx_Salpha'],
                 approx_lya=self.pf['approx_lya'])
-                
+                            
             self.grid.set_ics(self.data['dd0000'])
-            self.grid.initialize(self.pf)
+            self.grid.set_chemistry(Z=self.pf['Z'], 
+                abundance=self.pf['abundance'], 
+                approx_helium=self.pf['approx_helium'])
+            self.grid.set_density(self.data['dd0000']['rho'])
         
         # Read contents from CheckPoints class instance            
         else:
@@ -73,17 +76,26 @@ class Simulation:
             
         self.rs = rs
         
-    def EmergentSpectrum(self, t, cell=-1, norm=False):
+    def EmergentSpectrum(self, t, cell=-1, norm=False, logE=False):
         """
         Compute emergent spectrum at time t (Myr) and given cell in grid. By
         default, cell=-1, i.e., compute the spectrum that emerges from the grid.
         If norm=True, do not apply geometrical dilution.
+        
+        Returns
+        -------
+        E, Fin, Fout
+        
         """        
         
         if not hasattr(self, 'rs'):
             raise ValueError('RadiationSource class instance required.')
             
-        E = np.linspace(self.rs.Emin, self.rs.Emax)
+        if logE:
+            E = np.logspace(np.log10(self.rs.Emin), np.log10(self.rs.Emax))
+        else:
+            E = np.linspace(self.rs.Emin, self.rs.Emax)
+        
         F = np.array(map(self.rs.Spectrum, E))
         
         for dd in self.data: 
@@ -97,6 +109,8 @@ class Simulation:
                 Ntot[absorber] = N[absorber][cell]
             
             tau = self.rs.tab.SpecificOpticalDepth(E, Ntot)
+            
+            break
         
         out = F * np.exp(-tau)
         if not norm:
@@ -125,12 +139,12 @@ class Simulation:
             self.Qdot = self.pf['source_qdot']
             self.alpha_HII = 2.6e-13 * (T / 1.e4)**-0.85
             self.trec = 1. / self.alpha_HII / self.data['dd0000']['h_1'][0] / n_H # s
-            self.rs = (3. * self.Qdot \
+            self.rstrom = (3. * self.Qdot \
                     / 4. / np.pi / self.alpha_HII / n_H**2)**(1. / 3.)  # cm
         else:
             raise NotImplementedError('')
         
-        return self.rs * (1. - np.exp(-t / self.trec))**(1. / 3.) \
+        return self.rstrom * (1. - np.exp(-t / self.trec))**(1. / 3.) \
             + self.pf['start_radius']
         
     def LocateIonizationFront(self, dd, species = 0):
@@ -143,7 +157,7 @@ class Simulation:
         else:
             return np.interp(0.5, self.data[dd]['he_1'], self.grid.r_mid)
         
-    def ComputeIonizationFrontEvolution(self, T0=None):
+    def ComputeIonizationFrontEvolution(self, T0=None, xmin=0.1, xmax=0.9):
         """
         Find the position of the I-front at all times, and compute value of 
         analytic solution.
@@ -152,6 +166,7 @@ class Simulation:
         # First locate I-front for all data dumps and compute analytic solution
         self.t = []
         self.rIF = []
+        self.drIF, self.r1_IF, self.r2_IF = [], [], []        
         self.ranl = []
         for i, dd in enumerate(self.data.keys()):
             if dd == 'dd0000':
@@ -161,11 +176,20 @@ class Simulation:
             self.rIF.append(self.LocateIonizationFront(dd) / cm_per_kpc)
             self.ranl.append(self.StromgrenSphere(self.data[dd]['time'], 
                 T0=T0) / cm_per_kpc)
+            
+            x1 = np.interp(1.-xmax, self.data[dd]['h_1'], self.grid.r_mid)
+            x2 = np.interp(1.-xmin, self.data[dd]['h_1'], self.grid.r_mid)
+            self.drIF.append(x2-x1)
+            self.r1_IF.append(x1)
+            self.r2_IF.append(x2)
                 
         order = np.argsort(self.t)
         self.t = np.array(self.t)[order]
         self.rIF = np.array(self.rIF)[order]
         self.ranl = np.array(self.ranl)[order]
+        self.drIF = np.array(self.drIF)[order]        
+        self.r1_IF = np.array(self.r1_IF)[order]
+        self.r2_IF = np.array(self.r2_IF)[order]
                 
     def PlotIonizationFrontEvolution(self, mp=None, anl=True, T0=None, 
         color='k', ls='--', label=None, plot_error=True, plot_solution=True):
@@ -215,7 +239,8 @@ class Simulation:
             
     def IonizationProfile(self, species='h', t=[1, 10, 100], color='k', 
         annotate=False, xscale='linear', yscale='log', ax=None,
-        normx=False, marker=None, s=50, facecolors=None):
+        normx=False, marker=None, s=50, facecolors=None,
+        iononly=False, ls=None):
         """
         Plot radial profiles of species fraction (for H or He) at times t (Myr).
         """      
@@ -245,10 +270,19 @@ class Simulation:
                 lab = labels
             
             for i, field in enumerate(fields):
+                
+                if iononly and field in self.grid.ions:
+                    continue
+                
+                if ls is None:
+                    lss = linestyles[i]
+                else:
+                    lss = ls
+                
                 if marker is None:
                     ax.plot(self.grid.r_mid / cm_per_kpc,
-                        self.data[dd][field], ls = linestyles[i], 
-                        color=color, label = lab[i])
+                        self.data[dd][field], ls=lss, 
+                        color=color, label=lab[i])
                 else:
                     ax.scatter(self.grid.r_mid / cm_per_kpc,
                         self.data[dd][field], marker=marker, s=s, 
@@ -257,12 +291,16 @@ class Simulation:
         ax.set_xscale(xscale)
         ax.set_yscale(yscale)    
         ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
-        ax.set_ylabel(r'Species Fraction')
+        
+        if iononly:
+            ax.set_ylabel(r'Ionized Fraction$')
+        else:    
+            ax.set_ylabel(r'Species Fraction')
         ax.set_ylim(1e-5, 1.5)
         
         if annotate:
-            ax.legend(loc = 'lower right', ncol = len(fields), 
-                frameon = False)
+            ax.legend(loc = 'lower right', ncol=len(fields), 
+                frameon=False)
 
         pl.draw()   
         
@@ -331,6 +369,8 @@ class Simulation:
         Plot radial profiles of temperature at times t (Myr).
         """
         
+        hadax = False if ax is None else True
+        
         if ax is None:
             ax = pl.subplot(111)
         
@@ -366,11 +406,12 @@ class Simulation:
                     label=lab, marker=marker, s=s,
                     facecolors=facecolors)
         
-        ax.set_xscale(xscale)
-        ax.set_yscale(yscale)
-        ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
-        ax.set_ylabel(r'$\delta T_b \ (\mathrm{mK})$')
-        ax.set_ylim(dTb.min() - (dTb.min() % 5), dTb.max() + (5 - dTb.max() % 5))
+        if not hadax:
+            ax.set_xscale(xscale)
+            ax.set_yscale(yscale)
+            ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
+            ax.set_ylabel(r'$\delta T_b \ (\mathrm{mK})$')
+            ax.set_ylim(dTb.min() - (dTb.min() % 5), dTb.max() + (5 - dTb.max() % 5))
         pl.draw()
         
         return ax

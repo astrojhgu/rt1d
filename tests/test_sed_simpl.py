@@ -71,7 +71,3 @@ ax.set_xlim(1e2, 6e4)
 ax.fill_betweenx([1e-8, 1e-3], 5e2, 8e3, alpha=0.5, color='gray')
 pl.draw()
 
-pl.savefig('simpl_fsc_gamma.png')
-pl.savefig('simpl_fsc_gamma.eps')
-
-

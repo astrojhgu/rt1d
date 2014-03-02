@@ -38,7 +38,7 @@ def PhotoIonizationCrossSection(E, species=0):
     
     References
     ----------
-    Verner, D.A., Ferland, G.J., and Korista, K.T., ApJ, 465, 487
+    Verner, D.A., Ferland, G.J., Korista, K.T., and Yaklovlev, D.G., ApJ, 465, 487
     
     """
     

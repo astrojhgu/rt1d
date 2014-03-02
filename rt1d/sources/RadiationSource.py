@@ -24,7 +24,7 @@ from ..static.InterpolationTables import LookupTable
 from ..util import parse_kwargs, sort, evolve, readtab, Gauss1D, boxcar
 from ..physics.CrossSections import PhotoIonizationCrossSection as sigma_E
 
-np.seterr(all = 'ignore')   # exp overflow occurs when integrating BB
+np.seterr(all='ignore')   # exp overflow occurs when integrating BB
                             # will return 0 as it should for x large
 
 class RadiationSource(object):
@@ -48,8 +48,8 @@ class RadiationSource(object):
         #self._load_spectrum()        
             
         # Create Source/SpectrumPars attributes
-        self.SourcePars = sort(self.pf, prefix='source', make_list=False)        
-        self.SpectrumPars = sort(self.pf, prefix='spectrum')
+        self.SourcePars = self.src_pars = sort(self.pf, prefix='source', make_list=False)        
+        self.SpectrumPars = self.spec_pars = sort(self.pf, prefix='spectrum')
         
         # Correct emission limits if none were provided
         self.Emin = min(self.SpectrumPars['Emin'])
@@ -333,7 +333,7 @@ class RadiationSource(object):
                     
         return self._Heat_bar_all
                                 
-    def IonizingPhotonLuminosity(self, t = 0, bin = None):
+    def IonizingPhotonLuminosity(self, t=0, bin=None):
         """
         Return Qdot (photons / s) for this source at energy E.
         """
@@ -476,6 +476,21 @@ class RadiationSource(object):
                 print >> f, "%.8e %.8e" % (nrg, LE[i])
             f.close()    
     
+        print "Wrote %s." % fn    
+    
+    def sed_name(self, i=0):
+        """
+        Return name of output file based on SED properties.
+        """
+            
+        name = '%s_logM_%i_Gamma_%g_fsc_%g_logE_%.2g-%.2g' % \
+            (self.SpectrumPars['type'][i], np.log10(self.src.M0), 
+             self.src.spec_pars['alpha'][i], 
+             self.src.spec_pars['fsc'][i], self.logEmin, self.logEmax)
+
+        return name
+        
+        
                         
         
         

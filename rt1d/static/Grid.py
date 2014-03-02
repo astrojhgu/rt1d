@@ -319,6 +319,9 @@ class Grid(object):
             self._cosm = Cosmology()
         return self._cosm            
                 
+    def initialize(self, data):
+        self.set_chemistry()            
+                
     def set_physics(self, isothermal=False, compton_scattering=False,
         secondary_ionization=0, expansion=False, recombination='B'):
         self._isothermal = isothermal
@@ -414,11 +417,12 @@ class Grid(object):
                 self.evolving_fields.append('ge')
             else:    
                 self.evolving_fields.append('Tk')
-            
-        # Create blank data fields
-        self.data = {}
-        for field in self.tracked_fields:
-            self.data[field] = np.zeros(self.dims)
+
+        # Create blank data fields    
+        if not hasattr(self, 'data'):            
+            self.data = {}
+            for field in self.tracked_fields:
+                self.data[field] = np.zeros(self.dims)
             
         # Read abundances from chianti
         if type(abundance) is str and have_chianti:
@@ -597,7 +601,7 @@ class Grid(object):
                 self.data[key] = data[key]
                 continue
                 
-            self.data[key] = data[key].copy()    
+            self.data[key] = data[key].copy()
     
     def make_clump(self, position = None, radius = None, overdensity = None,
         temperature = None, ionization = None, profile = None):

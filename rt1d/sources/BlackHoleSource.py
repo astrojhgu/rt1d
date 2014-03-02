@@ -17,7 +17,7 @@ from .StellarSource import _Planck
 from ..util.SetDefaultParameterValues import BlackHoleParameters
 from ..physics.CrossSections import PhotoIonizationCrossSection as sigma_E
 
-sptypes = {'pl':0, 'mcd':1, 'qso':2, 'simpl':3}
+sptypes = {'pl':0, 'mcd':1, 'qso':2, 'simpl':3, 'zebra': 4}
 
 tiny_number = 1e-12
 
@@ -66,10 +66,12 @@ class BlackHoleSource(object):
         
         self.disk_history = {}
         
-        if 2 in self.spec_pars['type']:
-            self.fcol = self.spec_pars['fcol'][self.spec_pars['type'].index('mcd')]
-        if 3 in self.spec_pars['type']:
-            self.fcol = self.spec_pars['fcol'][self.spec_pars['type'].index('simpl')]    
+        #if 'mcd' in self.spec_pars['type']:
+        #    self.fcol = self.spec_pars['fcol'][self.spec_pars['type'].index('mcd')]
+        #if 'simpl' in self.spec_pars['type']:
+        #    self.fcol = self.spec_pars['fcol'][self.spec_pars['type'].index('simpl')]    
+        if 'zebra' in self.spec_pars['type']:
+            self.T = self.src_pars['temperature']#[self.spec_pars['type'].index('zebra')]
         
         # Parameters for the Sazonov & Ostriker AGN template
         self.Alpha = 0.24
@@ -176,9 +178,11 @@ class BlackHoleSource(object):
         Steiner et al. (2009). Thanks Greg Salvesen for the code!
         '''
 
-
         # Input photon distribution
-        nin = lambda E0: self._MultiColorDisk(E0, i, t) / E0
+        if self.type_by_name[i] == 'zebra':
+            nin = lambda E0: _Planck(E0, self.T) / E0
+        else:
+            nin = lambda E0: self._MultiColorDisk(E0, i, t) / E0
     
         fsc = self.spec_pars['fsc'][i]
 
@@ -307,6 +311,8 @@ class BlackHoleSource(object):
             Lnu = self._QuasarTemplate(E, i, t)
         elif self.type_by_name[i] == 'simpl':
             Lnu = self._SIMPL(E, i, t)
+        elif self.type_by_name[i] == 'zebra':
+            Lnu = self._SIMPL(E, i, t)            
         else:
             Lnu = 0.0
             

@@ -37,9 +37,9 @@ class RadiationField:
         if self.all_diffuse:
             return
         
-        self.sigma_th = {}
+        self.E_th = {}
         for absorber in self.grid.absorbers:
-            self.sigma_th[absorber] = self.grid.ioniz_thresholds[absorber]
+            self.E_th[absorber] = self.grid.ioniz_thresholds[absorber]
         
         # Array of cross-sections to match grid size 
         self.sigma = []
@@ -335,7 +335,7 @@ class RadiationField:
         Gamma_E = np.zeros([self.grid.dims, self.src.Nfreq])
         for j, E in enumerate(self.src.E):
             
-            if E < self.sigma_th[absorber]:
+            if E < self.E_th[absorber]:
                 continue    
             
             # Optical depth of cells (at this photon energy)                                                           
@@ -355,7 +355,7 @@ class RadiationField:
             
             # Total energy deposition rate per atom i via photo-electrons 
             # due to ionizations by *this* energy group. 
-            ee = Gamma_E[...,j] * (E - self.sigma_th[absorber]) \
+            ee = Gamma_E[...,j] * (E - self.E_th[absorber]) \
                * erg_per_ev
             
             k_H[...,i] += ee * fheat
@@ -369,8 +369,8 @@ class RadiationField:
             
                 # If these photo-electrons don't have enough 
                 # energy to ionize species k, continue    
-                if (E - self.sigma_th[absorber]) < \
-                    self.sigma_th[otherabsorber]:
+                if (E - self.E_th[absorber]) < \
+                    self.E_th[otherabsorber]:
                     continue    
                 
                 fion = self.esec.DepositionFraction(xHII=data['h_2'], 
@@ -378,7 +378,7 @@ class RadiationField:
 
                 # (This k) = i from paper, and (this i) = j from paper
                 gamma[...,k,i] += ee * fion \
-                    / (self.sigma_th[otherabsorber] * erg_per_ev)
+                    / (self.E_th[otherabsorber] * erg_per_ev)
                                                                            
         # Total photo-ionization tally
         Gamma[...,i] = np.sum(Gamma_E, axis = 1)
@@ -422,21 +422,21 @@ class RadiationField:
 
         if self.esec.Method < 2:
             HeatingRate = self.PsiN[absorber].copy()
-            HeatingRate -= self.sigma_th[absorber] * erg_per_ev  \
+            HeatingRate -= self.E_th[absorber] * erg_per_ev  \
                 * self.PhiN[absorber]
             if self.pf['photon_conserving']:
                 HeatingRate -= self.PsiNdN[absorber]
                 HeatingRate += erg_per_ev \
-                    * self.sigma_th[absorber] \
+                    * self.E_th[absorber] \
                     * self.PhiNdN[absorber]
         else:
             HeatingRate = self.PsiHatN[absorber].copy()
-            HeatingRate -= self.sigma_th[absorber] * erg_per_ev  \
+            HeatingRate -= self.E_th[absorber] * erg_per_ev  \
                 * self.PhiHatN[absorber]
             if self.pf['photon_conserving']:
                 HeatingRate -= self.PsiHatNdN[absorber]
                 HeatingRate += erg_per_ev \
-                    * self.sigma_th[absorber] \
+                    * self.E_th[absorber] \
                     * self.PhiHatNdN[absorber]
 
         return self.A[absorber] * self.fheat * HeatingRate
@@ -453,26 +453,26 @@ class RadiationField:
         
         if self.esec.Method < 2:
             IonizationRate = self.PsiN[donor].copy()
-            IonizationRate -= self.sigma_th[donor] \
+            IonizationRate -= self.E_th[donor] \
                 * erg_per_ev * self.PhiN[donor]
             if self.pf['photon_conserving']:
                 IonizationRate -= self.PsiNdN[donor]
-                IonizationRate += self.sigma_th[donor] \
+                IonizationRate += self.E_th[donor] \
                     * erg_per_ev * self.PhiNdN[donor]
                             
         else:
             IonizationRate = self.PsiWiggleN[absorber][donor] \
-                - self.sigma_th[donor] \
+                - self.E_th[donor] \
                 * erg_per_ev * self.PhiWiggleN[absorber][donor]
             if self.pf['photon_conserving']:
                 IonizationRate -= self.PsiWiggleNdN[absorber][donor]
-                IonizationRate += self.sigma_th[donor] \
+                IonizationRate += self.E_th[donor] \
                     * erg_per_ev * self.PhiWiggleNdN[absorber][donor]            
                         
         # Normalization (by number densities) will be applied in 
         # chemistry solver    
         return self.A[donor] * self.fion[absorber] * IonizationRate \
-                / self.sigma_th[absorber] / erg_per_ev    
+                / self.E_th[absorber] / erg_per_ev    
         
         
         
