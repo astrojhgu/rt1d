@@ -10,7 +10,7 @@ Description: Generate SIMPL accretion disk models. Save to HDF5 file.
 
 """
 
-import rt1d, os
+import rt1d, os, itertools
 import numpy as np
 
 try:
@@ -44,8 +44,7 @@ simpl = \
     'spectrum_logN': -np.inf,
 }
     
-ls = ['-', '--', ':']
-colors = ['b', 'g', 'r', 'm']
+
 for i, fsc in enumerate(f_scatter):
     simpl.update({'spectrum_fsc': fsc})
     for j, alpha in enumerate(gamma):
