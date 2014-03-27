@@ -57,14 +57,20 @@ class Source:
         
         return integrate(integrand, self.rs.EminNorm, self.rs.EmaxNorm)[0]
         
-    def EscapeFraction(self, i=0, logN=0.0):
+    def EscapeFraction(self, i=0, logN=0.0, weighted=True):
         if logN <= 0.0:
             return 1.0
                     
-        integrand1 = lambda E: self.rs.Spectrum(E) * sigma_E(E) \
-            * np.exp(-10.**logN \
-            * (sigma_E(E, 0) + y * sigma_E(E, 1))) / E
-        integrand2 = lambda E: self.rs.Spectrum(E) * sigma_E(E) / E    
+        if weighted:
+            integrand1 = lambda E: self.rs.Spectrum(E) * sigma_E(E) \
+                * np.exp(-10.**logN \
+                * (sigma_E(E, 0) + y * sigma_E(E, 1))) / E
+            integrand2 = lambda E: self.rs.Spectrum(E) * sigma_E(E) / E 
+        else:
+            integrand1 = lambda E: self.rs.Spectrum(E) * sigma_E(E) \
+                * np.exp(-10.**logN \
+                * (sigma_E(E, 0) + y * sigma_E(E, 1))) / E
+            integrand2 = lambda E: self.rs.Spectrum(E) * sigma_E(E) / E
         
         fesc_theory = integrate(integrand1, self.rs.spec_pars['Emin'][i], 
             self.rs.spec_pars['Emax'][i])[0] / integrate(integrand2, 

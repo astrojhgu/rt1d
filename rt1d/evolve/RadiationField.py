@@ -127,9 +127,22 @@ class RadiationField:
             
             # "Diffuse" sources have parameterized rates    
             if src.SourcePars['type'] == 'diffuse':
-                self.Gamma[h] = src.ionization_rate(z, **kwargs)
-                self.gamma[h] = src.secondary_ionization_rate(z, **kwargs)
-                self.k_H[h] = src.heating_rate(z, **kwargs)
+                
+                if 'Gamma_HI' in kwargs:
+                    self.Gamma[h] = kwargs['Gamma_HI']
+                else:
+                    self.Gamma[h] = src.ionization_rate(z, **kwargs)
+                
+                if 'gamma_HI' in kwargs:
+                    self.gamma[h] = kwargs['gamma_HI']
+                else:
+                    self.gamma[h] = src.secondary_ionization_rate(z, **kwargs)
+                
+                if 'epsilon_X' in kwargs:
+                    self.k_H[h] = kwargs['epsilon_X']
+                else:
+                    self.k_H[h] = src.heating_rate(z, **kwargs)
+                
                 continue    
                 
             self.h = h

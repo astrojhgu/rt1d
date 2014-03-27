@@ -46,3 +46,5 @@ class ProgressBar:
     def finish(self):
         if hasattr(self, 'pbar'):
             self.pbar.finish()
+            
+            

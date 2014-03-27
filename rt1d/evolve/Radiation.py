@@ -45,7 +45,7 @@ class Radiation:
         pack = [EmissionTime, EmissionTimeInterval, NHI, NHeI, NHeII, E]
         
         """
-        
+                
         # Make data globally accessible
         self.data = data.copy()
                 
@@ -66,7 +66,7 @@ class Radiation:
             else:    
                 Gamma_src, gamma_src, Heat_src, Ja_src = \
                     self.rfield.SourceDependentCoefficients(data, t, z, 
-                        **kwargs)
+                        **kwargs)    
                 
             if len(self.srcs) > 1:
                 for i, src in enumerate(self.srcs):
@@ -80,14 +80,13 @@ class Radiation:
             Gamma = np.sum(Gamma_src, axis=0)
             gamma = np.sum(gamma_src, axis=0)
             Heat = np.sum(Heat_src, axis=0)
-            
+                             
             # Compute Lyman-Alpha emission
             if not self.pf['approx_lya']:
                 Ja = np.sum(Ja_src, axis=0)
             
             # Molecule destruction
             #kdiss = np.sum(kdiss_src, axis=0)
-            
                                     
             # Each is grid x absorbers, or grid x [absorbers, absorbers] for gamma
             # For Ja, just has len(grid)
@@ -102,7 +101,7 @@ class Radiation:
 
         # SOLVE
         newdata = self.chem.Evolve(data, t, dt, **self.kwargs)
-                
+        
         ### 
         ## Tidy up a bit
         ###
