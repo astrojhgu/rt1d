@@ -11,31 +11,31 @@ Comparison Project (Iliev et al. 2006; RT06) but with helium included.
 
 """
 
-import rt1d
+import rt1d, os
 import pylab as pl
 
 pf = \
 {
  'problem_type': 12,
  'approx_helium': 0,
- 'source_table':'rt1d_integral_table.hdf5',
+ 'source_table':'rt1d_integral_table.hdf5', 
  'tables_logNmin': [15]*3,
  'tables_logNmax': [20]*3,
  'tables_dlogN': [0.05]*3
 }
 
 sim = rt1d.run.Simulation(**pf)
-#sim.run()
-#
-#anl = rt1d.analyze.Simulation(sim.checkpoints)
-#
-#ax = anl.TemperatureProfile(t=[10, 30, 100])
-#raw_input('<enter> for radial profiles of xHI & xHII')
-#pl.close()
-#
-#ax = anl.IonizationProfile(t=[10, 30, 100])
-#raw_input('<enter> for radial profiles of xHI & xHII')
-#
-#ax = anl.IonizationProfile(t=[10, 30, 100], species='he', color='b')
-#raw_input('')
-#
+sim.run()
+
+anl = rt1d.analyze.Simulation(sim.checkpoints)
+
+ax = anl.TemperatureProfile(t=[10, 30, 100])
+raw_input('<enter> for radial profiles of xHI & xHII')
+pl.close()
+
+ax = anl.IonizationProfile(t=[10, 30, 100])
+raw_input('<enter> for radial profiles of xHI & xHII')
+
+ax = anl.IonizationProfile(t=[10, 30, 100], species='he', color='b')
+raw_input('')
+

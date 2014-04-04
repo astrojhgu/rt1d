@@ -483,7 +483,7 @@ class RadiationSource(object):
         Return name of output file based on SED properties.
         """
             
-        name = '%s_logM_%i_Gamma_%g_fsc_%g_logE_%.2g-%.2g' % \
+        name = '%s_logM_%.2g_Gamma_%.3g_fsc_%.3g_logE_%.2g-%.2g' % \
             (self.SpectrumPars['type'][i], np.log10(self.src.M0), 
              self.src.spec_pars['alpha'][i], 
              self.src.spec_pars['fsc'][i], self.logEmin, self.logEmax)

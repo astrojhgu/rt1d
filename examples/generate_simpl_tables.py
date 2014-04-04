@@ -22,7 +22,7 @@ except ImportError:
 # 
 ## INPUT
 rmax = 1e3
-mass = 10.
+mass = [10., 100, 1e3]
 f_scatter = [0.1, 0.5, 1.0]
 gamma = [-2.5, -1.5, -0.5]
 Emin = 10
@@ -34,7 +34,7 @@ Nbins = 250
 simpl = \
 {
     'source_type': 'bh', 
-    'source_mass': mass,
+    'source_mass': 10.,
     'source_rmax': rmax,
     'spectrum_type': 'simpl',
     'spectrum_Emin': Emin,
@@ -44,27 +44,28 @@ simpl = \
     'spectrum_logN': -np.inf,
 }
     
-
-for i, fsc in enumerate(f_scatter):
-    simpl.update({'spectrum_fsc': fsc})
-    for j, alpha in enumerate(gamma):
-        
-        k = i * len(gamma) + j + 1
-        
-        if k % size != rank:
-            continue
-        
-        simpl.update({'spectrum_alpha': alpha})
-        
-        bh_simpl = rt1d.sources.RadiationSource(init_tabs=False, **simpl)
-        
-        prefix = bh_simpl.sed_name()
-                
-        E = np.logspace(np.log10(Emin), np.log10(Emax), Nbins)
-        
-        if os.path.exists('%s.txt' % prefix):
-            print '%s.txt exists!' % prefix
-            continue
+for h, m in enumerate(mass):
+    simpl.update({'source_mass': m})
+    for i, fsc in enumerate(f_scatter):
+        simpl.update({'spectrum_fsc': fsc})
+        for j, alpha in enumerate(gamma):
             
-        bh_simpl.dump('%s.txt' % prefix, E)
+            k = i * len(gamma) + j + 1
+            
+            if k % size != rank:
+                continue
+            
+            simpl.update({'spectrum_alpha': alpha})
+            
+            bh_simpl = rt1d.sources.RadiationSource(init_tabs=False, **simpl)
+            
+            prefix = bh_simpl.sed_name()
+                    
+            E = np.logspace(np.log10(Emin), np.log10(Emax), Nbins)
+            
+            if os.path.exists('%s.txt' % prefix):
+                print '%s.txt exists!' % prefix
+                continue
+                
+            bh_simpl.dump('%s.txt' % prefix, E)
         

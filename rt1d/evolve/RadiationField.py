@@ -21,12 +21,12 @@ class RadiationField:
         self.pf = parse_kwargs(**kwargs)
         self.grid = grid
         self.srcs = sources
-        self.esec = SecondaryElectrons(method = self.pf['secondary_ionization'])
+        self.esec = SecondaryElectrons(method=self.pf['secondary_ionization'])
                 
         if self.srcs is not None:
             self._initialize()
         
-    def _initialize(self):    
+    def _initialize(self):
         self.Ns = len(self.srcs)
                 
         # See if all sources are diffuse

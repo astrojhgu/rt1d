@@ -15,6 +15,7 @@ Gnedin, & Shull (2002) also available.
 import h5py, os
 import numpy as np
 from collections import Iterable
+from mathutils.interpolate import LinearNDInterpolator
 
 # If anything is identically zero for methods 2 and 3, 
 # our spline will get screwed up since log(0) = inf
@@ -27,26 +28,46 @@ class SecondaryElectrons:
         if self.Method == 3:
             rt1d = os.environ.get("RT1D")
             if rt1d:
-                f = h5py.File("%s/input/secondary_electron_data.hdf5" % rt1d, 'r')
+                self.fn = "%s/input/secondary_electron_data.hdf5" % rt1d
+                f = h5py.File(self.fn, 'r')
             else:
                 raise Exception('Error loading secondary electron data.')    
                 
             # Read in Furlanetto & Stoever lookup tables
             self.E = f["electron_energy"].value
-            self.x = f["ionized_fraction"].value
-            self.logx = np.log10(self.x)
+            self._x = f["ionized_fraction"].value
+            self._logx = np.log10(self.x)
             
-            from scipy.interpolate import RectBivariateSpline
+            self.fh_tab = f["f_heat"].value
+            self.fionHI_tab = f["fion_HI"].value
+            self.fionHeI_tab = f["fion_HeI"].value
+            self.fionHeII_tab = f["fion_HeII"].value
+            self.fexc_tab = f["fexc"].value
+            self.flya_tab = f['f_Lya'].value
+            
+            from scipy.interpolate import RectBivariateSpline, interp2d
             
             self.fh = RectBivariateSpline(self.E, self.x, f["f_heat"].value)
             self.fHI = RectBivariateSpline(self.E, self.x, f["fion_HI"].value)
             self.fHeI = RectBivariateSpline(self.E, self.x, f["fion_HeI"].value)
             self.fHeII = RectBivariateSpline(self.E, self.x, f["fion_HeII"].value)
-            self.fexc = RectBivariateSpline(self.E, self.x, f["fexc"].value)
+            self.fexc = interp2d(self.E, self.x, f["fexc"].value, kind='linear')
             self.flya = RectBivariateSpline(self.E, self.x, f['f_Lya'].value)
             
             f.close()
-
+            
+    @property
+    def logx(self):
+        if not hasattr(self, '_logx'):
+            self._logx = np.arange(-4, 0.1, 0.1)       
+        return self._logx
+    
+    @property
+    def x(self):
+        if not hasattr(self, '_x'):
+            self._x = 10**self.logx
+        return self._x    
+        
     def DepositionFraction(self, xHII, E=None, channel='heat'):
         """
         Return the fraction of secondary electron energy deposited as heat, or further ionizations.
@@ -143,6 +164,8 @@ class SecondaryElectrons:
                     f[i] = self.fHeII(E, x)
                 if channel == 'lya':
                     f[i] = self.flya(E, x)
+                if channel == 'fexc':
+                    f[i] = self.fexc(E, x)
             
             return f
             

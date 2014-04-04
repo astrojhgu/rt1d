@@ -55,7 +55,7 @@ def GridParameters():
         # These have shape len(absorbers)
         "tables_logNmin": [None],
         "tables_logNmax": [None],
-        "tables_dlogN": [0.2],        
+        "tables_dlogN": [0.1],        
         "tables_xmin": [1e-8],
         #
         
@@ -78,7 +78,11 @@ def PhysicsParameters():
         "plane_parallel": 0,   
         "infinite_c": 1,  
         
-        "secondary_ionization": 0,  
+        "secondary_ionization": 0,  # 0 = Deposit all energy as heat
+                                    # 1 = Shull & vanSteenberg (1985)
+                                    # 2 = Ricotti, Gnedin, & Shull (2002)
+                                    # 3 = Furlanetto & Stoever (2010)        
+        
         "isothermal": 1,  
         "expansion": 0,  
         "compton_scattering": 0,

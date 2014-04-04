@@ -12,7 +12,7 @@ Description: Tabulate integrals that appear in the rate equations.
 
 import numpy as np
 from ..util import ProgressBar
-from scipy.integrate import quad, trapz
+from scipy.integrate import quad, trapz, simps
 from ..physics.Constants import erg_per_ev
 from ..physics.SecondaryElectrons import *
 import os, re, scipy, itertools, math, copy
@@ -83,12 +83,12 @@ class IntegralTable:
         if self.pf['secondary_ionization'] > 1:
             self.esec = SecondaryElectrons(method=self.pf['secondary_ionization'])
             if self.pf['secondary_ionization'] == 2:
-                self.logx = np.linspace(self.pf['tables_logxmin'][0], 0,
-                    abs(self.pf['tables_logxmin'][0]) \
-                    / self.pf['tables_dlogx'][0] + 1)
+                self.logx = np.linspace(self.pf['tables_logxmin'], 0,
+                    abs(self.pf['tables_logxmin']) \
+                    / self.pf['tables_dlogx'] + 1)
                 self.E = np.linspace(self.src.Emin, self.src.Emax,
                     (self.src.Emax - self.src.Emin) \
-                    / self.pf['tables_dE'][0] + 1)
+                    / self.pf['tables_dE'] + 1)
             elif self.pf['secondary_ionization'] == 3:
                 self.logx = self.esec.logx
                 self.E = self.esec.E
@@ -373,7 +373,7 @@ class IntegralTable:
         
         return tau
         
-    def Tabulate(self, integral, absorber, donor, N, x = None, t = 0):
+    def Tabulate(self, integral, absorber, donor, N, x=None, t=0):
         if integral == 'Phi':
             table = self.Phi(N, absorber, t = t)
         if integral == 'Psi':
@@ -391,18 +391,13 @@ class IntegralTable:
             
         return np.log10(table)
         
-    def Phi(self, N, absorber, t = 0):
+    def Phi(self, N, absorber, t=0):
         """
         Equation 10 in Mirocha et al. 2012.
         """
                                                          
         # Otherwise, continuous spectrum                
         if self.pf['photon_conserving']:
-            #if self.pf['SpectrumFile'] is not 'None':
-            #    return np.trapz(self.src.Spectrum(None, t = t)[self.src.i_Eth[species]:] * \
-            #        np.exp(-self.SpecificOpticalDepth(self.src.E[self.src.i_Eth[species]:], ncol)) / \
-            #        (self.src.E[self.src.i_Eth[species]:] * erg_per_ev), self.src.E[self.src.i_Eth[species]:])
-            #else:
             integrand = lambda E: self.src.Spectrum(E, t=t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E
                             
@@ -420,18 +415,13 @@ class IntegralTable:
             
         return integral 
         
-    def Psi(self, N, absorber, t = None):            
+    def Psi(self, N, absorber, t=None):            
         """
         Equation 11 in Mirocha et al. 2012.
         """        
         
         # Otherwise, continuous spectrum    
         if self.pf['photon_conserving']:
-        #    if self.pf['SpectrumFile'] is not 'None':
-        #        return np.trapz(self.src.Spectrum(t = t)[self.src.i_Eth[species]:] * \
-        #            np.exp(-self.SpecificOpticalDepth(self.src.E[self.src.i_Eth[species]:], 
-        #            ncol)), self.src.E[self.src.i_Eth[species]:])
-            #else:
             integrand = lambda E: self.src.Spectrum(E, t = t) * \
                 np.exp(-self.SpecificOpticalDepth(E, N)[0])
         else:
@@ -448,7 +438,7 @@ class IntegralTable:
         
         return integral
                               
-    def PhiHat(self, N, absorber, donor = None, x = None, t = None):
+    def PhiHat(self, N, absorber, donor=None, x=None, t=None):
         """
         Equation 2.20 in the manual.
         """        
@@ -469,18 +459,19 @@ class IntegralTable:
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) / E \
                 / self.E_th[absorber]    
         
+        # Integrate over energies in lookup table
         c = self.E >= max(Ei, self.src.Emin)
         c &= self.E <= self.src.Emax                       
         samples = np.array([integrand(E) for E in self.E[c]])[..., 0]
              
-        integral = trapz(samples, self.E[c]) / erg_per_ev         
+        integral = simps(samples, self.E[c]) / erg_per_ev     
         
         if not self.pf['photon_conserving']:
             integral *= self.E_th[absorber]
             
         return integral
                 
-    def PsiHat(self, N, absorber, donor = None, x = None, t = None):            
+    def PsiHat(self, N, absorber, donor=None, x=None, t=None):            
         """
         Equation 2.21 in the manual.
         """        
@@ -501,18 +492,19 @@ class IntegralTable:
                 np.exp(-self.SpecificOpticalDepth(E, N)[0]) \
                 / self.E_th[absorber]
         
+        # Integrate over energies in lookup table
         c = self.E >= max(Ei, self.src.Emin)
         c &= self.E <= self.src.Emax
         samples = np.array([integrand(E) for E in self.E[c]])[..., 0]
         
-        integral = trapz(samples, self.E[c])  
+        integral = simps(samples, self.E[c])  
         
         if not self.pf['photon_conserving']:
             integral *= self.E_th[absorber]
         
         return integral
             
-    def PhiWiggle(self, N, absorber, donor, x = None, t = None):
+    def PhiWiggle(self, N, absorber, donor, x=None, t=None):
         """
         Equation 2.18 in the manual.
         """        
@@ -533,19 +525,20 @@ class IntegralTable:
         #        self.src.Spectrum(E, t = t) * \
         #        np.exp(-self.SpecificOpticalDepth(E, ncol)[0]) / E \
         #        / self.E_th[absorber]
-            
+        
+        # Integrate over energies in lookup table    
         c = self.E >= max(Ej, self.src.Emin)
         c &= self.E <= self.src.Emax
         samples = np.array([integrand(E) for E in self.E[c]])[..., 0]
         
-        integral = trapz(samples, self.E[c]) / erg_per_ev
+        integral = simps(samples, self.E[c]) / erg_per_ev
             
         if not self.pf['photon_conserving']:
             integral *= self.E_th[absorber]
                                         
         return integral
                               
-    def PsiWiggle(self, N, absorber, donor, x = None, t = None):            
+    def PsiWiggle(self, N, absorber, donor, x=None, t=None):            
         """
         Equation 2.19 in the manual.
         """        
@@ -563,19 +556,20 @@ class IntegralTable:
         #        self.src.Spectrum(E, t = t) * \
         #        np.exp(-self.SpecificOpticalDepth(E, ncol)[0])
         #        / self.E_th[absorber]
-                
+           
+        # Integrate over energies in lookup table        
         c = self.E >= max(Ej, self.src.Emin)
         c &= self.E <= self.src.Emax
         samples = np.array([integrand(E) for E in self.E[c]])[..., 0]
              
-        integral = trapz(samples, self.E[c])
-            
+        integral = simps(samples, self.E[c])
+          
         if not self.pf['photon_conserving']:
             integral *= self.E_th[absorber]    
                 
         return integral
             
-    def PsiBreve(self, N, absorber, donor, x = None, t = None):
+    def PsiBreve(self, N, absorber, donor, x=None, t=None):
         """
         Return fractional Lyman-alpha excitation.
         """         

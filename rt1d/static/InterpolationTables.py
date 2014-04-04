@@ -10,6 +10,7 @@ Description:
 
 """
 
+import re
 import numpy as np
 from scipy.interpolate import interp1d, RectBivariateSpline
 
@@ -23,6 +24,8 @@ spline_err = "interp_method == cubic and there are infs in our table!"
 spline_err += "\nSpline interpolation is global, so any infs will render *all*"
 spline_err += "\ninterpolated values NaN. Try linear interpolation, or narrow"
 spline_err += "\nbounds of interpolation table."
+
+err_msg = lambda s: "%s\n\n# Table: %s" % (spline_err, s)
 
 class LookupTable:
     def __init__(self, pf, name, logN, table, logx=None, t=None):
@@ -92,7 +95,12 @@ class LookupTable:
             ax2 = self._extra_axis(logx, t)
             logresult = np.zeros_like(logN[...,0])
             for i in xrange(logN.shape[0]):
-                logresult[i] = self.interp(logN[i,0], ax2[i]).squeeze()
+                if self.adv_secondary_ionization and \
+                    not (re.search('Wiggle', self.basename) or 
+                    re.search('Hat', self.basename)):
+                    logresult[i] = self.interp(logN[i,0]).squeeze()
+                else:
+                    logresult[i] = self.interp(logN[i,0], ax2[i]).squeeze()    
         else:
             logresult = \
                 np.array([self.interp(tuple(Ncol)) for Ncol in logN])
@@ -100,17 +108,22 @@ class LookupTable:
         return logresult
             
     def _extra_axis(self, logx, t):
+        """
+        Non-column-density dimension in lookup table.
+        
+        Is it ionized fraction or time?
+        """
         if logx is not None:
             return logx
         
-        return t        
+        return t
         
     def _init(self):
         """ Create interpolation table. """
         
         if self.pf['interp_method'] == 'cubic' and self.D <= 2 and \
             not np.all(np.isfinite(self.table)):
-            raise ValueError(spline_err)
+            raise ValueError(err_msg(self.basename))
         
         # Set up interpolation tables
         if self.D == 1:

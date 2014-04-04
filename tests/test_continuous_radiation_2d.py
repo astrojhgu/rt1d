@@ -22,13 +22,13 @@ grid.set_chemistry(Z=1)
 grid.set_density(rho0=1e-27)
 
 # Initialize radiation source
-src_pars = {'problem_type': 2, 'photon_conserving': 1, 
-    'secondary_ionization': 2}
+src_pars = {'problem_type': 2, 'secondary_ionization': 2}
 src = rt1d.sources.RadiationSource(grid, **src_pars)
 
 logN = np.array([np.linspace(min(src.tab.logN[0]), max(src.tab.logN[0]), 100)]).T
 logx1 = np.ones(100) * src.tab.logx[0]
 logx2 = np.ones(100) * src.tab.logx[-1]
+logx3 = -2.04 * np.ones(100)
 
 tables = ['logPhiHat_h_1', 'logPsiHat_h_1',     
           'logPhiWiggle_h_1_h_1', 'logPsiWiggle_h_1_h_1']
@@ -45,6 +45,7 @@ for i, table in enumerate(tables):
         color = 'b', s = 50)    
     pl.loglog(10**logN, 10**src.tables[table](logN, logx1), color='k')
     pl.loglog(10**logN, 10**src.tables[table](logN, logx2), color='b')
+    pl.loglog(10**logN, 10**src.tables[table](logN, logx3), color='g')
     pl.xlabel(r'Column Density $N_{\mathrm{HI}} \ (\mathrm{cm}^{-2})$')
     pl.ylabel(labels[i])
     pl.draw()
