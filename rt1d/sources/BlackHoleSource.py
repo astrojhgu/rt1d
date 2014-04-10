@@ -17,7 +17,7 @@ from .StellarSource import _Planck
 from ..util.SetDefaultParameterValues import BlackHoleParameters
 from ..physics.CrossSections import PhotoIonizationCrossSection as sigma_E
 
-sptypes = {'pl':0, 'mcd':1, 'qso':2, 'simpl':3, 'zebra': 4}
+sptypes = {'pl':0, 'mcd':1, 'qso':2, 'simpl':3, 'zebra':4}
 
 tiny_number = 1e-12
 

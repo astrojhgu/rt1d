@@ -15,7 +15,7 @@ import numpy as np
 import pylab as pl
 
 # RT06 #2
-sim1 = rt1d.run.Simulation(pf={'problem_type':2, 'stop_time':30})
+sim1 = rt1d.run.Simulation(problem_type=2, stop_time=30)
 sim1.run()
 
 # RT06 #2 + constant ionizing background
@@ -40,6 +40,4 @@ anl2 = rt1d.analyze.Simulation(sim2.checkpoints)
 
 ax = anl1.IonizationProfile(t=[10, 30])
 anl2.IonizationProfile(t=[10, 30], ax=ax, color='b')
-
-raw_input('')
 

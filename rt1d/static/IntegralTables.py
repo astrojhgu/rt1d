@@ -621,7 +621,9 @@ class IntegralTable:
         f.close()
     
     def load(self, fn):
-        """ Load table from hdf5. """
+        """ 
+        Load table from hdf5. 
+        """
         
         import h5py
         
@@ -639,11 +641,18 @@ class IntegralTable:
         f.close()
         print 'Read integral table from %s.' % fn
         
-        axis, names, values = zip(*axes)
-                
+        axis_nums, axis_names, values = zip(*axes)
+
+        print np.array(values).shape, np.array(self.axes).shape
+
         # See if parameter file and integral table are consistent
         ok = True
-        for i, axis in enumerate(names):
+        for i, axis in enumerate(axis_names):
+            
+            if axis not in self.axes_names:
+                print "WARNING: Axis \'%s\' not expected." % axis
+                continue
+            
             if np.all(np.array(values[i]) == self.axes[i]):
                 continue
             

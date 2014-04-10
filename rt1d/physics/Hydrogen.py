@@ -211,24 +211,34 @@ class Hydrogen:
     
     # Look at line 905 in astrophysics.cc of jonathan's code
     
-    def CollisionalCouplingCoefficient(self, Tk, z, nH, ne):
+    def CollisionalCouplingCoefficient(self, Tk, z, nHI, ne):
         """
+        Parameters
+        ----------
+        Tk : float
+            Kinetic temperature of the gas [K]
+        z : float
+            Redshift
+        nHI : float
+            Proper neutral hydrogen density [cm**-3]
+        ne : float
+            Proper electron density [cm**-3]
         
         References
         ----------
         Zygelman, B. 2005, ApJ, 622, 1356
         """
-        RateCoefficientSum = nH * self.kappa_H(Tk) + \
+        RateCoefficientSum = nHI * self.kappa_H(Tk) + \
             ne * self.kappa_e(Tk)
                 
         return RateCoefficientSum * T_star / A10 / self.cosm.TCMB(z)    
     
-    def WouthuysenFieldCouplingCoefficient(self, z, Ja, Tk=None):
+    def WouthuysenFieldCouplingCoefficient(self, z, Ja, Tk=None, xHII=None):
         """
         Return Lyman-alpha coupling coefficient.
         """
-        
-        return 1.81e11 * self.Sa(Tk) * Ja / (1. + z)
+                
+        return 1.81e11 * self.Sa(z=z, Tk=Tk, xHII=xHII) * Ja / (1. + z)
         
     def tauGP(self, z, xHII=0.):
         """ Gunn-Peterson optical depth. """
@@ -239,9 +249,9 @@ class Hydrogen:
         """
         Account for line profile effects.
         """
-        
+
         if self.approx_S == 0:
-            raise NotImplementedError('')
+            raise NotImplementedError('Must use analytical formulae.')
         if self.approx_S == 1:
             return 1.0
         elif self.approx_S == 2:
@@ -258,19 +268,22 @@ class Hydrogen:
         """ Return energy of Lyman-n photon in eV. """
         return E_LL * (1. - 1. / n**2)
         
-    def SpinTemp(self, z, Tk, Ja, nH, ne):
+    def SpinTemp(self, z, Tk, Ja, nHI, ne):
         """
         Returns spin temperature given:
             z = redshift (sets CMB temperature)
             Tk = kinetic temperature of the gas
             xHII = ionized hydrogen fraction
             Ja = Lyman-alpha flux
-            nH = proper hydrogen density
+            nHI = proper neutral hydrogen density
             ne = electron density
         """
 
-        x_c = self.CollisionalCouplingCoefficient(Tk, z, nH, ne)
-        x_a = self.WouthuysenFieldCouplingCoefficient(z, Ja, Tk)
+        nH = self.cosm.nH(z) * (1. + z)**3 # proper (total) hydrogen density
+        nHII = nH - nHI
+
+        x_c = self.CollisionalCouplingCoefficient(Tk, z, nHI, ne)
+        x_a = self.WouthuysenFieldCouplingCoefficient(z, Ja, Tk, nHII / nH)
         Tc = Tk
                 
         return (1.0 + x_c + x_a) / \

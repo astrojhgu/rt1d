@@ -441,8 +441,8 @@ class Simulation:
         
         return time, value
     
-    def IonizationRate(self, t=1, absorber='h_1', color = 'k', ls = '-', 
-        legend = True, plot_recomb = False, total_only = False, src = 0):
+    def IonizationRate(self, t=1, absorber='h_1', color='k', ls='-', 
+        legend=True, plot_recomb=False, total_only=False, src=0):
         """
         Plot total ionization rate, and lines for primary, secondary, and 
         collisional. Needs to be generalized under new framework.
@@ -464,12 +464,12 @@ class Simulation:
             nabs = self.data[dd][absorber] * self.grid.x_to_n[absorber]
             nion = self.data[dd]['h_2'] * self.grid.x_to_n[absorber]
               
-            Gamma = self.data[dd]['Gamma'][...,i] * nabs
+            Gamma = self.data[dd]['Gamma_%i' % src][...,i] * nabs
             Beta = self.data[dd]['Beta'][...,i] * nabs * ne
             
             gamma = 0.0
             for j, donor in enumerate(self.grid.absorbers):
-                gamma += self.data[dd]['gamma'][...,i,j] * \
+                gamma += self.data[dd]['gamma_%i' % src][...,i,j] * \
                     self.data[dd][donor] * self.grid.x_to_n[donor]
             
             ion = Gamma + Beta + gamma # Total ionization rate
@@ -540,7 +540,7 @@ class Simulation:
                 nion = self.data[dd]['h_2'] * self.grid.x_to_n[absorber]
                             
                 # Photo-heating
-                heat = heat + self.data[dd]['Heat'][...,i] * nabs
+                heat = heat + self.data[dd]['Heat_%i' % src][...,i] * nabs
                 
                 # Cooling
                 zeta = zeta + self.data[dd]['zeta'][...,i] * nabs * ne # collisional ionization                
@@ -582,7 +582,7 @@ class Simulation:
             if plot_cooling:
                 ax_label = r'Heating & Cooling Rate $(\mathrm{erg/s/cm^3})$'        
             else:    
-                ax_label = r'Heating Rate $(\mathrm{erg/s/cm^3})$'        
+                ax_label = r'Heating Rate $(\mathrm{erg} \ \mathrm{s}^{-1} \ \mathrm{cm}^{-3})$'    
                             
         self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
         self.ax.set_ylabel(ax_label)

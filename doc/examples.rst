@@ -7,16 +7,14 @@ Basics
 .. toctree::
    :maxdepth: 3
 
-   :doc:`example_rt06_1`
- 
-
+   example_rt06_1
+   example_rt06_2
+   
 Advanced
 --------
 .. toctree::
    :maxdepth: 3
 
-   Multi-component SEDs.
-   Time variable SEDs.
-   Using dengo to generate complex chemical networks.
-   Finding the optimal discrete SED for a given continuous spectrum.
-     
+   example_multi_src
+   example_multi_component
+   

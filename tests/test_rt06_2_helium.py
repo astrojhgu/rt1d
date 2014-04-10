@@ -17,7 +17,7 @@ import pylab as pl
 pf = \
 {
  'problem_type': 12,
- 'approx_helium': 0,
+ 'approx_helium': 1,
  'source_table':'rt1d_integral_table.hdf5', 
  'tables_logNmin': [15]*3,
  'tables_logNmax': [20]*3,

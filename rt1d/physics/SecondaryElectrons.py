@@ -59,7 +59,7 @@ class SecondaryElectrons:
     @property
     def logx(self):
         if not hasattr(self, '_logx'):
-            self._logx = np.arange(-4, 0.1, 0.1)       
+            self._logx = np.arange(-4, 0.1, 0.1)
         return self._logx
     
     @property
