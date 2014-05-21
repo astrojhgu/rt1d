@@ -26,11 +26,9 @@ except ImportError:
     
 try:
     from mpi4py import MPI
-    rank = MPI.COMM_WORLD.rank
-    size = MPI.COMM_WORLD.size
+    rank = MPI.COMM_WORLD.rank; size = MPI.COMM_WORLD.size
 except ImportError:
-    rank = 0
-    size = 1    
+    rank = 0; size = 1
     
 erg_per_ev = rt1d.physics.Constants.erg_per_ev 
 
