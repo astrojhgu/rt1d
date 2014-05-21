@@ -21,6 +21,7 @@ try:
     from scipy.interpolate import interp1d
     
 except ImportError:
+    T = None
     have_chianti = False
 
 rate_sources = ['fk96', 'chianti']
