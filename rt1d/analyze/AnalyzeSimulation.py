@@ -18,6 +18,11 @@ from ..static.Grid import Grid
 from ..physics.Constants import *
 
 try:
+    import h5py
+except ImportError:
+    pass
+
+try:
     from multiplot import multipanel
     multiplot = True
 except ImportError:
@@ -33,7 +38,7 @@ class Simulation:
         
         # Load contents of hdf5 file
         if type(checkpoints) is str:
-            import h5py, pickle
+            import pickle
             f = h5py.File(checkpoints)
             
             self.pf = {}

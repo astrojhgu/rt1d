@@ -15,7 +15,11 @@ Gnedin, & Shull (2002) also available.
 import os
 import numpy as np
 from collections import Iterable
-from mathutils.interpolate import LinearNDInterpolator
+
+try:
+    from mathutils.interpolate import LinearNDInterpolator
+except ImportError:
+    pass
 
 try:
     import h5py

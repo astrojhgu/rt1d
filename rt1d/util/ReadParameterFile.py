@@ -15,10 +15,15 @@ monochromatic source of photons).
      
 """
 
+import re, copy
 import numpy as np
-import re, copy, h5py
 from .ProblemTypes import ProblemType
 from .SetDefaultParameterValues import SetAllDefaults
+
+try:
+    import h5py
+except ImportError:
+    pass
 
 def ReadParameterFile(pf, setdefs = True):
     """
