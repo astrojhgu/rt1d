@@ -171,7 +171,7 @@ class Cosmology:
         return c * quad(integrand, z0, z)[0] / self.HubbleParameterNow        
             
     def ProperRadialDistance(self, z0, z):
-        return self.ComovingRadialDistance(z0, z) / (1. + z)    
+        return self.ComovingRadialDistance(z0, z) / (1. + z0)    
         
     def ComovingLineElement(self, z):
         """
@@ -197,7 +197,7 @@ class Cosmology:
         Bryan & Norman (1998).
         """            
         d = self.OmegaMatter(z) - 1.
-        return 18. * np.pi**2 + 82. * d - 39. * d**2    
+        return 18. * np.pi**2 + 82. * d - 39. * d**2
     
             
     

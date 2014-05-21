@@ -10,8 +10,8 @@ Description: Initialize a radiation source.
 
 """
 
+import re, os
 import numpy as np
-import h5py, re, os
 from scipy.integrate import quad
 from ..physics.Constants import *
 from .SimpleSource import SimpleSource
@@ -23,6 +23,11 @@ from ..static.IntegralTables import IntegralTable
 from ..static.InterpolationTables import LookupTable
 from ..util import parse_kwargs, sort, evolve, readtab, Gauss1D, boxcar
 from ..physics.CrossSections import PhotoIonizationCrossSection as sigma_E
+
+try:
+    import h5py
+except ImportError:
+    pass
 
 np.seterr(all='ignore')   # exp overflow occurs when integrating BB
                             # will return 0 as it should for x large

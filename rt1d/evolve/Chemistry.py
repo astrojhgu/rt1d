@@ -33,7 +33,8 @@ tiny_ion = 1e-12
 
 class Chemistry(object):
     """ Class for evolving chemical reaction equations. """
-    def __init__(self, grid, rt=False, dengo=False, atol=1e-8, rtol=1e-8):
+    def __init__(self, grid, rt=False, dengo=False, atol=1e-8, rtol=1e-8,
+        rate_src='fk96'):
         """
         Create a chemistry object.
         
@@ -58,11 +59,11 @@ class Chemistry(object):
             from ..static.ChemicalNetwork import \
                 SimpleChemicalNetwork as ChemicalNetwork
         
-        self.chemnet = ChemicalNetwork(grid)
+        self.chemnet = ChemicalNetwork(grid, rate_src=rate_src)
         
         self.solver = ode(self.chemnet.RateEquations, 
             jac=self.chemnet.Jacobian).set_integrator('vode',
-            method='bdf', nsteps=1e4, with_jacobian=True,
+            method='bdf', nsteps=1e4, with_jacobian=False,
             atol=atol, rtol=rtol)
             
         self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.evolving_fields)])

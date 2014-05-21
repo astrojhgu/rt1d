@@ -12,18 +12,16 @@ Description: Tabulate integrals that appear in the rate equations.
 
 import numpy as np
 from ..util import ProgressBar
-from scipy.integrate import quad, trapz, simps
 from ..physics.Constants import erg_per_ev
 from ..physics.SecondaryElectrons import *
 import os, re, scipy, itertools, math, copy
+from scipy.integrate import quad, trapz, simps
 
 try:
     from mpi4py import MPI
-    rank = MPI.COMM_WORLD.rank
-    size = MPI.COMM_WORLD.size
+    rank = MPI.COMM_WORLD.rank; size = MPI.COMM_WORLD.size
 except ImportError:
-    rank = 0
-    size = 1
+    rank = 0; size = 1
 
 E_th = [13.6, 24.6, 54.4]
 

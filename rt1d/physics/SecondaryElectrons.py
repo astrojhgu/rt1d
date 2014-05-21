@@ -12,10 +12,15 @@ Gnedin, & Shull (2002) also available.
 
 """
 
-import h5py, os
+import os
 import numpy as np
 from collections import Iterable
 from mathutils.interpolate import LinearNDInterpolator
+
+try:
+    import h5py
+except ImportError:
+    pass
 
 # If anything is identically zero for methods 2 and 3, 
 # our spline will get screwed up since log(0) = inf
@@ -70,7 +75,9 @@ class SecondaryElectrons:
         
     def DepositionFraction(self, xHII, E=None, channel='heat'):
         """
-        Return the fraction of secondary electron energy deposited as heat, or further ionizations.
+        Return the fraction of secondary electron energy deposited as heat, or 
+        further ionizations.
+        
         The parameter 'channel' determines which we want, and could be:
         
             channel = (heat, h_1, he_1, he_2, lya)

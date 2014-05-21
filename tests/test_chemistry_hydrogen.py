@@ -13,13 +13,13 @@ Description:
 import rt1d
 import numpy as np
 import pylab as pl
-import chianti.core as cc
 
+src = 'fk96'
 dims = 32
-T = np.logspace(np.log10(5000), 5, dims)
+T = np.logspace(3, 5, dims)
 
 # Initialize grid object
-grid = rt1d.static.Grid(dims = dims)
+grid = rt1d.static.Grid(dims=dims)
 
 # Set initial conditions
 grid.set_physics(isothermal=True)
@@ -29,7 +29,7 @@ grid.set_ionization()
 grid.set_temperature(T)
 
 # Initialize chemistry network / solver
-chem = rt1d.evolve.Chemistry(grid, rt=False, dengo=False)
+chem = rt1d.evolve.Chemistry(grid, rt=False, dengo=False, rate_src=src)
 
 # Compute rate coefficients once (isothermal)
 chem.chemnet.SourceIndependentCoefficients(grid.data['Tk'])
@@ -37,25 +37,12 @@ chem.chemnet.SourceIndependentCoefficients(grid.data['Tk'])
 # To compute timestep
 timestep = rt1d.run.ComputeTimestep(grid)
 
-# Plot Equilibrium solution
-np.seterr(all = 'ignore')
-Teq = np.logspace(np.log10(np.min(T)), np.log10(np.max(T)), 500)
-eq = cc.ioneq(1, Teq)
-ax = pl.subplot(111)
-ax.loglog(Teq, eq.Ioneq[0], color = 'k', ls = '-')
-ax.loglog(Teq, eq.Ioneq[1], color = 'k', ls = '--')
-ax.set_xlabel(r'$T \ (\mathrm{K})$')
-ax.set_ylabel('Species Fraction')
-ax.set_xlim(min(T), max(T))
-ax.set_ylim(5e-9, 1.5)
-pl.draw()
-
 # Evolve chemistry
 data = grid.data
 dt = rt1d.physics.Constants.s_per_myr / 1e3
 dt_max = 1e2 * rt1d.physics.Constants.s_per_myr
 t = 0.0
-tf = 10 * rt1d.physics.Constants.s_per_gyr
+tf = rt1d.physics.Constants.s_per_gyr
 
 # Initialize progress bar
 pb = rt1d.util.ProgressBar(tf)
@@ -73,13 +60,17 @@ while t <= tf:
         break
 
 pb.finish()    
-        
-ax.scatter(T, data['h_1'], color = 'b', s = 50, 
-    marker = 'o')
-ax.scatter(T, data['h_2'], color = 'b', s = 50, 
-    facecolors='none', marker = 'o')
+                
+ax = pl.subplot(111)        
+ax.loglog(T, data['h_1'], color='k', ls='-')
+ax.loglog(T, data['h_2'], color='k', ls='--')
+ax.set_xscale('log')
+ax.set_yscale('log')
+ax.set_xlabel(r'$T \ (\mathrm{K})$')
+ax.set_ylabel('Species Fraction')
+ax.set_ylim(1e-4, 2)
 pl.draw()    
-raw_input('')
+
 
 
 

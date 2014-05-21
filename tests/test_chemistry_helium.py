@@ -13,10 +13,9 @@ Description: Evolve helium species.
 import rt1d
 import numpy as np
 import pylab as pl
-import chianti.core as cc
 
 dims = 32
-T = np.logspace(np.log10(5000), 6, dims)
+T = np.logspace(5, 6, dims)
 
 # Initialize grid object
 grid = rt1d.static.Grid(dims=dims)
@@ -26,7 +25,7 @@ grid.set_physics(isothermal=True)
 grid.set_chemistry(Z=[1,2], abundance=[1.0, 0.08])
 grid.set_density(rho0=rt1d.physics.Constants.m_H)
 grid.set_temperature(T)
-grid.set_ionization()#state='neutral')
+grid.set_ionization()
 
 # Initialize chemistry network / solver
 chem = rt1d.evolve.Chemistry(grid, rt=False, dengo=False)
@@ -34,28 +33,44 @@ chem = rt1d.evolve.Chemistry(grid, rt=False, dengo=False)
 # Compute rate coefficients once (isothermal)
 chem.chemnet.SourceIndependentCoefficients(grid.data['Tk'])
 
-# Plot Equilibrium solution
-np.seterr(all='ignore')
-Teq = np.logspace(np.log10(np.min(T)), np.log10(np.max(T)), 500)
-eqHe = cc.ioneq(2, Teq)
+# To compute timestep
+timestep = rt1d.run.ComputeTimestep(grid)
+
+# Evolve chemistry
+data = grid.data
+dt = rt1d.physics.Constants.s_per_myr
+dt_max = 10 * rt1d.physics.Constants.s_per_myr
+t = 0.0
+tf = rt1d.physics.Constants.s_per_gyr
+
+# Initialize progress bar
+pb = rt1d.util.ProgressBar(tf)
+pb.start()
+
+while t <= tf:
+    pb.update(t)
+    data = chem.Evolve(data, t=t, dt=dt)
+    t += dt 
+    
+    new_dt = timestep.Limit(chem.chemnet.q, chem.chemnet.dqdt)
+    dt = min(min(min(new_dt, 2 * dt), dt_max), tf - t)
+
+    if dt == 0:
+        break
+
+pb.finish()    
+
+# Plot solution
 ax = pl.subplot(111)
-ax.loglog(Teq, eqHe.Ioneq[0], color='k', ls='-')
-ax.loglog(Teq, eqHe.Ioneq[1], color='k', ls='--')
-ax.loglog(Teq, eqHe.Ioneq[2], color='k', ls=':')
+ax.loglog(T, data['he_1'], color='k', ls='-')
+ax.loglog(T, data['he_2'], color='k', ls='--')
+ax.loglog(T, data['he_3'], color='k', ls=':')
+ax.set_xscale('log')
+ax.set_yscale('log')
 ax.set_xlabel(r'$T \ (\mathrm{K})$')
 ax.set_ylabel('Species Fraction')
 ax.set_xlim(min(T), max(T))
-ax.set_ylim(5e-9, 1.5)
-pl.draw()
-
-# Evolve chemistry
-dt = rt1d.physics.Constants.s_per_gyr
-data = chem.Evolve(grid.data, t=0, dt=dt)
-
-# Plot up solution
-ax.scatter(T, data['he_1'], color='b', s=50, marker='o')                  
-ax.scatter(T, data['he_2'], color='b', s=50, alpha=0.25, marker='o')     
-ax.scatter(T, data['he_3'], color='b', s=50, facecolors='none', marker='o')            
+ax.set_ylim(5e-9, 1.5)                        
 pl.draw()    
-raw_input('')
+
 

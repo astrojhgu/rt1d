@@ -25,6 +25,10 @@ def parse_kwargs(**kwargs):
     elif 'problem_type' in kwargs:
         pf.update(ProblemType(kwargs['problem_type']))
     
+    #for kwarg in kwargs:
+    #    if kwarg not in defs.keys():
+    #        print 'WARNING (rt1d): Unrecognized parameter: %s' % kwarg
+    
     pf.update(kwargs)
                 
     conflicts = CheckForParameterConflicts(pf)

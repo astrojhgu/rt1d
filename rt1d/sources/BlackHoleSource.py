@@ -77,10 +77,10 @@ class BlackHoleSource(object):
         self.Alpha = 0.24
         self.Beta = 1.60
         self.Gamma = 1.06
-        self.E_1 = 83.
+        self.E_1 = 83e3
         self.K = 0.0041
         self.E_0 = (self.Beta - self.Alpha) * self.E_1
-        self.A = np.exp(2.0 / self.E_1) * 2.0**self.Alpha
+        self.A = np.exp(2e3 / self.E_1) * 2e3**self.Alpha
         self.B = ((self.E_0**(self.Beta - self.Alpha)) \
             * np.exp(-(self.Beta - self.Alpha))) / \
             (1.0 + (self.K * self.E_0**(self.Beta - self.Gamma)))
@@ -88,11 +88,11 @@ class BlackHoleSource(object):
         # Normalization constants to make the SOS04 spectrum continuous.
         self.SX_Normalization = 1.0
         self.UV_Normalization = self.SX_Normalization \
-            * ((self.A * 2000.0**-self.Alpha) * \
-            np.exp(-2000.0 / self.E_1)) \
-            / ((1.2 * 2000**-1.7) * np.exp(2000.0 / 2000.0))
+            * ((self.A * 2e3**-self.Alpha) * \
+            np.exp(-2e3 / self.E_1)) \
+            / ((1.2 * 2e3**-1.7) * np.exp(2000.0 / 2000.))
         self.IR_Normalization = self.UV_Normalization * ((1.2 * 10**-1.7) \
-            * np.exp(10.0 / 2000.0)) / (1.2 * 159 * 10**-0.6)
+            * np.exp(10.0 / 2e3)) / (1.2 * 159 * 10**-0.6)
         self.HX_Normalization = self.SX_Normalization \
             * (self.A * self.E_0**-self.Alpha * \
             np.exp(-self.E_0 / self.E_1)) / (self.A * self.B \
@@ -277,7 +277,7 @@ class BlackHoleSource(object):
             F += xh * self.HX_Normalization * self.A * self.B * (1.0 + self.K * \
                     E**(self.Beta - self.Gamma)) * E**-self.Beta
         
-        return F
+        return E * F
     
     def SourceOn(self, t):
         """ See if source is on. Provide t in code units. """        

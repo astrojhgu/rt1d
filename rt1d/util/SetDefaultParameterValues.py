@@ -97,6 +97,8 @@ def PhysicsParameters():
         
         "approx_lya": 0, # 0 = calculate it!
                          # 1 = Ts -> Tk
+                         
+        "rate_source": 'fk96', # fk96, chianti                 
         }
             
     return pf

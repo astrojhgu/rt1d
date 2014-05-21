@@ -10,18 +10,21 @@ Description:
 
 """
 
+import os, types
 import numpy as np
-import h5py, os, types
 from ..physics.Cosmology import Cosmology
 from ..physics.Constants import s_per_myr
     
 try:
-    from mpi4py import MPI
-    rank = MPI.COMM_WORLD.rank
-    size = MPI.COMM_WORLD.size
+    import h5py
 except ImportError:
-    rank = 0
-    size = 1
+    pass    
+    
+try:
+    from mpi4py import MPI
+    rank = MPI.COMM_WORLD.rank; size = MPI.COMM_WORLD.size
+except ImportError:
+    rank = 0; size = 1
 
 class CheckPoints:
     def __init__(self, pf=None, grid=None, time_units=s_per_myr,

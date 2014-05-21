@@ -25,6 +25,7 @@ class Radiation:
                 
         # Initialize chemistry network / solver
         self.chem = Chemistry(grid, rt=kwargs['radiative_transfer'],
+            rate_src=self.pf['rate_source'],
             rtol=self.pf['solver_rtol'], atol=self.pf['solver_atol'])
         
         # Initialize RT solver

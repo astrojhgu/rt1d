@@ -32,11 +32,11 @@ except ImportError:
     have_dengo = False 
         
 class SimpleChemicalNetwork:
-    def __init__(self, grid):
+    def __init__(self, grid, rate_src='fk96'):
         self.grid = grid
         
         from ..physics.RateCoefficients import RateCoefficients
-        self.coeff = RateCoefficients(grid)
+        self.coeff = RateCoefficients(grid, rate_src=rate_src)
 
         self.isothermal = self.grid.isothermal
 
@@ -46,9 +46,21 @@ class SimpleChemicalNetwork:
         
     def RateEquations(self, t, q, args):
         """
-        This function returns the right-hand side of our ODE's,
+        Compute right-hand side of rate equation ODEs.
+        
         Equations 1, 2, 3 and 9 in Mirocha et al. (2012), except
         we're solving for ion fractions instead of number densities.
+        
+        Parameters
+        ----------
+        t : float
+            Current time.
+        q : np.ndarray
+            Array of dependent variables, one per rate equation.
+        args : list
+            Extra information needed to compute rates.
+            [cell #, ionization rate coefficient (IRC), secondary IRC,
+             photo-heating rate coefficient, number density, time]
         """       
                   
         self.q = q
