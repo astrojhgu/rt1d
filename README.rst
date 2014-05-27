@@ -6,8 +6,8 @@ rt1d is a 1D radiative transfer code developed for the purpose of studying
 ionization (hydrogen and helium) and thermal evolution of gas in the vicinity 
 of stars, accreting black holes, or really any source of ultraviolet and/or 
 X-ray photons you can think of. A paper including some discussion of its 
-inner-workings can be found 
-`here <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
+inner-workings can be found here: 
+`Mirocha et al. (2012) <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
 
 On its own, it is perhaps most valuable as a testbed for new physics modules and/or numerical
 solvers. It can also be used in conjunction with `glorb <https://bitbucket.org/mirochaj/glorb>`_ to study

@@ -6,7 +6,9 @@ Basics
 ------
 .. toctree::
    :maxdepth: 3
-
+   
+   example_star
+   example_bh
    example_rt06_1
    example_rt06_2
    
