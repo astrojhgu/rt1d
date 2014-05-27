@@ -16,13 +16,10 @@ import pylab as pl
 sim = rt1d.run.Simulation(problem_type=1)
 sim.run()
 
+fig2 = pl.figure(2); ax2 = fig2.add_subplot(111)
+
 anl = rt1d.analyze.Simulation(sim.checkpoints)
 anl.PlotIonizationFrontEvolution()
 
-raw_input('<enter> for radial profiles of xHI & xHII')
-pl.close()
-
-anl.IonizationProfile(t=[10, 100, 500], annotate=True)
-
-raw_input('')
+anl.IonizationProfile(t=[10, 100, 500], annotate=True, ax=ax2)
 

@@ -39,4 +39,5 @@ Contents
    install
    structure
    examples
+   parameters
    analysis

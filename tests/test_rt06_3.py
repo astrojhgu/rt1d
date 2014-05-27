@@ -64,6 +64,5 @@ mp.grid[0].legend(loc='lower right', frameon=False)
                 
 pl.draw() 
 
-raw_input('')
 
 

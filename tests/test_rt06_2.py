@@ -19,10 +19,10 @@ sim.run()
 
 anl = rt1d.analyze.Simulation(sim.checkpoints)
 
-ax = anl.TemperatureProfile(t=[10, 100, 500])
-raw_input('<enter> for radial profiles of xHI & xHII')
-pl.close()
+fig1 = pl.figure(1); ax1 = fig1.add_subplot(111)
+fig2 = pl.figure(2); ax2 = fig2.add_subplot(111)
 
-ax = anl.IonizationProfile(t=[10, 100, 500])
-raw_input('')
+anl.TemperatureProfile(t=[10, 100, 500], ax=ax1)
+anl.IonizationProfile(t=[10, 100, 500], ax=ax2)
+
 

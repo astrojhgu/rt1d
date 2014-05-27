@@ -229,6 +229,7 @@ class Simulation:
                 color=color, ls=ls, label=label)
             mp.grid[0].set_xlim(0, max(self.t / self.trec))
             mp.grid[0].set_ylim(0.94, 1.05)
+            mp.grid[0].set_yticks(np.arange(0.94, 1.04, 0.02))
             mp.grid[0].set_xlabel(r'$t / t_{\mathrm{rec}}$')
             mp.grid[0].set_ylabel(r'$r_{\mathrm{num}} / r_{\mathrm{anl}}$') 
             mp.grid[1].set_xticks(np.linspace(0, 4, 5))

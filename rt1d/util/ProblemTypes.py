@@ -125,8 +125,8 @@ def ProblemType(ptype):
         pf = {
               "problem_type": 2, 
               "density_units": 1e-3 * m_H,
-              "length_units": 6.6 * cm_per_kpc, 
-              "stop_time": 500.0, 
+              "length_units": 6.6 * cm_per_kpc,
+              "stop_time": 500.0,
               "isothermal": 0,
               "restricted_timestep": ['ions', 'energy'],
               "Z": [1],

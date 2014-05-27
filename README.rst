@@ -9,11 +9,14 @@ X-ray photons you can think of. A paper including some discussion of its
 inner-workings can be found 
 `here <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
 
-It is perhaps most valuable as a testbed for new physics modules and/or numerical
-solvers.
+On its own, it is perhaps most valuable as a testbed for new physics modules and/or numerical
+solvers. It can also be used in conjunction with `glorb <https://bitbucket.org/mirochaj/glorb>`_ to study
+the ionization and temperature evolution of the IGM during (and preceding) reionization.
 
 Be warned: this code is still under active development -- use at your own risk! 
 Correctness of results is not guaranteed.
+
+The `documentation <http://rt1d.readthedocs.org/en/latest/index.html>`_ is still a work in progress.
 
 Getting started
 ---------------

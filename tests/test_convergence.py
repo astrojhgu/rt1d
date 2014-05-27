@@ -14,7 +14,7 @@ import rt1d
 import pylab as pl
 import numpy as np
 
-maxres = 256
+maxres = 512
 colors = ['c', 'm', 'r', 'g', 'b', 'k']
 
 mp = None
@@ -39,8 +39,8 @@ for i, res in enumerate([2**n for n in np.arange(5, 10)]):
         
     del anl
 
+mp.grid[0].legend(loc='lower right', ncol=2, fontsize=14)
 mp.fix_ticks()    
-pl.rcParams['legend.fontsize'] = 14
-mp.grid[0].legend(loc='lower right', frameon=False, ncol=2)
+
 
     

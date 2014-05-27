@@ -18,22 +18,23 @@ from multiplot import multipanel
 from rt1d.physics.Constants import *
 
 # Initialize radiation background
-src_pars = {
-    'sfrd': lambda z: 0.01 / (1. + z)**3.,
-    'source_type': 'bh',
-    'model': -1,
-    'spectrum_type': 'pl',
-    'spectrum_alpha': -1.5,
-    'spectrum_Emin': 2e2,
-    'spectrum_Emax': 3e4,
-    'spectrum_EminNorm': 5e2,
-    'spectrum_EmaxNorm': 8e3,
-    'approx_xray': 0,
-    'approx_helium': 0,
-    'frequency_bins': 64,
-    'hybrid_integrator': True,
-    'resolve_tau_by': 15,
-    }
+src_pars = \
+{
+ 'sfrd': lambda z: 0.01 / (1. + z)**3.,
+ 'source_type': 'bh',
+ 'model': -1,
+ 'spectrum_type': 'pl',
+ 'spectrum_alpha': -1.5,
+ 'spectrum_Emin': 2e2,
+ 'spectrum_Emax': 3e4,
+ 'spectrum_EminNorm': 5e2,
+ 'spectrum_EmaxNorm': 8e3,
+ 'approx_xray': 0,
+ 'approx_helium': 0,
+ 'frequency_bins': 64,
+ 'hybrid_integrator': True,
+ 'resolve_tau_by': 15,
+}
 
 rad = glorb.evolve.RadiationBackground(**src_pars)
 
