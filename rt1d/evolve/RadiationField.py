@@ -129,20 +129,32 @@ class RadiationField:
             if src.SourcePars['type'] == 'diffuse':
                 
                 if 'Gamma_HI' in kwargs:
-                    self.Gamma[h] = kwargs['Gamma_HI']
+                    
+                    # These if/else's are for glorb!
+                    # Have to be sure we don't double count ionization/heat...
+                    if src.pf['is_ion_src_HII']:
+                        self.Gamma[h] = kwargs['Gamma_HI']
+                    else:
+                        self.Gamma[h] = 0.0
                 else:
                     self.Gamma[h] = src.ionization_rate(z, **kwargs)
                 
                 if 'gamma_HI' in kwargs:
-                    self.gamma[h] = kwargs['gamma_HI']
+                    if src.pf['is_ion_src_igm']:
+                        self.gamma[h] = kwargs['gamma_HI']
+                    else:
+                        self.gamma[h] = 0.0
                 else:
                     self.gamma[h] = src.secondary_ionization_rate(z, **kwargs)
                 
                 if 'epsilon_X' in kwargs:
-                    self.k_H[h] = kwargs['epsilon_X']
+                    if src.pf['is_xray_src']:
+                        self.k_H[h] = kwargs['epsilon_X']
+                    else:
+                        self.k_H[h] = 0.0
                 else:
                     self.k_H[h] = src.heating_rate(z, **kwargs)
-                
+
                 continue    
                 
             self.h = h

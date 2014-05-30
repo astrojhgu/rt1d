@@ -32,7 +32,7 @@ We use square brackets on this page to denote the units of parameters.
     \int_{\text{spectrum_EminNorm}}^{\text{spectrum_EminNorm}} I_{\nu} d\nu = 1
 
 ``spectrum_alpha``
-    Power-law index of emission. Only used if ``spectrum_type`` is 'pl' or 'simpl'
+    Power-law index of emission. Only used if ``spectrum_type`` is ``pl`` or ``simpl``
     Default: -1.5
     
     Defined such that    
@@ -45,7 +45,7 @@ Recall that :math:`I_{\nu}` is proportional to the energy, not the number of pho
 emitted at frequency :math:`\nu`.
     
 ``spectrum_logN``
-    Base-10 logarithm of the eutral absorbing column (hardens spectrum)
+    Base-10 logarithm of the neutral absorbing column (hardens spectrum)
     Default: :math:`-\infty`
     
 ``spectrum_Rmax``

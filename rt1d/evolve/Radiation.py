@@ -81,7 +81,7 @@ class Radiation:
             Gamma = np.sum(Gamma_src, axis=0)
             gamma = np.sum(gamma_src, axis=0)
             Heat = np.sum(Heat_src, axis=0)
-                             
+            
             # Compute Lyman-Alpha emission
             if not self.pf['approx_lya']:
                 Ja = np.sum(Ja_src, axis=0)
