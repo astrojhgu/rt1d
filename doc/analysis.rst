@@ -10,7 +10,7 @@ temperature, etc. To use it, do: ::
     
     # ...once simulation is complete
     anl = rt1d.analyze.Simulation(sim.checkpoints)
-    anl.TemperatureProfile(t[10, 20])
+    anl.TemperatureProfile(t=[10, 20])
     
 or, if you'd like to examine the properties of a radiation source, type instead: ::
 

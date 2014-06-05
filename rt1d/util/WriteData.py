@@ -17,8 +17,9 @@ from ..physics.Constants import s_per_myr
     
 try:
     import h5py
+    have_h5py = True
 except ImportError:
-    pass    
+    have_h5py = False
     
 try:
     from mpi4py import MPI
@@ -245,29 +246,34 @@ class CheckPoints:
     def dump(self, fn):
         """ Write out data to file. """
     
-        f = h5py.File(fn, 'w')
-        basename = fn[0:fn.rfind('.')]
-        
-        pf = f.create_group('parameters')
-        for key in self.pf:
-            if type(self.pf[key]) is types.NoneType:
-                continue
+        if have_h5py:
+            f = h5py.File(fn, 'w')
+            basename = fn[0:fn.rfind('.')]
             
-            try:    
-                pf.create_dataset(key, data=self.pf[key])
-            except TypeError:
-                pass
-        
-        for dd in self.data.keys():
-            grp = f.create_group(dd)
-            grp.attrs.create('is_data', data=True)
-            
-            for key in self.data[dd]:
-                grp.create_dataset(key, data=self.data[dd][key])
+            pf = f.create_group('parameters')
+            for key in self.pf:
+                if type(self.pf[key]) is types.NoneType:
+                    continue
                 
-            del grp    
+                try:    
+                    pf.create_dataset(key, data=self.pf[key])
+                except TypeError:
+                    pass
             
-        f.close()        
+            for dd in self.data.keys():
+                grp = f.create_group(dd)
+                grp.attrs.create('is_data', data=True)
+                
+                for key in self.data[dd]:
+                    grp.create_dataset(key, data=self.data[dd][key])
+                    
+                del grp    
+                
+            f.close() 
+        
+        else:
+            
+            raise NotImplemented('need to implement npz writer for data dumps.')       
 
          
         

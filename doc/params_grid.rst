@@ -7,7 +7,8 @@ Grid Parameters
     spherical shells to consider in calculation).
 
 ``logarithmic_grid``
-    If True, discretize space into logarithmic cells.
+    If True, discretize space logarithmically, rather than linearly.
+    
     Default: False
 
 ``start_radius``

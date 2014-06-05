@@ -580,77 +580,116 @@ class IntegralTable:
         if rank > 0:
             return
         
-        import h5py
-        
-        if fn is None:
+        try:
+            import h5py
+            have_h5py = True
+        except ImportError:
+            have_h5py = False    
+            
+        have_h5py = False # testing
+
+            
+        if fn is None and have_h5py:
             fn = 'rt1d_integral_table.hdf5'
+        elif fn is None:
+            fn = 'rt1d_integral_table.npz'
         
-        f = h5py.File(fn)
-        for i, axis in enumerate(self.axes):
-            ds = f.create_dataset(self.axes_names[i], data=axis)
-            ds.attrs.create('axis', data=i)
-            ds.attrs.create('logN', data=int(self.axes_names[i][0:4]=='logN'))
+        if have_h5py:
         
-        for tab in self.tabs:
-            f.create_dataset(tab, data=self.tabs[tab])
+            f = h5py.File(fn)
+            for i, axis in enumerate(self.axes):
+                ds = f.create_dataset(self.axes_names[i], data=axis)
+                ds.attrs.create('axis', data=i)
+                ds.attrs.create('logN', data=int(self.axes_names[i][0:4]=='logN'))
             
-        # Save parameter file
-        pf_grp = f.create_group('parameters')
-        for par in self.pf:
-            if self.pf[par] is not None:
-                try:
-                    pf_grp.create_dataset(par, data=self.pf[par])
-                except TypeError:
-                    if type(self.pf[par]) is list:
-                        Nones = 0
-                        for i in range(len(self.pf[par])):
-                            if self.pf[par] is None:
-                                Nones += 1
+            for tab in self.tabs:
+                f.create_dataset(tab, data=self.tabs[tab])
+                
+            # Save parameter file
+            pf_grp = f.create_group('parameters')
+            for par in self.pf:
+                if self.pf[par] is not None:
+                    try:
+                        pf_grp.create_dataset(par, data=self.pf[par])
+                    except TypeError:
+                        if type(self.pf[par]) is list:
+                            Nones = 0
+                            for i in range(len(self.pf[par])):
+                                if self.pf[par] is None:
+                                    Nones += 1
+                            
+                            if Nones == len(self.pf[par]):
+                                pf_grp.create_dataset(par, data=[-99999] * Nones)
+                        else:
+                            raise ValueError('Dunno what to do here.')        
                         
-                        if Nones == len(self.pf[par]):
-                            pf_grp.create_dataset(par, data=[-99999] * Nones)
-                    else:
-                        raise ValueError('Dunno what to do here.')        
-                    
-                    
-            else:
-                pf_grp.create_dataset(par, data=-99999)
+                        
+                else:
+                    pf_grp.create_dataset(par, data=-99999)
+                
+            f.close()
             
-        f.close()
+        else:
+            f = open(fn, 'w')
+
+            kw = {tab:self.tabs[tab] for tab in self.tabs}
+            for i, axis in enumerate(self.axes):
+                kw.update({self.axes_names[i]: self.axes[i]})
+                
+            np.savez(f, **kw)
+                
+            f.close()  
     
     def load(self, fn):
-        """ 
+        """
         Load table from hdf5. 
         """
         
-        import h5py
+        if re.search('npz', fn):
+                        
+            data = np.load(fn)
         
-        axes = []
-        self.tabs = {}
-        f = h5py.File(fn)
-        for element in f.keys():
-            if f[element].attrs.get('axis') is not None:
-                axes.append([int(f[element].attrs.get('axis')), element, 
-                    f[element].value])
-                continue
+            axes = []
+            self.tabs = {}
+            for key in data.keys():
+                if re.search('logN', key):
+                    if re.search('h_1', key):
+                        i = 0
+                    else:
+                        raise NotImplemented('help!')    
+                    
+                    axes.append([i, key, data[key]])
+        
+                    continue
             
-            self.tabs[element] = f[element].value
+                self.tabs[key] = data[key]
+
+        else:
+            axes = []
+            self.tabs = {}
+            f = h5py.File(fn)
+            for element in f.keys():
+                if f[element].attrs.get('axis') is not None:
+                    axes.append([int(f[element].attrs.get('axis')), element, 
+                        f[element].value])
+                    continue
                 
-        f.close()
+                self.tabs[element] = f[element].value
+            
+            f.close()
+        
         print 'Read integral table from %s.' % fn
         
         axis_nums, axis_names, values = zip(*axes)
 
-        print np.array(values).shape, np.array(self.axes).shape
-
         # See if parameter file and integral table are consistent
         ok = True
         for i, axis in enumerate(axis_names):
-            
+
             if axis not in self.axes_names:
                 print "WARNING: Axis \'%s\' not expected." % axis
                 continue
-            
+
             if np.all(np.array(values[i]) == self.axes[i]):
                 continue
             
@@ -663,5 +702,4 @@ class IntegralTable:
                 
         return self.tabs
                
-                    
             
