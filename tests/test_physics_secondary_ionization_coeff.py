@@ -23,9 +23,11 @@ channels.reverse()
 
 colors = ['k', 'b', 'r', 'g', 'm', 'c', 'y']
 
-mp = multipanel(dims=(2, 2), padding=(0.2, 0.2))
+mp = multipanel(dims=(2, 2), padding=(0.2, 0.))
 
-esec = rt1d.physics.SecondaryElectrons(method=3)
+esec1 = rt1d.physics.SecondaryElectrons(method=1)
+esec2 = rt1d.physics.SecondaryElectrons(method=2)
+esec3 = rt1d.physics.SecondaryElectrons(method=3)
 
 for j, channel in enumerate(channels):
     
@@ -38,20 +40,30 @@ for j, channel in enumerate(channels):
                 label = r'$x_e = %.2g$' % x
         else:
             label = None                       
-             
-        f = map(lambda EE: esec.DepositionFraction(xHII=x, E=EE, 
-            channel=channel), E)
         
-        mp.grid[j].semilogx(E, f, color=colors[k], ls='-', label=label)
+        if channel not in ['exc', 'lya']:                  
+            f2 = map(lambda EE: esec2.DepositionFraction(xHII=x, E=EE, 
+                channel=channel), E)
+            mp.grid[j].semilogx(E, f2, color=colors[k], ls='--')
+            
+        f3 = map(lambda EE: esec3.DepositionFraction(xHII=x, E=EE, 
+            channel=channel), E)
+        mp.grid[j].semilogx(E, f3, color=colors[k], ls='-', label=label)
+        
+        mp.grid[j].semilogx([10, 1e4], 
+            [esec1.DepositionFraction(xHII=x, channel=channel)]*2, 
+            color=colors[k], ls=':')
         
     mp.grid[j].set_ylabel(r'$f_{\mathrm{%s}}$' % channel)
     mp.grid[j].set_yscale('linear')
     mp.grid[j].set_ylim(0, 1.05)
     
     if j == 2:
-        mp.grid[2].legend(loc='upper left')
+        mp.grid[2].legend(loc='upper left', ncol=2)
 
-for i in range(3):
+for i in range(2):
     mp.grid[i].set_xlabel(r'Electron Energy (eV)')
 
-pl.draw()
+mp.fix_ticks()
+
+#pl.draw()

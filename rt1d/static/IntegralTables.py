@@ -587,7 +587,6 @@ class IntegralTable:
             have_h5py = False    
             
         have_h5py = False # testing
-
             
         if fn is None and have_h5py:
             fn = 'rt1d_integral_table.hdf5'
@@ -639,7 +638,19 @@ class IntegralTable:
             np.savez(f, **kw)
                 
             f.close()  
-    
+            
+            # Save parameters
+            import pickle
+            
+            prefix = fn[0:fn.rfind('.')]
+            suffix = fn[fn.rfind('.')+1:]
+            
+            f = open('%s.pars.pkl' % prefix, 'wb')
+            pickle.dump(self.pf, f)
+            f.close()
+            if rank == 0:
+                print 'Wrote %s and %s.pars.pkl' % (fn, prefix)  
+
     def load(self, fn):
         """
         Load table from hdf5. 
@@ -656,7 +667,7 @@ class IntegralTable:
                     if re.search('h_1', key):
                         i = 0
                     else:
-                        raise NotImplemented('help!')    
+                        raise NotImplemented('help! fix npz reader for N > 1')
                     
                     axes.append([i, key, data[key]])
         

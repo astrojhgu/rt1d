@@ -20,7 +20,7 @@ import numpy as np
 
 E_th = [13.6, 24.6, 54.4]
 
-def readtab(fn, start = 0, stop = None, header = False):
+def readtab(fn, start=0, stop=None, header=False):
     """
     Returns columns from ASCII file as lists. 
     """

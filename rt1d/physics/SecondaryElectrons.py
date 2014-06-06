@@ -175,7 +175,7 @@ class SecondaryElectrons:
                     f[i] = self.fHeII(E, x)
                 if channel == 'lya':
                     f[i] = self.flya(E, x)
-                if channel == 'fexc':
+                if channel == 'exc':
                     f[i] = self.fexc(E, x)
             
             return f
