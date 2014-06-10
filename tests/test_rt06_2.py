@@ -22,7 +22,7 @@ anl = rt1d.analyze.Simulation(sim.checkpoints)
 fig1 = pl.figure(1); ax1 = fig1.add_subplot(111)
 fig2 = pl.figure(2); ax2 = fig2.add_subplot(111)
 
-anl.TemperatureProfile(t=[10, 100, 500], ax=ax1)
-anl.IonizationProfile(t=[10, 100, 500], ax=ax2)
+anl.TemperatureProfile(t=[10, 30, 100], ax=ax1)
+anl.IonizationProfile(t=[10, 30, 100], ax=ax2)
 
 

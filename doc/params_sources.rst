@@ -25,9 +25,9 @@ Source Parameters
     Default: :math:`5 \times 10^{48}\ \text{s}^{-1}` 
         
 ``source_lifetime``
-    Time after which radiation from this source will no longer be considered [time_units]
+    Time after which radiation from this source will no longer be considered.
 
-    Default: :math:`10^{10}`
+    Default: :math:`10^{10}` [``time_units``]
     
  
 ::

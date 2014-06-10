@@ -38,6 +38,7 @@ def GridParameters():
         "time_units": s_per_myr,  
         
         "Z": [1],
+        "Zion": [0, 1],
         "abundance": [1.],
         "initial_ionization": [1.2e-3],
         "initial_temperature": 1e4,

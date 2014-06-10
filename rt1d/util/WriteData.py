@@ -125,6 +125,7 @@ class CheckPoints:
         """
         
         to_write, dump_type = self.write_now(t=t, z=z)
+        
         if not to_write:
             return    
         

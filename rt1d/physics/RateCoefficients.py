@@ -122,9 +122,17 @@ class RateCoefficients:
                     return 9.94e-11 * T**-0.6687
                 elif species == 2:
                     alpha = 3.36e-10 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 4.e6)**0.7)**-1 # To n >= 1
-                    alpha[T < 2.2e4] *= (1.11 - 0.044 * np.log(T[T < 2.2e4]))   # To n >= 2                   
-                    alpha[T >= 2.2e4] *= (1.43 - 0.076 * np.log(T[T >= 2.2e4])) # To n >= 2
                     
+                    if type(T) in [np.float64]:
+                        if T < 2.2e4:
+                            alpha *= (1.11 - 0.044 * np.log(T))   # To n >= 2
+                        else:
+                            alpha *= (1.43 - 0.076 * np.log(T)) # To n >= 2
+                    else:
+                        alpha[T < 2.2e4] *= (1.11 - 0.044 * np.log(T[T < 2.2e4]))   # To n >= 2
+                        alpha[T >= 2.2e4] *= (1.43 - 0.076 * np.log(T[T >= 2.2e4])) # To n >= 2
+                        
+                        
                     return alpha
             else:
                 raise ValueError('Unrecognized RecombinationMethod.  Should be A or B.')

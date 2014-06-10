@@ -448,19 +448,25 @@ class Simulation:
         return time, value
     
     def IonizationRate(self, t=1, absorber='h_1', color='k', ls='-', 
-        legend=True, plot_recomb=False, total_only=False, src=0):
+        legend=True, plot_recomb=False, total_only=False, src=0, ax=None):
         """
-        Plot total ionization rate, and lines for primary, secondary, and 
-        collisional. Needs to be generalized under new framework.
+        Plot ionization rate.
+        
+        Parameters
+        ----------
+        total_only : bool
+            If True, will only plot total ionization rate. If False, will
+            separate out into photo-ionization, secondary ionization, 
+            and collisional ionization.
+            
         """ 
         
         if type(t) is not list:
             t = [t]
         
-        if legend and hasattr(self, 'ax'):
-            legend = False
+        if ax is None:
+            ax = pl.subplot(111)
         
-        self.ax = pl.subplot(111)
         i = self.grid.absorbers.index(absorber)
         for dd in self.data.keys():
             if self.data[dd]['time'] / self.pf['time_units'] not in t: 
@@ -470,13 +476,26 @@ class Simulation:
             nabs = self.data[dd][absorber] * self.grid.x_to_n[absorber]
             nion = self.data[dd]['h_2'] * self.grid.x_to_n[absorber]
               
-            Gamma = self.data[dd]['Gamma_%i' % src][...,i] * nabs
-            Beta = self.data[dd]['Beta'][...,i] * nabs * ne
+            if 'Gamma_0' in self.data[dd].keys():
+                Gamma = self.data[dd]['Gamma_%i' % src][...,i] * nabs
+                
+                gamma = 0.0
+                for j, donor in enumerate(self.grid.absorbers):
+                    gamma += self.data[dd]['gamma_%i' % src][...,i,j] * \
+                        self.data[dd][donor] * self.grid.x_to_n[donor]
             
-            gamma = 0.0
-            for j, donor in enumerate(self.grid.absorbers):
-                gamma += self.data[dd]['gamma_%i' % src][...,i,j] * \
-                    self.data[dd][donor] * self.grid.x_to_n[donor]
+            else:
+                Gamma = self.data[dd]['Gamma'][...,i] * nabs
+                
+                gamma = 0.0
+                for j, donor in enumerate(self.grid.absorbers):
+                    gamma += self.data[dd]['gamma'][...,i,j] * \
+                        self.data[dd][donor] * self.grid.x_to_n[donor]
+            
+            if 'Beta' in self.data[dd]:
+                Beta = self.data[dd]['Beta'][...,i] * nabs * ne   
+            else:
+                Beta = 0 
             
             ion = Gamma + Beta + gamma # Total ionization rate
             
@@ -485,54 +504,65 @@ class Simulation:
             xi = self.data[dd]['xi'][...,i] * nion * ne
             recomb = alpha + xi    
                 
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, ion, 
-                color = color, ls = ls, label = 'Total')
+            ax.loglog(self.grid.r_mid / cm_per_kpc, ion, 
+                color=color, ls=ls, label='Total')
                 
             if not total_only:      
-                self.ax.loglog(self.grid.r_mid / cm_per_kpc, Gamma, 
-                    color = color, ls = '--', label = r'$\Gamma$')
-                self.ax.loglog(self.grid.r_mid / cm_per_kpc, gamma, 
-                    color = color, ls = ':', label = r'$\gamma$')
-                self.ax.loglog(self.grid.r_mid / cm_per_kpc, Beta, 
-                    color = color, ls = '-.', label = r'$\beta$')
+                ax.loglog(self.grid.r_mid / cm_per_kpc, Gamma, 
+                    color=color, ls='--', label=r'$\Gamma$')
+                ax.loglog(self.grid.r_mid / cm_per_kpc, gamma, 
+                    color=color, ls=':', label=r'$\gamma$')
+                ax.loglog(self.grid.r_mid / cm_per_kpc, Beta, 
+                    color=color, ls='-.', label=r'$\beta$')
                     
             if plot_recomb:
-                self.ax.loglog(self.grid.r_mid / cm_per_kpc, recomb, 
+                ax.loglog(self.grid.r_mid / cm_per_kpc, recomb, 
                     color = 'b', ls = '-', label = 'Recomb.')
-                self.ax.loglog(self.grid.r_mid / cm_per_kpc, alpha, 
-                    color = 'b', ls = '--', label = r'$\alpha$')
-                self.ax.loglog(self.grid.r_mid / cm_per_kpc, xi, 
-                    color = 'b', ls = ':', label = r'$\xi$')
+                    
+                if not total_only:    
+                    ax.loglog(self.grid.r_mid / cm_per_kpc, alpha, 
+                        color = 'b', ls = '--', label = r'$\alpha$')
+                    ax.loglog(self.grid.r_mid / cm_per_kpc, xi, 
+                        color = 'b', ls = ':', label = r'$\xi$')
             
-        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
-        self.ax.set_ylabel(r'Ionization Rate $(\mathrm{s}^{-1})$')
-        self.ax.set_ylim(0.01 * 10**np.floor(np.log10(np.min(ion))), 
+        ax.set_xlabel(r'$r \ (\mathrm{kpc})$') 
+        ax.set_ylabel(r'Ionization Rate $(\mathrm{s}^{-1})$')
+        ax.set_ylim(0.01 * 10**np.floor(np.log10(np.min(ion))), 
             10**np.ceil(np.log10(np.max(ion))))
         
         if legend:
-            self.ax.legend(frameon = False, ncol = 2, loc = 'best')
+            ax.legend(frameon=False, ncol=2, loc='best')
         
         pl.draw()    
         
-    def HeatingRate(self, t = 1, color = 'r', ls = '-', legend = True, src = 0, 
-        plot_cooling = False, label = None):
+        return ax
+        
+    def HeatingRate(self, t=1, color='r', ls='-', legend=True, src=0, 
+        plot_cooling=False, label=None, ax=None):
         """
-        Plot total heating rate, and lines for primary, secondary, and 
-        collisional.
+        Plot heating rate as a function of radius.
+        
+        Parameters
+        ----------
+        t : int, float
+            Time (code units) at which to plot heating rate.
+        plot_cooling : bool
+            Plot total cooling rate vs. radius as well?
+            
         """ 
         
         if type(t) is not list:
             t = [t]
         
-        if legend and hasattr(self, 'ax'):
-            legend = False
+        if ax is None:
+            ax = pl.subplot(111)    
             
         if label is None:
             heat_label = r'$\mathcal{H}_{\mathrm{tot}}$'    
         else:
             heat_label = label    
         
-        self.ax = pl.subplot(111)
+        ax = pl.subplot(111)
         for dd in self.data.keys():
             if self.data[dd]['time'] / self.pf['time_units'] not in t: 
                 continue
@@ -546,7 +576,10 @@ class Simulation:
                 nion = self.data[dd]['h_2'] * self.grid.x_to_n[absorber]
                             
                 # Photo-heating
-                heat = heat + self.data[dd]['Heat_%i' % src][...,i] * nabs
+                if 'Heat_0' in self.data[dd].keys():
+                    heat = heat + self.data[dd]['Heat_%i' % src][...,i] * nabs
+                else:
+                    heat = heat + self.data[dd]['Heat'][...,i] * nabs
                 
                 # Cooling
                 zeta = zeta + self.data[dd]['zeta'][...,i] * nabs * ne # collisional ionization                
@@ -563,21 +596,21 @@ class Simulation:
             mi = min(np.min(heat), np.min(cool))    
             ma = max(np.max(heat), np.max(cool))    
                 
-            self.ax.loglog(self.grid.r_mid / cm_per_kpc, heat, 
+            ax.loglog(self.grid.r_mid / cm_per_kpc, heat, 
                 color = color, ls = ls, label = heat_label)
             
             if plot_cooling:
-                self.ax.loglog(self.grid.r_mid / cm_per_kpc, cool, 
+                ax.loglog(self.grid.r_mid / cm_per_kpc, cool, 
                     color = 'b', ls = '-', label = r'$\mathcal{C}_{\mathrm{tot}}$')
-                self.ax.loglog(self.grid.r_mid / cm_per_kpc, zeta, 
+                ax.loglog(self.grid.r_mid / cm_per_kpc, zeta, 
                     color = 'g', ls = '--', label = r'$\zeta$')
-                self.ax.loglog(self.grid.r_mid / cm_per_kpc, psi, 
+                ax.loglog(self.grid.r_mid / cm_per_kpc, psi, 
                     color = 'g', ls = ':', label = r'$\psi$')
-                self.ax.loglog(self.grid.r_mid / cm_per_kpc, eta, 
+                ax.loglog(self.grid.r_mid / cm_per_kpc, eta, 
                     color = 'c', ls = '--', label = r'$\eta$')
             
                 if 'he_2' in self.grid.absorbers:
-                    self.ax.loglog(self.grid.r_mid / cm_per_kpc, omega, 
+                    ax.loglog(self.grid.r_mid / cm_per_kpc, omega, 
                         color = 'c', ls = ':', label = r'$\omega_{\mathrm{HeII}}$')
                         
                 #if self.pf['CosmologicalExpansion']:
@@ -590,17 +623,31 @@ class Simulation:
             else:    
                 ax_label = r'Heating Rate $(\mathrm{erg} \ \mathrm{s}^{-1} \ \mathrm{cm}^{-3})$'    
                             
-        self.ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
-        self.ax.set_ylabel(ax_label)
-        self.ax.set_ylim(0.001 * 10**np.floor(np.log10(mi)), 
+        ax.set_xlabel(r'$r \ (\mathrm{kpc})$')
+        ax.set_ylabel(ax_label)
+        ax.set_ylim(0.001 * 10**np.floor(np.log10(mi)), 
             10**np.ceil(np.log10(ma)))
         
         if legend:
-            self.ax.legend(frameon = False, ncol = 3, loc = 'best')
+            ax.legend(frameon=False, ncol=3, loc='best')
         
         pl.draw()    
         
         self.heat = heat
         self.cool, self.zeta, self.eta, self.psi = (cool, zeta, eta, psi)
     
+        return ax
 
+    def snapshot(self, t):
+        """
+        Return data for snapshot at given time (in time_units).
+        """
+        
+        if hasattr(self, 'pf'):
+            t_time_units = t / self.pf['time_units']
+        
+        for dd in self.data.keys():
+            t_time_units = self.data[dd]['time'] / self.pf['time_units']
+            if t_time_units not in t: 
+                continue
+                

@@ -22,10 +22,13 @@ grid = rt1d.static.Grid(dims=dims)
 
 # Set initial conditions
 grid.set_physics(isothermal=True)
-grid.set_chemistry(Z=[1,2], abundance=[1.0, 0.08])
+grid.set_chemistry(Z=[1,2], Zion=[[0, 1], [0, 1, 2]], abundance=[1.0, 0.08])
+#grid.set_chemistry(Z=[2])
 grid.set_density(rho0=rt1d.physics.Constants.m_H)
 grid.set_temperature(T)
 grid.set_ionization()
+#grid.set_ionization(1, x=0.5)
+#grid.set_ionization(2, x=0.33333333)
 
 # Initialize chemistry network / solver
 chem = rt1d.evolve.Chemistry(grid, rt=False, dengo=False)
@@ -38,10 +41,10 @@ timestep = rt1d.run.ComputeTimestep(grid)
 
 # Evolve chemistry
 data = grid.data
-dt = rt1d.physics.Constants.s_per_myr
+dt = rt1d.physics.Constants.s_per_myr * 1e-4
 dt_max = 10 * rt1d.physics.Constants.s_per_myr
 t = 0.0
-tf = rt1d.physics.Constants.s_per_gyr
+tf = 10 * rt1d.physics.Constants.s_per_gyr
 
 # Initialize progress bar
 pb = rt1d.util.ProgressBar(tf)
@@ -50,8 +53,8 @@ pb.start()
 while t <= tf:
     pb.update(t)
     data = chem.Evolve(data, t=t, dt=dt)
-    t += dt 
-    
+    t += dt
+
     new_dt = timestep.Limit(chem.chemnet.q, chem.chemnet.dqdt)
     dt = min(min(min(new_dt, 2 * dt), dt_max), tf - t)
 
@@ -64,7 +67,10 @@ pb.finish()
 ax = pl.subplot(111)
 ax.loglog(T, data['he_1'], color='k', ls='-')
 ax.loglog(T, data['he_2'], color='k', ls='--')
-ax.loglog(T, data['he_3'], color='k', ls=':')
+
+if 'he_3' in data:
+    ax.loglog(T, data['he_3'], color='k', ls=':')
+
 ax.set_xscale('log')
 ax.set_yscale('log')
 ax.set_xlabel(r'$T \ (\mathrm{K})$')

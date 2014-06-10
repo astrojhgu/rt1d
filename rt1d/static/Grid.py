@@ -346,7 +346,8 @@ class Grid(object):
             CMBTemperatureNow=CMBTemperatureNow, 
             approx_highz=approx_highz)        
         
-    def set_chemistry(self, Z=1, abundance=1.0, energy=False, approx_helium=0):
+    def set_chemistry(self, Z=1, Zion=[[0,1]], abundance=1.0, energy=False, 
+        approx_helium=0):
         """
         Initialize chemistry.
         
@@ -357,6 +358,8 @@ class Grid(object):
         ----------
         Z : int, list
             Atomic number(s) of elements to include in calculation.
+        Zion : list
+            Ions to include (per element) in calculation.
         abundance : float, list, str
             Abundance(s) (relative to hydrogen) of elements.
             If chiantiPy is installed, can be a string. Some acceptable
@@ -379,6 +382,10 @@ class Grid(object):
         
         if type(Z) is not list:
             Z = [Z]
+        if 2 in Z:
+            if Zion == [[0, 1]]:
+                Zion = [[0, 1], [0, 1, 2]]
+                
         if type(abundance) not in [str, list]:
             abundance = [abundance]    
         
@@ -386,6 +393,7 @@ class Grid(object):
         self.approx_helium = approx_helium
         
         self.Z = np.array(Z)
+        self.Zion = np.array(Zion)
         self.ions_by_parent = {} # Ions sorted by parent element in dictionary
         self.parents_by_ion = {} # From ion name, determine parent element
         self.elements = []       # Just a list of element names
@@ -393,11 +401,14 @@ class Grid(object):
         self.tracked_fields = [] # Anything we're keeping track of
         self.evolving_fields = []# Anything with an ODE we'll later solve
           
-        for element in self.Z:
+        for i, element in enumerate(self.Z):
             element_name = util.z2element(element)
             self.ions_by_parent[element_name] = []
             self.elements.append(element_name)
             for ion in xrange(element + 1):
+                if ion not in self.Zion[i]:
+                    continue
+                
                 name = util.zion2name(element, ion + 1)
                 self.all_ions.append(name)
                 self.ions_by_parent[element_name].append(name)
@@ -648,6 +659,9 @@ class Grid(object):
         self.data['de'] = np.zeros(self.dims)
         for i, Z in enumerate(self.Z):
             for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
+                if j not in self.Zion[i]:
+                    continue
+                
                 x_i_jp1 = self.data[util.zion2name(Z, j + 1)]
                 self.data['de'] += j * x_i_jp1 * self.n_ref \
                     * self.element_abundances[i]    
@@ -668,6 +682,9 @@ class Grid(object):
         de = np.zeros(self.dims)
         for i, Z in enumerate(self.Z):
             for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
+                if j not in self.Zion[i]:
+                    continue
+
                 x_i_jp1 = data[util.zion2name(Z, j + 1)]
                 de += j * x_i_jp1 * self.n_ref * (1. + z)**3 / (1. + self.zi)**3 \
                     * self.element_abundances[i]

@@ -328,7 +328,7 @@ class RadiationField:
                     continue
                 
                 for j, donor in enumerate(self.grid.absorbers):
-                    self.gamma[h][..., k, j] = \
+                    self.gamma[h][...,k,j] = \
                         self.SecondaryIonizationRate(absorber, donor)           
                        
             # Compute total optical depth too

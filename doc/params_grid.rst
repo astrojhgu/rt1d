@@ -20,13 +20,14 @@ Grid Parameters
     (i.e., equivalent of :math:`10^{-3}` hydrogen atoms per :math:`\text{cm}^{3}`)
     
 ``length_units``
-    Default: :math:`3.08568 \times 10^{21} \ \text{cm}` (i.e., 1 kilo-parsec)
+    Default: :math:`6.6 \times 3.08568 \times 10^{21} \ \text{cm}` (i.e., 6.6 kilo-parsec) [centimeters]
     
 ``time_units``
-    Default: :math:`3.15576 \times 10^{13} \ \text{s}` (i.e., 1 Myr)
+    Default: :math:`3.15576 \times 10^{13} \ \text{s}` (i.e., 1 Myr) [seconds]    
 
 ``Z``
     List of atomic numbers of elements to be included in calculation.
+    
     Default: [1] (hydrogen only)
 
 ``abundance``
