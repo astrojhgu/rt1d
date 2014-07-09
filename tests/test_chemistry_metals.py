@@ -12,7 +12,7 @@ Description: Evolve metal species to equilibrium using dengo-based solver.
 
 import rt1d
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 import chianti.core as cc
 
 #

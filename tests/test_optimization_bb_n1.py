@@ -13,7 +13,7 @@ we have an ~analytic solution that we can compare to.
 
 import rt1d, ndmin
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 from multiplot import multipanel
 
 erg_per_ev = rt1d.physics.Constants.erg_per_ev 

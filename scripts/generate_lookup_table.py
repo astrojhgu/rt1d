@@ -11,7 +11,7 @@ Description: Tabulate integral quantities in N-D, where N=len(Z).
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 import numpy as np
 
 # 

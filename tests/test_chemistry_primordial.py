@@ -12,7 +12,7 @@ Description: Evolve hydrogen and helium.
 
 import rt1d
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 import chianti.core as cc
 
 dims = 32

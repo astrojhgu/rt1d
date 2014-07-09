@@ -13,7 +13,7 @@ clump test problem.
 
 import rt1d, glorb
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 from multiplot import multipanel
 from rt1d.physics.Constants import *
 

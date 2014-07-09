@@ -11,7 +11,7 @@ to rt1d directly ('d') as an array both work.
 
 """
 
-import pylab as pl
+import matplotlib.pyplot as pl
 import numpy as np
 import rt1d, h5py, os
 

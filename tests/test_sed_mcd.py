@@ -11,7 +11,7 @@ Description: Plot a simple multi-color disk accretion spectrum.
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 import numpy as np
 
 bh_pars = \
@@ -20,8 +20,8 @@ bh_pars = \
     'source_mass': 10.,
     'source_rmax': 1e3,
     'spectrum_type': 'mcd',
-    'spectrum_Emin':10.,
-    'spectrum_Emax':1e4,
+    'spectrum_Emin': 10.,
+    'spectrum_Emax': 1e4,
     'spectrum_logN': 18.,
 }
 

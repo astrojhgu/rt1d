@@ -12,7 +12,7 @@ Description: Find optimal 4-bin 10^5 BB SED.
 
 import rt1d, sys
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 from multiplot import multipanel
 
 try:

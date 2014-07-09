@@ -12,7 +12,7 @@ Description:
 
 import rt1d
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 
 src1 = {'type': 'bb', 'Emin': 13.6, 'Emax': 1e2,
     'EminNorm': 0.0, 'EmaxNorm': np.inf}

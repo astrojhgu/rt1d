@@ -12,7 +12,7 @@ Description: Add constant background ionizing field.
 
 import rt1d
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 
 # RT06 #2
 sim1 = rt1d.run.Simulation(problem_type=2, stop_time=30)

@@ -11,7 +11,7 @@ Description:
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 from multiplot import multipanel
 
 sim = rt1d.run.Simulation(problem_type=3, grid_cells=256,

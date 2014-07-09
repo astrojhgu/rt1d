@@ -15,7 +15,6 @@ Maybe not - MPI should be OK, multiprocessing should cause the problems.
 """
 
 import copy
-import pylab as pl
 import numpy as np
 from scipy.integrate import ode
 from ..util import convert_ion_name

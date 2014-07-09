@@ -12,7 +12,7 @@ RT06 problems 0.3 and 2, for now.
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 from multiplot import multipanel
 
 # RT06 0.3 - continuous, discrete, and optically_thin = 1

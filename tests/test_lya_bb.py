@@ -11,7 +11,7 @@ Description:
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 
 E_LL = rt1d.physics.Constants.E_LL
 E_LyA = rt1d.physics.Constants.E_LyA

@@ -11,7 +11,7 @@ Description: Vary grid resolution for RT06 #1.
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 import numpy as np
 
 maxres = 512

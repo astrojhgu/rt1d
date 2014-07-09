@@ -12,7 +12,12 @@ Description:
 
 import rt1d, sys
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
+
+try:
+    species = int(sys.argv[1])
+except IndexError:
+    species = 0
 
 try:
     species = int(sys.argv[1])

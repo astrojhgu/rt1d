@@ -12,7 +12,7 @@ Description: Evolve helium species.
 
 import rt1d
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 
 dims = 32
 T = np.logspace(5, 6, dims)

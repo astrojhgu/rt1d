@@ -12,7 +12,7 @@ secondary ionization/heating.
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 
 cm_per_kpc = rt1d.physics.Constants.cm_per_kpc
 

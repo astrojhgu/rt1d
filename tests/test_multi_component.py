@@ -13,7 +13,7 @@ used to model emission from the vicinity of an accreting black hole.
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 
 pf = \
 {

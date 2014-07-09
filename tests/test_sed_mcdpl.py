@@ -11,7 +11,7 @@ Description: Reproduce Figure 1 (kind of) from Kuhlen & Madau (2005).
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 
 bh_pars = {
            'source_type': 'bh',

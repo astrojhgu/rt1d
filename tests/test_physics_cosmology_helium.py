@@ -11,7 +11,7 @@ Description: Recombination test problem - include helium.
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 import numpy as np
 from multiplot import multipanel
 

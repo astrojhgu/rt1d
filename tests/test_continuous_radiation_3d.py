@@ -12,7 +12,7 @@ generation.
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 import numpy as np
 
 grid = rt1d.Grid(length_units=3e23) # 100 kpc grid

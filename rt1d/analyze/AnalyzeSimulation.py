@@ -11,7 +11,7 @@ Description: Functions to calculate various quantities from our rt1d datasets.
 
 import os, re
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 from math import floor, ceil
 from ..run import Simulation
 from ..static.Grid import Grid

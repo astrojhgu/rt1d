@@ -11,7 +11,7 @@ Description:
 """
 
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 from ..physics.Constants import *
 from scipy.integrate import quad as integrate
 from ..physics.CrossSections import PhotoIonizationCrossSection as sigma_E
@@ -90,7 +90,16 @@ class Source:
             * (sigma_E(E, 0) + y * sigma_E(E, 1)))
                     
     def PlotSpectrum(self, color='k', components=True, t=0, normalized=True,
-        bins=100, ax=None, label=None, ls='-', xunit='eV'):
+        bins=100, ax=None, label=None, ls='-', xunit='eV', marker=None,
+        normalize_to=None):
+        """
+        
+        Parameters
+        ----------
+        normalize_to : list, tuple
+            Normalize such that at energy normalize_to[0], the intensity is
+            normalize_to[1]
+        """
         
         if not normalized:
             Lbol = self.rs.BolometricLuminosity(t)
@@ -124,11 +133,20 @@ class Source:
             F = np.array(F) * 1e3
         else:
             E = np.array(E)
-            F = np.array(F)    
+            F = np.array(F)
+            
+        if normalize_to is not None:
+            norm = normalize_to[1] / F[np.argmin(np.abs(E - normalize_to[0]))]
+        else:
+            norm = 1
                     
-        self.E, self.F = E, F            
-        ax.loglog(E, F * Lbol, color=color, ls=ls, 
-            label=label)
+        self.E, self.F = E, F    
+        if marker is None:        
+            ax.loglog(E, F * Lbol * norm, color=color, ls=ls, 
+                label=label)
+        else:
+            ax.scatter(E, F * Lbol * norm, color=color, marker=marker, 
+                label=label)
         
         if components and self.rs.N > 1:
             for i in xrange(self.rs.N):

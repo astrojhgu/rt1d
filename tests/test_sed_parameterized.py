@@ -11,7 +11,7 @@ Description: See if passing spectrum_function parameter works.
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 
 BBfunc = rt1d.sources.StellarSource._Planck
 

@@ -326,8 +326,8 @@ class SimpleChemicalNetwork:
                     Tcmb = self.grid.cosm.TCMB(z)
                     ucmb = self.grid.cosm.UCMB(z)
                     tcomp = 3. * m_e * c / (8. * sigma_T * ucmb)
-                    compton = xHII * (Tcmb - q[-1]) / tcomp \
-                        / (1. + self.grid.cosm.y + xHII)
+                    compton = x['h_2'] * (Tcmb - q[-1]) / tcomp \
+                        / (1. + self.grid.cosm.y + x['h_2'])
             
             dqdt['Tk'] = (heat - n_e * cool) * to_temp + compton - hubcool
         else:

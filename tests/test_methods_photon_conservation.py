@@ -12,7 +12,7 @@ algorithms.
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 
 m_H = rt1d.physics.Constants.m_H
 density_units = 1e-3 * m_H

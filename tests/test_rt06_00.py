@@ -12,7 +12,7 @@ Description: Test rate coefficients.
 
 import rt1d
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 import chianti.core as cc
 
 pl.rcParams['legend.fontsize'] = 14

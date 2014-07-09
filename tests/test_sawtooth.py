@@ -11,7 +11,7 @@ Description: Or rather, ``picket fence,'' i.e. Ahn et al. (2009).
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 import numpy as np
 from math import ceil
 from scipy.integrate import quad

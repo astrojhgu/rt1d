@@ -11,7 +11,7 @@ Description:
 """
 
    
-import pylab as pl
+import matplotlib.pyplot as pl
 import numpy as np
 from rt1d.physics import Hydrogen
 from mathutils.differentiate import central_difference

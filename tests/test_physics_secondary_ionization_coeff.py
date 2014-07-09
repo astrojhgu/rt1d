@@ -11,7 +11,7 @@ Description: Reproduce Figures 2-3 in Furlanetto & Stoever (2010).
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 import numpy as np
 from multiplot import multipanel
 

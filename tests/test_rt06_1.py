@@ -11,7 +11,7 @@ Description:
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 
 sim = rt1d.run.Simulation(problem_type=1)
 sim.run()

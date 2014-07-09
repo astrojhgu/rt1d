@@ -12,7 +12,7 @@ Comparison Project (Iliev et al. 2006; RT06) but with helium included.
 """
 
 import rt1d, os
-import pylab as pl
+import matplotlib.pyplot as pl
 
 pf = \
 {

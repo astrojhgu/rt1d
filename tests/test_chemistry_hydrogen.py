@@ -12,7 +12,7 @@ Description:
 
 import rt1d
 import numpy as np
-import pylab as pl
+import matplotlib.pyplot as pl
 
 src = 'fk96'
 dims = 32

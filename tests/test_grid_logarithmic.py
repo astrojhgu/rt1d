@@ -13,7 +13,7 @@ may under-resolve.
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 
 E_LyA = rt1d.physics.Constants.E_LyA
 cm_per_kpc = rt1d.physics.Constants.cm_per_kpc

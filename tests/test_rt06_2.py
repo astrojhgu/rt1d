@@ -12,7 +12,7 @@ Comparison Project (Iliev et al. 2006; RT06).
 """
 
 import rt1d
-import pylab as pl
+import matplotlib.pyplot as pl
 
 sim = rt1d.run.Simulation(problem_type=2)
 sim.run()

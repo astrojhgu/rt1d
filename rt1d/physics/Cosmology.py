@@ -53,6 +53,8 @@ class Cosmology:
                 
         self.zdec = 150. * (self.OmegaBaryonNow * self.h70**2 / 0.023)**0.4 - 1.
 
+        self.Omh2 = self.OmegaBaryonNow * self.h70**2
+
         # Hydrogen, helium, electron, and baryon densities today (z = 0)
         self.rho_b_z0 = self.MeanBaryonDensity(0)
         self.rho_m_z0 = self.MeanMatterDensity(0)

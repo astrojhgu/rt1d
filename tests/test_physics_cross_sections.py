@@ -10,7 +10,7 @@ Description:
 
 """
 
-import pylab as pl
+import matplotlib.pyplot as pl
 import numpy as np
 from rt1d.physics.CrossSections import *
 
