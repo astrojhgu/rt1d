@@ -15,7 +15,7 @@ import numpy as np
 import matplotlib.pyplot as pl
 
 src = 'fk96'
-dims = 32
+dims = 64
 T = np.logspace(3, 5, dims)
 
 # Initialize grid object
@@ -25,7 +25,7 @@ grid = rt1d.static.Grid(dims=dims)
 grid.set_physics(isothermal=True)
 grid.set_chemistry(Z=1)
 grid.set_density(rho0=rt1d.physics.Constants.m_H)
-grid.set_ionization()  
+grid.set_ionization(state='neutral')  
 grid.set_temperature(T)
 
 # Initialize chemistry network / solver

@@ -12,6 +12,7 @@ Description: Run a simulation.
 
 import rt1d
 import numpy as np
+from ..util.PrintInfo import print_sim
 from ..physics.Constants import s_per_myr
 from ..util import parse_kwargs, ReadParameterFile, ProgressBar
     
@@ -97,6 +98,8 @@ class Simulation:
                             overdensity=pf['clump_overdensity'],
                             ionization=pf['clump_ionization'], 
                             profile=pf['clump_profile'])
+                    
+            print_sim(self)        
                     
             # To compute timestep
             self.timestep = rt1d.run.ComputeTimestep(grid, pf['epsilon_dt'])
@@ -199,7 +202,7 @@ class Simulation:
                 self.checkpoints.store_kwargs(t, z, self.rt.kwargs)    
                 
             pb.update(t)
-            
+                        
             if z <= self.pf['final_redshift']:
                 break
                 

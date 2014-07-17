@@ -11,13 +11,13 @@ Description: ChemicalNetwork object just needs to have methods called
 
 """
 
-import copy
+import copy, sys
 import numpy as np
 from ..util import convert_ion_name
 from ..physics.Constants import k_B, sigma_T, m_e, c, s_per_myr
 
 try:
-    have_dengo = True    
+    have_dengo = True
     import dengo.primordial_rates, dengo.primordial_cooling
     import dengo.oxygen_rates, dengo.oxygen_cooling
     import dengo.carbon_rates, dengo.carbon_cooling
@@ -127,12 +127,12 @@ class SimpleChemicalNetwork:
                 -1. * (Gamma[h1] + self.Beta[cell][h1] * n_e) * xHI \
                 + self.alpha[cell][h1] * n_e * xHII \
                 - gamma[h1][h1] * xHI
-            self.dqdt[qh2] = -self.dqdt[qh1]   
+            self.dqdt[qh2] = -self.dqdt[qh1]
             self.dqdt[qe] = self.dqdt[qh2] * n_H
             
             if self.grid.approx_helium:
                 self.dqdt[qe] *= (1. + n_H / n_He)
-                                
+
         # Helium rate equations
         if 2 in self.grid.Z and not self.grid.approx_helium:
             self.dqdt[qhe1] = \
@@ -233,11 +233,10 @@ class SimpleChemicalNetwork:
         """       
     
         self.q = q
-        self.dqdt = np.zeros_like(self.zeros_q)
     
         cell, G, g, H, n, time = args
         
-        # Write routine to dict-ify this shit
+        # Write routine to dict-ify this stuff?
     
         to_temp = 1. / (1.5 * n * k_B)
     
@@ -246,6 +245,9 @@ class SimpleChemicalNetwork:
             n_H = self.grid.cosm.nH0 * (1. + z)**3
         else:
             n_H = self.grid.n_H[cell]
+            
+        if 2 in self.grid.Z:
+            n_He = self.grid.element_abundances[0] * n_H    
     
         # Read q vector quantities into dictionaries
         x, n, n_e = self._parse_q(q, n_H)
@@ -261,67 +263,145 @@ class SimpleChemicalNetwork:
         psi = {sp:self.psi[...,i] for i, sp in enumerate(self.grid.neutrals)}
         
         if 2 in self.grid.Z:
-            xi = {'he_1':self.xi}
-
-        heat, cool = 0.0, 0.0
-                        
-        # Loop over neutrals and ions, compute rates
-        dqdt = {field:0.0 for field in self.grid.evolving_fields}
-        for i, sp in enumerate(self.grid.evolving_fields):
-            
-            # Neutral species
-            if sp in self.grid.absorbers:
-                
-                elem = self.grid.parents_by_ion[sp]
-                k = self.grid.ions_by_parent[elem].index(sp)
-                ion = self.grid.ions_by_parent[elem][k+1]
-
-                # Losses via ionization processes
-                dqdt[sp] -= (Gamma[sp] + Beta[sp][cell] * n_e) * x[sp]
-      
-                # Secondary ionization
-                for j, donor in enumerate(self.grid.absorbers):
-                    dqdt[sp] -= gamma[sp][j] * n[elem] * x[donor]      
-                        
-                # Gains via recombinations
-                dqdt[sp] += alpha[sp][cell] * n_e * x[ion]
-                
-                if sp == 'he_1':
-                    dqdt[sp] += xi[sp][cell] * n_e * x['he_2']
-                
-                # Heating & cooling
-                if not self.grid.isothermal:
-                    heat += k_H[sp] * x[sp] * n[elem]         # photo-heating
-                    cool += zeta[sp][cell] * x[sp] * n[elem]  # ionization
-                    cool += psi[sp][cell] * x[sp] * n[elem]   # excitation
-                                        
-                # Electrons
-                dqdt['de'] += dqdt[sp] * n[elem]
-            
-            elif sp in self.grid.ions:
-                elem = self.grid.parents_by_ion[sp]
-                k = self.grid.ions_by_parent[elem].index(sp)
-                neu = self.grid.ions_by_parent[elem][k-1]
-                
-                if len(self.grid.ions_by_parent[elem]) == 2:
-                    dqdt[sp] = -dqdt[neu]
-                else:
-                    neu2 = self.grid.ions_by_parent[elem][k-2]
-                    dqdt[sp] = -(dqdt[neu] + dqdt[neu2])
-                
-                if not self.grid.isothermal:    
-                    cool += eta[sp][cell] * x[sp] * n[elem]   # recombination    
-                
-            else:
-                continue
+            xi = self.xi
+            omega = self.omega
         
+        # Store results here
+        dqdt = {field:0.0 for field in self.grid.evolving_fields}
+        
+        ##
+        # Hydrogen rate equations
+        ##
+        dqdt['h_1'] = -(Gamma['h_1'] + Beta['h_1'][cell] * n_e) * x['h_1'] \
+                      + alpha['h_1'][cell] * n_e * x['h_2']
+        dqdt['h_2'] = -dqdt['h_1']    
+        
+        ##
+        # Secondary ionization
+        ##
+        for j, donor in enumerate(self.grid.absorbers):
+            dqdt['h_1'] -= gamma['h_1'][j] * n['h'] * x[donor]
+            
+        ##
+        # Heating & cooling
+        ##
+        heat, cool = 0.0, 0.0
+        if not self.isothermal:
+            
+            for sp in self.grid.neutrals:
+                elem = self.grid.parents_by_ion[sp]
+                
+                heat += k_H[sp] * x[sp] * n[elem]         # photo-heating
+                cool += zeta[sp][cell] * x[sp] * n[elem]  # ionization
+                cool += psi[sp][cell] * x[sp] * n[elem]   # excitation
+                      
+        ##
+        # Helium processes
+        ##
+        if 2 in self.grid.Z:
+            
+            ##
+            # Helium rate equations
+            ##
+            dqdt['he_1'] = \
+                - x['he_1'] * (Gamma['he_1'] + Beta['he_1'][cell] * n_e) \
+                + x['he_2'] * (alpha['he_1'][cell] + xi[cell]) * n_e
+            
+            dqdt['he_2'] = \
+                  x['he_1'] * (Gamma['he_1'] + Beta['he_1'][cell] * n_e) \
+                - x['he_2'] * (Gamma['he_2'] \
+                + (Beta['he_2'][cell] + alpha['he_1'][cell] + xi[cell]) * n_e) \
+                + x['he_3'] * alpha['he_2'][cell] * n_e
+        
+            dqdt['he_3'] = \
+                  x['he_2'] * (Gamma['he_2'] + Beta['he_2'][cell] * n_e) \
+                - x['he_3'] * alpha['he_2'][cell] * n_e
+                
+            # Cooling
+            cool += eta['he_3'][cell] * x['he_3'] * n_He                
+                
+        # Loop over neutrals and ions, compute rates
+        #for i, sp in enumerate(self.grid.evolving_fields):
+        #    
+        #    # Neutral species
+        #    if sp in self.grid.absorbers:
+        #        
+        #        elem = self.grid.parents_by_ion[sp]
+        #        k = self.grid.ions_by_parent[elem].index(sp)
+        #        ion = self.grid.ions_by_parent[elem][k+1]
+        #
+        #        # Losses via ionization processes
+        #        dqdt[sp] -= (Gamma[sp] + Beta[sp][cell] * n_e) * x[sp]
+        #
+        #        # Losses via secondary ionization
+        #        for j, donor in enumerate(self.grid.absorbers):
+        #            dqdt[sp] -= gamma[sp][j] * n[elem] * x[donor]
+        #                
+        #        # Gains via recombinations
+        #        dqdt[sp] += alpha[sp][cell] * n_e * x[ion]
+        #        
+        #        # Di-electronic recombation
+        #        if sp == 'he_1':
+        #            dqdt[sp] += xi[cell] * n_e * x['he_2']
+        #        
+        #        # Heating & cooling
+        #        if not self.grid.isothermal:
+        #            heat += k_H[sp] * x[sp] * n[elem]         # photo-heating
+        #            cool += zeta[sp][cell] * x[sp] * n[elem]  # ionization
+        #            cool += psi[sp][cell] * x[sp] * n[elem]   # excitation
+        #    
+        #    # Ions
+        #    elif sp in self.grid.ions:
+        #        elem = self.grid.parents_by_ion[sp]
+        #        k = self.grid.ions_by_parent[elem].index(sp)
+        #        neu = self.grid.ions_by_parent[elem][k-1]
+        #        
+        #        if elem == 'h':
+        #            dqdt[sp] = -dqdt[neu]
+        #        else:
+        #            # Means we've got HeIII
+        #            #neu2 = self.grid.ions_by_parent[elem][k-2]
+        #            #dqdt[sp] = -(dqdt[neu] + dqdt[neu2])
+        #            dqdt[sp] = Gamma['he_2'] + Beta['he_2'][cell] * n_e \
+        #                     - alpha['he_2'][cell] * n_e
+        #            
+        #        
+        #        # Cooling
+        #        if not self.grid.isothermal:    
+        #            cool += eta[sp][cell] * x[sp] * n[elem]
+        #
+        
+        
+        ##            
+        # Electrons
+        ##
+        
+        # Gains from ionizations of HI
+        dqdt['de'] += n_H * dqdt['h_2']
+        
+        # Electrons from helium ionizations
+        if 2 in self.grid.Z:
+            # Gains from ionization of HeI
+            dqdt['de'] -= n_He * dqdt['he_1']
+            # Gains from ionization of HeII
+            dqdt['de'] += x['he_2'] * n_He \
+                * (Gamma['he_2'] + Beta['he_2'][cell] * n_e)
+            # Losses from HeII recombinations
+            dqdt['de'] -= x['he_2'] * n_He \
+                * (alpha['he_1'][cell] + xi[cell]) * n_e
+            # Losses from HeIII recombinations
+            dqdt['de'] -= x['he_3'] * n_He * alpha['he_2'][cell] * n_e
+            
         # Finish heating and cooling
         if not self.grid.isothermal:
             hubcool = 0.0
             compton = 0.0
+            
+            # Hubble Cooling
             if self.grid.expansion:
                 hubcool = 2. * self.grid.cosm.HubbleParameter(z) * q[-1]
-            
+
+                # Compton cooling
                 if self.grid.compton_scattering:
                     Tcmb = self.grid.cosm.TCMB(z)
                     ucmb = self.grid.cosm.UCMB(z)
@@ -333,342 +413,32 @@ class SimpleChemicalNetwork:
         else:
             dqdt['Tk'] = 0.0 
          
-        # Electrons, heating & cooling    
-        #elif species == 'de':
-        #    qtmp[species] += self.dqdt[qh2] * n_H
-        #    
-        #else:
-        #    if self.grid.isothermal:
-        #        continue
-        #    
-        #    phoheat, ioncool, reccool, exccool = np.zeros(4)
-        #    
-        #    if 1 in self.grid.Z:
-        #        phoheat += k_H[h1] * xHI * n_H
-        #        ioncool += self.zeta[cell][h1] * xHI * n_H
-        #        reccool += self.eta[cell][h1] * xHII * n_H
-        #        exccool += self.psi[cell][h1] * xHI * n_H
-        #    
-        #    if 2 in self.grid.Z and not self.grid.approx_helium:
-        #        phoheat += k_H[he1] * xHeI * n_He + k_H[he2] * xHeII * n_He
-        #        ioncool += self.zeta[cell][he1] * xHeI * n_He \
-        #                 + self.zeta[cell][he2] * xHeI * n_He
-        #        reccool += self.eta[cell][he1] * xHeII * n_He \
-        #                 + self.eta[cell][he2] * xHeIII * n_He
-        #        exccool += self.psi[cell][he1] * xHeI * n_He \
-        #                 + self.psi[cell][he2] * xHeII * n_He
-        #    
-        #    hubcool = 0.0
-        #    compton = 0.0
-        #    if self.grid.expansion:
-        #        hubcool = 2. * self.grid.cosm.HubbleParameter(z) * q[-1]
-        #    
-        #        if self.grid.compton_scattering:
-        #            Tcmb = self.grid.cosm.TCMB(z)
-        #            ucmb = self.grid.cosm.UCMB(z)
-        #            tcomp = 3. * m_e * c / (8. * sigma_T * ucmb)
-        #            compton = xHII * (Tcmb - q[-1]) / tcomp \
-        #                / (1. + self.grid.cosm.y + xHII)
-        #    
-        #    self.dqdt[-1] = phoheat * to_temp + compton \
-        #        - n_e * (ioncool + reccool + exccool) * to_temp \
-        #        - hubcool    
-        #
-        
-        
-        
-        # Hydrogen rate equations
-        #if 1 in self.grid.Z:
-        #    self.dqdt[qh1] = \
-        #        -1. * (Gamma[h1] + self.Beta[cell][h1] * n_e) * xHI \
-        #        + self.alpha[cell][h1] * n_e * xHII \
-        #        - gamma[h1][h1] * xHI
-        #    self.dqdt[qh2] = -self.dqdt[qh1]   
-        #    self.dqdt[qe] = self.dqdt[qh2] * n_H
-        #
-        #    if self.grid.approx_helium:
-        #        self.dqdt[qe] *= (1. + n_H / n_He)
-        #
-        ## Helium rate equations
-        #if 2 in self.grid.Z and not self.grid.approx_helium:
-        #    self.dqdt[qhe1] = \
-        #        -1. * (Gamma[he1] + self.Beta[cell][he1] * n_e) * xHeI \
-        #        + (self.alpha[cell][he1] + self.xi[cell]) * n_e * xHeII
-        #
-        #    self.dqdt[qhe2] = -self.dqdt[qhe1]
-        #
-        #    if 'he_3' in self.grid.ions:
-        #        self.dqdt[qhe2] -= (Gamma[he2] + self.Beta[cell][he2] * n_e) * xHeII \
-        #            + self.alpha[cell][he2] * n_e * xHeIII
-        #        self.dqdt[qhe3] = -(self.dqdt[qhe2] + self.dqdt[qhe1])
-        #
-        #    self.dqdt[qe] += (self.dqdt[qhe2] + self.dqdt[qhe2+1]) * n_He
-        #
-        ## Temperature evolution
-        #if not self.grid.isothermal:
-        #    phoheat, ioncool, reccool, exccool = np.zeros(4)
-        #
-        #    if 1 in self.grid.Z:
-        #        phoheat += k_H[h1] * xHI * n_H
-        #        ioncool += self.zeta[cell][h1] * xHI * n_H
-        #        reccool += self.eta[cell][h1] * xHII * n_H
-        #        exccool += self.psi[cell][h1] * xHI * n_H
-        #
-        #    if 2 in self.grid.Z and not self.grid.approx_helium:
-        #        phoheat += k_H[he1] * xHeI * n_He + k_H[he2] * xHeII * n_He
-        #        ioncool += self.zeta[cell][he1] * xHeI * n_He \
-        #                 + self.zeta[cell][he2] * xHeI * n_He
-        #        reccool += self.eta[cell][he1] * xHeII * n_He \
-        #                 + self.eta[cell][he2] * xHeIII * n_He
-        #        exccool += self.psi[cell][he1] * xHeI * n_He \
-        #                 + self.psi[cell][he2] * xHeII * n_He
-        #
-        #    hubcool = 0.0
-        #    compton = 0.0
-        #    if self.grid.expansion:
-        #        hubcool = 2. * self.grid.cosm.HubbleParameter(z) * q[-1]
-        #
-        #        if self.grid.compton_scattering:
-        #            Tcmb = self.grid.cosm.TCMB(z)
-        #            ucmb = self.grid.cosm.UCMB(z)
-        #            tcomp = 3. * m_e * c / (8. * sigma_T * ucmb)
-        #            compton = xHII * (Tcmb - q[-1]) / tcomp \
-        #                / (1. + self.grid.cosm.y + xHII)
-        #
-        #    self.dqdt[-1] = phoheat * to_temp + compton \
-        #        - n_e * (ioncool + reccool + exccool) * to_temp \
-        #        - hubcool
-        #
-        #    if 2 in self.grid.Z:
-        #        self.dqdt[-1] -= n_e * xHeIII * n_He * self.omega[cell]
-        #
-        # Multispecies : dqdt[-1] += n_e * xHeIII * n_He * omega
-        
         self.dqdt = np.array([dqdt[sp] for sp in self.grid.qmap])
                 
         return self.dqdt    
-    
+                          
     def Jacobian(self, t, q, args):
-        """
-        Jacobian of the rate equations.
-        """
-                                        
-        cell, Gamma, gamma, k_H, n, time = args        
-                
-        if self.grid.expansion:
-            z = self.grid.cosm.TimeToRedshiftConverter(0., time, self.grid.zi)
-            n_H = self.grid.cosm.nH0 * (1. + z)**3
-        else:    
-            n_H = self.grid.n_H[cell]        
-                                    
-        #if 1 in self.grid.Z:
-        #    qh1, qh2, qe = (0, 1, 2)
-        #    h1 = 0
-        #    xHI = q[qh1]
-        #    xHII = q[qh2]        
-        #    nHI = n_H * xHI
-        #    nHII = n_H * xHII
-        #        
-        #    if 2 in self.grid.Z:
-        #        n_He = self.grid.element_abundances[1] * n_H
-        #        
-        #        if not self.grid.approx_helium:
-        #            qhe1, qhe2, qhe3, qe = (2, 3, 4, 5)
-        #            he1, he2 = (1, 2)                
-        #            xHeI = q[qhe1]
-        #            xHeII = q[qhe2]
-        #            xHeIII = q[qhe3]
-        #            nHeI = n_He * xHeI
-        #            nHeII = n_He * xHeII
-        #            nHeIII = n_He * xHeIII
-        #        
-        #elif 2 in self.grid.Z:    
-        #    qhe1, qhe2, qhe3, qe = (0, 1, 2, 3)
-        #    he1, he2 = (0, 1)
-        #    n_He = self.grid.element_abundances[0] * n_H
-        #    xHeI = q[qhe1]
-        #    xHeII = q[qhe2]
-        #    xHeIII = q[qhe3]
-        #    nHeI = n_He * xHeI
-        #    nHeII = n_He * xHeII
-        #    nHeIII = n_He * xHeIII            
-        
-        if 1 in self.grid.Z:
-            qh1, qh2, qe = (0, 1, 2)
-            h1 = 0
-            xHI = q[qh1]
-            xHII = q[qh2] 
-            nHI = n_H * xHI
-            nHII = n_H * xHII
-        
-            if 2 in self.grid.Z:
-                n_He = self.grid.element_abundances[1] * n_H
-        
-                if not self.grid.approx_helium:
-        
-                    qhe1, qhe2 = (2, 3)
-                    he1, he2 = (1, 2)
-                    xHeI = q[qhe1]
-                    xHeII = q[qhe2]
-        
-                    if 'he_3' in self.grid.ions:
-                        qhe3, qe = (4, 5)
-                        xHeIII = q[qhe2 + 1]
-                    else:
-                        qe = 4
-                        xHeIII = 0.0
-        
-        elif 2 in self.grid.Z:
-            qhe1, qhe2 = (2, 3)
-            he1, he2 = (1, 2)
-            xHeI = q[qhe1]
-            xHeII = q[qhe2]
-        
-            if 'he_3' in self.grid.ions:
-                qhe3, qe = (4, 5)
-                xHeIII = q[qhe2 + 1]
-            else:
-                qe = 4
-                xHeIII = 0.0
-        
-            n_He = self.grid.element_abundances[0] * n_H
-        
-        n_e = q[qe]    
-        
-        n_e = q[qe]
-            
-        J = np.zeros_like(self.zeros_jac)
-
-        # Hydrogen terms - diagonal
-        if 1 in self.grid.Z:
-            J[qh1][qh1] = -(Gamma[h1] + self.Beta[cell][h1] * n_e) \
-                      -   self.alpha[cell][h1] * n_e \
-                      -   gamma[h1][h1]
-            J[qh2][qh2] = J[qh1][qh1]
-            
-            # Hydrogen - off-diagonal
-            J[qh1][qh2] = -J[qh1][qh1]
-            J[qh1][qe] = -self.Beta[cell][h1] * xHI \
-                     +  self.alpha[cell][h1] * xHII
-            J[qh2][qh1] = -J[qh1][qh1]
-            J[qh2][qe] = -J[qh1][qe]
-            
-            # Electron elements
-            J[qe][qh1] = Gamma[h1] * n_H + self.Beta[cell][h1] * n_e * n_H \
-                     + self.alpha[cell][h1] * n_e * n_H \
-                     + np.sum(gamma[h1]) * n_H
-            J[qe][qh2] = -J[qe][qh2]
-            J[qe][qe] = self.Beta[cell][h1] * n_H * xHI \
-                    - self.alpha[cell][h1] * n_H * xHII     
-                    
-            # Gas energy
-            if not self.grid.isothermal:                
-                J[-1][qh1] = n_H * (k_H[h1] \
-                          - n_e * (self.zeta[cell][h1] 
-                          + self.psi[cell][h1] - self.eta[cell][h1]))
-                J[-1][qh2] = -J[-1][qh1]
-
-        if 2 in self.grid.Z and not self.grid.approx_helium:
-
-            # First - diagonal elements
-            J[qhe1][qhe1] = \
-                -1. * (Gamma[he1] + self.Beta[cell][he1] * n_e) \
-                - (self.alpha[cell][he1] + self.xi[cell]) * n_e
-            
-            if 'he_3' in self.grid.ions:
-                J[qhe2][qhe2] = \
-                    -1. * (Gamma[he2] + self.Beta[cell][he2] * n_e) \
-                    - self.alpha[cell][he2] * n_e + J[qhe1][qhe1]
-                J[qhe3][qhe3] = \
-                    -1. * (Gamma[he2] + self.Beta[cell][he2] * n_e) \
-                    - self.alpha[cell][he2] * n_e
-            
-            # Off-diagonal elements HeI
-            
-            if 'he_3' in self.grid.ions:
-                J[qhe1][qhe3] = (Gamma[he1] + self.Beta[cell][he1] * n_e) \
-                            + (self.alpha[cell][1] + self.xi[cell]) * n_e
-                J[qhe1][qhe3] = (Gamma[he1] + self.Beta[cell][he1] * n_e) \
-                                - (self.alpha[cell][he1] + self.xi[cell]) * n_e 
-            
-            J[qhe1][qe] = -self.Beta[cell][he1] * xHeI \
-                      + (self.alpha[cell][he1] + self.xi[cell]) * xHeII                
-            
-            # Off-diagonal elements HeII
-            J[qhe2][qhe1] = (Gamma[he1] + self.Beta[cell][he1] * n_e) \
-                        - (self.alpha[cell][he1] + self.xi[cell]) * n_e \
-                        + (self.Beta[cell][he1] + self.alpha[cell][he1] \
-                        +  self.xi[cell]) * n_e
-            
-            if 'he_3' in self.grid.ions:
-                J[qhe2][qhe3] = -J[qhe3][qhe2]
-            
-            # Off-diagonal elements HeIII
-            if 'he_3' in self.grid.ions:
-                J[qhe2][qe] = -self.alpha[cell][he2] * xHeIII
-                J[qhe2][qe] += self.Beta[cell][he2] * xHeIII
-                J[qhe3][qhe1] = -(Gamma[he1] + self.Beta[cell][0] * n_e) \
-                               +   self.alpha[cell][he2] * n_e
-                J[qhe3][qhe2] = (Gamma[he1] + self.Beta[cell][0] * n_e) \
-                               +   self.alpha[cell][he2] * n_e
-                J[qhe3][qe] = self.Beta[cell][he2] * xHeII \
-                                - self.alpha[cell][he2] * xHeIII            
-            
-            # Electrons
-            J[qe][qe] += self.Beta[cell][he1] * xHeI \
-                    - self.alpha[cell][he1] * xHeII \
-                    - self.xi[cell] * xHeII
-                    
-            if 'he_3' in self.grid.ions:
-                J[qe][qe] += self.Beta[cell][he2] * xHeII
-                J[qe][qe] -= self.alpha[cell][he2] * xHeIII
-                    
-            #J[qe][qhe1] = Gamma[1] - Gamma[2] \
-            #          + (self.Beta[1][cell] - self.Beta[2][cell]) * n_e \
-            #          + self.xi[cell] * n_e \
-            #          + self.alpha[1][cell] * n_e + self.alpha[2][cell] * n_e 
-            #J[qe][qhe2] = Gamma[2] - Gamma[1] \
-            #          + (self.Beta[2][cell] - self.Beta[1][cell]) * n_e \
-            #          - self.xi[cell] * n_e \
-            #          - self.alpha[1][cell] * n_e + self.alpha[2][cell] * n_e
-            #J[qe][qhe3] = -(Gamma[1] + Gamma[2]) \
-            #          - (self.Beta[1][cell] + self.Beta[2][cell]) * n_e \
-            #          + self.xi[cell] * n_e \
-            #          + self.alpha[1][cell] * n_e - self.alpha[2][cell] * n_e
-            
-            J[qe][qe] *= n_He    
-            
-        if self.grid.expansion:
-            J[-1][-1] = -2. * self.grid.cosm.HubbleParameter(z)        
-            
-            if self.grid.compton_scattering:
-                Tcmb = self.grid.cosm.TCMB(z)
-                ucmb = self.grid.cosm.UCMB(z)
-                tcomp = 3. * m_e * c / (8. * sigma_T * ucmb)
-                J[-1][-1] -= xHII / tcomp \
-                    / (1. + self.grid.cosm.y + xHII)
-
-        return J
-                
-    def JacobianNEW(self, t, q, args):
         self.q = q
         self.dqdt = np.zeros_like(self.zeros_q)
     
         cell, G, g, H, n, time = args
-        
+    
         # Write routine to dict-ify this shit
     
         to_temp = 1. / (1.5 * n * k_B)
     
         if self.grid.expansion:
             z = self.grid.cosm.TimeToRedshiftConverter(0., time, self.grid.zi)
-            n_H = self.grid.cosm.nH0 * (1. + z)**3
+            n_H = self.grid.cosm.nH0 * (1. + z)**3            
         else:
             n_H = self.grid.n_H[cell]
+            
+        if 2 in self.grid.Z:
+            n_He = self.grid.element_abundances[0] * n_H    
     
         # Read q vector quantities into dictionaries
         x, n, n_e = self._parse_q(q, n_H)
-        
+    
         # Initialize dictionaries for results        
         k_H = {sp:H[i] for i, sp in enumerate(self.grid.absorbers)}
         Gamma = {sp:G[i] for i, sp in enumerate(self.grid.absorbers)}
@@ -678,99 +448,143 @@ class SimpleChemicalNetwork:
         zeta = {sp:self.zeta[...,i] for i, sp in enumerate(self.grid.absorbers)}
         eta = {sp:self.eta[...,i] for i, sp in enumerate(self.grid.ions)}
         psi = {sp:self.psi[...,i] for i, sp in enumerate(self.grid.neutrals)}
-
+        xi = self.xi
+        omega = self.omega
+    
+        # For Jacobian
+        if not self.isothermal:
+            dBeta = {sp:self.dBeta[...,i] for i, sp in enumerate(self.grid.absorbers)}
+            dalpha = {sp:self.alpha[...,i] for i, sp in enumerate(self.grid.absorbers)}
+            dzeta = {sp:self.dzeta[...,i] for i, sp in enumerate(self.grid.absorbers)}
+            deta = {sp:self.deta[...,i] for i, sp in enumerate(self.grid.ions)}
+            dpsi = {sp:self.dpsi[...,i] for i, sp in enumerate(self.grid.neutrals)}
+    
         heat, cool = 0.0, 0.0
-                        
+    
         # Loop over neutrals and ions, compute rates
-        J = np.zeros([len(self.grid.evolving_fields)] * 2)
+        N = len(self.grid.evolving_fields)
+        J = np.zeros([N] * 2)     
         
-        # Taking derivative of...
-        for i, sp1 in enumerate(self.grid.evolving_fields):
-
-            # With respect to...
-            for j, sp2 in enumerate(self.grid.evolving_fields):
-
-                if sp2 in ['Tk', 'de']:
-                    continue
-                    
-                # Jacobian is symmetric, should make sure we don't do double duty    
-
-                elem1 = self.grid.parents_by_ion[sp1]
-                k1 = self.grid.ions_by_parent[elem1].index(sp1)
-                ion1 = self.grid.ions_by_parent[elem1][k1+1]
+        # Where do the electrons live?
+        if N == 6:
+            e = -1
+        elif N == 7:
+            e = -2
+        else:
+            e = 2
+        
+        ##
+        # FIRST: HI and HII terms. Always in slots 0 and 1.
+        ##
             
-                elem2 = self.grid.parents_by_ion[sp2]
-                k2 = self.grid.ions_by_parent[elem2].index(sp2)
-                ion2 = self.grid.ions_by_parent[elem2][k2+1]
+        # HI by HI
+        J[0,0] = -(Gamma['h_1'] + Beta['h_1'][cell] * n_e)
+        
+        # HI by HII
+        J[0,1] = alpha['h_1'][cell] * n_e
+         
+        # HII by HI
+        J[1,0] = -J[0,0]
+        
+        # HII by HII
+        J[1,1] = -J[0,1]
+                    
+        ##    
+        # Hydrogen-Electron terms
+        ##
+        
+        J[0,e] = -Beta['h_1'][cell] * x['h_1'] + alpha['h_1'][cell] * x['h_2']
+        J[1,e] = -J[0,e]
+        J[e,e] = n_H * J[1,e]
+           
+        J[e,0] = n_H * (Gamma['h_1'] + Beta['h_1'][cell] * n_e)
+        J[e,1] = -n_H * alpha['h_1'][cell] * n_e
             
-                # Neutral species
-                if sp1 in self.grid.absorbers:
-                                        
-                    # Losses via ionization processes
-                    if elem1 == elem2:
-                        if i == j:
-                            J[i,j] -= (Gamma[sp1] + Beta[sp1][cell] * n_e)
-                        else:
-                            J[i,j] += (Gamma[sp1] + Beta[sp1][cell] * n_e)
-                    
-                    # Secondary ionization
-                    #for j, donor in enumerate(self.grid.absorbers):
-                    J[i,j] -= gamma[sp2][j] * n[elem2] * x[sp2]
-
-                    # Gains via recombinations
-                    if elem1 == elem2:
-                        if i == j:
-                            J[i,j] += alpha[sp1][cell] * n_e #* x[ion]
-                        else:
-                            J[i,j] -= alpha[sp1][cell] * n_e #* x[ion]
-                            
-                    #if sp == 'he_1':
-                    #    dqdt[sp] += self.xi[cell] * n_e * x['he_2']
-                    
-                    # Heating & cooling
-                    #if not self.grid.isothermal:
-                    #    heat += k_H[sp] * x[sp] * n[elem]
-                    #    cool += zeta[sp][cell] * x[sp] * n[elem]  # ionization
-                    #    cool += psi[sp][cell] * x[sp] * n[elem]   # excitation
-                    #                        
-                    ## Electrons
-                    #dqdt['de'] += dqdt[sp] * n[elem]
-                
-                #elif sp in self.grid.ions:
-                #
-                #    if len(self.grid.ions_by_parent[elem]) == 2:
-                #        J[i,j] = 0.0#J[j,i]
-                #    else:
-                #        neu2 = self.grid.ions_by_parent[elem][k-2]
-                #        dqdt[sp] = -(dqdt[neu] + dqdt[neu2])
-                #    
-                #    if not self.grid.isothermal:    
-                #        cool += eta[sp][cell] * x[sp] * n[elem]   # recombination    
-
-                else:
-                    continue
+        ###
+        ## HELIUM INCLUDED ONLY CASES: N=6 (isothermal), N=7 (thermal evolution)   
+        ###
+        if N in [6, 7]:
+            
+            # HeI by HeI
+            J[2,2] = -(Gamma['he_1'] + Beta['he_1'][cell] * n_e)
+            
+            # HeI by HeII
+            J[2,3] = -(alpha['he_1'][cell] + xi[cell]) * n_e
+            
+            # HeI by HeIII
+            J[2,4] = 0.0
+            
+            # HeII by HeI
+            J[3,2] = -J[2,2]
+            
+            # HeII by HeII
+            J[3,3] = -Gamma['he_2'] \
+                   - (Beta['he_2'][cell] + alpha['he_1'][cell] + xi[cell]) * n_e
+            
+            # HeII by HeIII
+            J[3,4] = alpha['he_2'][cell] * n_e
+            
+            # HeIII by HeI
+            J[4,2] = 0.0
+            
+            # HeIII by HeII
+            J[4,3] = Gamma['he_2'] + Beta['he_2'][cell] * n_e
+            
+            # HeIII by HeIII
+            J[4,4] = -alpha['he_2'][cell] * n_e
+            
+            ##
+            # Helium-Electron terms
+            ##
+            
+            J[2,e] = -Beta['he_1'][cell] * x['he_1'] \
+                   - (alpha['he_1'][cell] + xi[cell]) * x['he_2']
+            J[3,e] = Beta['he_1'][cell] * x['he_1'] \
+                   - (Beta['he_2'][cell] + alpha['he_1'][cell] + xi[cell]) * x['he_2'] \
+                   + alpha['he_2'][cell] * x['he_3']
+            J[4,e] = Beta['he_2'][cell] * x['he_2'] - alpha['he_2'][cell] * x['he_3']
+            
+            J[e,2] = n_He * x['he_1'] \
+                * (Gamma['he_1'] + Beta['he_1'][cell] * n_e)
+            
+            J[e,3] = n_He * x['he_2'] \
+                * ((Gamma['he_2'] + Beta['he_2'][cell] * n_e) \
+                - (alpha['he_1'][cell] + xi[cell]) * n_e)
+            
+            J[e,4] = -n_He * x['he_3'] * alpha['he_2'][cell] * n_e
+            J[e,e] += n_He * x['he_1'] * Beta['he_1'][cell]
+            J[e,e] += n_He * x['he_2'] \
+                * ((Beta['he_2'][cell] - (alpha['he_1'][cell] + xi[cell])) * n_e \
+                - alpha['he_2'][cell] * x['he_3'])
+                          
+        # evolving temperature, hydrogen-only    
+        if not self.isothermal:
+            J[0,-1] = -n_e * (x['h_1'] * dBeta['h_1'][cell] \
+                   + x['h_2'] * dalpha['h_1'][cell])
+            J[1,-1] = -J[0,3]
+            
+            J[-1,0] = n_H * k_H['h_1'] \
+                   - zeta['h_1'][cell] * n_e + eta['h_2'][cell] * n_e \
+                   - psi['h_1'][cell] * n_e
+            J[-1,1] = -J[3,0]
+            
+            J[-1,-1] = -n_e * n_H * x['h_1'] * dzeta['h_1'][cell] \
+                   - n_e * n_H * x['h_2'] * deta['h_2'][cell] \
+                   - n_e * n_H * x['h_1'] * dpsi['h_1'][cell]    
         
-        ## Finish heating and cooling
-        #if not self.grid.isothermal:
-        #    hubcool = 0.0
-        #    compton = 0.0
-        #    if self.grid.expansion:
-        #        hubcool = 2. * self.grid.cosm.HubbleParameter(z) * q[-1]
-        #    
-        #        if self.grid.compton_scattering:
-        #            Tcmb = self.grid.cosm.TCMB(z)
-        #            ucmb = self.grid.cosm.UCMB(z)
-        #            tcomp = 3. * m_e * c / (8. * sigma_T * ucmb)
-        #            compton = xHII * (Tcmb - q[-1]) / tcomp \
-        #                / (1. + self.grid.cosm.y + xHII)
-        #    
-        #    dqdt['Tk'] = (heat - n_e * cool) * to_temp + compton - hubcool
-        #else:
-        #    dqdt['Tk'] = 0.0
+            if N == 4:
+                J[2,-1] = n_H * J[1,3]
+                J[-1,2] = -zeta['h_1'][cell] * n_H * x['h_1'] \
+                       + eta['h_2'][cell] * n_H * x['h_1'] \
+                       - psi['h_1'][cell] * n_H * x['h_1']
+                       
+            # Add helium terms
         
+        #print J
+        #sys.exit()    
+            
         return J
-        
-                
+                                
     def SourceIndependentCoefficients(self, T):
         """
         Compute values of rate coefficients which depend only on 
@@ -787,22 +601,41 @@ class SimpleChemicalNetwork:
         self.xi = np.zeros(self.grid.dims)
         self.omega = np.zeros(self.grid.dims)
         
+        if not self.isothermal:
+            self.dBeta = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+            self.dalpha = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+            self.dzeta = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+            self.deta = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+            self.dpsi = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+        
         for i, absorber in enumerate(self.grid.absorbers):
             self.Beta[...,i] = self.coeff.CollisionalIonizationRate(i, T)
             self.alpha[...,i] = self.coeff.RadiativeRecombinationRate(i, T)
+            
+            if self.isothermal:
+                continue
+                
             self.zeta[...,i] = self.coeff.CollisionalIonizationCoolingRate(i, T)
             self.eta[...,i] = self.coeff.RecombinationCoolingRate(i, T)
             self.psi[...,i] = self.coeff.CollisionalExcitationCoolingRate(i, T)
+            
+            self.dBeta[...,i] = self.coeff.dCollisionalIonizationRate(i, T)
+            self.dalpha[...,i] = self.coeff.dRadiativeRecombinationRate(i, T)
+            self.dzeta[...,i] = self.coeff.dCollisionalIonizationCoolingRate(i, T)
+            self.deta[...,i] = self.coeff.dRecombinationCoolingRate(i, T)
+            self.dpsi[...,i] = self.coeff.dCollisionalExcitationCoolingRate(i, T)
 
         # Di-electric recombination
         if 2 in self.grid.Z and not self.grid.approx_helium:
             self.xi = self.coeff.DielectricRecombinationRate(T)
-            self.omega = self.coeff.DielectricRecombinationCoolingRate(T)
+            
+            if not self.isothermal:
+                self.omega = self.coeff.DielectricRecombinationCoolingRate(T)
         
-        return {'Beta': self.Beta, 'alpha': self.alpha,  
-                'zeta': self.zeta, 'eta': self.eta, 'psi': self.psi, 
+        return {'Beta': self.Beta, 'alpha': self.alpha,
+                'zeta': self.zeta, 'eta': self.eta, 'psi': self.psi,
                 'xi': self.xi, 'omega': self.omega}
-        
+
 class DengoChemicalNetwork:
     def __init__(self, grid):
         self.grid = grid

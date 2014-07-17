@@ -213,7 +213,7 @@ def ControlParameters():
         "final_redshift": None,
         "initial_timestep": 1e-8,
         "max_timestep": 1.,
-        "restricted_timestep": ['ions'],
+        "restricted_timestep": ['ions', 'neutrals', 'electrons', 'temperature'],
         
         "tau_ifront": 0.5,
         "optically_thin": 0,

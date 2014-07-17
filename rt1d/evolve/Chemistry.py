@@ -62,7 +62,7 @@ class Chemistry(object):
         
         self.solver = ode(self.chemnet.RateEquations, 
             jac=self.chemnet.Jacobian).set_integrator('vode',
-            method='bdf', nsteps=1e4, with_jacobian=False,
+            method='bdf', nsteps=1e4, with_jacobian=True,
             atol=atol, rtol=rtol)
             
         self.zeros_gridxq = np.zeros([self.grid.dims, len(self.grid.evolving_fields)])
@@ -143,7 +143,7 @@ class Chemistry(object):
                                                         
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)
-            
+                        
             self.q_grid[cell] = q.copy()
             self.dqdt_grid[cell] = self.chemnet.dqdt.copy()
 
@@ -157,8 +157,8 @@ class Chemistry(object):
                 newdata['he_3'][cell] = 0.0
         
         # Fix negative values
-        for ion in self.grid.ions:
-            newdata[ion][newdata[ion] < tiny_ion] = tiny_ion
+        #for ion in self.grid.ions:
+        #    newdata[ion][newdata[ion] < tiny_ion] = tiny_ion
                                                                 
         # Collect results        
         #if size > 1:

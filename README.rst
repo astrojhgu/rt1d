@@ -45,7 +45,7 @@ If you have the Python
 will use it. Don't be alarmed if the time-to-completion estimate you're given 
 is absurd at first -- the time-step at the beginning of radiative transfer 
 simulations is very small (characteristic ionization timescale very
-short).  The example problem given below should run in about a minute on a 
+short). The example problem given below should run in about a minute on a 
 single CPU.
 
 Some of the rt1d/test scripts and built-in analysis routines use a module for 

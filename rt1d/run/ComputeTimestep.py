@@ -29,6 +29,11 @@ class ComputeTimestep:
         # Projected timestep for each cell and field (dt.shape = grid x species)
         dt = self.epsilon * q / np.abs(dqdt)
         
+        # Don't let dt -> 0 where species fraction is zero
+        dt[np.logical_and(q == 0, self.grid.types >= 0)] = huge_dt
+        
+        # What's limiting the time-step?
+                
         # Isolate cells beyond I-front
         if tau is not None:
             dt[tau <= tau_ifront, ...] = huge_dt

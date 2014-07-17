@@ -17,25 +17,38 @@ import matplotlib.pyplot as pl
 pf = \
 {
  'problem_type': 12,
- 'approx_helium': 1,
+ 'approx_helium': 0,
  'source_table':'rt1d_integral_table.hdf5', 
  'tables_logNmin': [15]*3,
  'tables_logNmax': [20]*3,
- 'tables_dlogN': [0.05]*3
+ 'tables_dlogN': [0.05]*3,
+ 'restricted_timestep': ['neutrals'],
+ 'initial_timestep': 1e-1,
+ 'stop_time': 30,
 }
 
-sim = rt1d.run.Simulation(**pf)
-sim.run()
+sim_He = rt1d.run.Simulation(**pf)
+sim_He.run()
 
-anl = rt1d.analyze.Simulation(sim.checkpoints)
+sim_H = rt1d.run.Simulation(problem_type=2)
+sim_H.run()
 
-ax = anl.TemperatureProfile(t=[10, 30, 100])
-raw_input('<enter> for radial profiles of xHI & xHII')
-pl.close()
+anl_He = rt1d.analyze.Simulation(sim_He.checkpoints)
+anl_H = rt1d.analyze.Simulation(sim_H.checkpoints)
 
-ax = anl.IonizationProfile(t=[10, 30, 100])
-raw_input('<enter> for radial profiles of xHI & xHII')
+fig1 = pl.figure(1); ax1 = fig1.add_subplot(111)
+fig2 = pl.figure(2); ax2 = fig2.add_subplot(111)
+fig3 = pl.figure(3); ax3 = fig3.add_subplot(111)
 
-ax = anl.IonizationProfile(t=[10, 30, 100], species='he', color='b')
-raw_input('')
+
+anl_H.TemperatureProfile(t=[10, 30, 100], ax=ax1, color='k')
+anl_He.TemperatureProfile(t=[10, 30, 100], ax=ax1, color='b')
+
+# Hydrogen profiles
+anl_H.IonizationProfile(t=[10, 30, 100], ax=ax2, color='k')
+anl_He.IonizationProfile(t=[10, 30, 100], ax=ax2, color='b')
+
+# Helium profiles
+anl_He.IonizationProfile(t=[10, 30, 100], species='he', ax=ax3, color='k')
+
 

@@ -81,7 +81,7 @@ def ProblemType(ptype):
               "dtDataDump": None, 
               "initial_timestep": 1e-15,
               "max_timestep": 0.1,
-              "restricted_timestep": ['ions', 'electrons', 'energy'],
+              "restricted_timestep": ['ions', 'electrons', 'temperature'],
                            
               "initial_temperature": 1e2,
               "initial_ionization": [1e-8],
@@ -128,11 +128,11 @@ def ProblemType(ptype):
               "length_units": 6.6 * cm_per_kpc,
               "stop_time": 100.0,
               "isothermal": 0,
-              "restricted_timestep": ['ions', 'energy'],
+              "restricted_timestep": ['ions', 'temperature'],
               "Z": [1],
               "secondary_ionization": 0,
               "initial_temperature": 1e2,
-              "initial_ionization": [1.2e-3], 
+              "initial_ionization": [1.2e-3],
               "source_type": 'star', 
               "source_temperature": 1e5,
               "spectrum_type": 'bb',
@@ -159,7 +159,7 @@ def ProblemType(ptype):
               "source_qdot": 1e6,
               "spectrum_type": 'bb',
               
-              "restricted_timestep": ['ions', 'electrons', 'energy'],
+              "restricted_timestep": ['ions', 'electrons', 'temperature'],
               
               "spectrum_Emin": 13.6,
               "spectrum_Emax": 100.,

@@ -165,7 +165,7 @@ class Hydrogen:
         """
         return Ryd * (1. / nl / nl - 1. / nu / nu) / erg_per_ev
 
-    def photon_freq(self, nu, nl = 1):
+    def photon_freq(self, nu, nl=1):
         return self.photon_energy(nu, nl) * erg_per_ev / h 
 
     def zmax(self, z, n):
