@@ -38,7 +38,7 @@ timestep = rt1d.run.ComputeTimestep(grid)
 
 # Evolve chemistry
 data = grid.data
-dt = rt1d.physics.Constants.s_per_myr * 10
+dt = rt1d.physics.Constants.s_per_myr * 1
 t = 0.0
 tf = rt1d.physics.Constants.s_per_gyr
 
@@ -51,19 +51,21 @@ while t < tf:
     data = chem.Evolve(data, t=t, dt=dt)
     t += dt
 
-    new_dt = timestep.Limit(chem.chemnet.q, chem.chemnet.dqdt)
+    new_dt = timestep.Limit(chem.chemnet.q, chem.chemnet.dqdt, 
+        method=['ions', 'neutrals', 'electrons'])
     dt = min(min(new_dt, 2 * dt), tf - t)
 
 pb.finish() 
 
 # Plot solution
 ax = pl.subplot(111)
-ax.loglog(T, data['he_1'], color='k', ls='-')
+
+ax.loglog(T, data['h_1'], color='b', ls='-', label='H')
+ax.loglog(T, data['h_2'], color='b', ls='--')
+
+ax.loglog(T, data['he_1'], color='k', ls='-', label='He')
 ax.loglog(T, data['he_2'], color='k', ls='--')
 ax.loglog(T, data['he_3'], color='k', ls=':')
-
-ax.loglog(T, data['h_1'], color='b', ls='-')
-ax.loglog(T, data['h_2'], color='b', ls='--')
 
 ax.set_xscale('log')
 ax.set_yscale('log')
@@ -71,6 +73,7 @@ ax.set_xlabel(r'$T \ (\mathrm{K})$')
 ax.set_ylabel('Species Fraction')
 ax.set_xlim(min(T), max(T))
 ax.set_ylim(5e-9, 1.5)
+pl.legend(loc='lower right', frameon=False)
 pl.draw()
 
 

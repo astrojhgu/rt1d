@@ -36,7 +36,7 @@ e_methods = {0: 'all photo-electron energy -> heat',
 rate_srcs = {'fk96': 'Fukugita & Kawasaki (1996)',
              'chianti': 'Chianti'}
 
-def line(s, just='c'):
+def line(s, just='l'):
     """ 
     Take a string, add a prefix and suffix (some number of # symbols).
     
@@ -125,7 +125,7 @@ def print_warning(s):
     print "#"*width
     
     for l in snew_by_line:
-        print line(l, just='l')
+        print line(l)
     
     print "#"*width        
 
@@ -153,20 +153,20 @@ def print_warning(s):
         print line('Book-Keeping')
         print line('-'*twidth)
 
-        print line("z_initial   : %.1i" % sim.pf['initial_redshift'], just='l')
-        print line("first-light : z=%.1i" % sim.pf['first_light_redshift'], just='l')
+        print line("z_initial   : %.1i" % sim.pf['initial_redshift'])
+        print line("first-light : z=%.1i" % sim.pf['first_light_redshift'])
         if sim.pf['stop'] is not None:
-            print line("z_final     : @ turning point %s " % sim.pf['stop'], just='l')
+            print line("z_final     : @ turning point %s " % sim.pf['stop'])
         else:
             if sim.pf['stop_xavg'] is not None:    
-                print line("z_final     : when x_i > %.6g OR" % sim.pf['stop_xavg'], just='l')
+                print line("z_final     : when x_i > %.6g OR" % sim.pf['stop_xavg'])
 
-            print line("z_final     : %.2g" % sim.pf['final_redshift'], just='l')
+            print line("z_final     : %.2g" % sim.pf['final_redshift'])
 
         if sim.pf['dtDataDump'] is not None:
-            print line("dtDataDump  : every %i Myr" % sim.pf['dtDataDump'], just='l')
+            print line("dtDataDump  : every %i Myr" % sim.pf['dtDataDump'])
         else:
-            print line("dtDataDump  : no regularly-spaced time dumps", just='l')
+            print line("dtDataDump  : no regularly-spaced time dumps")
 
         if sim.pf['dzDataDump'] is not None:
             print line("dzDataDump  : every dz=%.2g" % sim.pf['dzDataDump'], just='l')

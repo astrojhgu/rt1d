@@ -14,7 +14,7 @@ Description: ChemicalNetwork object just needs to have methods called
 import copy, sys
 import numpy as np
 from ..util import convert_ion_name
-from ..physics.Constants import k_B, sigma_T, m_e, c, s_per_myr
+from ..physics.Constants import k_B, sigma_T, m_e, c, s_per_myr, erg_per_ev, h
 
 try:
     have_dengo = True
@@ -117,7 +117,7 @@ class SimpleChemicalNetwork:
                 qe = 4
                 xHeIII = 0.0
             
-            n_He = self.grid.element_abundances[0] * n_H
+            n_He = self.grid.element_abundances[1] * n_H
         
         n_e = q[qe]
                                                                     
@@ -235,9 +235,7 @@ class SimpleChemicalNetwork:
         self.q = q
     
         cell, G, g, H, n, time = args
-        
-        # Write routine to dict-ify this stuff?
-    
+            
         to_temp = 1. / (1.5 * n * k_B)
     
         if self.grid.expansion:
@@ -247,7 +245,7 @@ class SimpleChemicalNetwork:
             n_H = self.grid.n_H[cell]
             
         if 2 in self.grid.Z:
-            n_He = self.grid.element_abundances[0] * n_H    
+            n_He = self.grid.element_abundances[1] * n_H
     
         # Read q vector quantities into dictionaries
         x, n, n_e = self._parse_q(q, n_H)
@@ -268,19 +266,20 @@ class SimpleChemicalNetwork:
         
         # Store results here
         dqdt = {field:0.0 for field in self.grid.evolving_fields}
-        
+                
         ##
         # Hydrogen rate equations
         ##
         dqdt['h_1'] = -(Gamma['h_1'] + Beta['h_1'][cell] * n_e) * x['h_1'] \
                       + alpha['h_1'][cell] * n_e * x['h_2']
         dqdt['h_2'] = -dqdt['h_1']    
-        
+                
         ##
         # Secondary ionization
         ##
-        for j, donor in enumerate(self.grid.absorbers):
-            dqdt['h_1'] -= gamma['h_1'][j] * n['h'] * x[donor]
+        #for j, donor in enumerate(self.grid.absorbers):
+        #dqdt['h_1'] -= gamma['h_1'][0] * n_H * x['h_1']
+        #dqdt['h_2'] += gamma['h_1'][0] * n_H * x['h_1']
             
         ##
         # Heating & cooling
@@ -318,77 +317,30 @@ class SimpleChemicalNetwork:
                 - x['he_3'] * alpha['he_2'][cell] * n_e
                 
             # Cooling
-            cool += eta['he_3'][cell] * x['he_3'] * n_He                
-                
-        # Loop over neutrals and ions, compute rates
-        #for i, sp in enumerate(self.grid.evolving_fields):
-        #    
-        #    # Neutral species
-        #    if sp in self.grid.absorbers:
-        #        
-        #        elem = self.grid.parents_by_ion[sp]
-        #        k = self.grid.ions_by_parent[elem].index(sp)
-        #        ion = self.grid.ions_by_parent[elem][k+1]
-        #
-        #        # Losses via ionization processes
-        #        dqdt[sp] -= (Gamma[sp] + Beta[sp][cell] * n_e) * x[sp]
-        #
-        #        # Losses via secondary ionization
-        #        for j, donor in enumerate(self.grid.absorbers):
-        #            dqdt[sp] -= gamma[sp][j] * n[elem] * x[donor]
-        #                
-        #        # Gains via recombinations
-        #        dqdt[sp] += alpha[sp][cell] * n_e * x[ion]
-        #        
-        #        # Di-electronic recombation
-        #        if sp == 'he_1':
-        #            dqdt[sp] += xi[cell] * n_e * x['he_2']
-        #        
-        #        # Heating & cooling
-        #        if not self.grid.isothermal:
-        #            heat += k_H[sp] * x[sp] * n[elem]         # photo-heating
-        #            cool += zeta[sp][cell] * x[sp] * n[elem]  # ionization
-        #            cool += psi[sp][cell] * x[sp] * n[elem]   # excitation
-        #    
-        #    # Ions
-        #    elif sp in self.grid.ions:
-        #        elem = self.grid.parents_by_ion[sp]
-        #        k = self.grid.ions_by_parent[elem].index(sp)
-        #        neu = self.grid.ions_by_parent[elem][k-1]
-        #        
-        #        if elem == 'h':
-        #            dqdt[sp] = -dqdt[neu]
-        #        else:
-        #            # Means we've got HeIII
-        #            #neu2 = self.grid.ions_by_parent[elem][k-2]
-        #            #dqdt[sp] = -(dqdt[neu] + dqdt[neu2])
-        #            dqdt[sp] = Gamma['he_2'] + Beta['he_2'][cell] * n_e \
-        #                     - alpha['he_2'][cell] * n_e
-        #            
-        #        
-        #        # Cooling
-        #        if not self.grid.isothermal:    
-        #            cool += eta[sp][cell] * x[sp] * n[elem]
-        #
-        
+            if not self.grid.isothermal:
+                cool += eta['he_3'][cell] * x['he_3'] * n_He                
         
         ##            
         # Electrons
         ##
         
         # Gains from ionizations of HI
-        dqdt['de'] += n_H * dqdt['h_2']
+        dqdt['de'] = n_H * dqdt['h_2']
         
         # Electrons from helium ionizations
         if 2 in self.grid.Z:
             # Gains from ionization of HeI
-            dqdt['de'] -= n_He * dqdt['he_1']
+            dqdt['de'] += n_He * x['he_1'] \
+                * (Gamma['he_1'] + Beta['he_1'][cell] * n_e)
+            
             # Gains from ionization of HeII
-            dqdt['de'] += x['he_2'] * n_He \
+            dqdt['de'] += n_He * x['he_2'] \
                 * (Gamma['he_2'] + Beta['he_2'][cell] * n_e)
+                
             # Losses from HeII recombinations
             dqdt['de'] -= x['he_2'] * n_He \
                 * (alpha['he_1'][cell] + xi[cell]) * n_e
+                
             # Losses from HeIII recombinations
             dqdt['de'] -= x['he_3'] * n_He * alpha['he_2'][cell] * n_e
             
@@ -413,9 +365,18 @@ class SimpleChemicalNetwork:
         else:
             dqdt['Tk'] = 0.0 
          
+        #if self.grid.expansion:
+        #    Gcmb = alpha['h_1'][cell] \
+        #        * (2. * np.pi * m_e * k_B * q[-1])**1.5 / h**3 \
+        #        * np.exp(-3.4 * erg_per_ev / k_B / q[-1])
+        #    dqdt['h_1'] -= Gcmb * x['h_1']
+        #    dqdt['h_2'] += Gcmb * x['h_1']
+        #
+        #print Gcmb, alpha['h_1'][cell] * n_e * x['h_2']
+
         self.dqdt = np.array([dqdt[sp] for sp in self.grid.qmap])
-                
-        return self.dqdt    
+
+        return self.dqdt
                           
     def Jacobian(self, t, q, args):
         self.q = q
@@ -434,7 +395,7 @@ class SimpleChemicalNetwork:
             n_H = self.grid.n_H[cell]
             
         if 2 in self.grid.Z:
-            n_He = self.grid.element_abundances[0] * n_H    
+            n_He = self.grid.element_abundances[1] * n_H
     
         # Read q vector quantities into dictionaries
         x, n, n_e = self._parse_q(q, n_H)
@@ -509,7 +470,7 @@ class SimpleChemicalNetwork:
             J[2,2] = -(Gamma['he_1'] + Beta['he_1'][cell] * n_e)
             
             # HeI by HeII
-            J[2,3] = -(alpha['he_1'][cell] + xi[cell]) * n_e
+            J[2,3] = (alpha['he_1'][cell] + xi[cell]) * n_e
             
             # HeI by HeIII
             J[2,4] = 0.0
@@ -538,24 +499,28 @@ class SimpleChemicalNetwork:
             ##
             
             J[2,e] = -Beta['he_1'][cell] * x['he_1'] \
-                   - (alpha['he_1'][cell] + xi[cell]) * x['he_2']
+                   + (alpha['he_1'][cell] + xi[cell]) * x['he_2']
             J[3,e] = Beta['he_1'][cell] * x['he_1'] \
                    - (Beta['he_2'][cell] + alpha['he_1'][cell] + xi[cell]) * x['he_2'] \
                    + alpha['he_2'][cell] * x['he_3']
             J[4,e] = Beta['he_2'][cell] * x['he_2'] - alpha['he_2'][cell] * x['he_3']
             
-            J[e,2] = n_He * x['he_1'] \
+            J[e,2] = n_He \
                 * (Gamma['he_1'] + Beta['he_1'][cell] * n_e)
             
-            J[e,3] = n_He * x['he_2'] \
+            J[e,3] = n_He \
                 * ((Gamma['he_2'] + Beta['he_2'][cell] * n_e) \
                 - (alpha['he_1'][cell] + xi[cell]) * n_e)
             
-            J[e,4] = -n_He * x['he_3'] * alpha['he_2'][cell] * n_e
+            J[e,4] = -n_He * alpha['he_2'][cell] * n_e
+            
+            # Electron-electron terms (increment from H-only case)
             J[e,e] += n_He * x['he_1'] * Beta['he_1'][cell]
-            J[e,e] += n_He * x['he_2'] \
-                * ((Beta['he_2'][cell] - (alpha['he_1'][cell] + xi[cell])) * n_e \
-                - alpha['he_2'][cell] * x['he_3'])
+            
+            J[e,e] += n_He \
+                * (x['he_2'] \
+                * ((Beta['he_2'][cell] - (alpha['he_1'][cell] + xi[cell]))) \
+                - x['he_3'] * alpha['he_2'][cell])
                           
         # evolving temperature, hydrogen-only    
         if not self.isothermal:
@@ -578,11 +543,8 @@ class SimpleChemicalNetwork:
                        + eta['h_2'][cell] * n_H * x['h_1'] \
                        - psi['h_1'][cell] * n_H * x['h_1']
                        
-            # Add helium terms
-        
-        #print J
-        #sys.exit()    
-            
+            # Add helium terms here
+                    
         return J
                                 
     def SourceIndependentCoefficients(self, T):

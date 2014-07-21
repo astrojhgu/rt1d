@@ -37,7 +37,6 @@ pl.xlim(10, sim.grid.zi)
 pl.ylim(1, 2e3)
     
 pl.legend(frameon=False, loc='lower right')   
-raw_input('')    
 
 
 
