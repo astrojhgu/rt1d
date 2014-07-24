@@ -22,9 +22,10 @@ pf = \
  'tables_logNmin': [15]*3,
  'tables_logNmax': [20]*3,
  'tables_dlogN': [0.05]*3,
- 'restricted_timestep': ['neutrals'],
- 'initial_timestep': 1e-1,
- 'stop_time': 30,
+ 'restricted_timestep': ['ions', 'neutrals', 'electrons', 'temperature'],
+ 'initial_timestep': 1e-6,
+ "interp_method": 'linear',
+ #'stop_time': 1e-5,
 }
 
 sim_He = rt1d.run.Simulation(**pf)
@@ -40,15 +41,20 @@ fig1 = pl.figure(1); ax1 = fig1.add_subplot(111)
 fig2 = pl.figure(2); ax2 = fig2.add_subplot(111)
 fig3 = pl.figure(3); ax3 = fig3.add_subplot(111)
 
+anl_H.TemperatureProfile(t=[10, 30, 100], ax=ax1, color='k', label='H-only')
+anl_He.TemperatureProfile(t=[10, 30, 100], ax=ax1, color='b', label='H & He')
 
-anl_H.TemperatureProfile(t=[10, 30, 100], ax=ax1, color='k')
-anl_He.TemperatureProfile(t=[10, 30, 100], ax=ax1, color='b')
 
 # Hydrogen profiles
-anl_H.IonizationProfile(t=[10, 30, 100], ax=ax2, color='k')
-anl_He.IonizationProfile(t=[10, 30, 100], ax=ax2, color='b')
+anl_H.IonizationProfile(t=[10, 30, 100], ax=ax2, color='k', label='H-only')
+anl_He.IonizationProfile(t=[10, 30, 100], ax=ax2, color='b', label='H & He')
 
 # Helium profiles
-anl_He.IonizationProfile(t=[10, 30, 100], species='he', ax=ax3, color='k')
+anl_He.IonizationProfile(t=[10, 30, 100], annotate=True, species='he', ax=ax3, 
+    color='k')
+
+ax1.legend()
+ax2.legend()
+pl.draw()
 
 

@@ -229,15 +229,17 @@ class Simulation:
                 color=color, ls=ls, label=label)
             mp.grid[0].set_xlim(0, max(self.t / self.trec))
             mp.grid[0].set_ylim(0.94, 1.05)
-            mp.grid[0].set_yticks(np.arange(0.94, 1.04, 0.02))
-            mp.grid[0].set_xlabel(r'$t / t_{\mathrm{rec}}$')
-            mp.grid[0].set_ylabel(r'$r_{\mathrm{num}} / r_{\mathrm{anl}}$') 
-            mp.grid[1].set_xticks(np.linspace(0, 4, 5))
-            mp.grid[0].set_xticks(np.linspace(0, 4, 5))
-            mp.grid[1].set_xticklabels(np.linspace(0, 4, 5))
-            mp.grid[0].set_xticklabels(np.linspace(0, 4, 5))
+            
+            if not hadmp:
+                mp.grid[0].set_yticks(np.arange(0.94, 1.04, 0.02))
+                mp.grid[0].set_xlabel(r'$t / t_{\mathrm{rec}}$')
+                mp.grid[0].set_ylabel(r'$r_{\mathrm{num}} / r_{\mathrm{anl}}$') 
+                mp.grid[1].set_xticks(np.linspace(0, 4, 5))
+                mp.grid[0].set_xticks(np.linspace(0, 4, 5))
+                mp.grid[1].set_xticklabels(np.linspace(0, 4, 5))
+                mp.grid[0].set_xticklabels(np.linspace(0, 4, 5))
         
-        mp.fix_ticks()
+                mp.fix_ticks()
         
         pl.draw()
             
@@ -246,7 +248,7 @@ class Simulation:
     def IonizationProfile(self, species='h', t=[1, 10, 100], color='k', 
         annotate=False, xscale='linear', yscale='log', ax=None,
         normx=False, marker=None, s=50, facecolors=None,
-        iononly=False, ls=None):
+        iononly=False, ls=None, label=None):
         """
         Plot radial profiles of species fraction (for H or He) at times t (Myr).
         """      
@@ -263,6 +265,9 @@ class Simulation:
         elif species == 'he':
             labels = [r'$x_{\mathrm{HeI}}$', r'$x_{\mathrm{HeII}}$', 
                 r'$x_{\mathrm{HeIII}}$']
+                
+        if label is not None:
+            labels = [label] + [None] * (len(labels) - 1)
         
         for dd in self.data.keys():
             t_time_units = self.data[dd]['time'] / self.pf['time_units']
@@ -305,7 +310,7 @@ class Simulation:
         ax.set_ylim(1e-5, 1.5)
         
         if annotate:
-            ax.legend(loc = 'lower right', ncol=len(fields), 
+            ax.legend(loc='best', ncol=len(fields), 
                 frameon=False)
 
         pl.draw()   
@@ -648,6 +653,8 @@ class Simulation:
         
         for dd in self.data.keys():
             t_time_units = self.data[dd]['time'] / self.pf['time_units']
-            if t_time_units not in t: 
+            if t_time_units != t: 
                 continue
+                
+            return self.data[dd]
                 

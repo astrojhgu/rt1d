@@ -158,7 +158,7 @@ class RadiationField:
                 continue    
                 
             self.h = h
-            self.src = copy.deepcopy(src)
+            self.src = src
                 
             # If we're operating under the optically thin assumption, 
             # return pre-computed source-dependent values.    
@@ -188,11 +188,11 @@ class RadiationField:
             if self.src.discrete:
             
                 # Loop over absorbing species
-                for absorber in self.grid.absorbers:
+                for i, absorber in enumerate(self.grid.absorbers):
                                     
                     # Discrete spectrum (multi-freq approach)
                     if self.src.multi_freq:
-                        self.Gamma[h], self.gamma[h], self.k_H[h] = \
+                        self.Gamma[h,:,i], self.gamma[h,:,i], self.k_H[h,:,i] = \
                             self.MultiFreqCoefficients(data, absorber)
                     
                     # Discrete spectrum (multi-grp approach)
@@ -318,22 +318,22 @@ class RadiationField:
                         self.PsiWiggleNdN[absorber][donor] = \
                             10**self.src.tables["logPsiWiggle_%s" % suffix](self.logNdN[j],
                             self.logx, t)
-                            
+
             # Now, go ahead and calculate the rate coefficients
             for k, absorber in enumerate(self.grid.absorbers):
-                self.Gamma[h][..., k] = self.PhotoIonizationRate(absorber)
-                self.k_H[h][..., k] = self.PhotoHeatingRate(absorber)
-                
+                self.Gamma[h][...,k] = self.PhotoIonizationRate(absorber)
+                self.k_H[h][...,k] = self.PhotoHeatingRate(absorber)
+
                 if absorber in self.grid.metals:
                     continue
-                
+
                 for j, donor in enumerate(self.grid.absorbers):
                     self.gamma[h][...,k,j] = \
-                        self.SecondaryIonizationRate(absorber, donor)           
+                        self.SecondaryIonizationRate(absorber, donor)
                        
             # Compute total optical depth too
             self.tau_tot = 10**self.src.tables["logTau"](self.logN_by_cell)
-
+            
         return self.Gamma, self.gamma, self.k_H, self.Ja
         
     def MultiFreqCoefficients(self, data, absorber):
@@ -342,9 +342,13 @@ class RadiationField:
         multi-frequency SED.
         """
         
-        k_H = np.zeros_like(self.grid.zeros_grid_x_absorbers)
-        Gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers)
-        gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers2)
+        #k_H = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+        #Gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers)
+        #gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers2)
+        
+        k_H = np.zeros(self.grid.dims)
+        #Gamma = np.zeros(self.grid.dims)
+        gamma = np.zeros_like(self.grid.zeros_grid_x_absorbers)
         
         i = self.grid.absorbers.index(absorber)
         n = self.n[absorber]
@@ -369,7 +373,7 @@ class RadiationField:
             # Photo-ionization by *this* energy group
             Gamma_E[...,j] = \
                 self.PhotoIonizationRateMultiFreq(self.src.Qdot[j], n,
-                self.tau_r[j], tau_c)
+                self.tau_r[j], tau_c)            
                           
             # Heating
             if self.grid.isothermal:
@@ -383,7 +387,7 @@ class RadiationField:
             ee = Gamma_E[...,j] * (E - self.E_th[absorber]) \
                * erg_per_ev
             
-            k_H[...,i] += ee * fheat
+            k_H += ee * fheat
                 
             if not self.pf['secondary_ionization']:
                 continue
@@ -406,7 +410,7 @@ class RadiationField:
                     / (self.E_th[otherabsorber] * erg_per_ev)
                                                                            
         # Total photo-ionization tally
-        Gamma[...,i] = np.sum(Gamma_E, axis = 1)
+        Gamma = np.sum(Gamma_E, axis=1)
         
         return Gamma, gamma, k_H
     
@@ -422,7 +426,7 @@ class RadiationField:
                           
         if self.pf['plane_parallel']:
             IonizationRate *= self.pp_corr
-                          
+        
         return IonizationRate
         
     def PhotoIonizationRateMultiGroup(self):

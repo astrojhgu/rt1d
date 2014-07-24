@@ -15,7 +15,7 @@ import numpy as np
 import matplotlib.pyplot as pl
 
 dims = 64
-T = np.logspace(4, 5.5, dims)
+T = np.logspace(3.5, 6, dims)
 
 # Initialize grid object
 grid = rt1d.static.Grid(dims=dims)
@@ -73,7 +73,7 @@ ax.set_xlabel(r'$T \ (\mathrm{K})$')
 ax.set_ylabel('Species Fraction')
 ax.set_xlim(min(T), max(T))
 ax.set_ylim(5e-9, 1.5)
-pl.legend(loc='lower right', frameon=False)
+pl.legend(loc='upper right', frameon=False)
 pl.draw()
 
 

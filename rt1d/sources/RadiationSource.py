@@ -69,7 +69,7 @@ class RadiationSource(object):
                 self.SpectrumPars['EmaxNorm'][i] = self.SpectrumPars['Emax'][i]    
         
         self.EminNorm = self.SpectrumPars['EminNorm']
-        self.EmaxNorm = self.SpectrumPars['EmaxNorm']
+        self.EmaxNorm = self.SpectrumPars['EmaxNorm']    
         
         # Source-specific initialization
         if self.SourcePars['type'] == 'toy':

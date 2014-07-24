@@ -103,7 +103,7 @@ class Radiation:
         # SOLVE
         newdata = self.chem.Evolve(data, t, dt, **self.kwargs)
         
-        ### 
+        ###
         ## Tidy up a bit
         ###
         

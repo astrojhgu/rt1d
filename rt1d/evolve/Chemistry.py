@@ -33,7 +33,7 @@ tiny_ion = 1e-12
 class Chemistry(object):
     """ Class for evolving chemical reaction equations. """
     def __init__(self, grid, rt=False, dengo=False, atol=1e-8, rtol=1e-8,
-        rate_src='fk96'):
+        rate_src='fk94'):
         """
         Create a chemistry object.
         

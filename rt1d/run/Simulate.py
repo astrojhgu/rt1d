@@ -99,7 +99,10 @@ class Simulation:
                             ionization=pf['clump_ionization'], 
                             profile=pf['clump_profile'])
                     
-            print_sim(self)        
+            ##
+            # PRINT STUFF
+            ##        
+            print_sim(self)
                     
             # To compute timestep
             self.timestep = rt1d.run.ComputeTimestep(grid, pf['epsilon_dt'])

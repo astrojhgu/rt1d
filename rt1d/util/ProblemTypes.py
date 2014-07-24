@@ -39,7 +39,7 @@ def ProblemType(ptype):
     ptype_int = int(ptype)
     if abs(ptype_int) > 10: # Multiply by 10 rather than add 10?
         ptype_int -= 10 * np.sign(ptype_int)
-        ptype_mod1 = ptype % 1
+        ptype_mod1 = round(ptype - 10 - ptype_int, 1)
     else:    
         ptype_mod1 = round(ptype - ptype_int, 1)
         
@@ -177,11 +177,11 @@ def ProblemType(ptype):
               "interp_method": 'linear',
 
              }
-             
+                          
     if ptype_mod1 != 0:
         pf.update({'photon_conserving': 1})
         pf.update({'source_type': 'toy'})
-        
+                
         # Change discrete spectrum: 0.1 = Mirocha et al. 2012
         #                           0.2 = Wise & Abel 2011
         if ptype_mod1 == 0.1:
@@ -204,5 +204,5 @@ def ProblemType(ptype):
             }
             
         pf.update(helium_pars)
-            
+                    
     return pf    

@@ -14,7 +14,7 @@ import rt1d
 import numpy as np
 import matplotlib.pyplot as pl
 
-src = 'fk96'
+src = 'fk94'
 dims = 64
 T = np.logspace(3, 5, dims)
 

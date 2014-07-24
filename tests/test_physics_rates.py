@@ -28,7 +28,7 @@ dims = 32
 T = np.logspace(3, 6, 500)
 
 colors = list('kb')
-for i, src in enumerate(['fk96']):
+for i, src in enumerate(['fk94']):
 
     # Initialize grid object
     grid = rt1d.static.Grid(dims=dims)

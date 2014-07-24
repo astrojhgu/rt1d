@@ -38,7 +38,6 @@ def GridParameters():
         "time_units": s_per_myr,  
         
         "Z": [1],
-        "Zion": [0, 1],
         "abundance": [1.],
         "initial_ionization": [1.2e-3],
         "initial_temperature": 1e4,
@@ -99,7 +98,7 @@ def PhysicsParameters():
         "approx_lya": 0, # 0 = calculate it!
                          # 1 = Ts -> Tk
                          
-        "rate_source": 'fk96', # fk96, chianti                 
+        "rate_source": 'fk94', # fk94, chianti                 
         }
             
     return pf

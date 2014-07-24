@@ -24,16 +24,16 @@ except ImportError:
     T = None
     have_chianti = False
     
-rate_sources = ['fk96', 'chianti']
+rate_sources = ['fk94', 'chianti']
 
 class RateCoefficients:
-    def __init__(self, grid=None, rate_src='fk96', T=T):
+    def __init__(self, grid=None, rate_src='fk94', T=T):
         """
         Parameters
         ----------
         grid : rt1d.static.Grid instance
         source : str
-            fk96 (Fukugita & Kawasaki 1994)
+            fk94 (Fukugita & Kawasaki 1994)
             chianti
         """
         
@@ -87,7 +87,7 @@ class RateCoefficients:
         Collisional ionization rate which we denote elsewhere as Beta.
         """    
         
-        if self.rate_src == 'fk96':
+        if self.rate_src == 'fk94':
             if species == 0:  
                 return 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)    
               
@@ -110,7 +110,7 @@ class RateCoefficients:
         refers to HII, HeII, and HeIII.
         """
         
-        if self.rate_src == 'fk96':
+        if self.rate_src == 'fk94':
             if self.rec == 'A':
                 if species == 0:
                     return 6.28e-11 * T**-0.5 * (T / 1e3)**-0.2 * (1. + (T / 1e6)**0.7)**-1.
@@ -154,6 +154,9 @@ class RateCoefficients:
         
         return 1.9e-3 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
         
+    def dDielectricRecombinationRate(self, T):
+        return derivative(self.DielectricRecombinationRate, T)
+        
     def CollisionalIonizationCoolingRate(self, species, T):
         """
         Returns coefficient for cooling by collisional ionization.  These are equations B4.1a, b, and d respectively
@@ -162,7 +165,7 @@ class RateCoefficients:
             units: erg cm^3 / s
         """
         
-        if self.rate_src == 'fk96':
+        if self.rate_src == 'fk94':
             if species == 0: 
                 return 1.27e-21 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.58e5 / T)
             if species == 1: 
@@ -170,7 +173,7 @@ class RateCoefficients:
             if species == 2: 
                 return 4.95e-22 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-6.31e5 / T)
         else:
-            raise NotImplemented('Cannot do cooling for rate_source != fk96 (yet).')
+            raise NotImplemented('Cannot do cooling for rate_source != fk94 (yet).')
     
     def dCollisionalIonizationCoolingRate(self, species, T):
         return derivative(lambda T: self.CollisionalIonizationCoolingRate(species, T), T)        
@@ -183,7 +186,7 @@ class RateCoefficients:
             units: erg cm^3 / s
         """
         
-        if self.rate_src == 'fk96':
+        if self.rate_src == 'fk94':
             if species == 0: 
                 return 7.5e-19 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-1.18e5 / T)
             if species == 1: 
@@ -191,7 +194,7 @@ class RateCoefficients:
             if species == 2: 
                 return 5.54e-17 * T**-0.397 * (1. + np.sqrt(T / 1e5))**-1. * np.exp(-4.73e5 / T)    
         else:
-            raise NotImplemented('Cannot do cooling for rate_source != fk96 (yet).')
+            raise NotImplemented('Cannot do cooling for rate_source != fk94 (yet).')
 
     def dCollisionalExcitationCoolingRate(self, species, T):
         return derivative(lambda T: self.CollisionalExcitationCoolingRate(species, T), T)        
@@ -204,7 +207,7 @@ class RateCoefficients:
             units: erg cm^3 / s
         """
         
-        if self.rate_src == 'fk96':
+        if self.rate_src == 'fk94':
             if species == 0: 
                 return 6.5e-27 * np.sqrt(T) * (T / 1e3)**-0.2 * (1.0 + (T / 1e6)**0.7)**-1.0
             if species == 1: 
@@ -212,7 +215,7 @@ class RateCoefficients:
             if species == 2: 
                 return 3.48e-26 * np.sqrt(T) * (T / 1e3)**-0.2 * (1. + (T / 4e6)**0.7)**-1.
         else:
-            raise NotImplemented('Cannot do cooling for rate_source != fk96 (yet).')
+            raise NotImplemented('Cannot do cooling for rate_source != fk94 (yet).')
 
     def dRecombinationCoolingRate(self, species, T):
         return derivative(lambda T: self.RecombinationCoolingRate(species, T), T)
@@ -225,4 +228,7 @@ class RateCoefficients:
         """
         
         return 1.24e-13 * T**-1.5 * np.exp(-4.7e5 / T) * (1. + 0.3 * np.exp(-9.4e4 / T))
+        
+    def dDielectricRecombinationCoolingRate(self, T):
+        return derivative(self.DielectricRecombinationCoolingRate, T)
         

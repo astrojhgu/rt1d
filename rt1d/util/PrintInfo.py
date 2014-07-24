@@ -12,7 +12,7 @@ Description:
 
 import numpy as np
 import types, os, textwrap
-from ..physics.Constants import cm_per_kpc
+from ..physics.Constants import cm_per_kpc, m_H
 
 try:
     from mpi4py import MPI
@@ -33,7 +33,7 @@ e_methods = {0: 'all photo-electron energy -> heat',
              2: 'Ricotti, Gnedin, & Shull (2002)',
              3: 'Furlanetto & Stoever (2010)'}
              
-rate_srcs = {'fk96': 'Fukugita & Kawasaki (1996)',
+rate_srcs = {'fk94': 'Fukugita & Kawasaki (1994)',
              'chianti': 'Chianti'}
 
 def line(s, just='l'):
@@ -41,7 +41,7 @@ def line(s, just='l'):
     Take a string, add a prefix and suffix (some number of # symbols).
     
     Optionally justify string, 'c' for 'center', 'l' for 'left', and 'r' for
-    'right'. Defaults to center-justified.
+    'right'. Defaults to left-justified.
     
     """
     if just == 'c':
@@ -274,7 +274,7 @@ def print_sim(sim):
         just='l')
     print line("size        : %.3g (kpc)" \
         % (sim.pf['length_units'] / cm_per_kpc), just='l')
-    
+    print line("density     : %.2e (g cm**-3 / m_H)" % (sim.pf['density_units'] / m_H))
     print line('-'*twidth)       
     print line('Chemical Network')     
     print line('-'*twidth)
@@ -298,14 +298,33 @@ def print_sim(sim):
     print line('Physics')     
     print line('-'*twidth)
     
-    print line("radiation   : %i" % sim.pf['radiative_transfer'], just='l')
+    print line("radiation   : %i" % sim.pf['radiative_transfer'])
+    print line("isothermal  : %i" % sim.pf['isothermal'], just='l')
     if sim.pf['radiative_transfer']:
-        print line("PC          : %i" % sim.pf['photon_conserving'], just='l')
+        print line("phot. cons. : %i" % sim.pf['photon_conserving'])
         print line("planar      : %s" % sim.pf['plane_parallel'], 
             just='l')        
     print line("electrons   : %s" % e_methods[sim.pf['secondary_ionization']], 
         just='l')
             
+    # Should really loop over sources here        
+    print line('-'*twidth)       
+    print line('Source')     
+    print line('-'*twidth)        
+    
+    print line("type        : %s" % sim.pf['source_type'])
+    if sim.pf['source_type'] == 'star':
+        print line("T_surf      : %.2e K" % sim.pf['source_temperature'])
+        print line("Qdot        : %.2e photons / sec" % sim.pf['source_qdot'])
+
+    print line('-'*twidth)       
+    print line('Spectrum')     
+    print line('-'*twidth)
+
+
+    #if sim.pf['spectrum_E'] is not None:
+    #    tabulate()
+        
 
     print "#"*width
     print ""
