@@ -68,7 +68,7 @@ class Simulation:
                         HeliumFractionByMass=pf['HeliumFractionByMass'], 
                         CMBTemperatureNow=pf['CMBTemperatureNow'],
                         approx_highz=pf['approx_highz'])    
-                    grid.set_chemistry(Z=pf['Z'], abundance=pf['abundance'],
+                    grid.set_chemistry(Z=pf['Z'], abundances=pf['abundances'],
                         approx_helium=pf['approx_helium'])
                     grid.set_density(grid.cosm.rho_b_z0 \
                         * (1. + pf['initial_redshift'])**3)
@@ -81,7 +81,7 @@ class Simulation:
                         z=pf['initial_redshift'])
                         
                 else:
-                    grid.set_chemistry(Z=pf['Z'], abundance=pf['abundance'],
+                    grid.set_chemistry(Z=pf['Z'], abundances=pf['abundances'],
                         approx_helium=pf['approx_helium'])
                     grid.set_density(pf['density_units'])
                     
@@ -129,7 +129,7 @@ class Simulation:
                 allsrcs = self.rs.all_sources    
             else:
                 allsrcs = None
-                
+            
             self.rt = rt1d.evolve.Radiation(self.grid, allsrcs, **self.pf)
 
     def run(self):

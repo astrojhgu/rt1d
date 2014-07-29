@@ -356,7 +356,7 @@ class Grid(object):
             CMBTemperatureNow=CMBTemperatureNow, 
             approx_highz=approx_highz)        
         
-    def set_chemistry(self, Z=1, abundance=1.0, energy=False, 
+    def set_chemistry(self, Z=1, abundances=1.0, energy=False, 
         approx_helium=0):
         """
         Initialize chemistry.
@@ -368,7 +368,7 @@ class Grid(object):
         ----------
         Z : int, list
             Atomic number(s) of elements to include in calculation.
-        abundance : float, list, str
+        abundances : float, list, str
             Abundance(s) (relative to hydrogen) of elements.
             If chiantiPy is installed, can be a string. Some acceptable
             abundance strings are:
@@ -384,17 +384,17 @@ class Grid(object):
         Example
         -------
         grid = Grid(dims=32)
-        grid.set_chemistry(Z=[1,2], abundance='cosmic')  
+        grid.set_chemistry(Z=[1,2], abundances='cosmic')  
         
         """                
         
         if type(Z) is not list:
             Z = [Z]
   
-        if type(abundance) not in [str, list]:
-            abundance = [abundance]    
+        if type(abundances) not in [str, list]:
+            abundances = [abundances]    
         
-        self.abundance = abundance
+        self.abundances = abundances
         self.approx_helium = approx_helium
         
         self.Z = np.array(Z)
@@ -437,15 +437,15 @@ class Grid(object):
                 self.data[field] = np.zeros(self.dims)
             
         # Read abundances from chianti
-        if type(abundance) is str and have_chianti:
+        if type(abundances) is str and have_chianti:
             self.abundances_by_number = util.abundanceRead(abundance)['abundance']
             self.element_abundances = []
             for i, Z in enumerate(self.Z):
                 self.element_abundances.append(self.abundances_by_number[Z-1])
-        elif type(abundance) is str:
+        elif type(abundances) is str:
             raise ValueError('If chianti is not installed, must supply abundances by number.')             
         else:
-            self.abundances_by_number = self.abundance
+            self.abundances_by_number = self.abundances
             self.element_abundances = []
             for i, Z in enumerate(self.Z):
                 self.element_abundances.append(self.abundances_by_number[i])

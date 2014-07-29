@@ -68,7 +68,11 @@ class RadiationField:
     def finite_c(self):
         if self.pf['infinite_c']:
             return False
-        return True            
+        return True      
+        
+    @property
+    def helium(self):
+        return 2 in self.grid.Z
             
     def SourceDependentCoefficients(self, data, t, z=None, **kwargs):
         """
@@ -99,7 +103,7 @@ class RadiationField:
             for i, absorber in enumerate(self.grid.absorbers):
                 self.N_by_cell[...,i] = self.N[absorber]
                 self.Nc_by_cell[...,i] = self.Nc[absorber]
-            
+
             self.logN_by_cell = np.log10(self.N_by_cell)
             self.logNc_by_cell = np.log10(self.N_by_cell)
             
@@ -124,28 +128,34 @@ class RadiationField:
         for h, src in enumerate(self.srcs):        
             if not src.SourceOn(t):
                 continue
-            
+                
             # "Diffuse" sources have parameterized rates    
             if src.SourcePars['type'] == 'diffuse':
                 
-                if 'Gamma_HI' in kwargs:
+                # If rate coefficients are in kwargs, 
+                # it means we're working on an IGM grid patch
+                if 'Gamma' in kwargs:
                     
                     # These if/else's are for glorb!
                     # Have to be sure we don't double count ionization/heat...
-                    if src.pf['is_ion_src_HII']:
-                        self.Gamma[h] = kwargs['Gamma_HI']
+                    if src.pf['is_ion_src_igm']:
+                        self.Gamma[h] = kwargs['Gamma']
                     else:
                         self.Gamma[h] = 0.0
                 else:
-                    self.Gamma[h] = src.ionization_rate(z, **kwargs)
+                    for i, absorber in enumerate(self.grid.absorbers):
+                        self.Gamma[h,:,i] = \
+                            src.ionization_rate(z, species=i, **kwargs)
                 
-                if 'gamma_HI' in kwargs:
+                if 'gamma' in kwargs:
                     if src.pf['is_ion_src_igm']:
-                        self.gamma[h] = kwargs['gamma_HI']
+                        self.gamma[h] = kwargs['gamma']
                     else:
                         self.gamma[h] = 0.0
                 else:
-                    self.gamma[h] = src.secondary_ionization_rate(z, **kwargs)
+                    for i, absorber in enumerate(self.grid.absorbers):
+                        self.gamma[h,:,i] = \
+                            src.secondary_ionization_rate(z, species=i, **kwargs)
                 
                 if 'epsilon_X' in kwargs:
                     if src.pf['is_xray_src']:
@@ -153,8 +163,9 @@ class RadiationField:
                     else:
                         self.k_H[h] = 0.0
                 else:
-                    self.k_H[h] = src.heating_rate(z, **kwargs)
-
+                    for i, absorber in enumerate(self.grid.absorbers):
+                        self.k_H[h,:,i] = src.heating_rate(z, species=i, **kwargs)
+            
                 continue    
                 
             self.h = h

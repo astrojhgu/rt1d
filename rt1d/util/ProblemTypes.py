@@ -195,7 +195,7 @@ def ProblemType(ptype):
         helium_pars = \
             {
              'Z': [1, 2], 
-             'abundance': [1.0, 0.08],
+             'abundances': [1.0, 0.08],
              'initial_ionization': [pf['initial_ionization'][0]]*2,
              'tables_dlogN': defs['tables_dlogN']*3,
              'tables_xmin': defs["tables_xmin"]*3,

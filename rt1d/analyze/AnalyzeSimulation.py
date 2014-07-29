@@ -68,7 +68,7 @@ class Simulation:
                             
             self.grid.set_ics(self.data['dd0000'])
             self.grid.set_chemistry(Z=self.pf['Z'], 
-                abundance=self.pf['abundance'], 
+                abundance=self.pf['abundances'], 
                 approx_helium=self.pf['approx_helium'])
             self.grid.set_density(self.data['dd0000']['rho'])
         

@@ -66,7 +66,7 @@ class CompositeSource:
                     continue
                 
                 sf.update({key:sf[key][i]})                       
-                                    
+                                                                        
             # Create RadiationSource class instance
             rs = RadiationSource(grid=self.grid, init_tabs=init_tabs[i], **sf)
             

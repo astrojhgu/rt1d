@@ -28,13 +28,26 @@ twidth = width - len(pre) - len(post) - 2
 
 RT1D = os.environ.get('RT1D')
 
-e_methods = {0: 'all photo-electron energy -> heat',
-             1: 'Shull & vanSteenberg (1985)',
-             2: 'Ricotti, Gnedin, & Shull (2002)',
-             3: 'Furlanetto & Stoever (2010)'}
+e_methods = \
+{
+ 0: 'all photo-electron energy -> heat',
+ 1: 'Shull & vanSteenberg (1985)',
+ 2: 'Ricotti, Gnedin, & Shull (2002)',
+ 3: 'Furlanetto & Stoever (2010)'
+}
              
-rate_srcs = {'fk94': 'Fukugita & Kawasaki (1994)',
-             'chianti': 'Chianti'}
+rate_srcs = \
+{
+ 'fk94': 'Fukugita & Kawasaki (1994)',
+ 'chianti': 'Chianti'
+}
+             
+S_methods = \
+{
+ 1: 'Salpha = const. = 1',
+ 2: 'Chuzhoy, Alvarez, & Shapiro (2005)',
+ 3: 'Furlanetto & Pritchard (2006)'
+}             
 
 def line(s, just='l'):
     """ 
@@ -263,6 +276,30 @@ def print_sim(sim):
     print "\n" + "#"*width
     print "%s %s %s" % (pre, header.center(twidth), post)
     print "#"*width
+    
+    print line('-'*twidth)       
+    print line('Book-Keeping')     
+    print line('-'*twidth)
+    
+    if sim.pf['dtDataDump'] is not None:
+        print line("dtDataDump  : every %i Myr" % sim.pf['dtDataDump'])
+    else:
+        print line("dtDataDump  : no regularly-spaced time dumps")
+    
+    if sim.pf['dzDataDump'] is not None:
+        print line("dzDataDump  : every dz=%.2g" % sim.pf['dzDataDump'])
+    else:
+        print line("dzDataDump  : no regularly-spaced redshift dumps")    
+       
+    print line("initial dt  : %.2g Myr" % sim.pf['initial_timestep'])        
+           
+    rdt = ""
+    for element in sim.pf['restricted_timestep']:
+        rdt += '%s, ' % element
+    rdt = rdt.strip().rstrip(',')       
+    print line("restrict dt : %s" % rdt)
+    print line("max change  : %.4g%% per time-step" % \
+        (sim.pf['epsilon_dt'] * 100))
 
     print line('-'*twidth)       
     print line('Grid')     
@@ -275,6 +312,7 @@ def print_sim(sim):
     print line("size        : %.3g (kpc)" \
         % (sim.pf['length_units'] / cm_per_kpc), just='l')
     print line("density     : %.2e (g cm**-3 / m_H)" % (sim.pf['density_units'] / m_H))
+    
     print line('-'*twidth)       
     print line('Chemical Network')     
     print line('-'*twidth)
@@ -284,13 +322,13 @@ def print_sim(sim):
     for i, element in enumerate(sim.pf['Z']):
         if element == 1:
             Z += 'H'
-            A += '%.2g' % (sim.pf['abundance'][i])
+            A += '%.2g' % (sim.pf['abundances'][i])
         elif element == 2:
             Z += ', He'
-            A += ', %.2g' % (sim.pf['abundance'][i])
+            A += ', %.2g' % (sim.pf['abundances'][i])
             
     print line("elements    : %s" % Z, just='l')
-    print line("abundance   : %s" % A, just='l')
+    print line("abundances  : %s" % A, just='l')
     print line("rates       : %s" % rate_srcs[sim.pf['rate_source']], 
         just='l')
     

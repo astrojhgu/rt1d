@@ -14,18 +14,19 @@ Comparison Project (Iliev et al. 2006; RT06) but with helium included.
 import rt1d, os
 import matplotlib.pyplot as pl
 
+cm_per_kpc = rt1d.physics.Constants.cm_per_kpc
+
 pf = \
 {
  'problem_type': 12,
+ 'grid_cells': 128,
  'approx_helium': 0,
  'source_table':'rt1d_integral_table.hdf5', 
  'tables_logNmin': [15]*3,
  'tables_logNmax': [20]*3,
  'tables_dlogN': [0.05]*3,
- 'restricted_timestep': ['ions', 'neutrals', 'electrons', 'temperature'],
+ 'restricted_timestep': ['ions'],
  'initial_timestep': 1e-6,
- "interp_method": 'linear',
- #'stop_time': 1e-5,
 }
 
 sim_He = rt1d.run.Simulation(**pf)
@@ -57,4 +58,15 @@ ax1.legend()
 ax2.legend()
 pl.draw()
 
+fig4 = pl.figure(4); ax4 = fig4.add_subplot(111)
+
+data_H = anl_H.snapshot(100)
+data_He = anl_He.snapshot(100)
+
+ax4.semilogy(sim_H.grid.r_mid * 6.6 / cm_per_kpc, data_H['h_2'] / data_He['he_2'],
+    color='k')
+ax4.set_xlabel(r'$r \ (\mathrm{kpc})$')
+ax4.set_ylabel(r'$x_{\mathrm{HII}} / x_{\mathrm{HeII}}$')
+ax4.plot([1e-1, 1e2], [1]*2, color='k', ls=':')
+pl.draw()
 

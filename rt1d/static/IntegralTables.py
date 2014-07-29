@@ -102,7 +102,7 @@ class IntegralTable:
                 self.t = self.pf['tables_times']  
         else:
             self.t = np.array([0])
-                                    
+                                                
         # What quantities are we going to compute?
         self.IntegralList = self.ToCompute()
         
@@ -159,6 +159,9 @@ class IntegralTable:
         for dims in self.dimsN:
             tmp.append(np.arange(dims))
                 
+        if rank == 0:
+            print "Setting up integral table..."
+            
         logNiter = itertools.product(*self.logN)
         iNiter = itertools.product(*tmp)
         
