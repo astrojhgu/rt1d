@@ -91,7 +91,7 @@ class Hydrogen:
                                 'kappa_e': np.array(kappa_He), 
                                 'T_H': np.array(T_HH), 'T_e': np.array(T_He)}
     
-        # High-resolution tables for differentiation
+        # High-resolution tables for differentiation of rate coefficients
         self._Tk_hi_H = np.logspace(np.log10(self.tabulated_coeff['T_H'].min()),
             np.log10(self.tabulated_coeff['T_H'].max()), 1000)
         self._kH_hi = np.array(map(self.kappa_H, self._Tk_hi_H))
@@ -121,6 +121,9 @@ class Hydrogen:
             return spline(Tk)
                                
     def kappa_H(self, Tk):
+        """
+        Rate coefficient for spin-exchange via H-H collsions.
+        """
         if type(Tk) in [float, np.float64]:            
             return self._kappa(Tk, T_HH, self.kappa_H_pre)
         else:
@@ -129,7 +132,10 @@ class Hydrogen:
                 tmp[i] = self._kappa(Tk[i], T_HH, self.kappa_H_pre)
             return tmp
             
-    def kappa_e(self, Tk):                           
+    def kappa_e(self, Tk):       
+        """
+        Rate coefficient for spin-exchange via H-electron collsions.
+        """                            
         if type(Tk) in [float, np.float64]:
             return self._kappa(Tk, T_He, self.kappa_e_pre)
         else:
@@ -137,28 +143,8 @@ class Hydrogen:
             for i in range(len(Tk)):
                 tmp[i] = self._kappa(Tk[i], T_He, self.kappa_e_pre)
             return tmp
-            
-    def CollisionalIonizationRate(self, T):
-        """
-        From Fukugita & Kawasaki 1996 (I think).
-        """
-        return 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)    
-                
-    def RecombinationRateCaseA(self, Tk):
-        """
-        Return mean IGM recombination rate coefficient.
-        """    
-        
-        return 4.2e-13 * (Tk / 1.e4)**-0.7    
-    
-    def RecombinationRateCaseB(self, Tk):
-        """
-        Return mean IGM recombination rate coefficient.
-        """    
-        
-        return 2.6e-13 * (Tk / 1.e4)**-0.7                            
 
-    def photon_energy(self, nu, nl = 1):
+    def photon_energy(self, nu, nl=1):
         """
         Return energy of photon transitioning from nu to nl in eV.  
         Defaults to Lyman-series.
@@ -213,33 +199,34 @@ class Hydrogen:
         else:
             raise ValueError('Only know frec for 2 <= 2 <= 30!')
     
-    # Look at line 905 in astrophysics.cc of jonathan's code
+    # Look at line 905 in astrophysics.cc of Jonathan's code
     
-    def CollisionalCouplingCoefficient(self, Tk, z, nHI, ne):
+    def CollisionalCouplingCoefficient(self, z, Tk, xHII, ne):
         """
         Parameters
         ----------
-        Tk : float
-            Kinetic temperature of the gas [K]
         z : float
             Redshift
-        nHI : float
-            Proper neutral hydrogen density [cm**-3]
+        Tk : float
+            Kinetic temperature of the gas [K]
+        xHII : float
+            Hydrogen ionized fraction
         ne : float
             Proper electron density [cm**-3]
         
         References
         ----------
         Zygelman, B. 2005, ApJ, 622, 1356
+        
         """
-        RateCoefficientSum = nHI * self.kappa_H(Tk) + \
-            ne * self.kappa_e(Tk)
+        sum_term = self.cosm.nH(z) * (1. - xHII) * self.kappa_H(Tk) \
+            + ne * self.kappa_e(Tk)
                 
-        return RateCoefficientSum * T_star / A10 / self.cosm.TCMB(z)    
+        return sum_term * T_star / A10 / self.cosm.TCMB(z)    
     
-    def WouthuysenFieldCouplingCoefficient(self, z, Ja, Tk=None, xHII=None):
+    def RadiativeCouplingCoefficient(self, z, Ja, Tk=None, xHII=None):
         """
-        Return Lyman-alpha coupling coefficient.
+        Return radiative coupling coefficient (i.e., Wouthuysen-Field effect).
         """
                 
         return 1.81e11 * self.Sa(z=z, Tk=Tk, xHII=xHII) * Ja / (1. + z)
@@ -272,48 +259,55 @@ class Hydrogen:
         """ Return energy of Lyman-n photon in eV. """
         return E_LL * (1. - 1. / n**2)
         
-    def SpinTemp(self, z, Tk, Ja, nHI, ne):
+    def SpinTemperature(self, z, Tk, Ja, xHII, ne):
         """
-        Returns spin temperature given:
-            z = redshift (sets CMB temperature)
-            Tk = kinetic temperature of the gas
-            xHII = ionized hydrogen fraction
-            Ja = Lyman-alpha flux
-            nHI = proper neutral hydrogen density
-            ne = electron density
+        Returns spin temperature of intergalactic hydrogen.
+        
+        Parameters
+        ----------
+        z : float, np.ndarray
+            Redshift
+        Tk : float, np.ndarray
+            Gas kinetic temperature
+        Ja : float, np.ndarray
+            Lyman-alpha flux in units of [s**-1 cm**-2 Hz**-1 sr**-1]
+        xHII : float, np.ndarray 
+            Hydrogen ionized fraction
+        ne : float, np.ndarray
+            Proper electron density in [cm**-3]
+            
+        Returns
+        -------
+        Spin temperature in Kelvin.   
+         
         """
-
-        nH = self.cosm.nH(z) * (1. + z)**3 # proper (total) hydrogen density
-        nHII = nH - nHI
-
-        x_c = self.CollisionalCouplingCoefficient(Tk, z, nHI, ne)
-        x_a = self.WouthuysenFieldCouplingCoefficient(z, Ja, Tk, nHII / nH)
+        
+        x_c = self.CollisionalCouplingCoefficient(z, Tk, xHII, ne)
+        x_a = self.RadiativeCouplingCoefficient(z, Ja, Tk, xHII)
         Tc = Tk
-                
+
         return (1.0 + x_c + x_a) / \
             (self.cosm.TCMB(z)**-1. + x_c * Tk**-1. + x_a * Tc**-1.)
     
-    def Ts(self, data, z):
-        Tk = data['Tk']
-        
-        if self.approx_lya == 0:
-            if 'Ja' in data.keys():
-                Ja = data['Ja']
-            else:
-                Ja = np.zeros_like(Tk)
-        elif self.approx_lya == 1:
-            return Tk
-        else:
-            raise ValueError('approx_lya can only be 0 or 1!')
-        
-        nH = self.cosm.nH0 * (1. + z)**3
-        ne = data['de']      
-        
-        return self.SpinTemp(z, Tk, Ja, nH, ne)
-        
     def DifferentialBrightnessTemperature(self, z, xHII, delta, Ts):
         """
         Global 21-cm signature relative to cosmic microwave background in mK.
+        
+        Parameters
+        ----------
+        z : float, np.ndarray
+            Redshift
+        xHII : float, np.ndarray 
+            Volume filling factor of HII regions
+        delta : float, np.ndarray 
+            Gas overdensity
+        Ts : float, np.ndarray
+            Spin temperature of intergalactic hydrogen.
+            
+        Returns
+        -------
+        Differential brightness temperature in milli-Kelvin.
+        
         """
         
         return 27. * (1. - xHII) * (1.0 + delta) * \

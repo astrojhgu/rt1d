@@ -134,10 +134,6 @@ class Grid(object):
         if not hasattr(self, '_absorbing_species'):
             self._absorbing_species = copy.copy(self.neutrals)
             for parent in self.ions_by_parent:
-                if self.approx_helium:
-                    if parent == 'he':
-                        self._absorbing_species.remove('he_1')
-                        continue
                 self._absorbing_species.extend(self.ions_by_parent[parent][1:-1])
             
         return self._absorbing_species
@@ -231,17 +227,14 @@ class Grid(object):
         
         if not hasattr(self, '_ioniz_thresholds'):
             self._ioniz_thresholds = {}
-            for absorber in self.absorbers:
-                if absorber == 'h_1':
-                    self._ioniz_thresholds[absorber] = 13.6
-                elif absorber == 'he_1':
-                    self._ioniz_thresholds[absorber] = 24.4
-                elif absorber == 'he_2':
-                    self._ioniz_thresholds[absorber] = 54.4
-        
-            if self.approx_helium:
-                self._ioniz_thresholds['he_1'] = 24.4
-                    
+            #for absorber in self.absorbers:
+            #if absorber == 'h_1':
+            self._ioniz_thresholds['h_1'] = 13.6
+            #elif absorber == 'he_1':
+            self._ioniz_thresholds['he_1'] = 24.4
+            #elif absorber == 'he_2':
+            self._ioniz_thresholds['he_2'] = 54.4
+           
         return self._ioniz_thresholds
         
     @property # MUST GENERALIZE THIS
@@ -253,23 +246,19 @@ class Grid(object):
         
         if not hasattr(self, 'all_xsections'):
             self._bf_xsections = {}
-            for absorber in self.absorbers:
+            #for absorber in self.absorbers:
                 #ion = cc.continuum(absorber)
                 #ion.vernerCross(energy = np.logspace(1, 5, 1000))
-                if absorber == 'h_1':
-                    self._bf_xsections[absorber] = lambda E: \
-                        PhotoIonizationCrossSection(E, species=0)
-                elif absorber == 'he_1':
-                    self._bf_xsections[absorber] = lambda E: \
-                        PhotoIonizationCrossSection(E, species=1)
-                elif absorber == 'he_2':
-                    self._bf_xsections[absorber] = lambda E: \
-                        PhotoIonizationCrossSection(E, species=2) 
+                #if absorber == 'h_1':
+            self._bf_xsections['h_1'] = lambda E: \
+                PhotoIonizationCrossSection(E, species=0)
+                #elif absorber == 'he_1':
+            self._bf_xsections['he_1'] = lambda E: \
+                PhotoIonizationCrossSection(E, species=1)
+                #elif absorber == 'he_2':
+            self._bf_xsections['he_2'] = lambda E: \
+                PhotoIonizationCrossSection(E, species=2) 
                         
-            if self.approx_helium:
-                self._bf_xsections['he_1'] = lambda E: \
-                        PhotoIonizationCrossSection(E, species=1)           
-                
         return self._bf_xsections
         
     @property
@@ -356,8 +345,7 @@ class Grid(object):
             CMBTemperatureNow=CMBTemperatureNow, 
             approx_highz=approx_highz)        
         
-    def set_chemistry(self, Z=1, abundances=1.0, energy=False, 
-        approx_helium=0):
+    def set_chemistry(self, Z=1, abundances=1.0, energy=False):
         """
         Initialize chemistry.
         
@@ -376,11 +364,7 @@ class Grid(object):
         energy : bool
             Solve for internal energy or temperature? (not sure if this is
             used anywhere)
-        approx_helium : bool
-            If True, sets singly ionized helium fraction to HI fraction, and
-            assumes doubly ionized helium fraction is zero. Rate equations for
-            helium are not solved - only additional cooling is accounted for.
-            
+
         Example
         -------
         grid = Grid(dims=32)
@@ -392,10 +376,9 @@ class Grid(object):
             Z = [Z]
   
         if type(abundances) not in [str, list]:
-            abundances = [abundances]    
-        
+            abundances = [abundances]   
+            
         self.abundances = abundances
-        self.approx_helium = approx_helium
         
         self.Z = np.array(Z)
         self.ions_by_parent = {} # Ions sorted by parent element in dictionary
@@ -407,6 +390,7 @@ class Grid(object):
           
         for i, element in enumerate(self.Z):
             element_name = util.z2element(element)
+                
             self.ions_by_parent[element_name] = []
             self.elements.append(element_name)
             for ion in xrange(element + 1):
@@ -415,10 +399,6 @@ class Grid(object):
                 self.ions_by_parent[element_name].append(name)
                 self.parents_by_ion[name] = element_name
                 self.tracked_fields.append(name)
-                
-                if self.approx_helium and element_name == 'he':
-                    continue
-                    
                 self.evolving_fields.append(name)
 
         self.solve_ge = False      
@@ -498,12 +478,12 @@ class Grid(object):
             X += self.abundances_by_number[i] * ELEMENT(name).mass
                      
         # Set reference number density
-        if 'h' in self.elements:                           
+        if 'h' in self.elements:
             self.n_H = self.n_ref = self.data['rho'] / m_H / X
         else:
             self.n_H = self.n_ref = self.data['rho'] / m_H \
                 / ELEMENT(self.elements[0]).mass
-        
+
     def set_temperature(self, T0):
         """
         Set initial temperature in grid.  
@@ -529,14 +509,8 @@ class Grid(object):
         """       
         
         if x is not None:
-            try:
-                if self.approx_helium and not np.allclose(x):
-                    raise ValueError('If approx_helium, initial ionized fractions must be equal!')
-                for i, frac in enumerate(x):
-                    self.data[util.zion2name(Z, i)].fill(frac)
-            except TypeError:    
-                self.data[util.zion2name(Z, 1)].fill(1. - x)
-                self.data[util.zion2name(Z, 2)].fill(x)
+            self.data[util.zion2name(Z, 1)].fill(1. - x)
+            self.data[util.zion2name(Z, 2)].fill(x)
             
         elif state == 'equilibrium':
             np.seterr(all = 'ignore')   # This tends to produce divide by zero errors

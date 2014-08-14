@@ -150,12 +150,6 @@ class Chemistry(object):
             for i, value in enumerate(self.solver.y):
                 newdata[self.grid.evolving_fields[i]][cell] = self.solver.y[i]# / 1e10
         
-            # Update helium if approximate treatment in use
-            if self.grid.approx_helium:
-                newdata['he_1'][cell] = newdata['h_1'][cell]
-                newdata['he_2'][cell] = newdata['h_2'][cell]
-                newdata['he_3'][cell] = 0.0
-        
         # Fix negative values
         #for ion in self.grid.ions:
         #    newdata[ion][newdata[ion] < tiny_ion] = tiny_ion

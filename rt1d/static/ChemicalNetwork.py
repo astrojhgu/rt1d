@@ -39,7 +39,8 @@ class SimpleChemicalNetwork:
         self.coeff = RateCoefficients(grid, rate_src=rate_src)
 
         self.isothermal = self.grid.isothermal
-
+        self.secondary_ionization = self.grid.secondary_ionization
+        
         # For convenience 
         self.zeros_q = np.zeros(len(self.grid.evolving_fields))
         self.zeros_jac = np.zeros([len(self.grid.evolving_fields)] * 2)
@@ -53,15 +54,10 @@ class SimpleChemicalNetwork:
             
         if 2 in self.grid.Z:
             n_He = self.grid.element_abundances[1] * n_H
+            n['he'] = n_He
             x['he_1'] = q[self.grid.qmap.index('he_1')]
             x['he_2'] = q[self.grid.qmap.index('he_2')]
-        
-            if 'he_3' in self.grid.ions:
-                x['he_3'] = q[self.grid.qmap.index('he_3')]
-            else:
-                x['he_3'] = 0.0
-                
-            n['he'] = n_He  
+            x['he_3'] = q[self.grid.qmap.index('he_3')]
                 
         n_e = q[self.grid.qmap.index('de')]
         
@@ -120,21 +116,29 @@ class SimpleChemicalNetwork:
         
         # Store results here
         dqdt = {field:0.0 for field in self.grid.evolving_fields}
+        
+        ##
+        # Secondary ionization (of hydrogen)
+        ##
+        gamma_HI = 0.0
+        if self.secondary_ionization > 0:
+            
+            for j, donor in enumerate(self.grid.absorbers):
+                elem = self.grid.parents_by_ion[donor]
+                
+                term = gamma['h_1'][j] * x[donor] / x['h_1']
+                dqdt['h_1'] -= term
+                dqdt['h_2'] += term
+
+                gamma_HI += term
                 
         ##
         # Hydrogen rate equations
         ##
-        dqdt['h_1'] = -(Gamma['h_1'] + Beta['h_1'][cell] * n_e) * x['h_1'] \
+        dqdt['h_1'] = -(Gamma['h_1'] + gamma_HI + Beta['h_1'][cell] * n_e) * x['h_1'] \
                       + alpha['h_1'][cell] * n_e * x['h_2']
         dqdt['h_2'] = -dqdt['h_1']    
                 
-        ##
-        # Secondary ionization
-        ##
-        #for j, donor in enumerate(self.grid.absorbers):
-        #dqdt['h_1'] -= gamma['h_1'][0] * n_H * x['h_1']
-        #dqdt['h_2'] += gamma['h_1'][0] * n_H * x['h_1']
-            
         ##
         # Heating & cooling
         ##
@@ -163,27 +167,47 @@ class SimpleChemicalNetwork:
         ##
         if 2 in self.grid.Z:
             
+            # Secondary ionization  
+            gamma_HeI = 0.0
+            gamma_HeII = 0.0 
+            if self.secondary_ionization > 0: 
+                                
+                for j, donor in enumerate(self.grid.absorbers):
+                    elem = self.grid.parents_by_ion[donor]
+                
+                    term1 = gamma['he_1'][j] * x[donor] / x['he_1']
+                    dqdt['he_1'] -= term1
+                    dqdt['he_2'] += term1
+                    
+                    gamma_HeI += term1
+                    
+                    term2 = gamma['he_2'][j] * x[donor] / x['he_2']
+                    dqdt['he_2'] -= term2
+                    dqdt['he_3'] += term2
+                    
+                    gamma_HeII += term2
+            
             ##
             # Helium rate equations
             ##
             dqdt['he_1'] = \
-                - x['he_1'] * (Gamma['he_1'] + Beta['he_1'][cell] * n_e) \
+                - x['he_1'] * (Gamma['he_1'] + gamma_HeI + Beta['he_1'][cell] * n_e) \
                 + x['he_2'] * (alpha['he_1'][cell] + xi[cell]) * n_e
             
             dqdt['he_2'] = \
-                  x['he_1'] * (Gamma['he_1'] + Beta['he_1'][cell] * n_e) \
-                - x['he_2'] * (Gamma['he_2'] \
+                  x['he_1'] * (Gamma['he_1'] + gamma_HeI + Beta['he_1'][cell] * n_e) \
+                - x['he_2'] * (Gamma['he_2'] + gamma_HeII \
                 + (Beta['he_2'][cell] + alpha['he_1'][cell] + xi[cell]) * n_e) \
                 + x['he_3'] * alpha['he_2'][cell] * n_e
         
             dqdt['he_3'] = \
-                  x['he_2'] * (Gamma['he_2'] + Beta['he_2'][cell] * n_e) \
+                  x['he_2'] * (Gamma['he_2'] + gamma_HeII + Beta['he_2'][cell] * n_e) \
                 - x['he_3'] * alpha['he_2'][cell] * n_e
             
             # Dielectronic recombination cooling    
             if not self.grid.isothermal:
                 cool += omega[cell] * x['he_2'] * n_He
-        
+                    
         ##            
         # Electrons
         ##
@@ -195,11 +219,11 @@ class SimpleChemicalNetwork:
         if 2 in self.grid.Z:
             # Gains from ionization of HeI
             dqdt['de'] += n_He * x['he_1'] \
-                * (Gamma['he_1'] + Beta['he_1'][cell] * n_e)
+                * (Gamma['he_1'] + gamma_HeI + Beta['he_1'][cell] * n_e)
             
             # Gains from ionization of HeII
             dqdt['de'] += n_He * x['he_2'] \
-                * (Gamma['he_2'] + Beta['he_2'][cell] * n_e)
+                * (Gamma['he_2'] + gamma_HeII + Beta['he_2'][cell] * n_e)
                 
             # Losses from HeII recombinations
             dqdt['de'] -= x['he_2'] * n_He \
@@ -257,12 +281,16 @@ class SimpleChemicalNetwork:
             n_H = self.grid.cosm.nH0 * (1. + z)**3            
         else:
             n_H = self.grid.n_H[cell]
-            
-        if 2 in self.grid.Z:
-            n_He = self.grid.element_abundances[1] * n_H
-    
+                    
         # Read q vector quantities into dictionaries
         x, n, n_e = self._parse_q(q, n_H)
+        
+        if 2 in self.grid.Z:
+            n_He = self.grid.element_abundances[1] * n_H
+        else:
+            n_He = 0.0
+    
+        ntot = n_e + n_H + n_He
     
         # Initialize dictionaries for results        
         k_H = {sp:H[i] for i, sp in enumerate(self.grid.absorbers)}
@@ -300,13 +328,24 @@ class SimpleChemicalNetwork:
             e = -2
         else:
             e = 2
+            
+        ##
+        # Secondary ionization (of hydrogen)
+        ##
+        gamma_HI = 0.0
+        if self.secondary_ionization > 0:
+        
+            for j, donor in enumerate(self.grid.absorbers):
+                elem = self.grid.parents_by_ion[donor]
+                term = gamma['h_1'][j] * x[donor] / x['h_1']
+                gamma_HI += term    
         
         ##
         # FIRST: HI and HII terms. Always in slots 0 and 1.
         ##
             
         # HI by HI
-        J[0,0] = -(Gamma['h_1'] + Beta['h_1'][cell] * n_e)
+        J[0,0] = -(Gamma['h_1'] + gamma_HI + Beta['h_1'][cell] * n_e)
         
         # HI by HII
         J[0,1] = alpha['h_1'][cell] * n_e
@@ -325,7 +364,7 @@ class SimpleChemicalNetwork:
         J[1,e] = -J[0,e]
         J[e,e] = n_H * J[1,e]
            
-        J[e,0] = n_H * (Gamma['h_1'] + Beta['h_1'][cell] * n_e)
+        J[e,0] = n_H * (Gamma['h_1'] + gamma_HI + Beta['h_1'][cell] * n_e)
         J[e,1] = -n_H * alpha['h_1'][cell] * n_e
             
         ###
@@ -333,8 +372,22 @@ class SimpleChemicalNetwork:
         ###
         if N in [6, 7]:
             
+            # Secondary ionization  
+            gamma_HeI = 0.0
+            gamma_HeII = 0.0 
+            if self.secondary_ionization > 0: 
+                                
+                for j, donor in enumerate(self.grid.absorbers):
+                    elem = self.grid.parents_by_ion[donor]
+                
+                    term1 = gamma['he_1'][j] * x[donor] / x['he_1']
+                    gamma_HeI += term1
+                    
+                    term2 = gamma['he_2'][j] * x[donor] / x['he_2']
+                    gamma_HeII += term2
+            
             # HeI by HeI
-            J[2,2] = -(Gamma['he_1'] + Beta['he_1'][cell] * n_e)
+            J[2,2] = -(Gamma['he_1'] + gamma_HeI + Beta['he_1'][cell] * n_e)
             
             # HeI by HeII
             J[2,3] = (alpha['he_1'][cell] + xi[cell]) * n_e
@@ -346,7 +399,7 @@ class SimpleChemicalNetwork:
             J[3,2] = -J[2,2]
 
             # HeII by HeII
-            J[3,3] = -Gamma['he_2'] \
+            J[3,3] = -(Gamma['he_2'] + gamma_HeII) \
                    - (Beta['he_2'][cell] + alpha['he_1'][cell] + xi[cell]) * n_e
 
             # HeII by HeIII
@@ -373,10 +426,10 @@ class SimpleChemicalNetwork:
             J[4,e] = Beta['he_2'][cell] * x['he_2'] - alpha['he_2'][cell] * x['he_3']
             
             J[e,2] = n_He \
-                * (Gamma['he_1'] + Beta['he_1'][cell] * n_e)
+                * (Gamma['he_1'] + gamma_HeI + Beta['he_1'][cell] * n_e)
             
             J[e,3] = n_He \
-                * ((Gamma['he_2'] + Beta['he_2'][cell] * n_e) \
+                * ((Gamma['he_2'] + gamma_HeII + Beta['he_2'][cell] * n_e) \
                 - (alpha['he_1'][cell] + xi[cell]) * n_e)
             
             J[e,4] = -n_He * alpha['he_2'][cell] * n_e
@@ -491,7 +544,22 @@ class SimpleChemicalNetwork:
         # Dielectronic recombination term
         if 2 in self.grid.Z: 
             J[-1,e] -= omega[cell] * n_He * x['he_2']      
-            J[-1,-1] -= n_e * x['he_2'] * n_He * domega[cell]     
+            J[-1,-1] -= n_e * x['he_2'] * n_He * domega[cell]
+            
+        # Cosmological effects
+        if self.grid.expansion:
+            J[-1,-1] -= 2. * self.grid.cosm.HubbleParameter(z)
+            
+            if self.grid.compton_scattering:
+                Tcmb = self.grid.cosm.TCMB(z)
+                ucmb = self.grid.cosm.UCMB(z)
+                #tcomp = 3. * m_e * c / (8. * sigma_T * ucmb)
+                #compton = x['h_2'] * (Tcmb - q[-1]) / tcomp \
+                #    / (1. + self.grid.cosm.y + x['h_2'])
+        
+                J[-1,-1] -= (8. / 3.) * sigma_T * ucmb * n_e / m_e / c / ntot
+                J[-1,e] -= (8. / 3.) * sigma_T * ucmb * (Tcmb - q[-1]) \
+                    / m_e / c / ntot
 
         return J
                                 
@@ -536,15 +604,14 @@ class SimpleChemicalNetwork:
             self.dpsi[...,i] = self.coeff.dCollisionalExcitationCoolingRate(i, T)
 
         # Di-electric recombination
-        if 2 in self.grid.Z and not self.grid.approx_helium:
+        if 2 in self.grid.Z:
             self.xi = self.coeff.DielectricRecombinationRate(T)
             self.dxi = self.coeff.dDielectricRecombinationRate(T)
             
             if not self.isothermal:
                 self.omega = self.coeff.DielectricRecombinationCoolingRate(T)
                 self.domega = self.coeff.dDielectricRecombinationCoolingRate(T)
-                
-        
+                        
         return {'Beta': self.Beta, 'alpha': self.alpha,
                 'zeta': self.zeta, 'eta': self.eta, 'psi': self.psi,
                 'xi': self.xi, 'omega': self.omega}

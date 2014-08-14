@@ -19,9 +19,11 @@ from scipy.integrate import quad, trapz, simps
 
 try:
     from mpi4py import MPI
-    rank = MPI.COMM_WORLD.rank; size = MPI.COMM_WORLD.size
+    rank = MPI.COMM_WORLD.rank
+    size = MPI.COMM_WORLD.size
 except ImportError:
-    rank = 0; size = 1
+    rank = 0
+    size = 1
 
 E_th = [13.6, 24.6, 54.4]
 
@@ -111,11 +113,8 @@ class IntegralTable:
         self.TableProperties()
         
         self.E_th = {}
-        for absorber in self.grid.absorbers:
+        for absorber in ['h_1', 'he_1', 'he_2']:
             self.E_th[absorber] = self.grid.ioniz_thresholds[absorber]
-        
-        if self.grid.approx_helium:
-            self.E_th['he_1'] = self.grid.ioniz_thresholds['he_1']
         
     def TableBoundsAuto(self, xmin=1e-5):
         """
@@ -161,19 +160,18 @@ class IntegralTable:
                 
         if rank == 0:
             print "Setting up integral table..."
-            
-        logNiter = itertools.product(*self.logN)
-        iNiter = itertools.product(*tmp)
-        
+                    
         # Values that correspond to indices
         logNarr = []
-        for item in logNiter:
+        for item in itertools.product(*self.logN):
             logNarr.append(item)
         
         # Indices for column densities
         iN = []
-        for item in iNiter:
+        for item in itertools.product(*tmp):
             iN.append(tuple(item))    
+            
+        #iN = np.indices(self.dimsN)    
             
         self.indices_N = iN
         self.logNall = np.array(logNarr)
@@ -317,10 +315,10 @@ class IntegralTable:
             tau += self.OpticalDepth(N[self.grid.absorbers.index(absorber)], 
                 absorber)
                 
-            if self.grid.approx_helium:
-                Nhe = self.grid.abundance[1] \
-                    * N[self.grid.absorbers.index('h_1')]
-                tau += self.OpticalDepth(Nhe, 'he_1')  
+            #if self.grid.approx_helium:
+            #    Nhe = self.grid.abundances[1] \
+            #        * N[self.grid.absorbers.index('h_1')]
+            #    tau += self.OpticalDepth(Nhe, 'he_1')  
     
         return tau
                

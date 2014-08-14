@@ -30,7 +30,7 @@ Grid Parameters
     
     Default: [1] (hydrogen only)
 
-``abundance``
+``abundances``
     List of elemental abundances relative to hydrogen, corresponding to elements
     of Z.
 

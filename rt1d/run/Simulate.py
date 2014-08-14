@@ -68,8 +68,7 @@ class Simulation:
                         HeliumFractionByMass=pf['HeliumFractionByMass'], 
                         CMBTemperatureNow=pf['CMBTemperatureNow'],
                         approx_highz=pf['approx_highz'])    
-                    grid.set_chemistry(Z=pf['Z'], abundances=pf['abundances'],
-                        approx_helium=pf['approx_helium'])
+                    grid.set_chemistry(Z=pf['Z'], abundances=pf['abundances'])
                     grid.set_density(grid.cosm.rho_b_z0 \
                         * (1. + pf['initial_redshift'])**3)
                     grid.set_temperature(grid.cosm.Tgas(pf['initial_redshift']))
@@ -81,11 +80,10 @@ class Simulation:
                         z=pf['initial_redshift'])
                         
                 else:
-                    grid.set_chemistry(Z=pf['Z'], abundances=pf['abundances'],
-                        approx_helium=pf['approx_helium'])
+                    grid.set_chemistry(Z=pf['Z'], abundances=pf['abundances'])
                     grid.set_density(pf['density_units'])
                     
-                    for i, Z in enumerate(pf['Z']):
+                    for i, Z in enumerate(grid.Z):
                         grid.set_ionization(Z=Z, x=pf['initial_ionization'][i])
                     
                     grid.set_temperature(pf['initial_temperature'])
@@ -193,8 +191,15 @@ class Simulation:
                 if dz is not None:
                     dt = min(dt, dz*self.grid.cosm.dtdz(z))
 
-            # Compute spin-temperature
-            data['Ts'] = self.grid.hydr.Ts(data, z)
+            # Compute spin-temperature            
+            if 'Ja' not in data:
+                data['Ts'] = self.grid.hydr.SpinTemperature(z,
+                    data['Tk'], 0.0, 
+                    data['h_2'], data['de'])
+            else:    
+                data['Ts'] = self.grid.hydr.SpinTemperature(z, 
+                    data['Tk'], data['Ja'], 
+                    data['h_2'], data['de'])
 
             self.checkpoints.update(data, t, z)
 

@@ -19,7 +19,7 @@ pl.rcParams['legend.fontsize'] = 14
 
 #
 dims = 32
-T = np.logspace(1, 7, dims)
+T = np.logspace(2, 7, dims)
 #
 
 # Chianti rates
@@ -40,26 +40,26 @@ h1.diRate()
 he1.diRate()
 he2.diRate()
 
+fig1 = pl.figure(1)
+ax1 = fig1.add_subplot(111)
+
 # Chianti
-pl.loglog(T, h1.DiRate['rate'], color = 'k', ls = '-', 
-    label = 'chianti')
-pl.loglog(T, he1.DiRate['rate'], color = 'k', ls = '--')
-pl.loglog(T, he2.DiRate['rate'], color = 'k', ls = ':')
+ax1.loglog(T, h1.DiRate['rate'], color = 'k', ls = '-', 
+    label='chianti')
+ax1.loglog(T, he1.DiRate['rate'], color = 'k', ls = '--')
+ax1.loglog(T, he2.DiRate['rate'], color = 'k', ls = ':')
 
 # Fukugita '94
-pl.loglog(T, coeff.CollisionalIonizationRate(0, T), color = 'b', ls = '-', 
+ax1.loglog(T, coeff.CollisionalIonizationRate(0, T), color = 'b', ls = '-', 
     label = 'Fukugita & Kawasaki \'94')
-pl.loglog(T, coeff.CollisionalIonizationRate(1, T), color = 'b', ls = '--')
-pl.loglog(T, coeff.CollisionalIonizationRate(2, T), color = 'b', ls = ':')
+ax1.loglog(T, coeff.CollisionalIonizationRate(1, T), color = 'b', ls = '--')
+ax1.loglog(T, coeff.CollisionalIonizationRate(2, T), color = 'b', ls = ':')
 
-pl.xlim(min(T), max(T))
-pl.ylim(0.9 * min(h1.DiRate['rate']), 1.1 * max(h1.DiRate['rate']))
-pl.xlabel(r'$T \ (\mathrm{K})$')
-pl.ylabel(r'Collisional Ionization Rate $(\mathrm{cm}^3 \ \mathrm{s}^{-1})$')
-pl.legend(loc = 'lower right', frameon = False)
-
-raw_input('')
-pl.close()
+ax1.set_xlim(min(T), max(T))
+ax1.set_ylim(1e-14, 1e-7)
+ax1.set_xlabel(r'$T \ (\mathrm{K})$')
+ax1.set_ylabel(r'Collisional Ionization Rate $(\mathrm{cm}^3 \ \mathrm{s}^{-1})$')
+ax1.legend(loc='upper left', frameon=False)
 
 """
 Plot recombination rate coefficients.
@@ -70,24 +70,28 @@ he2.rrRate()
 he2.drRate()
 he3.rrRate()
 
+fig2 = pl.figure(2)
+ax2 = fig2.add_subplot(111)
+
+
 # Chianti
-pl.loglog(T, h2.RrRate['rate'], color = 'k', ls = '-', label = 'chianti')
-pl.loglog(T, he2.RrRate['rate'], color = 'k', ls = '--')
-pl.loglog(T, he3.RrRate['rate'], color = 'k', ls = ':')
-pl.loglog(T, he2.DrRate['rate'], color = 'k', ls = '-.')
+ax2.loglog(T, h2.RrRate['rate'], color = 'k', ls = '-', label = 'chianti')
+ax2.loglog(T, he2.RrRate['rate'], color = 'k', ls = '--')
+ax2.loglog(T, he3.RrRate['rate'], color = 'k', ls = ':')
+ax2.loglog(T, he2.DrRate['rate'], color = 'k', ls = '-.')
 
 # Fukugita
-pl.loglog(T, coeff.RadiativeRecombinationRate(0, T), color = 'b', ls = '-',
+ax2.loglog(T, coeff.RadiativeRecombinationRate(0, T), color = 'b', ls = '-',
     label = 'Fukugita & Kawasaki \'94')
-pl.loglog(T, coeff.RadiativeRecombinationRate(1, T), color = 'b', ls = '--')
-pl.loglog(T, coeff.RadiativeRecombinationRate(2, T), color = 'b', ls = ':')
-pl.loglog(T, coeff.DielectricRecombinationRate(T), color = 'b', ls = '-.')
+ax2.loglog(T, coeff.RadiativeRecombinationRate(1, T), color = 'b', ls = '--')
+ax2.loglog(T, coeff.RadiativeRecombinationRate(2, T), color = 'b', ls = ':')
+ax2.loglog(T, coeff.DielectricRecombinationRate(T), color = 'b', ls = '-.')
 
-pl.xlim(min(T), max(T))
-pl.ylim(0.9 * min(h2.RrRate['rate']), 1.1 * max(coeff.DielectricRecombinationRate(T)))
-pl.xlabel(r'$T \ (\mathrm{K})$')
-pl.ylabel(r'Recombination Rate $(\mathrm{cm}^3 \ \mathrm{s}^{-1})$')
+ax2.set_xlim(min(T), max(T))
+ax2.set_ylim(1e-16, 1e-10)
+ax2.set_xlabel(r'$T \ (\mathrm{K})$')
+ax2.set_ylabel(r'Recombination Rate $(\mathrm{cm}^3 \ \mathrm{s}^{-1})$')
 
-pl.legend(loc = 'lower center', frameon = False)
+ax2.legend(loc='lower left', frameon=False)
 
-raw_input('')
+pl.draw()

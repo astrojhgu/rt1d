@@ -130,7 +130,6 @@ def ProblemType(ptype):
               "isothermal": 0,
               "restricted_timestep": ['ions', 'temperature'],
               "Z": [1],
-              "secondary_ionization": 0,
               "initial_temperature": 1e2,
               "initial_ionization": [1.2e-3],
               "source_type": 'star', 

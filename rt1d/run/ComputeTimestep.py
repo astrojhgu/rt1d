@@ -11,6 +11,7 @@ Description:
 """
 
 import numpy as np
+from ..util.Warnings import dt_error
 
 huge_dt = 1e30  # seconds
 
@@ -18,6 +19,7 @@ class ComputeTimestep:
     def __init__(self, grid, epsilon=0.1):
         self.grid = grid
         self.epsilon = epsilon
+        self.grid_indices = np.arange(self.grid.dims)
     
     def Limit(self, q, dqdt, z=None, tau=None, tau_ifront=0.5, 
         method=['ions']):
@@ -38,37 +40,49 @@ class ComputeTimestep:
         if tau is not None:
             dt[tau <= tau_ifront, ...] = huge_dt
                 
+        tries = []  
         new_dt = huge_dt
         for mth in method:
         
+            # Determine index correspond to element(s) of q to use to limit dt
             if mth == 'ions':
-                new_dt = min(new_dt, 
-                    np.min(dt[..., self.grid.types == 1]))
+                j = self.grid.types == 1
             elif mth == 'neutrals':
-                new_dt = min(new_dt, 
-                    np.min(dt[..., self.grid.types == 0]))
+                j = self.grid.types == 0
             elif mth == 'electrons':
-                new_dt = min(new_dt, 
-                    np.min(dt[..., self.grid.evolving_fields.index('de')]))
-            elif mth == 'temperature' and 'T' in self.grid.evolving_fields:
-                new_dt = min(new_dt, 
-                    np.min(dt[..., self.grid.evolving_fields.index('T')]))
+                j = self.grid.evolving_fields.index('de')
+            elif mth == 'temperature':
+                if 'Tk' in self.grid.evolving_fields:
+                    j = self.grid.evolving_fields.index('Tk')
+                else:
+                    min_dt = huge_dt
             elif mth == 'hubble' and self.grid.expansion:
-                new_dt = min(new_dt, self.epsilon \
-                    * self.grid.cosm.HubbleTime(z))
+                min_dt = self.epsilon * self.grid.cosm.HubbleTime(z)
             else:
-                new_dt = min(new_dt, np.min(dt))
-                
-        # Raise error if any funny stuff happens
-        if new_dt < 0: 
-            raise ValueError('ERROR: dt < 0.') 
-        elif new_dt == 0:
-            raise ValueError('ERROR: dt = 0.')  
-        elif np.isnan(new_dt):  
-            raise ValueError('ERROR: dt -> inf.')      
-        
-        return new_dt    
+                raise ValueError('Unrecognized dt restriction method: %s' % mth)
             
+            min_dt = np.min(dt[..., j])
+            
+            # Determine which cell is behaving badly
+            if self.grid.dims == 1:
+                tries.append(0)
+            else:
+                if j is not None:
+                    which_cell = int(self.grid_indices[np.argwhere(dt[...,j] == min_dt)].squeeze())
+                else:
+                    which_cell = 0
+                
+                tries.append(which_cell)
+
+            # Update the time-step
+            new_dt = min(new_dt, min_dt)
+
+        # Raise error if any funny stuff happens                        
+        if (new_dt <= 0) or np.isnan(new_dt) or np.isinf(new_dt):
+            dt_error(self.grid, q, dqdt, new_dt, tries, method)
+
+        return new_dt    
+
         
     
      

@@ -69,6 +69,14 @@ class Cosmology:
         self.delta_c0 = 1.686
         self.TcmbNow = self.CMBTemperatureNow
         
+        self.pars = {'omega_lambda':self.OmegaLambdaNow,
+         'omega_b':self.OmegaBaryonNow,
+         'omega_M':self.OmegaMatterNow,
+         'sigma_8':self.sigma8,
+         'n': self.PrimordialIndex}
+        
+        
+        
     def TimeToRedshiftConverter(self, t_i, t_f, z_i):
         """
         High redshift approximation under effect.

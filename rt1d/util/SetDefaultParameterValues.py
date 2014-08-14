@@ -38,12 +38,10 @@ def GridParameters():
         "time_units": s_per_myr,  
         
         "Z": [1],
-        "abundance": [1.],
+        "abundances": [1.],
         "initial_ionization": [1.2e-3],
         "initial_temperature": 1e4,
-        
-        "approx_helium": 0,
-        
+                
         "clump": 0,
         "clump_position": 0.1,
         "clump_radius": 0.05,
@@ -78,7 +76,7 @@ def PhysicsParameters():
         "plane_parallel": 0,   
         "infinite_c": 1,  
         
-        "secondary_ionization": 0,  # 0 = Deposit all energy as heat
+        "secondary_ionization": 1,  # 0 = Deposit all energy as heat
                                     # 1 = Shull & vanSteenberg (1985)
                                     # 2 = Ricotti, Gnedin, & Shull (2002)
                                     # 3 = Furlanetto & Stoever (2010)        
