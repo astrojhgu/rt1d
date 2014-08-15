@@ -22,7 +22,8 @@ from .Constants import c, G, km_per_mpc, m_H, m_He, sigma_SB
 class Cosmology:
     def __init__(self, OmegaMatterNow=0.272, OmegaLambdaNow=0.728,
         OmegaBaryonNow=0.044, HubbleParameterNow=0.702, 
-        HeliumFractionByMass=0.2477, CMBTemperatureNow=2.725, 
+        HeliumAbundanceByNumber=0.08,
+        CMBTemperatureNow=2.725, 
         approx_highz=False, SigmaEight=0.807, PrimordialIndex=0.96):
         """Initialize a Cosmology object.
         
@@ -45,8 +46,9 @@ class Cosmology:
         
         self.h70 = HubbleParameterNow
         
-        self.Y = HeliumFractionByMass
-        self.y = self.Y / 4. / (1. - self.Y) 
+        self.y = HeliumAbundanceByNumber
+        self.Y = 4. * self.y / (1. + 4. * self.y)
+        
         self.X = 1. - self.Y
         
         self.g_per_baryon = m_H / (1. - self.Y) / (1. + self.y)

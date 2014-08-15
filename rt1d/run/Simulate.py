@@ -58,6 +58,11 @@ class Simulation:
                     expansion=pf['expansion'], 
                     recombination=pf['recombination'])
                 
+                if len(pf['Z']) > 1:
+                    y = pf['Z'][1]
+                else:
+                    y = 0.0
+                
                 # Set initial conditions
                 if pf['expansion']:
                     grid.set_cosmology(initial_redshift=pf['initial_redshift'],
@@ -65,7 +70,7 @@ class Simulation:
                         OmegaLambdaNow=pf['OmegaLambdaNow'], 
                         OmegaBaryonNow=pf['OmegaBaryonNow'],
                         HubbleParameterNow=pf['HubbleParameterNow'],
-                        HeliumFractionByMass=pf['HeliumFractionByMass'], 
+                        HeliumAbundanceByNumber=y, 
                         CMBTemperatureNow=pf['CMBTemperatureNow'],
                         approx_highz=pf['approx_highz'])    
                     grid.set_chemistry(Z=pf['Z'], abundances=pf['abundances'])

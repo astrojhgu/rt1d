@@ -334,14 +334,14 @@ class Grid(object):
         
     def set_cosmology(self, initial_redshift=1e3, OmegaMatterNow=0.272, 
         OmegaLambdaNow=0.728, OmegaBaryonNow=0.044, HubbleParameterNow=0.702, 
-        HeliumFractionByMass=0.2477, CMBTemperatureNow=2.725, 
+        HeliumAbundanceByNumber=0.08, CMBTemperatureNow=2.725, 
         approx_highz=False):
         
         self.zi = initial_redshift
         self._cosm = Cosmology(OmegaMatterNow=OmegaMatterNow, 
             OmegaLambdaNow=OmegaLambdaNow, OmegaBaryonNow=OmegaBaryonNow,
             HubbleParameterNow=HubbleParameterNow, 
-            HeliumFractionByMass=HeliumFractionByMass,
+            HeliumAbundanceByNumber=HeliumAbundanceByNumber,
             CMBTemperatureNow=CMBTemperatureNow, 
             approx_highz=approx_highz)        
         
@@ -448,41 +448,56 @@ class Grid(object):
             or an array of values the same size as the grid itself.
             
         """
+        
         if isinstance(rho0, Iterable):
             self.data['rho'] = rho0
         else:
-            self.data['rho'] = rho0 * np.ones(self.dims)   
-                    
+            self.data['rho'] = rho0 * np.ones(self.dims)  
+            
         if len(self.Z) == 1:
-            if self.Z == np.ones(1):
-                self.abundances_by_number = self.element_abundances = np.ones(1)
-                if self.expansion:
-                    self.n_H = \
-                        (1. - self.cosm.Y) * self.data['rho'] / m_H
-                else:
-                    self.n_H = self.data['rho'] / m_H
-            else:
-                self.n_H = self.data['rho'] / m_H \
-                    / ELEMENT(self.elements[0]).mass
+            self.n_H = self.data['rho'] / m_H
+            self.n_He = 0.0 
+        elif len(self.Z) == 2:
+            if 2 not in self.Z:
+                raise ValueError('Only know how to do H+He gas.')
+                
+            self.n_H = (1. - self.cosm.Y) * self.data['rho'] / m_H
+            self.n_He = self.cosm.Y * self.data['rho'] / 4. / m_H
+        
+        self.n_ref = self.n_H
                     
-            self.n_ref = copy.deepcopy(self.n_H)
-            return    
-                            
-        # Set hydrogen number density (which normalizes all other species)
-        X = 0.0
-        for i in xrange(len(self.abundances_by_number) - 1):
-            name = util.z2element(i + 1)
-            if not name.strip():
-                continue
-                    
-            X += self.abundances_by_number[i] * ELEMENT(name).mass
-                     
-        # Set reference number density
-        if 'h' in self.elements:
-            self.n_H = self.n_ref = self.data['rho'] / m_H / X
-        else:
-            self.n_H = self.n_ref = self.data['rho'] / m_H \
-                / ELEMENT(self.elements[0]).mass
+        #if len(self.Z) == 1:
+        #    if self.Z == np.ones(1):
+        #        self.abundances_by_number = self.element_abundances = np.ones(1)
+        #        if self.expansion:
+        #            self.n_H = \
+        #                (1. - self.cosm.Y) * self.data['rho'] / m_H
+        #        else:
+        #            self.n_H = self.data['rho'] / m_H
+        #    else:
+        #        self.n_H = self.data['rho'] / m_H \
+        #            / ELEMENT(self.elements[0]).mass
+        #            
+        #    self.n_ref = copy.deepcopy(self.n_H)
+        #    return
+        #    
+        #    
+        #                    
+        ## Set hydrogen number density (which normalizes all other species)
+        #X = 0.0
+        #for i in xrange(len(self.abundances_by_number) - 1):
+        #    name = util.z2element(i + 1)
+        #    if not name.strip():
+        #        continue
+        #            
+        #    X += self.abundances_by_number[i] * ELEMENT(name).mass
+        #             
+        ## Set reference number density
+        #if 'h' in self.elements:
+        #    self.n_H = self.n_ref = self.data['rho'] / m_H / X
+        #else:
+        #    self.n_H = self.n_ref = self.data['rho'] / m_H \
+        #        / ELEMENT(self.elements[0]).mass
 
     def set_temperature(self, T0):
         """

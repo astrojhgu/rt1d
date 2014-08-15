@@ -233,7 +233,7 @@ def CosmologyParameters():
         "OmegaBaryonNow": 0.044,
         "OmegaLambdaNow": 0.728,
         "HubbleParameterNow": 0.702,
-        "HeliumFractionByMass": 0.2477,
+        "HeliumAbundanceByNumber": 0.08,
         "CMBTemperatureNow": 2.725,
         "SigmaEight": 0.807
         }
