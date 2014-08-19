@@ -33,14 +33,14 @@ class ComputeTimestep:
         
         # Don't let dt -> 0 where species fraction is zero
         dt[np.logical_and(q == 0, self.grid.types >= 0)] = huge_dt
-        
-        # What's limiting the time-step?
-                
+                        
+        # Don't let dt -> 0 when quantities are in equilibrium
+        dt[dqdt == 0] = huge_dt                
+                        
         # Isolate cells beyond I-front
         if tau is not None:
             dt[tau <= tau_ifront, ...] = huge_dt
                 
-        tries = []  
         new_dt = huge_dt
         for mth in method:
         
@@ -50,7 +50,7 @@ class ComputeTimestep:
             elif mth == 'neutrals':
                 j = self.grid.types == 0
             elif mth == 'electrons':
-                j = self.grid.evolving_fields.index('de')
+                j = self.grid.evolving_fields.index('e')
             elif mth == 'temperature':
                 if 'Tk' in self.grid.evolving_fields:
                     j = self.grid.evolving_fields.index('Tk')
@@ -60,26 +60,26 @@ class ComputeTimestep:
                 min_dt = self.epsilon * self.grid.cosm.HubbleTime(z)
             else:
                 raise ValueError('Unrecognized dt restriction method: %s' % mth)
-            
+
             min_dt = np.min(dt[..., j])
-            
-            # Determine which cell is behaving badly
-            if self.grid.dims == 1:
-                tries.append(0)
-            else:
-                if j is not None:
-                    which_cell = int(self.grid_indices[np.argwhere(dt[...,j] == min_dt)].squeeze())
-                else:
+
+            not_ok = ((min_dt <= 0) or np.isnan(min_dt) or np.isinf(min_dt))            
+
+            # Determine which cell is behaving badly (if any)
+            if not_ok:
+                if self.grid.dims == 1:
                     which_cell = 0
-                
-                tries.append(which_cell)
+                else:
+                    if j is not None:
+                        which_cell = self.grid_indices[np.argwhere(dt[...,j] == min_dt)].squeeze()
+                        which_cell = int(which_cell)
+                    else:
+                        which_cell = 0
+                                                                
+                dt_error(self.grid, z, q, dqdt, min_dt, which_cell, mth)
 
             # Update the time-step
             new_dt = min(new_dt, min_dt)
-
-        # Raise error if any funny stuff happens                        
-        if (new_dt <= 0) or np.isnan(new_dt) or np.isinf(new_dt):
-            dt_error(self.grid, q, dqdt, new_dt, tries, method)
 
         return new_dt    
 

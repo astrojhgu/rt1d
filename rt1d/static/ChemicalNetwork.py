@@ -59,7 +59,7 @@ class SimpleChemicalNetwork:
             x['he_2'] = q[self.grid.qmap.index('he_2')]
             x['he_3'] = q[self.grid.qmap.index('he_3')]
                 
-        n_e = q[self.grid.qmap.index('de')]
+        n_e = q[self.grid.qmap.index('e')] * n_H
         
         return x, n, n_e
         
@@ -90,17 +90,23 @@ class SimpleChemicalNetwork:
     
         if self.grid.expansion:
             z = self.grid.cosm.TimeToRedshiftConverter(0., time, self.grid.zi)
-            n_H = self.grid.cosm.nH0 * (1. + z)**3
+            n_H = self.grid.cosm.nH(z)
         else:
             n_H = self.grid.n_H[cell]
-            
+
         if 2 in self.grid.Z:
+            y = self.grid.element_abundances[1]
             n_He = self.grid.element_abundances[1] * n_H
-    
+        else:
+            y = 0.0
+            n_He = 0.0
+
         # Read q vector quantities into dictionaries
         x, n, n_e = self._parse_q(q, n_H)
         
-        # Initialize dictionaries for results        
+        xe = n_e / n_H
+
+        # Initialize dictionaries for results
         k_H = {sp:H[i] for i, sp in enumerate(self.grid.absorbers)}
         Gamma = {sp:G[i] for i, sp in enumerate(self.grid.absorbers)}
         gamma = {sp:g[i] for i, sp in enumerate(self.grid.absorbers)}
@@ -131,20 +137,21 @@ class SimpleChemicalNetwork:
                 dqdt['h_2'] += term
 
                 gamma_HI += term
-                
+
         ##
         # Hydrogen rate equations
         ##
-        dqdt['h_1'] = -(Gamma['h_1'] + gamma_HI + Beta['h_1'][cell] * n_e) * x['h_1'] \
+        dqdt['h_1'] = -(Gamma['h_1'] + gamma_HI + Beta['h_1'][cell] * n_e) \
+                      * x['h_1'] \
                       + alpha['h_1'][cell] * n_e * x['h_2']
         dqdt['h_2'] = -dqdt['h_1']    
-                
+
         ##
         # Heating & cooling
         ##
-        
+
         # NOTE: cooling term multiplied by electron density at the very end!
-        
+
         heat = 0.0
         cool = 0.0
         if not self.isothermal:
@@ -161,7 +168,7 @@ class SimpleChemicalNetwork:
                 elem = self.grid.parents_by_ion[sp]
                 
                 cool += eta[sp][cell] * x[sp] * n[elem]   # recombination
-                      
+                                            
         ##
         # Helium processes
         ##
@@ -213,24 +220,24 @@ class SimpleChemicalNetwork:
         ##
         
         # Gains from ionizations of HI
-        dqdt['de'] = n_H * dqdt['h_2']
+        dqdt['e'] = 1. * dqdt['h_2']
         
         # Electrons from helium ionizations
         if 2 in self.grid.Z:
             # Gains from ionization of HeI
-            dqdt['de'] += n_He * x['he_1'] \
+            dqdt['e'] += y * x['he_1'] \
                 * (Gamma['he_1'] + gamma_HeI + Beta['he_1'][cell] * n_e)
             
             # Gains from ionization of HeII
-            dqdt['de'] += n_He * x['he_2'] \
+            dqdt['e'] += y * x['he_2'] \
                 * (Gamma['he_2'] + gamma_HeII + Beta['he_2'][cell] * n_e)
                 
             # Losses from HeII recombinations
-            dqdt['de'] -= x['he_2'] * n_He \
+            dqdt['e'] -= y * x['he_2'] \
                 * (alpha['he_1'][cell] + xi[cell]) * n_e
                 
             # Losses from HeIII recombinations
-            dqdt['de'] -= x['he_3'] * n_He * alpha['he_2'][cell] * n_e
+            dqdt['e'] -= y * x['he_3'] * alpha['he_2'][cell] * n_e
             
         # Finish heating and cooling
         if not self.grid.isothermal:
@@ -246,22 +253,14 @@ class SimpleChemicalNetwork:
                     Tcmb = self.grid.cosm.TCMB(z)
                     ucmb = self.grid.cosm.UCMB(z)
                     tcomp = 3. * m_e * c / (8. * sigma_T * ucmb)
-                    compton = x['h_2'] * (Tcmb - q[-1]) / tcomp \
-                        / (1. + self.grid.cosm.y + x['h_2'])
+                    compton = xe * (Tcmb - q[-1]) / tcomp \
+                        / (1. + self.grid.cosm.y + xe)
             
             dqdt['Tk'] = (heat - n_e * cool) * to_temp + compton - hubcool
+            
         else:
             dqdt['Tk'] = 0.0 
-         
-        #if self.grid.expansion:
-        #    Gcmb = alpha['h_1'][cell] \
-        #        * (2. * np.pi * m_e * k_B * q[-1])**1.5 / h**3 \
-        #        * np.exp(-3.4 * erg_per_ev / k_B / q[-1])
-        #    dqdt['h_1'] -= Gcmb * x['h_1']
-        #    dqdt['h_2'] += Gcmb * x['h_1']
-        #
-        #print Gcmb, alpha['h_1'][cell] * n_e * x['h_2']
-
+            
         self.dqdt = np.array([dqdt[sp] for sp in self.grid.qmap])
 
         return self.dqdt
@@ -271,14 +270,12 @@ class SimpleChemicalNetwork:
         self.dqdt = np.zeros_like(self.zeros_q)
     
         cell, G, g, H, n, time = args
-    
-        # Write routine to dict-ify this shit
-    
+        
         to_temp = 1. / (1.5 * n * k_B)
     
         if self.grid.expansion:
             z = self.grid.cosm.TimeToRedshiftConverter(0., time, self.grid.zi)
-            n_H = self.grid.cosm.nH0 * (1. + z)**3            
+            n_H = self.grid.cosm.nH(z)
         else:
             n_H = self.grid.n_H[cell]
                     
@@ -290,7 +287,7 @@ class SimpleChemicalNetwork:
         else:
             n_He = 0.0
     
-        ntot = n_e + n_H + n_He
+        xe = n_e / n_H
     
         # Initialize dictionaries for results        
         k_H = {sp:H[i] for i, sp in enumerate(self.grid.absorbers)}
@@ -316,8 +313,6 @@ class SimpleChemicalNetwork:
                 dxi = self.dxi
                 domega = self.domega
     
-        heat, cool = 0.0, 0.0
-
         N = len(self.grid.evolving_fields)
         J = np.zeros([N] * 2)     
         
@@ -366,6 +361,9 @@ class SimpleChemicalNetwork:
            
         J[e,0] = n_H * (Gamma['h_1'] + gamma_HI + Beta['h_1'][cell] * n_e)
         J[e,1] = -n_H * alpha['h_1'][cell] * n_e
+        
+        #if self.grid.expansion:
+        #    J[e,e] -= 3. * self.grid.cosm.HubbleParameter(z)
             
         ###
         ## HELIUM INCLUDED CASES: N=6 (isothermal), N=7 (thermal evolution)   
@@ -441,24 +439,20 @@ class SimpleChemicalNetwork:
                 * (x['he_2'] \
                 * ((Beta['he_2'][cell] - (alpha['he_1'][cell] + xi[cell]))) \
                 - x['he_3'] * alpha['he_2'][cell])
-        
-        ##                  
-        # Quit if we're not allowing thermal evolution
-        ##
-        if self.isothermal:
-            return J
-                        
+                
         ##
         # Heating/Cooling from here onwards
         ##
-        
+        if self.isothermal:
+            return J              
+
         ##
         # Hydrogen derivatives wrt Tk
         ##
         
         # HI by Tk
-        J[0,-1] = -n_e * (x['h_1'] * dBeta['h_1'][cell] \
-               + x['h_2'] * dalpha['h_1'][cell])
+        J[0,-1] = -n_e * x['h_1'] * dBeta['h_1'][cell] \
+                +  n_e * x['h_2'] * dalpha['h_1'][cell]
         # HII by Tk
         J[1,-1] = -J[0,-1]
         
@@ -493,7 +487,7 @@ class SimpleChemicalNetwork:
                 * (dBeta['he_1'][cell] * x['he_1'] + dBeta['he_2'][cell] * x['he_2'] \
                 - (dalpha['he_1'][cell] + dxi[cell]) * x['he_2'] \
                 - dalpha['he_2'][cell] * x['he_3'])
-
+                
         ##
         # Tk derivatives wrt neutrals
         ##
@@ -529,7 +523,7 @@ class SimpleChemicalNetwork:
         ##
         for sp in self.grid.absorbers:       
             elem = self.grid.parents_by_ion[sp]
-            J[-1,-1] -= n_e * n[elem] * x[sp] * dzeta[sp][cell]            
+            J[-1,-1] -= n_e * n[elem] * x[sp] * dzeta[sp][cell]
             J[-1,-1] -= n_e * n[elem] * x[sp] * dpsi[sp][cell]
             
             J[-1,e] -= n[elem] * x[sp] * zeta[sp][cell]
@@ -546,23 +540,27 @@ class SimpleChemicalNetwork:
             J[-1,e] -= omega[cell] * n_He * x['he_2']      
             J[-1,-1] -= n_e * x['he_2'] * n_He * domega[cell]
             
+        # So far, everything in units of energy, must convert to temperature    
+        J[-1,:] *= to_temp    
+
         # Cosmological effects
         if self.grid.expansion:
-            J[-1,-1] -= 2. * self.grid.cosm.HubbleParameter(z)
             
+            # These terms have the correct units already
+            J[-1,-1] -= 2. * self.grid.cosm.HubbleParameter(z)
+
             if self.grid.compton_scattering:
                 Tcmb = self.grid.cosm.TCMB(z)
                 ucmb = self.grid.cosm.UCMB(z)
-                #tcomp = 3. * m_e * c / (8. * sigma_T * ucmb)
-                #compton = x['h_2'] * (Tcmb - q[-1]) / tcomp \
-                #    / (1. + self.grid.cosm.y + x['h_2'])
-        
-                J[-1,-1] -= (8. / 3.) * sigma_T * ucmb * n_e / m_e / c / ntot
-                J[-1,e] -= (8. / 3.) * sigma_T * ucmb * (Tcmb - q[-1]) \
-                    / m_e / c / ntot
+                tcomp = 3. * m_e * c / (8. * sigma_T * ucmb)
+
+                J[-1,-1] -= q[-1] * xe \
+                    / tcomp / (1. + self.grid.cosm.y + xe)
+                J[-1,e] -= (Tcmb - q[-1]) * (1. + self.grid.cosm.y) \
+                    / (1. + self.grid.cosm.y + xe)**2 / tcomp
 
         return J
-                                
+
     def SourceIndependentCoefficients(self, T):
         """
         Compute values of rate coefficients which depend only on 

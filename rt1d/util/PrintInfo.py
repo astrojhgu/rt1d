@@ -214,6 +214,7 @@ def print_sim(sim):
     
     print line("radiation   : %i" % sim.pf['radiative_transfer'])
     print line("isothermal  : %i" % sim.pf['isothermal'], just='l')
+    print line("expansion   : %i" % sim.pf['expansion'], just='l')
     if sim.pf['radiative_transfer']:
         print line("phot. cons. : %i" % sim.pf['photon_conserving'])
         print line("planar      : %s" % sim.pf['plane_parallel'], 

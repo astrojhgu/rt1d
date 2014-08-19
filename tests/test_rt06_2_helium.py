@@ -44,7 +44,6 @@ fig3 = pl.figure(3); ax3 = fig3.add_subplot(111)
 anl_H.TemperatureProfile(t=[10, 30, 100], ax=ax1, color='k', label='H-only')
 anl_He.TemperatureProfile(t=[10, 30, 100], ax=ax1, color='b', label='H & He')
 
-
 # Hydrogen profiles
 anl_H.IonizationProfile(t=[10, 30, 100], ax=ax2, color='k', label='H-only')
 anl_He.IonizationProfile(t=[10, 30, 100], ax=ax2, color='b', label='H & He')

@@ -118,13 +118,16 @@ class RateCoefficients:
         
         if self.rate_src == 'fk94':
             if species == 0:  
-                return 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-1.578e5 / T)
+                return 5.85e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. \
+                    * np.exp(-1.578e5 / T)
               
             if species == 1:    
-                return 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-2.853e5 / T) 
+                return 2.38e-11 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. \
+                    * np.exp(-2.853e5 / T) 
             
             if species == 2:
-                return 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1.e5))**-1. * np.exp(-6.315e5 / T)
+                return 5.68e-12 * np.sqrt(T) * (1. + np.sqrt(T / 1e5))**-1. \
+                    * np.exp(-6.315e5 / T)
         
         else:
             name = self.grid.neutrals[species]

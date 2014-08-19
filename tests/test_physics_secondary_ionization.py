@@ -30,8 +30,10 @@ for i in range(0, 4)[-1::-1]:
 
     anl = rt1d.analyze.Simulation(sim.checkpoints)
 
-    anl.TemperatureProfile(t=[10, 100], color=colors[i], ax=ax1)
-    anl.IonizationProfile(t=[10, 100], color=colors[i], ax=ax2)
+    anl.TemperatureProfile(t=[10, 100], color=colors[i], ax=ax1, 
+        label='method=%i' % i)
+    anl.IonizationProfile(t=[10, 100], color=colors[i], ax=ax2,
+        label='method=%i' % i)
 
     pl.draw()
     

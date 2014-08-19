@@ -17,7 +17,7 @@ from .PrintInfo import twidth, line, tabulate
 separator = '|'*twidth
 separator2 = '-'*twidth
 
-def dt_error(grid, q, dqdt, new_dt, which_cell, methods):
+def dt_error(grid, z, q, dqdt, new_dt, cell, method):
     
     print ""    
     print line(separator)
@@ -29,40 +29,27 @@ def dt_error(grid, q, dqdt, new_dt, which_cell, methods):
         print line("current dt  : %.4e" % new_dt)
     else:
         print line("current dt  : NaN or inf")
-            
-    same_cell = len(np.unique(which_cell)) == 1
+                
+    print line(separator2)
+    print line("method      : %s" % method)
+    print line("cell #      : %i" % cell)
+    if z is not None:
+        print line("redshift    : %.4g" % z)
+    print line(separator2)  
+     
+    cols = ['value', 'derivative']
     
-    for h, cell in enumerate(which_cell): 
-        
-        if same_cell:
-            mth = ''
-            for m in methods:
-                mth += '%s, ' % m
-            mth = mth.rstrip(',')
-        else:
-            mth = methods[h]
-        
-        print line(separator2)
-        print line("method      : %s" % mth)
-        print line("cell #      : %i" % cell)
-        print line(separator2)   
-        cols = ['value', 'derivative']
-        
-        rows = []
-        data = []
-        for i in range(len(grid.qmap)):
-            name = grid.qmap[i]
-            rows.append(name)
+    rows = []
+    data = []
+    for i in range(len(grid.qmap)):
+        name = grid.qmap[i]
+        rows.append(name)
+                
+        data.append([q[i], dqdt[i]])
             
-            data.append([q[0,i], dqdt[0,i]])
-    
-        
-        # Print quantities and their rates of change
-        tabulate(data, rows, cols, cwidth=12)  
+    # Print quantities and their rates of change
+    tabulate(data, rows, cols, cwidth=12)  
 
-        if same_cell:
-            break
-    
     print line(separator2)        
 
     print line(separator)

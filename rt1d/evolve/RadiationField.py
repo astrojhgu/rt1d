@@ -144,6 +144,9 @@ class RadiationField:
                         self.Gamma[h] = 0.0
                 else:
                     for i, absorber in enumerate(self.grid.absorbers):
+                        if self.pf['approx_helium'] and i > 0:
+                            continue
+                        
                         self.Gamma[h,:,i] = \
                             src.ionization_rate(z, species=i, **kwargs)
                 
@@ -154,6 +157,9 @@ class RadiationField:
                         self.gamma[h] = 0.0
                 else:
                     for i, absorber in enumerate(self.grid.absorbers):
+                        if self.pf['approx_helium'] and i > 0:
+                            continue
+                            
                         self.gamma[h,:,i] = \
                             src.secondary_ionization_rate(z, species=i, **kwargs)
                 
@@ -164,6 +170,9 @@ class RadiationField:
                         self.k_H[h] = 0.0
                 else:
                     for i, absorber in enumerate(self.grid.absorbers):
+                        if self.pf['approx_helium'] and i > 0:
+                            continue
+                            
                         self.k_H[h,:,i] = src.heating_rate(z, species=i, **kwargs)
             
                 continue    
@@ -182,7 +191,8 @@ class RadiationField:
 
             # Normalizations
             self.A = {}
-            for absorber in self.grid.absorbers:                        
+            for absorber in self.grid.absorbers:          
+                
                 if self.pf['photon_conserving']:
                     self.A[absorber] = self.src.Lbol \
                         / self.n[absorber] / self.grid.Vsh

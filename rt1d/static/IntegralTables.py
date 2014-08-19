@@ -171,7 +171,7 @@ class IntegralTable:
         for item in itertools.product(*tmp):
             iN.append(tuple(item))    
             
-        #iN = np.indices(self.dimsN)    
+        #iN = np.indices(self.dimsN)
             
         self.indices_N = iN
         self.logNall = np.array(logNarr)

@@ -143,17 +143,13 @@ class Chemistry(object):
                                                         
             self.solver.set_initial_value(q, 0.0).set_f_params(args).set_jac_params(args)
             self.solver.integrate(dt)
-                        
+                                                
             self.q_grid[cell] = q.copy()
             self.dqdt_grid[cell] = self.chemnet.dqdt.copy()
 
             for i, value in enumerate(self.solver.y):
-                newdata[self.grid.evolving_fields[i]][cell] = self.solver.y[i]# / 1e10
-        
-        # Fix negative values
-        #for ion in self.grid.ions:
-        #    newdata[ion][newdata[ion] < tiny_ion] = tiny_ion
-                                                                
+                newdata[self.grid.evolving_fields[i]][cell] = self.solver.y[i]
+                                                         
         # Collect results        
         #if size > 1:
         #    collected_data = {}
@@ -172,10 +168,8 @@ class Chemistry(object):
         #    self.q_grid = tmp_q
         #    self.dqdt_grid = tmp_qdot
                             
-        # Convert T to ge for fun and update particle density
-        #if not self.grid.isothermal:        
+        # Compute particle density
         newdata['n'] = self.grid.particle_density(newdata, z - dz)
-        newdata['de'] = self.grid.electron_density(newdata, z - dz)
                         
         return newdata  
 

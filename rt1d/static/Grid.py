@@ -402,7 +402,7 @@ class Grid(object):
                 self.evolving_fields.append(name)
 
         self.solve_ge = False      
-        self.evolving_fields.append('de')
+        self.evolving_fields.append('e')
         if not self.isothermal:
             if energy:
                 self.solve_ge = True
@@ -580,7 +580,7 @@ class Grid(object):
                     / (1. + util.convertName(species)['Z']))
         
         # Set electron density
-        self._set_electron_density()
+        self._set_electron_fraction()
         
         if self.solve_ge:
             self.set_gas_energy()
@@ -640,35 +640,54 @@ class Grid(object):
             self.data[ion][isclump] = ionization    
         
         # Reset electron density, particle density, and gas energy
-        self._set_electron_density()
+        self._set_electron_fraction()
                 
-        del self._x_to_n_converter
+        if hasattr(self, '_x_to_n_converter'):        
+            del self._x_to_n_converter
         
-    def _set_electron_density(self):
+    def _set_electron_fraction(self):
         """
         Set electron density - must have run set_density beforehand.
         """
         
-        self.data['de'] = np.zeros(self.dims)
+        self.data['e'] = np.zeros(self.dims)
         for i, Z in enumerate(self.Z):
             for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
                 x_i_jp1 = self.data[util.zion2name(Z, j + 1)]
-                self.data['de'] += j * x_i_jp1 * self.n_ref \
-                    * self.element_abundances[i]    
+                self.data['e'] += j * x_i_jp1 * self.n_ref \
+                    * self.element_abundances[i]  
+                    
+        self.data['e'] /= self.n_H              
                 
     def particle_density(self, data, z=0):
         """
         Compute total particle number density.
         """    
         
-        n = data['de'].copy()
-        for ion in self.all_ions:
-            n += data[ion] * self.x_to_n[ion] * (1. + z)**3 \
-                / (1. + self.zi)**3
+        n = data['e'].copy()
+        #for ion in self.all_ions:
+        #    n += data[ion] * self.x_to_n[ion] * (1. + z)**3 \
+        #        / (1. + self.zi)**3
+        
+        if self.expansion:
+            n *= self.cosm.nH(z)
+            
+            n += self.cosm.nH(z)
+            
+            if 2 in self.Z:
+                n += self.cosm.nHe(z)
+                
+        else:
+            n *= self.n_H
+            
+            n += self.n_H
+            
+            if 2 in self.Z:
+                n += self.n_H * self.abundances[1]
              
         return n 
             
-    def electron_density(self, data, z):
+    def electron_fraction(self, data, z):
         de = np.zeros(self.dims)
         for i, Z in enumerate(self.Z):
             for j in np.arange(1, 1 + Z):   # j = number of electrons donated by ion j + 1
@@ -676,7 +695,7 @@ class Grid(object):
                 de += j * x_i_jp1 * self.n_ref * (1. + z)**3 / (1. + self.zi)**3 \
                     * self.element_abundances[i]
 
-        return de
+        return de / self.n_H
 
     def ColumnDensity(self, data):
         """ Compute column densities for all absorbing species. """    

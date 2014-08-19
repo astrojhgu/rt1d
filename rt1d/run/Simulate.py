@@ -172,8 +172,11 @@ class Simulation:
             t += dt 
             
             if self.grid.expansion:
+                n_H = self.grid.cosm.nH(z)
                 z -= dt / self.grid.cosm.dtdz(z)
-            
+            else:
+                n_H = self.grid.n_H
+                
             tau_tot = None
             if hasattr(self.rt, 'rfield'):
                 tau_tot = self.rt.rfield.tau_tot
@@ -200,11 +203,11 @@ class Simulation:
             if 'Ja' not in data:
                 data['Ts'] = self.grid.hydr.SpinTemperature(z,
                     data['Tk'], 0.0, 
-                    data['h_2'], data['de'])
+                    data['h_2'], data['e'] * n_H)
             else:    
                 data['Ts'] = self.grid.hydr.SpinTemperature(z, 
                     data['Tk'], data['Ja'], 
-                    data['h_2'], data['de'])
+                    data['h_2'], data['e'] * n_H)
 
             self.checkpoints.update(data, t, z)
 

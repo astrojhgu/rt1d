@@ -16,19 +16,17 @@ A paper including some discussion of its inner-workings can be found
 
 Currently, rt1d has support for the following:
     * Standard non-equilibrium chemistry solver for hydrogen and helium.
-    * Time-dependent source luminosities and SEDs.
     * Continuous or discrete SEDs, choice of using multi-group or
       multi-frequency methods for discrete SEDs.
     * Photon-conserving and non-photon-conserving algorithms.
-    * Infinite speed-of-light approximation or explicit treatment of the speed-of-light.
     * Secondary ionization and heating rates from Shull & vanSteenberg (1985), Ricotti,
       Gnedin, & Shull (2002), or Furlanetto & Stoever (2010).
     * Cosmological expansion.
     * Time-dependent ionizing backgrounds.
-    * Can use `dengo <https://bitbucket.org/MatthewTurk/dengo>`_ package to create
-      advanced chemical networks, though they are not yet coupled to the
-      radiation field.
     * Optimization of multi-frequency SEDs using method of `Mirocha et al. (2012) <http://adsabs.harvard.edu/abs/2012ApJ...756...94M>`_.
+.. * Time-dependent source luminosities and SEDs.
+.. * Infinite speed-of-light approximation or explicit treatment of the speed-of-light.
+    
 
 Contents
 --------

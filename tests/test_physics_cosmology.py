@@ -16,7 +16,7 @@ import matplotlib.pyplot as pl
 
 sim = rt1d.run.Simulation(pf={'problem_type':-1,
     'initial_redshift': 3e3, 'initial_ionization': [0.99999],
-    'rate_source': 'chianti'})
+    'rate_source': 'fk94'})
 sim.run()
 
 anl = rt1d.analyze.Simulation(sim.checkpoints)
@@ -32,7 +32,8 @@ ax1.loglog(z[z <= sim.grid.cosm.zdec],
     sim.grid.cosm.TCMB(sim.grid.cosm.zdec) * \
     (1. + z[z <= sim.grid.cosm.zdec])**2 / (1. + sim.grid.cosm.zdec)**2, 
     color='k', label=r'analytic')
-ax1.loglog(z, sim.grid.cosm.TCMB(z), color = 'k', ls = ':')
+ax1.loglog(z[z > sim.grid.cosm.zdec], sim.grid.cosm.TCMB(z[z > sim.grid.cosm.zdec]), 
+    color = 'k', ls = ':')
 
 z1, T = anl.CellEvolution(field='Tk', redshift=True)
 ax1.loglog(z1, T, color='b', label='rt1d')

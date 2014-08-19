@@ -95,8 +95,10 @@ def PhysicsParameters():
         
         "approx_lya": 0, # 0 = calculate it!
                          # 1 = Ts -> Tk
+        
+        "approx_helium": 0,
                          
-        "rate_source": 'fk94', # fk94, chianti                 
+        "rate_source": 'fk94', # fk94, chianti
         }
             
     return pf

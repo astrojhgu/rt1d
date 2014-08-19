@@ -13,7 +13,8 @@ Description: Single zone ionization/recombination + heating/cooling test.
 import rt1d
 from multiplot import multipanel
 
-sim = rt1d.run.Simulation(problem_type=0, optically_thin=1)
+sim = rt1d.run.Simulation(problem_type=0, optically_thin=1, 
+    secondary_ionization=0)
 sim.run()
 
 anl = rt1d.analyze.Simulation(sim.checkpoints)
@@ -35,5 +36,13 @@ mp.grid[1].set_ylim(1e2, 1e5)
 mp.grid[0].set_ylabel(r'$x_{\mathrm{HI}}$')
 mp.grid[1].set_ylabel(r'$T \ (\mathrm{K})$')
 mp.grid[0].set_xlabel(r'$t \ (\mathrm{yr})$')
+
+for ax in mp.grid:
+    ax.loglog([sim.pf['source_lifetime'] * 1e6]*2, ax.get_ylim(), 
+        color='k', ls=':')
+
+ax.annotate('source OFF', (sim.pf['source_lifetime'] * 1e6, 2e2), ha='right',
+    va='bottom', rotation=90)
+    
 mp.fix_ticks()
 
