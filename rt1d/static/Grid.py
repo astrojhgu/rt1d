@@ -10,7 +10,7 @@ Description:
 
 """
 
-import copy
+import copy, types
 import numpy as np
 from collections import Iterable
 from ..util import parse_kwargs, rebin
@@ -306,6 +306,13 @@ class Grid(object):
         return self._recombination
         
     @property
+    def clumping_factor(self):
+        if not hasattr(self, '_clumping_factor'):
+            self.set_physics()
+        return self._clumping_factor
+        
+        
+    @property
     def hydr(self):
         if not hasattr(self, '_hydr'):
             self._hydr = Hydrogen(self.cosm, approx_Salpha=self.approx_Salpha,
@@ -322,12 +329,18 @@ class Grid(object):
         self.set_chemistry()            
                 
     def set_physics(self, isothermal=False, compton_scattering=False,
-        secondary_ionization=0, expansion=False, recombination='B'):
+        secondary_ionization=0, expansion=False, recombination='B',
+        clumping_factor=1.0):
         self._isothermal = isothermal
         self._compton_scattering = compton_scattering
         self._secondary_ionization = secondary_ionization
         self._expansion = expansion
         self._recombination = recombination
+        
+        if type(clumping_factor) is not types.FunctionType:
+            self._clumping_factor = lambda z: clumping_factor
+        else:
+            self._clumping_factor = clumping_factor
         
         if self._expansion:
             self.set_cosmology()

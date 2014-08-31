@@ -15,21 +15,6 @@ import copy, sys
 import numpy as np
 from ..util import convert_ion_name
 from ..physics.Constants import k_B, sigma_T, m_e, c, s_per_myr, erg_per_ev, h
-
-try:
-    have_dengo = True
-    import dengo.primordial_rates, dengo.primordial_cooling
-    import dengo.oxygen_rates, dengo.oxygen_cooling
-    import dengo.carbon_rates, dengo.carbon_cooling
-    import dengo.magnesium_rates, dengo.magnesium_cooling
-    import dengo.neon_rates, dengo.neon_cooling
-    import dengo.nitrogen_rates, dengo.nitrogen_cooling
-    import dengo.silicon_rates, dengo.silicon_cooling
-    import dengo.sulfur_rates, dengo.sulfur_cooling
-    from dengo.chemical_network import ChemicalNetwork, \
-        reaction_registry, cooling_registry
-except ImportError:
-    have_dengo = False 
         
 class SimpleChemicalNetwork:
     def __init__(self, grid, rate_src='fk94'):
@@ -91,8 +76,10 @@ class SimpleChemicalNetwork:
         if self.grid.expansion:
             z = self.grid.cosm.TimeToRedshiftConverter(0., time, self.grid.zi)
             n_H = self.grid.cosm.nH(z)
+            CF = self.grid.clumping_factor(z)
         else:
             n_H = self.grid.n_H[cell]
+            CF = self.grid.clumping_factor(0.0) 
 
         if 2 in self.grid.Z:
             y = self.grid.element_abundances[1]
@@ -143,7 +130,7 @@ class SimpleChemicalNetwork:
         ##
         dqdt['h_1'] = -(Gamma['h_1'] + gamma_HI + Beta['h_1'][cell] * n_e) \
                       * x['h_1'] \
-                      + alpha['h_1'][cell] * n_e * x['h_2']
+                      + alpha['h_1'][cell] * n_e * x['h_2'] * CF
         dqdt['h_2'] = -dqdt['h_1']    
 
         ##
@@ -276,8 +263,10 @@ class SimpleChemicalNetwork:
         if self.grid.expansion:
             z = self.grid.cosm.TimeToRedshiftConverter(0., time, self.grid.zi)
             n_H = self.grid.cosm.nH(z)
+            CF = self.grid.clumping_factor(z)
         else:
             n_H = self.grid.n_H[cell]
+            CF = self.grid.clumping_factor(0.0)
                     
         # Read q vector quantities into dictionaries
         x, n, n_e = self._parse_q(q, n_H)
@@ -286,7 +275,7 @@ class SimpleChemicalNetwork:
             n_He = self.grid.element_abundances[1] * n_H
         else:
             n_He = 0.0
-    
+        
         xe = n_e / n_H
     
         # Initialize dictionaries for results        
@@ -343,7 +332,7 @@ class SimpleChemicalNetwork:
         J[0,0] = -(Gamma['h_1'] + gamma_HI + Beta['h_1'][cell] * n_e)
         
         # HI by HII
-        J[0,1] = alpha['h_1'][cell] * n_e
+        J[0,1] = alpha['h_1'][cell] * n_e * CF
          
         # HII by HI
         J[1,0] = -J[0,0]
@@ -355,12 +344,12 @@ class SimpleChemicalNetwork:
         # Hydrogen-Electron terms
         ##
         
-        J[0,e] = -Beta['h_1'][cell] * x['h_1'] + alpha['h_1'][cell] * x['h_2']
+        J[0,e] = -Beta['h_1'][cell] * x['h_1'] + alpha['h_1'][cell] * x['h_2'] * CF
         J[1,e] = -J[0,e]
         J[e,e] = n_H * J[1,e]
            
         J[e,0] = n_H * (Gamma['h_1'] + gamma_HI + Beta['h_1'][cell] * n_e)
-        J[e,1] = -n_H * alpha['h_1'][cell] * n_e
+        J[e,1] = -n_H * alpha['h_1'][cell] * n_e * CF
         
         #if self.grid.expansion:
         #    J[e,e] -= 3. * self.grid.cosm.HubbleParameter(z)
@@ -452,7 +441,7 @@ class SimpleChemicalNetwork:
         
         # HI by Tk
         J[0,-1] = -n_e * x['h_1'] * dBeta['h_1'][cell] \
-                +  n_e * x['h_2'] * dalpha['h_1'][cell]
+                +  n_e * x['h_2'] * dalpha['h_1'][cell] * CF
         # HII by Tk
         J[1,-1] = -J[0,-1]
         
@@ -477,7 +466,7 @@ class SimpleChemicalNetwork:
         # Electron by Tk terms
         ##
         J[e,-1] = n_H * n_e \
-            * (x['h_1'] * dBeta['h_1'][cell] - x['h_2'] * dalpha['h_1'][cell])
+            * (x['h_1'] * dBeta['h_1'][cell] - x['h_2'] * dalpha['h_1'][cell] * CF)
         
         ##
         # A few last Tk by Tk and Tk by electron terms (dielectronic recombination)
@@ -614,192 +603,3 @@ class SimpleChemicalNetwork:
                 'zeta': self.zeta, 'eta': self.eta, 'psi': self.psi,
                 'xi': self.xi, 'omega': self.omega}
 
-class DengoChemicalNetwork:
-    def __init__(self, grid):
-        self.grid = grid
-        
-        # Make list of dengo.chemical_network.ChemicalNetwork objects
-        self._initialize()
-    
-    def _initialize(self):
-        """ Create list of ChemicalNetwork objects (one for each element). """
-        
-        if not have_dengo:
-            raise ImportError('Module dengo not found.')
-        
-        self.networks = {}
-        for element in self.grid.ions_by_parent.keys():
-            chem_net = ChemicalNetwork()
-            for ion in self.grid.ions_by_parent[element]:
-                dengo_name = convert_ion_name(ion)
-                
-                # Do something special!?
-                #if self._is_primordial(element):
-                #    continue
-                
-                # Add cooling actions - even if isothermal
-                for ca in cooling_registry.values():
-                    if ca.name.split('_')[0] == dengo_name:
-                        chem_net.add_cooling(ca)
-                        
-                # Add ionization reactions        
-                for s in reaction_registry.values():
-                    if s.name.split('_')[0] == dengo_name:
-                        chem_net.add_reaction(s)
-                                    
-            self.networks[element] = chem_net
-        
-        # For each chemical network object, set rate equation and Jacobian
-        self._set_rhs()
-        self._set_jac()
-    
-    def _is_primordial(self, element):
-        if element in ['h', 'he']:
-            return True
-        else:
-            return False
-            
-    def _set_rhs(self):
-        """
-        Create string representations of RHS of all ODEs.
-        
-        NOTE: This will not work with primordial network naming conventions.
-        """
-        
-        # Set up RHS of rate equations - must convert dengo strings to ours
-        i = 0
-        dedot = ''
-        gedot = ''
-        self.dqdt_eqs = []
-        for element in self.grid.elements:
-            for ion in self.grid.ions_by_parent[element]:
-                expr = self.networks[element].rhs_string_equation(convert_ion_name(ion))
-                expr = self._translate_rate_str(expr)                
-                self.dqdt_eqs.append(expr)        
-                i += 1
-                
-            de = self._translate_rate_str(self.networks[element].rhs_string_equation('de'))   
-            dedot += '+%s' % de  
-
-            if not self.grid.isothermal:
-                ge = self._translate_cool_str(self.networks[element].cooling_string_equation())               
-                gedot += '+%s' % ge  
-        
-        # Electrons and gas energy
-        self.dqdt_eqs.append(dedot)
-        if not self.grid.isothermal:
-            self.dqdt_eqs.append(gedot)
-                        
-    def _set_jac(self):
-        """
-        Create string representations of Jacobian.
-        """        
-        
-        # Create empty jacobian
-        self.jac = [['0']*len(self.grid.evolving_fields) \
-            for sp in self.grid.evolving_fields]
-            
-        for i, sp1 in enumerate(self.grid.evolving_fields):
-            
-            for element in self.grid.ions_by_parent:
-                if sp1 in self.grid.ions_by_parent[element]:
-                    break
-                    
-            chemnet = self.networks[element]
-            names = [species.name for species in chemnet.required_species]
-            
-            for j, sp2 in enumerate(self.grid.evolving_fields):                    
-                if convert_ion_name(sp2) not in names:
-                    continue    
-                
-                expr = chemnet.jacobian_string_equation(convert_ion_name(sp1), 
-                    convert_ion_name(sp2))
-                expr = self._translate_rate_str(expr)
-                self.jac[i][j] = expr
-            
-    def _translate_rate_str(self, expr):
-        """
-        Convert dengo style rate equation strings to our dictionary / vector 
-        convention.
-        """    
-        
-        # Ionization and recombination coefficients
-        for species in self.grid.all_ions:
-            sp = convert_ion_name(species)
-            expr = expr.replace('%s_i' % sp, 'kwargs[\'%s_i\']' % species)
-            expr = expr.replace('%s_r' % sp, 'kwargs[\'%s_r\']' % species)
-        
-        # Rename ions
-        for element in self.grid.ions_by_parent:
-            ions = copy.deepcopy(self.grid.ions_by_parent[element])
-            ions.reverse()
-            
-            for ion in ions:
-                sp = convert_ion_name(ion)
-                        
-                expr = expr.replace('%s' % sp,
-                    'q[%i]' % list(self.grid.qmap).index(ion))
-        
-        # Replace de and ge         
-        if self.grid.isothermal:
-            expr = expr.replace('de', 'q[-1]')
-        else:
-            expr = expr.replace('de', 'q[-2]')
-            expr = expr.replace('ge', 'q[-1]')
-                                    
-        return expr   
-        
-    def _translate_cool_str(self, expr):
-        for species in self.grid.all_ions:
-            sp = convert_ion_name(species)
-            expr = expr.replace('%s_c_%s_c' % (sp, sp), 
-                'kwargs[\'%s_c\']' % species)
-        
-        # Rename ions
-        for element in self.grid.ions_by_parent:
-            ions = copy.deepcopy(self.grid.ions_by_parent[element])
-            ions.reverse()
-            
-            for ion in ions:
-                sp = convert_ion_name(ion)
-                        
-                expr = expr.replace('%s' % sp,
-                    'q[%i]' % list(self.grid.qmap).index(ion))
-        
-        # Replace de and ge         
-        if self.grid.isothermal:
-            expr = expr.replace('de', 'q[-1]')
-        else:
-            expr = expr.replace('de', 'q[-2]')
-            expr = expr.replace('ge', 'q[-1]')
-                                    
-        return expr   
-        
-    def RateEquations(self, t, q, args):
-        """
-        Compute RHS of rate equations.  
-        """
-        
-        kwargs = dict(args)
-        self.q = q
-        self.dqdt = np.zeros(len(self.dqdt_eqs))
-                        
-        # Compute RHS of ODEs
-        for i, ode in enumerate(self.dqdt_eqs):
-            self.dqdt[i] = eval(ode)
-                
-        return self.dqdt
-        
-    def Jacobian(self, t, q, args):
-        """
-        Compute the Jacobian of the rate equations.
-        """    
-                
-        kwargs = dict(args)
-        jac = np.zeros([len(self.dqdt_eqs)] * 2)
-
-        for i, sp1 in enumerate(self.grid.evolving_fields):
-            for j, sp2 in enumerate(self.grid.evolving_fields):
-                jac[i,j] = eval(self.jac[i][j])
-                
-        return jac                      

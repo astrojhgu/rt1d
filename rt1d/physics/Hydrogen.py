@@ -289,7 +289,7 @@ class Hydrogen:
         return (1.0 + x_c + x_a) / \
             (self.cosm.TCMB(z)**-1. + x_c * Tk**-1. + x_a * Tc**-1.)
     
-    def DifferentialBrightnessTemperature(self, z, xHII, delta, Ts):
+    def DifferentialBrightnessTemperature(self, z, xHII, Ts):
         """
         Global 21-cm signature relative to cosmic microwave background in mK.
         
@@ -298,9 +298,8 @@ class Hydrogen:
         z : float, np.ndarray
             Redshift
         xHII : float, np.ndarray 
-            Volume filling factor of HII regions
-        delta : float, np.ndarray 
-            Gas overdensity
+            Mean ionized fraction (avg of volume filling factor and ionized
+            fraction in bulk IGM)
         Ts : float, np.ndarray
             Spin temperature of intergalactic hydrogen.
             
@@ -310,7 +309,7 @@ class Hydrogen:
         
         """
         
-        return 27. * (1. - xHII) * (1.0 + delta) * \
+        return 27. * (1. - xHII) * \
             (self.cosm.OmegaBaryonNow * self.cosm.h70**2 / 0.023) * \
             np.sqrt(0.15 * (1.0 + z) / self.cosm.OmegaMatterNow / self.cosm.h70**2 / 10.) * \
             (1.0 - self.cosm.TCMB(z) / Ts)

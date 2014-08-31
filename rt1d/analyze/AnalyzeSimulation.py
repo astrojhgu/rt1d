@@ -404,8 +404,7 @@ class Simulation:
             z = self.data[dd]['redshift']
             xHII = self.data[dd]['h_2']
             Ts = self.data[dd]['Ts']#self.grid.hydr.Ts(self.data[dd], z)
-            dTb = self.grid.hydr.DifferentialBrightnessTemperature(z, xHII, 
-                0.0, Ts)
+            dTb = self.grid.hydr.DifferentialBrightnessTemperature(z, xHII, Ts)
             
             if marker is None:
                 ax.plot(self.grid.r_mid / cm_per_kpc, dTb,

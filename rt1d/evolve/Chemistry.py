@@ -19,7 +19,9 @@ import numpy as np
 from scipy.integrate import ode
 from ..util import convert_ion_name
 from ..physics.Constants import k_B
-
+from ..static.ChemicalNetwork import \
+    SimpleChemicalNetwork as ChemicalNetwork
+    
 #try:
 #    from mpi4py import MPI
 #    rank = MPI.COMM_WORLD.rank
@@ -32,32 +34,23 @@ tiny_ion = 1e-12
 
 class Chemistry(object):
     """ Class for evolving chemical reaction equations. """
-    def __init__(self, grid, rt=False, dengo=False, atol=1e-8, rtol=1e-8,
-        rate_src='fk94'):
+    def __init__(self, grid, rt=False, atol=1e-8, rtol=1e-8, rate_src='fk94'):
         """
         Create a chemistry object.
         
         Parameters
         ----------
         grid: rt1d.static.Grid.Grid instance
-        dengo: bool
-            Use dengo?
+
         rt: bool
             Use radiative transfer?
             
         """
 
         self.grid = grid
-        self.dengo = dengo
+
         self.rtON = rt
-        
-        if dengo:
-            from ..static.ChemicalNetwork import \
-                DengoChemicalNetwork as ChemicalNetwork
-        else:
-            from ..static.ChemicalNetwork import \
-                SimpleChemicalNetwork as ChemicalNetwork
-        
+    
         self.chemnet = ChemicalNetwork(grid, rate_src=rate_src)
         
         self.solver = ode(self.chemnet.RateEquations, 
@@ -100,12 +93,9 @@ class Chemistry(object):
         else:
             z = dz = 0
                 
-        if self.dengo:
-            return self.EvolveDengo(data, t, dt)
-        else:
-            if 'he_1' in self.grid.absorbers:
-                i = self.grid.absorbers.index('he_1')
-                self.chemnet.psi[...,i] *= data['he_2'] / data['he_1']
+        if 'he_1' in self.grid.absorbers:
+            i = self.grid.absorbers.index('he_1')
+            self.chemnet.psi[...,i] *= data['he_2'] / data['he_1']
                 
         # Make sure we've got number densities
         if 'n' not in data.keys():
