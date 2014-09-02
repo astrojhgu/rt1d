@@ -92,6 +92,9 @@ class SimpleChemicalNetwork:
         x, n, n_e = self._parse_q(q, n_H)
         
         xe = n_e / n_H
+        
+        if self.grid.in_bubbles:
+            CF *= (n_H * (1. + y) / n_e)
 
         # Initialize dictionaries for results
         k_H = {sp:H[i] for i, sp in enumerate(self.grid.absorbers)}
@@ -272,11 +275,16 @@ class SimpleChemicalNetwork:
         x, n, n_e = self._parse_q(q, n_H)
         
         if 2 in self.grid.Z:
+            y = self.grid.element_abundances[1]
             n_He = self.grid.element_abundances[1] * n_H
         else:
+            y = 0.0
             n_He = 0.0
         
         xe = n_e / n_H
+        
+        if self.grid.in_bubbles:
+            CF *= (n_H * (1. + y) / n_e)
     
         # Initialize dictionaries for results        
         k_H = {sp:H[i] for i, sp in enumerate(self.grid.absorbers)}

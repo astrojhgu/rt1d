@@ -345,6 +345,16 @@ class Grid(object):
         if self._expansion:
             self.set_cosmology()
         
+    @property
+    def in_bubbles(self):    
+        if not hasattr(self, '_in_bubbles'):
+            self.set_recombination_rate()
+            
+        return self._in_bubbles
+        
+    def set_recombination_rate(self, in_bubbles=False):
+        self._in_bubbles = in_bubbles    
+        
     def set_cosmology(self, initial_redshift=1e3, OmegaMatterNow=0.272, 
         OmegaLambdaNow=0.728, OmegaBaryonNow=0.044, HubbleParameterNow=0.702, 
         HeliumAbundanceByNumber=0.08, CMBTemperatureNow=2.725, 
