@@ -55,29 +55,6 @@ making multi-panel plots, which can be found
 If you'd like to find the optimal discrete SED for a given continuous spectrum,
 you'll need `ndmin <https://bitbucket.org/mirochaj/ndmin>`_.
 
-The code is written such that running with an arbitrary chemical composition 
-is possible (in principle) using `dengo <https://bitbucket.org/MatthewTurk/dengo>`_ 
-(written by Matthew Turk and Devin Silvia). Its sub-dependencies can all be 
-installed using pip: ::
-
-    pip install sympy
-    pip install periodic
-    pip install jinja2
-    pip install docutils
-    pip install ChiantiPy
-    
-The chianti database itself can be downloaded 
-`here <http://www.chiantidatabase.org/download/CHIANTI_7.1_data.tar.gz>`_. To 
-make use of it with ChiantiPy, you must define a new environment variable, 
-which for me (in bash) looks like: ::
-
-    export XUVTOP=$WORK/mods/chianti
-
-Once this is all done, you should be off to the races.
-
-The dengo-based stuff is still pretty unstable, 
-though rt1d/tests/test_chemistry_metals.py should work.
-
 Example
 -------
 rt1d is meant to be modular. Rather than running a full radiative transfer
@@ -123,8 +100,8 @@ session and use built-in analysis routines, or look at the raw data itself:
 >>>
 
 To see what pre-defined problem types are available, have a look at
-rt1d/util/ProblemTypes.py, or for a list of all available input parameters,
-see rt1d/util/SetDefaultParameterValues.py.
+``rt1d/util/ProblemTypes.py``, or for a list of all available input parameters,
+see ``rt1d/util/SetDefaultParameterValues.py``.
 
 More examples on the way.
 
