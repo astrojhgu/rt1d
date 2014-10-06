@@ -71,7 +71,7 @@ initializes a calculation from a parameter file or via keyword arguments:
 >>> sim.run()
 >>>
   
-The 'sim' object is an instance of the Simulation class, which contains the 
+The ``sim`` object is an instance of the Simulation class, which contains the 
 data as well as instances of all major classes used in the calculation (e.g. 
 Grid, Radiation, ChemicalNetwork, etc.). A second command to actually run
 the simulation is implemented so that if you like, you can initialize the 
