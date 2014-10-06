@@ -27,7 +27,7 @@ To clone a copy and install: ::
     python setup.py install
 
 Dependencies
-------------
+--------------------
 Currently, rt1d depends on numpy, h5py, and scipy.
 
 Dependencies (Optional)
@@ -104,4 +104,3 @@ To see what pre-defined problem types are available, have a look at
 see ``rt1d/util/SetDefaultParameterValues.py``.
 
 More examples on the way.
-
