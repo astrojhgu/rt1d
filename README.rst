@@ -1,3 +1,9 @@
+=============
+DISCLAIMER
+=============
+This code is being superseded by `ARES <https://bitbucket.org/mirochaj/ares>`_, which I have yet to make public as it is under construction. Please contact me if you'd like to use it!
+
+
 ====
 rt1d
 ====
@@ -33,9 +39,8 @@ Currently, rt1d depends on numpy, h5py, and scipy.
 Dependencies (Optional)
 -----------------------
 If you plan to run with hydrogen and helium, we'll need to be able to 
-interpolate in N >= 3 dimensions. Go
-`here <https://bitbucket.org/mirochaj/mathutils>`_ to grab the routines I
-wrote to do this.
+interpolate in N >= 3 dimensions. Grab
+`mathutils <https://bitbucket.org/mirochaj/mathutils>`_ to do this.
 
 The built-in analysis modules also use on matplotlib, though if you'd rather
 make your plots with something else, this dependence is not necessary.
