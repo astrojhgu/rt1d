@@ -1,8 +1,7 @@
 =============
 DISCLAIMER
 =============
-This code is being superseded by `ARES <https://bitbucket.org/mirochaj/ares>`_, which I have yet to make public as it is under construction. Please contact me if you'd like to use it!
-
+This code will soon be superseded, though I have yet to make the new code public. Please contact me if you'd like to use it!
 
 ====
 rt1d
